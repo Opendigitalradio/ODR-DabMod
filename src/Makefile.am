@@ -47,6 +47,7 @@ crc_dabmod_SOURCES =  DabMod.cpp \
                       EtiReader.cpp EtiReader.h \
                       Eti.cpp Eti.h \
                       FicSource.cpp FicSource.h \
+					  FIRFilter.cpp FIRFilter.h \
                       ModInput.cpp ModInput.h \
                       PuncturingRule.cpp PuncturingRule.h \
                       PuncturingEncoder.cpp PuncturingEncoder.h \
@@ -54,6 +55,8 @@ crc_dabmod_SOURCES =  DabMod.cpp \
                       Flowgraph.cpp Flowgraph.h \
                       GainControl.cpp GainControl.h \
                       OutputMemory.cpp OutputMemory.h \
+					  TimestampDecoder.h TimestampDecoder.cpp \
+                      OutputUHD.cpp OutputUHD.h \
                       ModOutput.cpp ModOutput.h \
                       InputMemory.cpp InputMemory.h \
                       OutputFile.cpp OutputFile.h \

@@ -1,6 +1,9 @@
 /*
    Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010, 2011 Her Majesty
    the Queen in Right of Canada (Communications Research Center Canada)
+
+   Includes modifications for which no copyright is claimed
+   2012, Matthias P. Braendli, matthias.braendli@mpb.li
  */
 /*
    This file is part of CRC-DADMOD.
@@ -30,6 +33,7 @@
 #include "Eti.h"
 #include "FicSource.h"
 #include "SubchannelSource.h"
+#include "TimestampDecoder.h"
 
 #include <vector>
 #include <stdint.h>
@@ -51,21 +55,39 @@ protected:
     eti_TIST eti_tist;
     FicSource* myFicSource;
     std::vector<SubchannelSource*> mySources;
+    TimestampDecoder* myTimestampDecoder;
     
 public:
-    EtiReader();
+    EtiReader(struct modulator_offset_config& modconf);
     virtual ~EtiReader();
     EtiReader(const EtiReader&);
     EtiReader& operator=(const EtiReader&);
 
     FicSource* getFic();
     unsigned getMode();
-    unsigned getFct();
+    unsigned getFp();
     const std::vector<SubchannelSource*>& getSubchannels();
     int process(Buffer* dataIn);
 
+    void calculateTimestamp(struct frame_timestamp& ts)
+    {
+        myTimestampDecoder->calculateTimestamp(ts);
+    }
+
+    /* Return the frame counter */
+    uint32_t getFCT();
+
+    /* Returns true if we have valid time stamps in the ETI*/
+    bool sourceContainsTimestamp();
+
+protected:
+    /* Transform the ETI TIST to a PPS offset in ms */
+    double getPPSOffset();
+
 private:
     size_t myCurrentFrame;
+    bool time_ext_enabled;
+    unsigned long timestamp_seconds;
 };
 
 

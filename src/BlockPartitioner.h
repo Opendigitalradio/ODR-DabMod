@@ -35,7 +35,7 @@
 class BlockPartitioner : public ModMux
 {
 public:
-    BlockPartitioner(unsigned mode, unsigned fct);
+    BlockPartitioner(unsigned mode, unsigned phase);
     virtual ~BlockPartitioner();
     BlockPartitioner(const BlockPartitioner&);
     BlockPartitioner& operator=(const BlockPartitioner&);
@@ -48,7 +48,7 @@ protected:
     size_t d_ficSize;
     size_t d_cifCount;
     size_t d_cifNb;
-    size_t d_cifInit;
+    size_t d_cifPhase;
     size_t d_cifSize;
     size_t d_outputFramesize;
     size_t d_outputFramecount;

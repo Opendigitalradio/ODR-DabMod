@@ -2,6 +2,9 @@
    Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012
    Her Majesty the Queen in Right of Canada (Communications Research
    Center Canada)
+
+   Includes modifications for which no copyright is claimed
+   2012, Matthias P. Braendli, matthias.braendli@mpb.li
  */
 /*
    This file is part of CRC-DADMOD.
@@ -29,7 +32,9 @@
 #include "DabModulator.h"
 #include "InputMemory.h"
 #include "OutputFile.h"
+#include "OutputUHD.h"
 #include "PcDebug.h"
+#include "TimestampDecoder.h"
 
 #include <complex>
 #include <stdlib.h>
@@ -69,10 +74,14 @@ void printUsage(char* progName, FILE* out = stderr)
 {
     fprintf(out, "Usage:\n");
     fprintf(out, "\t%s"
-            " [input [output]]"
+            " [input]"
+            " (-f filename | -u uhddevice -F frequency) "
+            " [-G txgain]"
+            " [-o offset]"
+            " [-O offsetfile]"
+            " [-T filter_taps_file]"
             " [-a amplitude]"
             " [-c clockrate]"
-            " [-f]"
             " [-g gainMode]"
             " [-h]"
             " [-l]"
@@ -80,17 +89,23 @@ void printUsage(char* progName, FILE* out = stderr)
             " [-r samplingRate]"
             "\n", progName);
     fprintf(out, "Where:\n");
-    fprintf(out, "input:    ETI input filename (default: stdin).\n");
-    fprintf(out, "output:   COFDM output filename (default: stdout).\n");
-    fprintf(out, "-a:       Apply amplitude gain.\n");
-    fprintf(out, "-c:       Set the DAC clock rate.\n");
-    fprintf(out, "-f:       (deprecated) Set fifo input.\n");
-    fprintf(out, "-g:       Set computation gain mode: "
+    fprintf(out, "input:         ETI input filename (default: stdin).\n");
+    fprintf(out, "-f name:       Use file output with given filename. (use /dev/stdout for standard output)\n");
+    fprintf(out, "-u device:     Use UHD output with given device string. (use "" for default device)\n");
+    fprintf(out, "-F frequency:  Set the transmit frequency when using UHD output. (mandatory option when using UHD)\n");
+    fprintf(out, "-G txgain:     Set the transmit gain for the UHD driver (default: 0)\n");
+    fprintf(out, "-o:            (UHD only) Set the timestamp offset added to the timestamp in the ETI. The offset is a double.\n");
+    fprintf(out, "-O:            (UHD only) Set the file containing the timestamp offset added to the timestamp in the ETI. The file is read every six seconds, and must contain a double value.\n");
+    fprintf(out, "                  Specifying either -o or -O make DABMOD mute frames that do not contain a valid timestamp.\n");
+    fprintf(out, "-T taps_file:  Enable filtering before the output, using the specified file containing the filter taps.\n");
+    fprintf(out, "-a gain:       Apply digital amplitude gain.\n");
+    fprintf(out, "-c rate:       Set the DAC clock rate and enable Cic Equalisation.\n");
+    fprintf(out, "-g:            Set computation gain mode: "
             "%u FIX, %u MAX, %u VAR\n", GAIN_FIX, GAIN_MAX, GAIN_VAR);
-    fprintf(out, "-h:       Print this help.\n");
-    fprintf(out, "-l:       Loop file when reach end of file.\n");
-    fprintf(out, "-m:       Set DAB mode: (0: auto, 1-4: force).\n");
-    fprintf(out, "-r:       Set output sampling rate (default: 2048000).\n");
+    fprintf(out, "-h:            Print this help.\n");
+    fprintf(out, "-l:            Loop file when reach end of file.\n");
+    fprintf(out, "-m mode:       Set DAB mode: (0: auto, 1-4: force).\n");
+    fprintf(out, "-r rate:       Set output sampling rate (default: 2048000).\n");
 }
 
 
@@ -124,7 +139,15 @@ int main(int argc, char* argv[])
     int ret = 0;
     bool loop = false;
     char* inputName;
+
     char* outputName;
+    char* outputDevice;
+    int useFileOutput = 0;
+    int useUHDOutput = 0;
+    double uhdFrequency = 0.0;
+    int uhdTxGain = 0;
+    bool uhd_mute_no_timestamps = false;
+
     FILE* inputFile = NULL;
     uint32_t sync = 0;
     uint32_t nbFrames = 0;
@@ -137,15 +160,26 @@ int main(int argc, char* argv[])
     GainMode gainMode = GAIN_VAR;
     Buffer data;
 
+    char* filterTapsFilename = NULL;
+
+    // To handle the timestamp offset of the modulator
+    struct modulator_offset_config modconf;
+    modconf.use_offset_file = false;
+    modconf.use_offset_fixed = false;
+
     Flowgraph* flowgraph = NULL;
     DabModulator* modulator = NULL;
     InputMemory* input = NULL;
-    OutputFile* output = NULL;
+    ModOutput* output = NULL;
 
     signal(SIGINT, signalHandler);
 
+    // Set timezone to UTC
+    setenv("TZ", "", 1);
+    tzset();
+
     while (true) {
-        int c = getopt(argc, argv, "a:c:fg:hlm:r:V");
+        int c = getopt(argc, argv, "a:c:f:F:g:G:hlm:o:O:r:T:u:V");
         if (c == -1) {
             break;
         }
@@ -157,19 +191,59 @@ int main(int argc, char* argv[])
             clockRate = strtol(optarg, NULL, 0);
             break;
         case 'f':
-            fprintf(stderr, "Option -f deprecated!\n");
+            if (useUHDOutput) {
+                fprintf(stderr, "Options -u and -f are mutually exclusive\n");
+                goto END_MAIN;
+            }
+            outputName = optarg;
+            useFileOutput = 1;
+            break;
+        case 'F':
+            uhdFrequency = strtof(optarg, NULL);
             break;
         case 'g':
             gainMode = (GainMode)strtol(optarg, NULL, 0);
             break;
+        case 'G':
+            uhdTxGain = (int)strtol(optarg, NULL, 10);
+            break;
         case 'l':
             loop = true;
+            break;
+        case 'o':
+            if (modconf.use_offset_file)
+            {
+                fprintf(stderr, "Options -o and -O are mutually exclusive\n");
+                goto END_MAIN;
+            }
+            modconf.use_offset_fixed = true;
+            modconf.offset_fixed = strtod(optarg, NULL);
+            break;
+        case 'O':
+            if (modconf.use_offset_fixed)
+            {
+                fprintf(stderr, "Options -o and -O are mutually exclusive\n");
+                goto END_MAIN;
+            }
+            modconf.use_offset_file = true;
+            modconf.offset_filename = optarg;
             break;
         case 'm':
             dabMode = strtol(optarg, NULL, 0);
             break;
         case 'r':
             outputRate = strtol(optarg, NULL, 0);
+            break;
+        case 'T':
+            filterTapsFilename = optarg;
+            break;
+        case 'u':
+            if (useFileOutput) {
+                fprintf(stderr, "Options -u and -f are mutually exclusive\n");
+                goto END_MAIN;
+            }
+            outputDevice = optarg;
+            useUHDOutput = 1;
             break;
         case 'V':
             printVersion();
@@ -186,17 +260,21 @@ int main(int argc, char* argv[])
             goto END_MAIN;
         }
     }
+
+    // When using offset, enable frame muting
+    uhd_mute_no_timestamps = (modconf.use_offset_file || modconf.use_offset_fixed);
+
+    if (!(modconf.use_offset_file || modconf.use_offset_fixed)) {
+        fprintf(stderr, "No Modulator offset defined, setting to 0\n");
+        modconf.use_offset_fixed = true;
+        modconf.offset_fixed = 0;
+    }
+
     // Setting ETI input filename
     if (optind < argc) {
         inputName = argv[optind++];
     } else {
         inputName = (char*)"/dev/stdin";
-    }
-    // Setting COFDM output filename
-    if (optind < argc) {
-        outputName = argv[optind++];
-    } else {
-        outputName = (char*)"/dev/stdout";
     }
     // Checking unused arguments
     if (optind != argc) {
@@ -210,15 +288,25 @@ int main(int argc, char* argv[])
         goto END_MAIN;
     }
 
+    if (!useFileOutput && !useUHDOutput) {
+        fprintf(stderr, "Must specify output !");
+        goto END_MAIN;
+    }
+
     // Print settings
     fprintf(stderr, "Input\n");
     fprintf(stderr, "  Name: %s\n", inputName);
     fprintf(stderr, "Output\n");
-    fprintf(stderr, "  Name: %s\n", outputName);
+    if (useUHDOutput) {
+        fprintf(stderr, " UHD, Device: %s\n", outputDevice);
+    }
+    else if (useFileOutput) {
+        fprintf(stderr, "  Name: %s\n", outputName);
+    }
     fprintf(stderr, "  Sampling rate: ");
     if (outputRate > 1000) {
         if (outputRate > 1000000) {
-            fprintf(stderr, "%.3g mHz\n", outputRate / 1000000.0f);
+            fprintf(stderr, "%.3g MHz\n", outputRate / 1000000.0f);
         } else {
             fprintf(stderr, "%.3g kHz\n", outputRate / 1000.0f);
         }
@@ -234,17 +322,31 @@ int main(int argc, char* argv[])
         ret = -1;
         goto END_MAIN;
     }
-    // Opening COFDM output file
-    if (outputName != NULL) {
-        output = new OutputFile(outputName);
+
+    if (useFileOutput) {
+        // Opening COFDM output file
+        if (outputName != NULL) {
+            fprintf(stderr, "Using file output\n");
+            output = new OutputFile(outputName);
+        }
+    }
+    else if (useUHDOutput) {
+        fprintf(stderr, "Using UHD output\n");
+        amplitude /= 32000.0f;
+        output = new OutputUHD(outputDevice, outputRate, uhdFrequency, uhdTxGain, uhd_mute_no_timestamps);
     }
 
     flowgraph = new Flowgraph();
     data.setLength(6144);
     input = new InputMemory(&data);
-    modulator = new DabModulator(outputRate, clockRate, dabMode, gainMode, amplitude);
+    modulator = new DabModulator(modconf, outputRate, clockRate,
+            dabMode, gainMode, amplitude, filterTapsFilename);
     flowgraph->connect(input, modulator);
     flowgraph->connect(modulator, output);
+
+    if (useUHDOutput) {
+        ((OutputUHD*)output)->setETIReader(modulator->getEtiReader());
+    }
 
     try {
         while (running) {

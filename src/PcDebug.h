@@ -74,4 +74,8 @@
 #  endif
 #endif
 
+void mpbdebugopen();
+void mpbdebug(const char* message, int val);
+
+
 #endif // PC_DEBUG_H

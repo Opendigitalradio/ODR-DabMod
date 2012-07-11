@@ -22,11 +22,20 @@
 /* Define to 1 if you have the <inttypes.h> header file. */
 #undef HAVE_INTTYPES_H
 
+/* Define to 1 if you have the `boost_thread' library (-lboost_thread). */
+#undef HAVE_LIBBOOST_THREAD
+
 /* Define to 1 if you have the `duma' library (-lduma). */
 #undef HAVE_LIBDUMA
 
 /* Define to 1 if you have the `efence' library (-lefence). */
 #undef HAVE_LIBEFENCE
+
+/* Define to 1 if you have the `rt' library (-lrt). */
+#undef HAVE_LIBRT
+
+/* Define to 1 if you have the `uhd' library (-luhd). */
+#undef HAVE_LIBUHD
 
 /* Define to 1 if you have the <limits.h> header file. */
 #undef HAVE_LIMITS_H

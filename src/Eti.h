@@ -1,6 +1,9 @@
 /*
    Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010 Her Majesty the
    Queen in Right of Canada (Communications Research Center Canada)
+
+   Includes modifications for which no copyright is claimed
+   2012, Matthias P. Braendli, matthias.braendli@mpb.li
  */
 /*
    This file is part of CRC-DADMOD.
@@ -39,6 +42,7 @@ typedef DWORD32 uint32_t;
 #   define PACKED __attribute__ ((packed))
 #endif
 
+#include <time.h>
 
 //definitions des structures des champs du ETI(NI, G703)
 
@@ -90,6 +94,42 @@ struct eti_EOF {
 
 struct eti_TIST {
     uint32_t TIST;
+} PACKED;
+
+struct eti_MNSC_TIME_0 {
+    uint32_t type:4;
+    uint32_t identifier:4;
+    uint32_t rfa:8;
+} PACKED;
+
+struct eti_MNSC_TIME_1 {
+    uint32_t second_unit:4;
+    uint32_t second_tens:3;
+    uint32_t accuracy:1;
+    
+    uint32_t minute_unit:4;
+    uint32_t minute_tens:3;
+    uint32_t sync_to_frame:1;
+} PACKED;
+
+struct eti_MNSC_TIME_2 {
+    uint32_t hour_unit:4;
+    uint32_t hour_tens:4;
+    
+    uint32_t day_unit:4;
+    uint32_t day_tens:4;
+} PACKED;
+
+struct eti_MNSC_TIME_3 {
+    uint32_t month_unit:4;
+    uint32_t month_tens:4;
+    
+    uint32_t year_unit:4;
+    uint32_t year_tens:4;
+} PACKED;
+
+struct eti_extension_TIME {
+    uint32_t TIME_SECONDS;
 } PACKED;
 
 

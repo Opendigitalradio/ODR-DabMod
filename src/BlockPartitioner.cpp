@@ -29,7 +29,7 @@
 #include <assert.h>
 
 
-BlockPartitioner::BlockPartitioner(unsigned mode, unsigned fct) :
+BlockPartitioner::BlockPartitioner(unsigned mode, unsigned phase) :
     ModMux(ModFormat(0), ModFormat(0)),
     d_mode(mode)
 {
@@ -67,7 +67,7 @@ BlockPartitioner::BlockPartitioner(unsigned mode, unsigned fct) :
     }
     d_cifNb = 0;
     // For Synchronisation purpose, count nb of CIF to drop
-    d_cifInit = fct % d_cifCount;
+    d_cifPhase = phase % d_cifCount;
     d_cifSize = 864 * 8;
 
     myInputFormat.size(d_cifSize);
@@ -110,10 +110,10 @@ int BlockPartitioner::process(std::vector<Buffer*> dataIn, Buffer* dataOut)
                 "BlockPartitioner::process input size not valid!");
     }
 
-    // Synchronize first CIF
-    if (d_cifInit != 0) {
-        if (++d_cifInit == d_cifCount) {
-            d_cifInit = 0;
+    // Synchronize CIF phase
+    if (d_cifPhase != 0) {
+        if (++d_cifPhase == d_cifCount) {
+            d_cifPhase = 0;
         }
         // Drop CIF
         return 0;

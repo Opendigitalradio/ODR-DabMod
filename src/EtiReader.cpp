@@ -1,6 +1,9 @@
 /*
    Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010, 2011 Her Majesty
    the Queen in Right of Canada (Communications Research Center Canada)
+
+   Includes modifications for which no copyright is claimed
+   2012, Matthias P. Braendli, matthias.braendli@mpb.li
  */
 /*
    This file is part of CRC-DADMOD.
@@ -21,10 +24,12 @@
 
 #include "EtiReader.h"
 #include "PcDebug.h"
+#include "TimestampDecoder.h"
 
 #include <stdexcept>
 #include <sys/types.h>
 #include <string.h>
+#include <arpa/inet.h>
 
 
 enum ETI_READER_STATE {
@@ -42,14 +47,14 @@ enum ETI_READER_STATE {
 };
 
 
-EtiReader::EtiReader() : state(EtiReaderStateSync),
-    myFicSource(NULL)
+EtiReader::EtiReader(struct modulator_offset_config& modconf) :
+    state(EtiReaderStateSync), myFicSource(NULL)
 {
     PDEBUG("EtiReader::EtiReader()\n");
 
     myCurrentFrame = 0;
+    myTimestampDecoder = new TimestampDecoder(modconf);
 }
-
 
 EtiReader::~EtiReader()
 {
@@ -76,9 +81,9 @@ unsigned EtiReader::getMode()
 }
 
 
-unsigned EtiReader::getFct()
+unsigned EtiReader::getFp()
 {
-    return eti_fc.FCT;
+    return eti_fc.FP;
 }
 
 
@@ -266,5 +271,38 @@ int EtiReader::process(Buffer* dataIn)
         }
     }
     
+    // Update timestamps
+    myTimestampDecoder->updateTimestampEti(eti_fc.FP & 0x3,
+            eti_eoh.MNSC, 
+            getPPSOffset());
+
+    if (getFCT() % 125 == 0) //every 3 seconds is fine enough
+    {
+        myTimestampDecoder->updateModulatorOffset();
+    }
+
     return dataIn->getLength() - input_size;
+}
+
+bool EtiReader::sourceContainsTimestamp()
+{
+    return (ntohl(eti_tist.TIST) & 0xFFFFFF) != 0xFFFFFF;
+    /* See ETS 300 799, Annex C.2.2 */
+}
+
+double EtiReader::getPPSOffset()
+{
+    if (!sourceContainsTimestamp())
+        return 0.0;
+
+    uint32_t timestamp = ntohl(eti_tist.TIST) & 0xFFFFFF;
+    //fprintf(stderr, "TIST 0x%x\n", timestamp);
+    double pps = timestamp / 16384000.0; // seconds
+
+    return pps;
+}
+
+uint32_t EtiReader::getFCT()
+{
+    return eti_fc.FCT;
 }

@@ -36,22 +36,21 @@ CicEqualizer::CicEqualizer(size_t nbCarriers, size_t spacing, int R) :
             nbCarriers, spacing, R, this);
 
     myFilter = new float[nbCarriers];
-    int M = 1;
-    int N = 4;
-    float pi = 4.0f * atanf(1.0f);
+    const int M = 1;
+    const int N = 4;
+    const float pi = 4.0f * atanf(1.0f);
     for (size_t i = 0; i < nbCarriers; ++i) {
         int k = i < (nbCarriers + 1) / 2
             ? i + ((nbCarriers & 1) ^ 1)
             : i - (int)nbCarriers;
         float angle = pi * k / spacing;
         if (k == 0) {
-            myFilter[i] = R;
-        } else {
-            myFilter[i] = sinf(angle / R) / sinf(angle * M);
-        }
-        myFilter[i] = fabsf(myFilter[i]) * R;
-        myFilter[i] = powf(myFilter[i], N);
-        myFilter[i] *= 0.5f;
+            myFilter[i] = 1.0f;
+	} else {
+		myFilter[i] = sinf(angle / R) / sinf(angle * M);
+		myFilter[i] = fabsf(myFilter[i]) * R * M;
+		myFilter[i] = powf(myFilter[i], N);
+	}
         PDEBUG("HCic[%zu -> %i] = %f (%f dB) -> angle: %f\n",
                 i, k,myFilter[i], 20.0 * log10(myFilter[i]), angle);
     }

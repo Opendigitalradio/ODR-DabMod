@@ -73,14 +73,16 @@ am_crc_dabmod_OBJECTS = crc_dabmod-DabMod.$(OBJEXT) \
 	crc_dabmod-Buffer.$(OBJEXT) crc_dabmod-ModCodec.$(OBJEXT) \
 	crc_dabmod-ModPlugin.$(OBJEXT) crc_dabmod-ModFormat.$(OBJEXT) \
 	crc_dabmod-EtiReader.$(OBJEXT) crc_dabmod-Eti.$(OBJEXT) \
-	crc_dabmod-FicSource.$(OBJEXT) crc_dabmod-ModInput.$(OBJEXT) \
+	crc_dabmod-FicSource.$(OBJEXT) crc_dabmod-FIRFilter.$(OBJEXT) \
+	crc_dabmod-ModInput.$(OBJEXT) \
 	crc_dabmod-PuncturingRule.$(OBJEXT) \
 	crc_dabmod-PuncturingEncoder.$(OBJEXT) \
 	crc_dabmod-SubchannelSource.$(OBJEXT) \
 	crc_dabmod-Flowgraph.$(OBJEXT) \
 	crc_dabmod-GainControl.$(OBJEXT) \
 	crc_dabmod-OutputMemory.$(OBJEXT) \
-	crc_dabmod-ModOutput.$(OBJEXT) \
+	crc_dabmod-TimestampDecoder.$(OBJEXT) \
+	crc_dabmod-OutputUHD.$(OBJEXT) crc_dabmod-ModOutput.$(OBJEXT) \
 	crc_dabmod-InputMemory.$(OBJEXT) \
 	crc_dabmod-OutputFile.$(OBJEXT) \
 	crc_dabmod-FrameMultiplexer.$(OBJEXT) \
@@ -263,6 +265,7 @@ crc_dabmod_SOURCES = DabMod.cpp \
                       EtiReader.cpp EtiReader.h \
                       Eti.cpp Eti.h \
                       FicSource.cpp FicSource.h \
+					  FIRFilter.cpp FIRFilter.h \
                       ModInput.cpp ModInput.h \
                       PuncturingRule.cpp PuncturingRule.h \
                       PuncturingEncoder.cpp PuncturingEncoder.h \
@@ -270,6 +273,8 @@ crc_dabmod_SOURCES = DabMod.cpp \
                       Flowgraph.cpp Flowgraph.h \
                       GainControl.cpp GainControl.h \
                       OutputMemory.cpp OutputMemory.h \
+					  TimestampDecoder.h TimestampDecoder.cpp \
+                      OutputUHD.cpp OutputUHD.h \
                       ModOutput.cpp ModOutput.h \
                       InputMemory.cpp InputMemory.h \
                       OutputFile.cpp OutputFile.h \
@@ -417,6 +422,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/crc_dabmod-DifferentialModulator.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/crc_dabmod-Eti.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/crc_dabmod-EtiReader.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/crc_dabmod-FIRFilter.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/crc_dabmod-FicSource.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/crc_dabmod-Flowgraph.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/crc_dabmod-FrameMultiplexer.Po@am__quote@
@@ -434,6 +440,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/crc_dabmod-OfdmGenerator.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/crc_dabmod-OutputFile.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/crc_dabmod-OutputMemory.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/crc_dabmod-OutputUHD.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/crc_dabmod-PhaseReference.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/crc_dabmod-PrbsGenerator.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/crc_dabmod-PuncturingEncoder.Po@am__quote@
@@ -443,6 +450,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/crc_dabmod-SignalMultiplexer.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/crc_dabmod-SubchannelSource.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/crc_dabmod-TimeInterleaver.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/crc_dabmod-TimestampDecoder.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/crc_dabmod-kiss_fft.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/crc_dabmod-kiss_fftr.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/crc_dabmod-kiss_fftsimd.Po@am__quote@
@@ -658,6 +666,20 @@ crc_dabmod-FicSource.obj: FicSource.cpp
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(crc_dabmod_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o crc_dabmod-FicSource.obj `if test -f 'FicSource.cpp'; then $(CYGPATH_W) 'FicSource.cpp'; else $(CYGPATH_W) '$(srcdir)/FicSource.cpp'; fi`
 
+crc_dabmod-FIRFilter.o: FIRFilter.cpp
+@am__fastdepCXX_TRUE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(crc_dabmod_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT crc_dabmod-FIRFilter.o -MD -MP -MF $(DEPDIR)/crc_dabmod-FIRFilter.Tpo -c -o crc_dabmod-FIRFilter.o `test -f 'FIRFilter.cpp' || echo '$(srcdir)/'`FIRFilter.cpp
+@am__fastdepCXX_TRUE@	$(am__mv) $(DEPDIR)/crc_dabmod-FIRFilter.Tpo $(DEPDIR)/crc_dabmod-FIRFilter.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='FIRFilter.cpp' object='crc_dabmod-FIRFilter.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(crc_dabmod_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o crc_dabmod-FIRFilter.o `test -f 'FIRFilter.cpp' || echo '$(srcdir)/'`FIRFilter.cpp
+
+crc_dabmod-FIRFilter.obj: FIRFilter.cpp
+@am__fastdepCXX_TRUE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(crc_dabmod_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT crc_dabmod-FIRFilter.obj -MD -MP -MF $(DEPDIR)/crc_dabmod-FIRFilter.Tpo -c -o crc_dabmod-FIRFilter.obj `if test -f 'FIRFilter.cpp'; then $(CYGPATH_W) 'FIRFilter.cpp'; else $(CYGPATH_W) '$(srcdir)/FIRFilter.cpp'; fi`
+@am__fastdepCXX_TRUE@	$(am__mv) $(DEPDIR)/crc_dabmod-FIRFilter.Tpo $(DEPDIR)/crc_dabmod-FIRFilter.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='FIRFilter.cpp' object='crc_dabmod-FIRFilter.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(crc_dabmod_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o crc_dabmod-FIRFilter.obj `if test -f 'FIRFilter.cpp'; then $(CYGPATH_W) 'FIRFilter.cpp'; else $(CYGPATH_W) '$(srcdir)/FIRFilter.cpp'; fi`
+
 crc_dabmod-ModInput.o: ModInput.cpp
 @am__fastdepCXX_TRUE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(crc_dabmod_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT crc_dabmod-ModInput.o -MD -MP -MF $(DEPDIR)/crc_dabmod-ModInput.Tpo -c -o crc_dabmod-ModInput.o `test -f 'ModInput.cpp' || echo '$(srcdir)/'`ModInput.cpp
 @am__fastdepCXX_TRUE@	$(am__mv) $(DEPDIR)/crc_dabmod-ModInput.Tpo $(DEPDIR)/crc_dabmod-ModInput.Po
@@ -755,6 +777,34 @@ crc_dabmod-OutputMemory.obj: OutputMemory.cpp
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='OutputMemory.cpp' object='crc_dabmod-OutputMemory.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(crc_dabmod_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o crc_dabmod-OutputMemory.obj `if test -f 'OutputMemory.cpp'; then $(CYGPATH_W) 'OutputMemory.cpp'; else $(CYGPATH_W) '$(srcdir)/OutputMemory.cpp'; fi`
+
+crc_dabmod-TimestampDecoder.o: TimestampDecoder.cpp
+@am__fastdepCXX_TRUE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(crc_dabmod_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT crc_dabmod-TimestampDecoder.o -MD -MP -MF $(DEPDIR)/crc_dabmod-TimestampDecoder.Tpo -c -o crc_dabmod-TimestampDecoder.o `test -f 'TimestampDecoder.cpp' || echo '$(srcdir)/'`TimestampDecoder.cpp
+@am__fastdepCXX_TRUE@	$(am__mv) $(DEPDIR)/crc_dabmod-TimestampDecoder.Tpo $(DEPDIR)/crc_dabmod-TimestampDecoder.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='TimestampDecoder.cpp' object='crc_dabmod-TimestampDecoder.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(crc_dabmod_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o crc_dabmod-TimestampDecoder.o `test -f 'TimestampDecoder.cpp' || echo '$(srcdir)/'`TimestampDecoder.cpp
+
+crc_dabmod-TimestampDecoder.obj: TimestampDecoder.cpp
+@am__fastdepCXX_TRUE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(crc_dabmod_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT crc_dabmod-TimestampDecoder.obj -MD -MP -MF $(DEPDIR)/crc_dabmod-TimestampDecoder.Tpo -c -o crc_dabmod-TimestampDecoder.obj `if test -f 'TimestampDecoder.cpp'; then $(CYGPATH_W) 'TimestampDecoder.cpp'; else $(CYGPATH_W) '$(srcdir)/TimestampDecoder.cpp'; fi`
+@am__fastdepCXX_TRUE@	$(am__mv) $(DEPDIR)/crc_dabmod-TimestampDecoder.Tpo $(DEPDIR)/crc_dabmod-TimestampDecoder.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='TimestampDecoder.cpp' object='crc_dabmod-TimestampDecoder.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(crc_dabmod_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o crc_dabmod-TimestampDecoder.obj `if test -f 'TimestampDecoder.cpp'; then $(CYGPATH_W) 'TimestampDecoder.cpp'; else $(CYGPATH_W) '$(srcdir)/TimestampDecoder.cpp'; fi`
+
+crc_dabmod-OutputUHD.o: OutputUHD.cpp
+@am__fastdepCXX_TRUE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(crc_dabmod_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT crc_dabmod-OutputUHD.o -MD -MP -MF $(DEPDIR)/crc_dabmod-OutputUHD.Tpo -c -o crc_dabmod-OutputUHD.o `test -f 'OutputUHD.cpp' || echo '$(srcdir)/'`OutputUHD.cpp
+@am__fastdepCXX_TRUE@	$(am__mv) $(DEPDIR)/crc_dabmod-OutputUHD.Tpo $(DEPDIR)/crc_dabmod-OutputUHD.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='OutputUHD.cpp' object='crc_dabmod-OutputUHD.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(crc_dabmod_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o crc_dabmod-OutputUHD.o `test -f 'OutputUHD.cpp' || echo '$(srcdir)/'`OutputUHD.cpp
+
+crc_dabmod-OutputUHD.obj: OutputUHD.cpp
+@am__fastdepCXX_TRUE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(crc_dabmod_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT crc_dabmod-OutputUHD.obj -MD -MP -MF $(DEPDIR)/crc_dabmod-OutputUHD.Tpo -c -o crc_dabmod-OutputUHD.obj `if test -f 'OutputUHD.cpp'; then $(CYGPATH_W) 'OutputUHD.cpp'; else $(CYGPATH_W) '$(srcdir)/OutputUHD.cpp'; fi`
+@am__fastdepCXX_TRUE@	$(am__mv) $(DEPDIR)/crc_dabmod-OutputUHD.Tpo $(DEPDIR)/crc_dabmod-OutputUHD.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='OutputUHD.cpp' object='crc_dabmod-OutputUHD.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(crc_dabmod_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o crc_dabmod-OutputUHD.obj `if test -f 'OutputUHD.cpp'; then $(CYGPATH_W) 'OutputUHD.cpp'; else $(CYGPATH_W) '$(srcdir)/OutputUHD.cpp'; fi`
 
 crc_dabmod-ModOutput.o: ModOutput.cpp
 @am__fastdepCXX_TRUE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(crc_dabmod_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT crc_dabmod-ModOutput.o -MD -MP -MF $(DEPDIR)/crc_dabmod-ModOutput.Tpo -c -o crc_dabmod-ModOutput.o `test -f 'ModOutput.cpp' || echo '$(srcdir)/'`ModOutput.cpp

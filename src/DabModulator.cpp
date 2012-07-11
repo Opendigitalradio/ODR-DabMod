@@ -2,6 +2,9 @@
    Copyright (C) 2007, 2008, 2009, 2010, 2011, 2012
    Her Majesty the Queen in Right of Canada (Communications Research
    Center Canada)
+
+   Includes modifications for which no copyright is claimed
+   2012, Matthias P. Braendli, matthias.braendli@mpb.li
  */
 /*
    This file is part of CRC-DADMOD.
@@ -38,19 +41,27 @@
 #include "GuardIntervalInserter.h"
 #include "Resampler.h"
 #include "ConvEncoder.h"
+#include "FIRFilter.h"
 #include "PuncturingEncoder.h"
 #include "TimeInterleaver.h"
+#include "TimestampDecoder.h"
 
 
-DabModulator::DabModulator(unsigned outputRate, unsigned clockRate,
-        unsigned dabMode, GainMode gainMode, float factor) :
+DabModulator::DabModulator(
+        struct modulator_offset_config& modconf,
+        unsigned outputRate, unsigned clockRate,
+        unsigned dabMode, GainMode gainMode, float factor,
+        char* filterTapsFilename
+        ) :
     ModCodec(ModFormat(1), ModFormat(0)),
     myOutputRate(outputRate),
     myClockRate(clockRate),
     myDabMode(dabMode),
     myGainMode(gainMode),
     myFactor(factor),
-    myFlowgraph(NULL)
+    myEtiReader(EtiReader(modconf)),
+    myFlowgraph(NULL),
+    myFilterTapsFilename(filterTapsFilename)
 {
     PDEBUG("DabModulator::DabModulator(%u, %u, %u, %u) @ %p\n",
             outputRate, clockRate, dabMode, gainMode, this);
@@ -147,12 +158,13 @@ int DabModulator::process(Buffer* const dataIn, Buffer* dataOut)
         OfdmGenerator* cifOfdm = NULL;
         GainControl* cifGain = NULL;
         GuardIntervalInserter* cifGuard = NULL;
+        FIRFilter* cifFilter = NULL;
         Resampler* cifRes = NULL;
 
         cifPrbs = new PrbsGenerator(864 * 8, 0x110);
         cifMux = new FrameMultiplexer(myFicSizeOut + 864 * 8,
                 &myEtiReader.getSubchannels());
-        cifPart = new BlockPartitioner(mode, myEtiReader.getFct());
+        cifPart = new BlockPartitioner(mode, myEtiReader.getFp());
         cifMap = new QpskSymbolMapper(myNbCarriers);
         cifRef = new PhaseReference(mode);
         cifFreq = new FrequencyInterleaver(mode);
@@ -162,15 +174,28 @@ int DabModulator::process(Buffer* const dataIn, Buffer* dataOut)
                 (1 + myNbSymbols) * myNbCarriers * sizeof(complexf));
 
         if (myClockRate) {
-            cifCicEq = new CicEqualizer(myNbCarriers,
-                    (float)mySpacing * (float)myOutputRate / 2048000.0f,
-                    myClockRate / myOutputRate);
+            unsigned ratio = myClockRate / myOutputRate;
+            ratio /= 4; // FPGA DUC
+            if (myClockRate == 400000000) { // USRP2
+                if (ratio & 1) { // odd
+                    cifCicEq = new CicEqualizer(myNbCarriers,
+                            (float)mySpacing * (float)myOutputRate / 2048000.0f,
+                            ratio);
+                } // even, no filter
+            } else {
+                cifCicEq = new CicEqualizer(myNbCarriers,
+                        (float)mySpacing * (float)myOutputRate / 2048000.0f,
+                        ratio);
+            }
         }
 
         cifOfdm = new OfdmGenerator((1 + myNbSymbols), myNbCarriers, mySpacing);
         cifGain = new GainControl(mySpacing, myGainMode, myFactor);
         cifGuard = new GuardIntervalInserter(myNbSymbols, mySpacing,
                 myNullSize, mySymSize);
+        if (myFilterTapsFilename != NULL) {
+            cifFilter = new FIRFilter(myFilterTapsFilename);
+        }
         myOutput = new OutputMemory();
 
         if (myOutputRate != 2048000) {
@@ -312,11 +337,24 @@ int DabModulator::process(Buffer* const dataIn, Buffer* dataOut)
         }
         myFlowgraph->connect(cifOfdm, cifGain);
         myFlowgraph->connect(cifGain, cifGuard);
-        if (cifRes != NULL) {
-            myFlowgraph->connect(cifGuard, cifRes);
-            myFlowgraph->connect(cifRes, myOutput);
-        } else {
-            myFlowgraph->connect(cifGuard, myOutput);
+
+        if (myFilterTapsFilename != NULL) {
+            myFlowgraph->connect(cifGuard, cifFilter);
+            if (cifRes != NULL) {
+                myFlowgraph->connect(cifFilter, cifRes);
+                myFlowgraph->connect(cifRes, myOutput);
+            } else {
+                myFlowgraph->connect(cifFilter, myOutput);
+            }
+        }
+        else { //no filtering
+            if (cifRes != NULL) {
+                myFlowgraph->connect(cifGuard, cifRes);
+                myFlowgraph->connect(cifRes, myOutput);
+            } else {
+                myFlowgraph->connect(cifGuard, myOutput);
+            }
+
         }
     }
 

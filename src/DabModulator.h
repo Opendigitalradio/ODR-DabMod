@@ -2,6 +2,9 @@
    Copyright (C) 2007, 2008, 2009, 2010, 2011, 2012
    Her Majesty the Queen in Right of Canada (Communications Research
    Center Canada)
+
+   Includes modifications for which no copyright is claimed
+   2012, Matthias P. Braendli, matthias.braendli@mpb.li
  */
 /*
    This file is part of CRC-DADMOD.
@@ -39,13 +42,19 @@
 class DabModulator : public ModCodec
 {
 public:
-    DabModulator(unsigned outputRate = 2048000, unsigned clockRate = 0,
-            unsigned dabMode = 0, GainMode gainMode = GAIN_VAR, float factor = 1.0);
+    DabModulator(
+            struct modulator_offset_config& modconf,
+            unsigned outputRate = 2048000, unsigned clockRate = 0,
+            unsigned dabMode = 0, GainMode gainMode = GAIN_VAR,
+            float factor = 1.0, char* filterTapsFilename = NULL);
     DabModulator(const DabModulator& copy);
     virtual ~DabModulator();
 
     int process(Buffer* const dataIn, Buffer* dataOut);
     const char* name() { return "DabModulator"; }
+
+    /* Required to get the timestamp */
+    EtiReader* getEtiReader() { return &myEtiReader; }
 
 protected:
     void setMode(unsigned mode);
@@ -58,6 +67,7 @@ protected:
     EtiReader myEtiReader;
     Flowgraph* myFlowgraph;
     OutputMemory* myOutput;
+    char* myFilterTapsFilename;
 
     size_t myNbSymbols;
     size_t myNbCarriers;

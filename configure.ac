@@ -17,7 +17,7 @@
 # along with CRC-DADMOD.  If not, see <http://www.gnu.org/licenses/>.
 
 AC_PREREQ(2.59)
-AC_INIT([CRC-DabMod], [0.3.3], [pascal.charest@crc.ca])
+AC_INIT([CRC-DabMod], [0.3.3-sfn], [pascal.charest@crc.ca])
 AC_CONFIG_AUX_DIR([build-aux])
 AC_CANONICAL_SYSTEM
 AM_INIT_AUTOMAKE([-Wall])
@@ -71,6 +71,10 @@ AS_IF([test "x$enable_fft_simd" != "xno"],
 AC_SUBST([CFLAGS], ["$OPTIM $DEBUG $EXTRA"])
 AC_SUBST([CXXFLAGS], ["$OPTIM $DEBUG $EXTRA"])
 
+AC_CHECK_LIB([uhd], [main], [], [AC_MSG_ERROR([library uhd is missing])])
+AC_CHECK_LIB([boost_thread], [main], [], [AC_MSG_ERROR([library boost_thread is missing])])
+
+AC_CHECK_LIB([rt], [clock_gettime], [], [AC_MSG_ERROR([library rt is missing])])
 
 # Checks for libraries.
 AS_IF([test "x$enable_debug" != "xno"],
