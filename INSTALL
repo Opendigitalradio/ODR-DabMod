@@ -1,0 +1,18 @@
+Simple install procedure:
+=========================
+
+    % tar xjf crc-dabmod-0.3.2.tar.bz2      # Unpack the source
+    % cd crc-dabmod-0.3.2                   # Change to the source directory
+    % ./configure --disable-debug --with-debug-malloc=yes --enable-fft-simd
+                                            # Run the configure script
+    % make                                  # Build CRC-DABMOD
+    [ as root ]
+    % make install                          # Install CRC-DABMOD
+
+
+Advanced install procedure:
+===========================
+
+The configure script can be launch with a variety of options, launch the
+following command for a complete list:
+    % ./configure --help

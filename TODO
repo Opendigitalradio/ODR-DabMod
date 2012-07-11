@@ -1,0 +1,5 @@
+* Flowgraph.connect should not take buffer size as argument
+* Node.process should use variable buffer input and output size
+* Flowgraph.run should not return until end of execution
+* Add mode I, III and IV (need Flowgraph.connect and Node.process)
+* Add windowing to resampler process

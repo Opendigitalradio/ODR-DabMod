@@ -1,0 +1,44 @@
+2012-06-04  Pascal Charest <pascal [dot] charest [at] crc [dot] ca>
+
+    * BlockPartitioner.cpp BlockPartitioner.h DabModulator.cpp EtiReader.cpp EtiReader.h:
+        Solved CIF count synchronisation bug.
+
+2012-02-07  Pascal Charest <pascal [dot] charest [at] crc [dot] ca>
+
+    * DabMod.cpp DabModulator.cpp DabModulator.h: Added gain factor to support UHD scale.
+        Added manual DAB mode control.
+    * GainControl.cpp GainControl.h: Added gain factor to support UHD scale.
+    * Makefile.am kiss_fft129.tar.gz: Updated Kiss FFT library to 1.2.9.
+
+2011-12-15  Pascal Charest <pascal [dot] charest [at] crc [dot] ca>
+
+    * configure.ac: Added Wall option to debug compilation.
+        Added mm_malloc macro.
+    * src/BlockPartitioner.h: Changed from codec to mux.
+    * src/Buffer.cpp src/Buffer.h: New buffer management class.
+    * src/DabMod.cpp: Changed from mm_malloc to memalign for Efence support.
+        Replaced all fixed memory size with dynamic Buffer class.
+        Removed FFTW api.
+    * src/DabModulator.cpp src/DabModulator.h: Solved integer overflow bug for CicEqualizer initialisation.
+    * src/GainControl.cpp: Added handling of null symbol when gain would be infinity.
+    * src/InputMemory.h: Solved debug wrong file name issue.
+    * src/kiss_fftsimd.c src/kiss_fftsimd.h: Generic function to pack data for SIMD operations (currently not used).
+
+2011-12-09  Pascal Charest <pascal [dot] charest [at] crc [dot] ca>
+
+    * *: Added support for DAB mode I, III and IV.
+
+2010-07-14  Pascal Charest <pascal [dot] charest [at] crc [dot] ca>
+
+    * configure.ac: Added enable-prof and enable-fft-simd options.
+    * src/GainControl.cpp: Changed to system defined variables.
+    * src/Makefile.am: Removed code about FFTW and KISS_FFT the only FFT library.
+    * src/OfdmGenerator.cpp src/OfdmGenerator.h: Added support for KISS_FFT simd operations.
+    * src/PuncturingEncoder.cpp: Solved a bug for last bits (tail) encoding.
+    * src/Resampler.cpp src/Resampler.h: Added support for KISS_FFT simd operations.
+                                         Removed unused code.
+    * src/crc-dwap.py: Adapted to latest Gnuradio version.
+
+2010-02-12  Pascal Charest <pascal [dot] charest [at] crc [dot] ca>
+     
+    * *: Initial public release
