@@ -135,7 +135,7 @@ class UHDWorker {
 class OutputUHD: public ModOutput {
     public:
         OutputUHD(char* device, unsigned sampleRate, double frequency, int txgain,
-                bool muteNoTimestamps);
+                bool enableSync, bool muteNoTimestamps);
         ~OutputUHD();
 
         int process(Buffer* dataIn, Buffer* dataOut);
@@ -159,6 +159,7 @@ class OutputUHD: public ModOutput {
         struct UHDWorkerData uwd;
         int activebuffer;
         bool mute_no_timestamps;
+        bool enable_sync;
 
         size_t lastLen;
 };

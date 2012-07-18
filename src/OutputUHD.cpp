@@ -38,9 +38,10 @@
 typedef std::complex<float> complexf;
 
 OutputUHD::OutputUHD(char* device, unsigned sampleRate,
-        double frequency, int txgain, bool muteNoTimestamps) :
+        double frequency, int txgain, bool enableSync, bool muteNoTimestamps) :
     ModOutput(ModFormat(1), ModFormat(0)),
     mySampleRate(sampleRate), myTxGain(txgain),
+    enable_sync(enableSync),
     myFrequency(frequency), mute_no_timestamps(muteNoTimestamps)
 {
     MDEBUG("OutputUHD::OutputUHD(device: %s) @ %p\n",
@@ -57,12 +58,14 @@ OutputUHD::OutputUHD(char* device, unsigned sampleRate,
     myUsrp = uhd::usrp::multi_usrp::make(myDevice);
     MDEBUG("OutputUHD:Using device: %s...\n", myUsrp->get_pp_string().c_str());
 
-    MDEBUG("OutputUHD:Setting REFCLK and PPS input...\n");
-    uhd::clock_config_t clock_config;
-    clock_config.ref_source = uhd::clock_config_t::REF_SMA;
-    clock_config.pps_source = uhd::clock_config_t::PPS_SMA;
-    clock_config.pps_polarity = uhd::clock_config_t::PPS_POS;
-    myUsrp->set_clock_config(clock_config, uhd::usrp::multi_usrp::ALL_MBOARDS);
+    if (enable_sync) {
+        MDEBUG("OutputUHD:Setting REFCLK and PPS input...\n");
+        uhd::clock_config_t clock_config;
+        clock_config.ref_source = uhd::clock_config_t::REF_SMA;
+        clock_config.pps_source = uhd::clock_config_t::PPS_SMA;
+        clock_config.pps_polarity = uhd::clock_config_t::PPS_POS;
+        myUsrp->set_clock_config(clock_config, uhd::usrp::multi_usrp::ALL_MBOARDS);
+    }
 
     std::cerr << "UHD clock source is " << 
             myUsrp->get_clock_source(0) << std::endl;
@@ -84,39 +87,40 @@ OutputUHD::OutputUHD(char* device, unsigned sampleRate,
     MDEBUG("OutputUHD:Actual TX Gain: %f ...\n", myUsrp->get_tx_gain());
 
 
-    /* handling time for synchronisation: wait until the next full
-     * second, and set the USRP time at next PPS */
-    struct timespec now;
-    time_t seconds;
-    if (clock_gettime(CLOCK_REALTIME, &now)) {
-        fprintf(stderr, "errno: %d\n", errno);
-        perror("OutputUHD:Error: could not get time: ");
-    }
-    else {
-        seconds = now.tv_sec;
-
-        MDEBUG("OutputUHD:sec+1: %ld ; now: %ld ...\n", seconds+1, now.tv_sec);
-        while (seconds + 1 > now.tv_sec) {
-            usleep(1);
-            if (clock_gettime(CLOCK_REALTIME, &now)) {
-                fprintf(stderr, "errno: %d\n", errno);
-                perror("OutputUHD:Error: could not get time: ");
-                break;
-            }
+    if (enable_sync) {
+        /* handling time for synchronisation: wait until the next full
+         * second, and set the USRP time at next PPS */
+        struct timespec now;
+        time_t seconds;
+        if (clock_gettime(CLOCK_REALTIME, &now)) {
+            fprintf(stderr, "errno: %d\n", errno);
+            perror("OutputUHD:Error: could not get time: ");
         }
-        MDEBUG("OutputUHD:sec+1: %ld ; now: %ld ...\n", seconds+1, now.tv_sec);
-        /* We are now shortly after the second change. */
+        else {
+            seconds = now.tv_sec;
 
-#warning "TODO usleep for USRP time setting !"
-        //usleep(200000); // 200ms, we want the PPS to be later
-        myUsrp->set_time_unknown_pps(uhd::time_spec_t(seconds + 2));
-        fprintf(stderr, "OutputUHD: Setting USRP time next pps to %f\n",
-                uhd::time_spec_t(seconds + 2).get_real_secs());
+            MDEBUG("OutputUHD:sec+1: %ld ; now: %ld ...\n", seconds+1, now.tv_sec);
+            while (seconds + 1 > now.tv_sec) {
+                usleep(1);
+                if (clock_gettime(CLOCK_REALTIME, &now)) {
+                    fprintf(stderr, "errno: %d\n", errno);
+                    perror("OutputUHD:Error: could not get time: ");
+                    break;
+                }
+            }
+            MDEBUG("OutputUHD:sec+1: %ld ; now: %ld ...\n", seconds+1, now.tv_sec);
+            /* We are now shortly after the second change. */
+
+            usleep(200000); // 200ms, we want the PPS to be later
+            myUsrp->set_time_unknown_pps(uhd::time_spec_t(seconds + 2));
+            fprintf(stderr, "OutputUHD: Setting USRP time next pps to %f\n",
+                    uhd::time_spec_t(seconds + 2).get_real_secs());
+        }
+
+        usleep(1e6);
+        fprintf(stderr, "OutputUHD: USRP time %f\n",
+                myUsrp->get_time_now().get_real_secs());
     }
-
-    usleep(1e6);
-    fprintf(stderr, "OutputUHD: USRP time %f\n",
-            myUsrp->get_time_now().get_real_secs());
     
     
     // preparing output thread worker data
@@ -166,7 +170,7 @@ int OutputUHD::process(Buffer* dataIn, Buffer* dataOut)
         uwd.frame0.buf = malloc(uwd.bufsize);
         uwd.frame1.buf = malloc(uwd.bufsize);
 
-        uwd.sourceContainsTimestamp = myEtiReader->sourceContainsTimestamp();
+        uwd.sourceContainsTimestamp = enable_sync && myEtiReader->sourceContainsTimestamp();
 
         // The worker begins by transmitting buf0
         memcpy(uwd.frame0.buf, dataIn->getData(), uwd.bufsize);

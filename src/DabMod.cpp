@@ -95,8 +95,11 @@ void printUsage(char* progName, FILE* out = stderr)
     fprintf(out, "-F frequency:  Set the transmit frequency when using UHD output. (mandatory option when using UHD)\n");
     fprintf(out, "-G txgain:     Set the transmit gain for the UHD driver (default: 0)\n");
     fprintf(out, "-o:            (UHD only) Set the timestamp offset added to the timestamp in the ETI. The offset is a double.\n");
-    fprintf(out, "-O:            (UHD only) Set the file containing the timestamp offset added to the timestamp in the ETI. The file is read every six seconds, and must contain a double value.\n");
-    fprintf(out, "                  Specifying either -o or -O make DABMOD mute frames that do not contain a valid timestamp.\n");
+    fprintf(out, "-O:            (UHD only) Set the file containing the timestamp offset added to the timestamp in the ETI.\n"
+                                 "The file is read every six seconds, and must contain a double value.\n");
+    fprintf(out, "                  Specifying either -o or -O has two implications: It enables synchronous transmission,\n"
+                 "                  requiring an external REFCLK and PPS signal and frames that do not contain a valid timestamp\n"
+                 "                  get muted.\n\n");
     fprintf(out, "-T taps_file:  Enable filtering before the output, using the specified file containing the filter taps.\n");
     fprintf(out, "-a gain:       Apply digital amplitude gain.\n");
     fprintf(out, "-c rate:       Set the DAC clock rate and enable Cic Equalisation.\n");
@@ -147,6 +150,7 @@ int main(int argc, char* argv[])
     double uhdFrequency = 0.0;
     int uhdTxGain = 0;
     bool uhd_mute_no_timestamps = false;
+    bool uhd_enable_sync = false;
 
     FILE* inputFile = NULL;
     uint32_t sync = 0;
@@ -218,6 +222,7 @@ int main(int argc, char* argv[])
             }
             modconf.use_offset_fixed = true;
             modconf.offset_fixed = strtod(optarg, NULL);
+            uhd_enable_sync = true;
             break;
         case 'O':
             if (modconf.use_offset_fixed)
@@ -227,6 +232,7 @@ int main(int argc, char* argv[])
             }
             modconf.use_offset_file = true;
             modconf.offset_filename = optarg;
+            uhd_enable_sync = true;
             break;
         case 'm':
             dabMode = strtol(optarg, NULL, 0);
@@ -333,7 +339,7 @@ int main(int argc, char* argv[])
     else if (useUHDOutput) {
         fprintf(stderr, "Using UHD output\n");
         amplitude /= 32000.0f;
-        output = new OutputUHD(outputDevice, outputRate, uhdFrequency, uhdTxGain, uhd_mute_no_timestamps);
+        output = new OutputUHD(outputDevice, outputRate, uhdFrequency, uhdTxGain, uhd_enable_sync, uhd_mute_no_timestamps);
     }
 
     flowgraph = new Flowgraph();
