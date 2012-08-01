@@ -40,9 +40,11 @@ typedef std::complex<float> complexf;
 OutputUHD::OutputUHD(char* device, unsigned sampleRate,
         double frequency, int txgain, bool enableSync, bool muteNoTimestamps) :
     ModOutput(ModFormat(1), ModFormat(0)),
-    mySampleRate(sampleRate), myTxGain(txgain),
-    enable_sync(enableSync),
-    myFrequency(frequency), mute_no_timestamps(muteNoTimestamps)
+    mySampleRate(sampleRate),
+    myTxGain(txgain),
+    myFrequency(frequency),
+    mute_no_timestamps(muteNoTimestamps),
+    enable_sync(enableSync)
 {
     MDEBUG("OutputUHD::OutputUHD(device: %s) @ %p\n",
             device, this);
