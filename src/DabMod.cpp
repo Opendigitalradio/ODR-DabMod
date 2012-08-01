@@ -35,6 +35,7 @@
 #include "OutputUHD.h"
 #include "PcDebug.h"
 #include "TimestampDecoder.h"
+#include "FIRFilter.h"
 
 #include <complex>
 #include <stdlib.h>
@@ -170,6 +171,7 @@ int main(int argc, char* argv[])
     struct modulator_offset_config modconf;
     modconf.use_offset_file = false;
     modconf.use_offset_fixed = false;
+    modconf.delay_calculation_pipeline_stages = 0;
 
     Flowgraph* flowgraph = NULL;
     DabModulator* modulator = NULL;
@@ -275,6 +277,11 @@ int main(int argc, char* argv[])
         modconf.use_offset_fixed = true;
         modconf.offset_fixed = 0;
     }
+
+    // When using the FIRFilter, increase the modulator offset pipelining delay
+    // by the correct amount
+    modconf.delay_calculation_pipeline_stages += FIRFILTER_PIPELINE_DELAY;
+
 
     // Setting ETI input filename
     if (optind < argc) {

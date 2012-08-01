@@ -339,8 +339,8 @@ void UHDWorker::process(struct UHDWorkerData *uwd)
             }
 #endif
 
-            if (frame->fct % 50 < 4) {
-                fprintf(stderr, "UHDOut (%f): frame %d tx_second %zu; pps %.9f\n",
+            if (last_pps > pps_offset) {
+                fprintf(stderr, "UHDOut (usrp time: %f): frame %d;  tx_second %zu; pps %.9f\n",
                         usrp_time,
                         frame->fct, tx_second, pps_offset);
             }
@@ -461,6 +461,11 @@ void UHDWorker::process(struct UHDWorkerData *uwd)
 
 
         }
+#else // ENABLE_UHD
+        fprintf(stderr, "UHDOut UHD DISABLED: Sample %d : valid timestamp %zu + %f\n",
+                frame->fct,
+                tx_second,
+                pps_offset);
 #endif
 
         last_pps = pps_offset;

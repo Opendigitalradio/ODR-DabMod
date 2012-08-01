@@ -22,14 +22,15 @@
    along with CRC-DADMOD.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "TimestampDecoder.h"
-#include "Eti.h"
-#include <sys/types.h>
-#include "PcDebug.h"
+#include <queue>
 #include <iostream>
 #include <fstream>
 #include <string>
 #include <boost/lexical_cast.hpp>
+#include <sys/types.h>
+#include "PcDebug.h"
+#include "TimestampDecoder.h"
+#include "Eti.h"
 
 //#define MDEBUG(fmt, args...) fprintf (LOG, fmt , ## args) 
 #define MDEBUG(fmt, args...) PDEBUG(fmt, ## args) 
@@ -37,14 +38,55 @@
 
 void TimestampDecoder::calculateTimestamp(struct frame_timestamp& ts)
 {
-    ts.timestamp_valid = full_timestamp_received_mnsc;
-    ts.timestamp_sec = time_secs;
-    ts.timestamp_pps_offset = time_pps;
+    struct frame_timestamp* ts_queued = new struct frame_timestamp;
 
-    ts.timestamp_refresh = offset_changed;
+    /* Push new timestamp into queue */
+    ts_queued->timestamp_valid = full_timestamp_received_mnsc;
+    ts_queued->timestamp_sec = time_secs;
+    ts_queued->timestamp_pps_offset = time_pps;
+
+    ts_queued->timestamp_refresh = offset_changed;
     offset_changed = false;
 
-    ts += timestamp_offset;
+    *ts_queued += timestamp_offset;
+
+    queue_timestamps.push(ts_queued);
+
+    if (queue_timestamps.size() < modconfig.delay_calculation_pipeline_stages) {
+        /* Return invalid timestamp */
+        ts.timestamp_valid = false;
+        ts.timestamp_sec = 0;
+        ts.timestamp_pps_offset = 0;
+        ts.timestamp_refresh = false;
+    }
+    else {
+        /* Return timestamp from queue */
+        ts_queued = queue_timestamps.front();
+        queue_timestamps.pop();
+        /*fprintf(stderr, "ts_queued v:%d, sec:%d, pps:%f, ref:%d\n",
+                ts_queued->timestamp_valid,
+                ts_queued->timestamp_sec,
+                ts_queued->timestamp_pps_offset,
+                ts_queued->timestamp_refresh);*/
+        ts = *ts_queued;
+        /*fprintf(stderr, "ts v:%d, sec:%d, pps:%f, ref:%d\n\n",
+                ts.timestamp_valid,
+                ts.timestamp_sec,
+                ts.timestamp_pps_offset,
+                ts.timestamp_refresh);*/
+
+        delete ts_queued;
+    }
+
+    PDEBUG("Timestamp queue size %zu, delay_calc %u\n",
+            queue_timestamps.size(),
+            modconfig.delay_calculation_pipeline_stages);
+
+    if (queue_timestamps.size() > modconfig.delay_calculation_pipeline_stages) {
+        fprintf(stderr, "Error: Timestamp queue is too large : size %zu ! This should not happen !\n",
+                queue_timestamps.size());
+    }
+
     //ts.print("calc2 ");
 }
 

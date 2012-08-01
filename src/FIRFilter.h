@@ -33,6 +33,7 @@
 #include <queue>
 
 #include "ModCodec.h"
+#include "PcDebug.h"
 
 #include <sys/types.h>
 #include <complex>
@@ -40,8 +41,7 @@
 #include <time.h>
 #include <cstdio>
 
-//#define MDEBUG(fmt, args...) fprintf (stderr, fmt , ## args) 
-#define MDEBUG(fmt, args...) 
+#define FIRFILTER_PIPELINE_DELAY 1
 
 typedef std::complex<float> complexf;
 
@@ -108,7 +108,7 @@ class FIRFilterWorker {
         }
 
         ~FIRFilterWorker() {
-            MDEBUG("~FIRFilterWorker: Total elapsed thread time filtering: %zu\n", calculationTime);
+            PDEBUG("~FIRFilterWorker: Total elapsed thread time filtering: %zu\n", calculationTime);
         }
 
         void start(struct FIRFilterWorkerData *firworkerdata) {

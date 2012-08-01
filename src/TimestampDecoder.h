@@ -25,18 +25,27 @@
 #ifndef TIMESTAMP_DECODER_H
 #define TIMESTAMP_DECODER_H
 
-#include "Eti.h"
+#include <queue>
 #include <time.h>
 #include <math.h>
 #include <stdio.h>
+#include "Eti.h"
 
 struct modulator_offset_config
 {
     bool use_offset_fixed;
     double offset_fixed;
+    /* These two fields are used when the modulator is run with a fixed offset */
 
     bool use_offset_file;
     char* offset_filename;
+    /* These two fields are used when the modulator reads the offset from a file */
+
+    unsigned delay_calculation_pipeline_stages;
+    /* Specifies by how many stages the timestamp must be delayed.
+     * (e.g. The FIRFilter is pipelined, therefore we must increase 
+     * delay_calculation_pipeline_stages by one if the filter is used
+     */
 };
 
 struct frame_timestamp
@@ -149,6 +158,14 @@ class TimestampDecoder
 
         /* Disable timstamps until full time has been received in mnsc */
         bool full_timestamp_received_mnsc;
+
+        /* when pipelining, we must shift the calculated timestamps
+         * through this queue. Otherwise, it would not be possible to
+         * synchronise two modulators if only one uses (for instance) the
+         * FIRFilter (1 stage pipeline)
+         */
+        std::queue<struct frame_timestamp*> queue_timestamps;
+
 };
 
 #endif
