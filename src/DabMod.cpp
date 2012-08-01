@@ -280,7 +280,9 @@ int main(int argc, char* argv[])
 
     // When using the FIRFilter, increase the modulator offset pipelining delay
     // by the correct amount
-    modconf.delay_calculation_pipeline_stages += FIRFILTER_PIPELINE_DELAY;
+    if (filterTapsFilename != NULL) {
+        modconf.delay_calculation_pipeline_stages += FIRFILTER_PIPELINE_DELAY;
+    }
 
 
     // Setting ETI input filename

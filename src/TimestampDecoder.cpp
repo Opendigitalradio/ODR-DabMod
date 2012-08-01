@@ -52,14 +52,21 @@ void TimestampDecoder::calculateTimestamp(struct frame_timestamp& ts)
 
     queue_timestamps.push(ts_queued);
 
-    if (queue_timestamps.size() < modconfig.delay_calculation_pipeline_stages) {
-        /* Return invalid timestamp */
+    /* Here, the queue size is one more than the pipeline delay, because
+     * we've just added a new element in the queue.
+     *
+     * Therefore, use <= and not < for comparison
+     */
+    if (queue_timestamps.size() <= modconfig.delay_calculation_pipeline_stages) {
+        //fprintf(stderr, "* %zu %u ", queue_timestamps.size(), modconfig.delay_calculation_pipeline_stages);
+        /* Return invalid timestamp until the queue is full */
         ts.timestamp_valid = false;
         ts.timestamp_sec = 0;
         ts.timestamp_pps_offset = 0;
         ts.timestamp_refresh = false;
     }
     else {
+        //fprintf(stderr, ". %zu ", queue_timestamps.size());
         /* Return timestamp from queue */
         ts_queued = queue_timestamps.front();
         queue_timestamps.pop();
