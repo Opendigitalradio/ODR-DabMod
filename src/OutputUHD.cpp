@@ -37,7 +37,7 @@
 
 typedef std::complex<float> complexf;
 
-OutputUHD::OutputUHD(char* device, unsigned sampleRate,
+OutputUHD::OutputUHD(const char* device, unsigned sampleRate,
         double frequency, int txgain, bool enableSync, bool muteNoTimestamps) :
     ModOutput(ModFormat(1), ModFormat(0)),
     mySampleRate(sampleRate),
@@ -203,7 +203,7 @@ int OutputUHD::process(Buffer* dataIn, Buffer* dataOut)
         // the worker sends the other.
 
         myEtiReader->calculateTimestamp(ts);
-        uwd.sourceContainsTimestamp = myEtiReader->sourceContainsTimestamp();
+        uwd.sourceContainsTimestamp = enable_sync && myEtiReader->sourceContainsTimestamp();
 
         if (activebuffer == 0) {
             memcpy(uwd.frame0.buf, dataIn->getData(), uwd.bufsize);

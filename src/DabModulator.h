@@ -46,7 +46,7 @@ public:
             struct modulator_offset_config& modconf,
             unsigned outputRate = 2048000, unsigned clockRate = 0,
             unsigned dabMode = 0, GainMode gainMode = GAIN_VAR,
-            float factor = 1.0, char* filterTapsFilename = NULL);
+            float factor = 1.0, const char* filterTapsFilename = NULL);
     DabModulator(const DabModulator& copy);
     virtual ~DabModulator();
 
@@ -67,7 +67,7 @@ protected:
     EtiReader myEtiReader;
     Flowgraph* myFlowgraph;
     OutputMemory* myOutput;
-    char* myFilterTapsFilename;
+    const char* myFilterTapsFilename;
 
     size_t myNbSymbols;
     size_t myNbCarriers;

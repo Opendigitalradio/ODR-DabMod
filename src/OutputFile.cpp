@@ -26,7 +26,7 @@
 #include <stdexcept>
 
 
-OutputFile::OutputFile(char* filename) :
+OutputFile::OutputFile(const char* filename) :
     ModOutput(ModFormat(1), ModFormat(0)),
     myFilename(filename)
 {

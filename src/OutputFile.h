@@ -36,14 +36,14 @@
 class OutputFile : public ModOutput
 {
 public:
-    OutputFile(char* filename);
+    OutputFile(const char* filename);
     virtual ~OutputFile();
 
     virtual int process(Buffer* dataIn, Buffer* dataOut);
     const char* name() { return "OutputFile"; }
 
 protected:
-    char* myFilename;
+    const char* myFilename;
     FILE* myFile;
 };
 

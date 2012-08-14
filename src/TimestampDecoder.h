@@ -38,7 +38,7 @@ struct modulator_offset_config
     /* These two fields are used when the modulator is run with a fixed offset */
 
     bool use_offset_file;
-    char* offset_filename;
+    const char* offset_filename;
     /* These two fields are used when the modulator reads the offset from a file */
 
     unsigned delay_calculation_pipeline_stages;

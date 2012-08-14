@@ -227,7 +227,7 @@ void FIRFilterWorker::process(struct FIRFilterWorkerData *fwd)
 }
 
 
-FIRFilter::FIRFilter(char* taps_file) :
+FIRFilter::FIRFilter(const char* taps_file) :
     ModCodec(ModFormat(sizeof(complexf)), ModFormat(sizeof(complexf)))
 {
     PDEBUG("FIRFilter::FIRFilter(%s) @ %p\n",

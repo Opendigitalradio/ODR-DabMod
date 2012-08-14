@@ -134,7 +134,7 @@ class UHDWorker {
 
 class OutputUHD: public ModOutput {
     public:
-        OutputUHD(char* device, unsigned sampleRate, double frequency, int txgain,
+        OutputUHD(const char* device, unsigned sampleRate, double frequency, int txgain,
                 bool enableSync, bool muteNoTimestamps);
         ~OutputUHD();
 

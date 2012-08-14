@@ -51,7 +51,7 @@ DabModulator::DabModulator(
         struct modulator_offset_config& modconf,
         unsigned outputRate, unsigned clockRate,
         unsigned dabMode, GainMode gainMode, float factor,
-        char* filterTapsFilename
+        const char* filterTapsFilename
         ) :
     ModCodec(ModFormat(1), ModFormat(0)),
     myOutputRate(outputRate),

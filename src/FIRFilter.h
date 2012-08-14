@@ -136,7 +136,7 @@ class FIRFilterWorker {
 class FIRFilter : public ModCodec
 {
 public:
-    FIRFilter(char* taps_file);
+    FIRFilter(const char* taps_file);
     virtual ~FIRFilter();
     FIRFilter(const FIRFilter&);
     FIRFilter& operator=(const FIRFilter&);
