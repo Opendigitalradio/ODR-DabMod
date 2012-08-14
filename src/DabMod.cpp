@@ -37,6 +37,8 @@
 #include "TimestampDecoder.h"
 #include "FIRFilter.h"
 
+#include <boost/property_tree/ptree.hpp>
+#include <boost/property_tree/ini_parser.hpp>
 #include <complex>
 #include <stdlib.h>
 #include <unistd.h>
@@ -73,7 +75,12 @@ void signalHandler(int signalNb)
 
 void printUsage(char* progName, FILE* out = stderr)
 {
-    fprintf(out, "Usage:\n");
+    fprintf(out, "Welcome to %s %s, compiled at %s, %s\n\n",
+            PACKAGE, VERSION, __DATE__, __TIME__);
+    fprintf(out, "Usage with configuration file:\n");
+    fprintf(out, "\t%s -C config_file.ini\n\n", progName);
+
+    fprintf(out, "Usage with command line options:\n");
     fprintf(out, "\t%s"
             " [input]"
             " (-f filename | -u uhddevice -F frequency) "
@@ -142,10 +149,10 @@ int main(int argc, char* argv[])
 {
     int ret = 0;
     bool loop = false;
-    char* inputName;
+    char* inputName = NULL;
 
-    char* outputName;
-    char* outputDevice;
+    const char* outputName;
+    const char* outputDevice;
     int useFileOutput = 0;
     int useUHDOutput = 0;
     double uhdFrequency = 0.0;
@@ -165,7 +172,12 @@ int main(int argc, char* argv[])
     GainMode gainMode = GAIN_VAR;
     Buffer data;
 
-    char* filterTapsFilename = NULL;
+    const char* filterTapsFilename = NULL;
+
+    // Two configuration sources exist: command line and (new) INI file
+    bool use_configuration_cmdline = false;
+    bool use_configuration_file = false;
+    std::string configuration_file;
 
     // To handle the timestamp offset of the modulator
     struct modulator_offset_config modconf;
@@ -185,11 +197,21 @@ int main(int argc, char* argv[])
     tzset();
 
     while (true) {
-        int c = getopt(argc, argv, "a:c:f:F:g:G:hlm:o:O:r:T:u:V");
+        int c = getopt(argc, argv, "a:C:c:f:F:g:G:hlm:o:O:r:T:u:V");
         if (c == -1) {
             break;
         }
+
+        if (c != 'C') {
+            use_configuration_cmdline = true;
+        }
+            
         switch (c) {
+        case 'C':
+            use_configuration_file = true;
+            configuration_file = optarg;
+            break;
+
         case 'a':
             amplitude = strtof(optarg, NULL);
             break;
@@ -269,6 +291,101 @@ int main(int argc, char* argv[])
         }
     }
 
+    if (use_configuration_file && use_configuration_cmdline) {
+        fprintf(stderr, "Warning: configuration file and command line parameters are defined:\n\t"
+                        "Command line parameters override settings in the configuration file !\n");
+    }
+
+    if (use_configuration_file) {
+        // First read parameters from the file
+        using boost::property_tree::ptree;
+        ptree pt;
+
+        read_ini(configuration_file, pt);
+
+        // modulator parameters:
+        gainMode = (GainMode)pt.get("modulator.gainmode", 0);
+        dabMode = pt.get("modulator.mode", dabMode);
+        clockRate = pt.get("modulator.dac_clk_rate", (size_t)0);
+        amplitude = pt.get("modulator.digital_gain", amplitude);
+        outputRate = pt.get("modulator.rate", outputRate);
+        
+        // FIR Filter parameters:
+        if (pt.get("firfilter.enabled", 0) == 1) {
+            try {
+                filterTapsFilename = pt.get<std::string>("firfilter.enabled").c_str();
+            }
+            catch (std::exception &e) {
+                std::cerr << "Error: " << e.what() << "\n";
+                std::cerr << "       Configuration enables firfilter, but does not specify filter taps file\n";
+                goto END_MAIN;
+            }
+        }
+
+        // Output options
+        std::string output_selected;
+        try {
+             output_selected = pt.get<std::string>("output.output");
+        }
+        catch (std::exception &e) {
+            std::cerr << "Error: " << e.what() << "\n";
+            std::cerr << "       Configuration does not specify output\n";
+            goto END_MAIN;
+        }
+
+        if (output_selected == "file") {
+            try {
+                outputName = pt.get<std::string>("fileoutput.filename").c_str();
+            }
+            catch (std::exception &e) {
+                std::cerr << "Error: " << e.what() << "\n";
+                std::cerr << "       Configuration does not specify file name for file output\n";
+                goto END_MAIN;
+            }
+            useFileOutput = 1;
+        }
+        else if (output_selected == "uhd") {
+            outputDevice = pt.get("uhdoutput.device", "").c_str();
+            uhdTxGain    = pt.get("uhdoutput.txgain", 0);
+            try {
+                uhdFrequency = pt.get<double>("uhdoutput.frequency");
+            }
+            catch (std::exception &e) {
+                std::cerr << "Error: " << e.what() << "\n";
+                std::cerr << "       UHD output enabled, but no frequency defined.\n";
+                goto END_MAIN;
+            }
+            useUHDOutput = 1;
+        }
+        else {
+            std::cerr << "Error: Invalid output defined.\n";
+            goto END_MAIN;
+        }
+
+        uhd_enable_sync = (pt.get("delaymanagement.synchronous", 0) == 1);
+        if (uhd_enable_sync) {
+            try {
+                std::string delay_mgmt = pt.get<std::string>("delaymanagement.management");
+                if (delay_mgmt == "fixed") {
+                    modconf.offset_fixed = pt.get<double>("delaymanagement.fixedoffset");
+                    modconf.use_offset_fixed = true;
+                }
+                else if (delay_mgmt == "dynamic") {
+                    modconf.offset_filename = pt.get<std::string>("delaymanagement.dynamicoffsetfile").c_str();
+                    modconf.use_offset_file = true;
+                }
+                else {
+                    throw std::runtime_error("invalid management value");
+                }
+            }
+            catch (std::exception &e) {
+                std::cerr << "Error: " << e.what() << "\n";
+                std::cerr << "       Synchronised transmission enabled, but delay management specification is incomplete.\n";
+                goto END_MAIN;
+            }
+        }
+    }
+
     // When using offset, enable frame muting
     uhd_mute_no_timestamps = (modconf.use_offset_file || modconf.use_offset_fixed);
 
@@ -286,7 +403,7 @@ int main(int argc, char* argv[])
 
 
     // Setting ETI input filename
-    if (optind < argc) {
+    if (inputName != NULL && optind < argc) {
         inputName = argv[optind++];
     } else {
         inputName = (char*)"/dev/stdin";
