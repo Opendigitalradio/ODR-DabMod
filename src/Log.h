@@ -92,7 +92,8 @@ class LogToFile : public LogBackend {
         LogToFile(std::string filename) {
             name = "FILE";
             log_filename = filename;
-            log_stream.open(filename.c_str(), std::ios::app);
+            
+            log_stream.open(filename.c_str(), std::ios::out | std::ios::app);
             if (!log_stream.is_open()) {
                 throw new std::runtime_error("Cannot open log file !");
             }
@@ -113,6 +114,7 @@ class LogToFile : public LogBackend {
             va_start(arg_ptr, fmt);
             snprintf(message, 200, fmt, arg_ptr);
             log_stream << "CRC-DABMOD: " << log_level_text[(size_t)level] << ": " << message << std::endl;
+            log_stream.flush();
             va_end(arg_ptr);
         }
 

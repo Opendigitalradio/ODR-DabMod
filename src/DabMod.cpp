@@ -313,16 +313,18 @@ int main(int argc, char* argv[])
         }
 
         if (pt.get("log.filelog", 0) == 1) {
+            std::string logfilename;
             try {
-                std::string logfilename = pt.get<std::string>("fileoutput.filename");
-                LogToFile* log_file = new LogToFile(logfilename);
-                logger.register_backend(log_file);
+                 logfilename = pt.get<std::string>("log.filename");
             }
             catch (std::exception &e) {
                 std::cerr << "Error: " << e.what() << "\n";
                 std::cerr << "       Configuration enables file log, but does not specify log filename\n";
                 goto END_MAIN;
             }
+
+            LogToFile* log_file = new LogToFile(logfilename);
+            logger.register_backend(log_file);
         }
 
 
