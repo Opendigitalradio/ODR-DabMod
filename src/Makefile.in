@@ -99,7 +99,7 @@ am_crc_dabmod_OBJECTS = crc_dabmod-DabMod.$(OBJEXT) \
 	crc_dabmod-GuardIntervalInserter.$(OBJEXT) \
 	crc_dabmod-Resampler.$(OBJEXT) \
 	crc_dabmod-ConvEncoder.$(OBJEXT) \
-	crc_dabmod-TimeInterleaver.$(OBJEXT)
+	crc_dabmod-TimeInterleaver.$(OBJEXT) crc_dabmod-Log.$(OBJEXT)
 am__objects_1 = crc_dabmod-kiss_fft.$(OBJEXT) \
 	crc_dabmod-kiss_fftr.$(OBJEXT) \
 	crc_dabmod-kiss_fftsimd.$(OBJEXT)
@@ -293,7 +293,8 @@ crc_dabmod_SOURCES = DabMod.cpp \
                       GuardIntervalInserter.cpp GuardIntervalInserter.h \
                       Resampler.cpp Resampler.h \
                       ConvEncoder.cpp ConvEncoder.h \
-                      TimeInterleaver.cpp TimeInterleaver.h
+                      TimeInterleaver.cpp TimeInterleaver.h \
+					  Log.cpp Log.h
 
 nodist_crc_dabmod_SOURCES = $(FFT_SRC)
 dist_bin_SCRIPTS = crc-dwap.py
@@ -430,6 +431,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/crc_dabmod-GainControl.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/crc_dabmod-GuardIntervalInserter.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/crc_dabmod-InputMemory.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/crc_dabmod-Log.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/crc_dabmod-ModCodec.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/crc_dabmod-ModFormat.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/crc_dabmod-ModInput.Po@am__quote@
@@ -1071,6 +1073,20 @@ crc_dabmod-TimeInterleaver.obj: TimeInterleaver.cpp
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='TimeInterleaver.cpp' object='crc_dabmod-TimeInterleaver.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(crc_dabmod_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o crc_dabmod-TimeInterleaver.obj `if test -f 'TimeInterleaver.cpp'; then $(CYGPATH_W) 'TimeInterleaver.cpp'; else $(CYGPATH_W) '$(srcdir)/TimeInterleaver.cpp'; fi`
+
+crc_dabmod-Log.o: Log.cpp
+@am__fastdepCXX_TRUE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(crc_dabmod_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT crc_dabmod-Log.o -MD -MP -MF $(DEPDIR)/crc_dabmod-Log.Tpo -c -o crc_dabmod-Log.o `test -f 'Log.cpp' || echo '$(srcdir)/'`Log.cpp
+@am__fastdepCXX_TRUE@	$(am__mv) $(DEPDIR)/crc_dabmod-Log.Tpo $(DEPDIR)/crc_dabmod-Log.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='Log.cpp' object='crc_dabmod-Log.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(crc_dabmod_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o crc_dabmod-Log.o `test -f 'Log.cpp' || echo '$(srcdir)/'`Log.cpp
+
+crc_dabmod-Log.obj: Log.cpp
+@am__fastdepCXX_TRUE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(crc_dabmod_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT crc_dabmod-Log.obj -MD -MP -MF $(DEPDIR)/crc_dabmod-Log.Tpo -c -o crc_dabmod-Log.obj `if test -f 'Log.cpp'; then $(CYGPATH_W) 'Log.cpp'; else $(CYGPATH_W) '$(srcdir)/Log.cpp'; fi`
+@am__fastdepCXX_TRUE@	$(am__mv) $(DEPDIR)/crc_dabmod-Log.Tpo $(DEPDIR)/crc_dabmod-Log.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='Log.cpp' object='crc_dabmod-Log.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(crc_dabmod_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o crc_dabmod-Log.obj `if test -f 'Log.cpp'; then $(CYGPATH_W) 'Log.cpp'; else $(CYGPATH_W) '$(srcdir)/Log.cpp'; fi`
 
 ID: $(HEADERS) $(SOURCES) $(LISP) $(TAGS_FILES)
 	list='$(SOURCES) $(HEADERS) $(LISP) $(TAGS_FILES)'; \

@@ -45,6 +45,7 @@ DESCRIPTION:
 #include <boost/thread/barrier.hpp>
 #include <boost/shared_ptr.hpp>
 
+#include "Log.h"
 #include "ModOutput.h"
 #include "EtiReader.h"
 #include "TimestampDecoder.h"
@@ -100,6 +101,9 @@ struct UHDWorkerData {
 
     // A barrier to synchronise the two threads
     shared_ptr<barrier> sync_barrier;
+
+    // The common logger
+    Logger* logger;
 }; 
 
 
@@ -134,8 +138,13 @@ class UHDWorker {
 
 class OutputUHD: public ModOutput {
     public:
-        OutputUHD(const char* device, unsigned sampleRate, double frequency, int txgain,
-                bool enableSync, bool muteNoTimestamps);
+        OutputUHD(const char* device,
+                unsigned sampleRate,
+                double frequency,
+                int txgain,
+                bool enableSync,
+                bool muteNoTimestamps,
+                Logger& logger);
         ~OutputUHD();
 
         int process(Buffer* dataIn, Buffer* dataOut);
@@ -147,6 +156,7 @@ class OutputUHD: public ModOutput {
         }
 
     protected:
+        Logger& myLogger;
         EtiReader *myEtiReader;
         std::string myDevice;
         unsigned mySampleRate;

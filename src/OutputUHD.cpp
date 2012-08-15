@@ -26,6 +26,7 @@
 
 #include "OutputUHD.h"
 #include "PcDebug.h"
+#include "Log.h"
 
 #include <iostream>
 #include <assert.h>
@@ -38,8 +39,10 @@
 typedef std::complex<float> complexf;
 
 OutputUHD::OutputUHD(const char* device, unsigned sampleRate,
-        double frequency, int txgain, bool enableSync, bool muteNoTimestamps) :
+        double frequency, int txgain, bool enableSync, bool muteNoTimestamps,
+        Logger& logger) :
     ModOutput(ModFormat(1), ModFormat(0)),
+    myLogger(logger),
     mySampleRate(sampleRate),
     myTxGain(txgain),
     myFrequency(frequency),
@@ -57,7 +60,12 @@ OutputUHD::OutputUHD(const char* device, unsigned sampleRate,
     //create a usrp device
     MDEBUG("OutputUHD:Creating the usrp device with: %s...\n",
             myDevice.c_str());
-    myUsrp = uhd::usrp::multi_usrp::make(myDevice);
+    //try {
+        myUsrp = uhd::usrp::multi_usrp::make(myDevice);
+    /*}
+    catch (std::exception &e) {
+        fprintf(stderr, "FLABBER FLABBER FLABBER\n");
+    }*/
     MDEBUG("OutputUHD:Using device: %s...\n", myUsrp->get_pp_string().c_str());
 
     if (enable_sync) {
@@ -97,6 +105,7 @@ OutputUHD::OutputUHD(const char* device, unsigned sampleRate,
         if (clock_gettime(CLOCK_REALTIME, &now)) {
             fprintf(stderr, "errno: %d\n", errno);
             perror("OutputUHD:Error: could not get time: ");
+            myLogger(error, "OutputUHD: could not get time");
         }
         else {
             seconds = now.tv_sec;
@@ -107,6 +116,7 @@ OutputUHD::OutputUHD(const char* device, unsigned sampleRate,
                 if (clock_gettime(CLOCK_REALTIME, &now)) {
                     fprintf(stderr, "errno: %d\n", errno);
                     perror("OutputUHD:Error: could not get time: ");
+                    myLogger(error, "OutputUHD: could not get time");
                     break;
                 }
             }
@@ -129,6 +139,7 @@ OutputUHD::OutputUHD(const char* device, unsigned sampleRate,
     uwd.myUsrp = myUsrp;
 #else
     fprintf(stderr, "OutputUHD: UHD initialisation disabled at compile-time\n");
+    myLogger(error, "OutputUHD: UHD initialisation disabled at compile-time");
 #endif
 
     uwd.frame0.ts.timestamp_valid = false;
@@ -167,6 +178,7 @@ int OutputUHD::process(Buffer* dataIn, Buffer* dataOut)
     // OutputUHD::process
     if (first_run) {
         fprintf(stderr, "OutUHD.process:Initialising...\n");
+        myLogger(debug, "OutputUHD: UHD initialising...");
 
         uwd.bufsize = dataIn->getLength();
         uwd.frame0.buf = malloc(uwd.bufsize);
@@ -186,6 +198,7 @@ int OutputUHD::process(Buffer* dataIn, Buffer* dataOut)
         lastLen = uwd.bufsize;
         first_run = false;
         fprintf(stderr, "OutUHD.process:Initialising complete.\n");
+        myLogger(debug, "OutputUHD: UHD initialising complete");
     }
     else {
 
@@ -194,6 +207,7 @@ int OutputUHD::process(Buffer* dataIn, Buffer* dataOut)
             fprintf(stderr,
                     "OutUHD.process:AAAAH PANIC input length changed from %zu to %zu !\n",
                     lastLen, dataIn->getLength());
+            myLogger(emerg, "OutputUHD: Fatal error, input length changed !");
             throw std::runtime_error("Non-constant input length!");
         }
         //fprintf(stderr, "OutUHD.process:Waiting for barrier\n");
@@ -291,6 +305,7 @@ void UHDWorker::process(struct UHDWorkerData *uwd)
         // Check for ref_lock 
         if (! uwd->myUsrp->get_mboard_sensor("ref_locked", 0).to_bool()) {
             fprintf(stderr, "UHDWorker: RefLock lost !\n");
+            uwd->logger->log(alert, "OutputUHD: External reference clock lock lost !");
         }
 
         usrp_time = uwd->myUsrp->get_time_now().get_real_secs();
@@ -304,6 +319,8 @@ void UHDWorker::process(struct UHDWorkerData *uwd)
                  * MNSC. We sleep through the frame.
                  */
                 fprintf(stderr, "UHDOut: Throwing sample %d away: incomplete timestamp %zu + %f\n",
+                        frame->fct, tx_second, pps_offset);
+                uwd->logger->log(info, "OutputUHD: Throwing sample %d away: incomplete timestamp %zu + %f\n",
                         frame->fct, tx_second, pps_offset);
                 usleep(20000);
                 goto loopend;
@@ -335,6 +352,7 @@ void UHDWorker::process(struct UHDWorkerData *uwd)
                     "* Timestamp way too far in the future! offset: %f\n",
                     md.time_spec.get_real_secs() - usrp_time);
                 fprintf(stderr, "* Aborting\n");
+                uwd->logger->log(error, "OutputUHD: timestamp is way to far in the future, aborting");
                 throw std::runtime_error("Timestamp error. Aborted.");
             }
 #endif
@@ -425,28 +443,34 @@ void UHDWorker::process(struct UHDWorkerData *uwd)
             //std::cerr << std::endl << "Waiting for async burst ACK... " << std::flush;
             uhd::async_metadata_t async_md;
             if (uwd->myUsrp->get_device()->recv_async_msg(async_md, 0)) {
-                std::string PREFIX = "### asyncronous UHD message : ";
+                std::string uhd_async_message = "Received UHD message ";
+                bool failure = true;
                 switch (async_md.event_code) {
                     case uhd::async_metadata_t::EVENT_CODE_BURST_ACK:
+                        failure = false;
                         break;
                     case uhd::async_metadata_t::EVENT_CODE_UNDERFLOW:
-                        std::cerr << PREFIX << "Underflow" << std::endl;
+                        uhd_async_message += "Underflow";
                         break;
                     case uhd::async_metadata_t::EVENT_CODE_SEQ_ERROR:
-                        std::cerr << PREFIX << "Packet loss between host and device." << std::endl;
+                        uhd_async_message += "Packet loss between host and device.";
                         break;
                     case uhd::async_metadata_t::EVENT_CODE_TIME_ERROR:
-                        std::cerr << PREFIX << "Packet had time that was late." << std::endl;
+                        uhd_async_message += "Packet had time that was late.";
                         break;
                     case uhd::async_metadata_t::EVENT_CODE_UNDERFLOW_IN_PACKET:
-                        std::cerr << PREFIX << "Underflow occurred inside a packet." << std::endl;
+                        uhd_async_message += "Underflow occurred inside a packet.";
                         break;
                     case uhd::async_metadata_t::EVENT_CODE_SEQ_ERROR_IN_BURST:
-                        std::cerr << PREFIX << "Packet loss within a burst." << std::endl;
+                        uhd_async_message += "Packet loss within a burst.";
                         break;
                     default:
-                        std::cerr << PREFIX << "unknown event code" << std::endl;
+                        uhd_async_message += "unknown event code";
                         break;
+                }
+
+                if (failure) {
+                    uwd->logger->log(alert, uhd_async_message);
                 }
             }
 
