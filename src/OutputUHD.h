@@ -159,31 +159,13 @@ class OutputUHD: public ModOutput, public RemoteControl {
         }
 
         /*********** REMOTE CONTROL ***************/
-        virtual std::string get_rc_name() { return "uhd"; }
-        
         /* Tell the controllable to enrol at the given controller /
         virtual void enrol_at(BaseRemoteController& controller) {
             controller.enrol(this);
         } // */
 
-        /* Return a list of possible parameters that can be set */
-        list<string> get_supported_parameters() {
-            list<string> parameterlist;
-            for (list< vector<string> >::iterator it = parameters_.begin(); it != parameters_.end(); it++) {
-                parameterlist.push_back((*it)[0]);
-            }
-            return parameterlist;
-        }
-
-        /* Return a mapping of the descriptions of all parameters */
-        virtual std::list< std::vector<std::string> > get_parameter_descriptions() = 0;
-
         /* Base function to set parameters. */
         virtual void set_parameter(string parameter, string value) = 0;
-
-        /* Convenience functions for other common types */
-        virtual void set_parameter(string parameter, double value) = 0;
-        virtual void set_parameter(string parameter, long value) = 0;
 
         /* Getting a parameter always returns a string. */
         virtual string get_parameter(string parameter) = 0;
@@ -206,9 +188,6 @@ class OutputUHD: public ModOutput, public RemoteControl {
         bool enable_sync;
 
         size_t lastLen;
-
-
-        /*********** REMOTE CONTROL ***************/
 };
 
 

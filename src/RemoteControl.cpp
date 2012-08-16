@@ -191,6 +191,9 @@ RemoteControllerTelnet::dispatch_command(tcp::socket& socket, string command)
             catch (ParameterError &e) {
                 reply(socket, e.what());
             }
+            catch (exception &e) {
+                reply(socket, "Error: Invalid parameter value. ");
+            }
         }
         else
         {

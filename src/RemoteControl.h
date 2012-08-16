@@ -40,7 +40,7 @@
 #include <stdexcept>
 
 
-#define ADD_PARAMETER(p, desc) {   \
+#define RC_ADD_PARAMETER(p, desc) {   \
   vector<string> p; \
   p.push_back(#p); \
   p.push_back(desc); \
@@ -81,7 +81,7 @@ class RemoteControllable {
          * It might be used in the commands the user has to type, so keep
          * it short
          */
-        virtual std::string get_rc_name() = 0;
+        virtual std::string get_rc_name() { return name_; }
         
         /* Tell the controllable to enrol at the given controller */
         virtual void enrol_at(BaseRemoteController& controller) {
@@ -99,14 +99,12 @@ class RemoteControllable {
         }
 
         /* Return a mapping of the descriptions of all parameters */
-        virtual std::list< std::vector<std::string> > get_parameter_descriptions() = 0;
+        virtual std::list< std::vector<std::string> > get_parameter_descriptions() {
+            return parameters_;
+        }
 
         /* Base function to set parameters. */
         virtual void set_parameter(string parameter, string value) = 0;
-
-        /* Convenience functions for other common types */
-        virtual void set_parameter(string parameter, double value) = 0;
-        virtual void set_parameter(string parameter, long value) = 0;
 
         /* Getting a parameter always returns a string. */
         virtual string get_parameter(string parameter) = 0;

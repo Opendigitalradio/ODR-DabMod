@@ -27,6 +27,7 @@
 #include "OutputUHD.h"
 #include "PcDebug.h"
 #include "Log.h"
+#include "RemoteControl.h"
 
 #include <iostream>
 #include <assert.h>
@@ -42,6 +43,7 @@ OutputUHD::OutputUHD(const char* device, unsigned sampleRate,
         double frequency, int txgain, bool enableSync, bool muteNoTimestamps,
         Logger& logger) :
     ModOutput(ModFormat(1), ModFormat(0)),
+    RemoteControl("uhd"),
     myLogger(logger),
     mySampleRate(sampleRate),
     myTxGain(txgain),
@@ -51,6 +53,9 @@ OutputUHD::OutputUHD(const char* device, unsigned sampleRate,
 {
     MDEBUG("OutputUHD::OutputUHD(device: %s) @ %p\n",
             device, this);
+
+    /* register the parameters that can be remote controlled */
+    RC_ADD_PARAMETER("txgain", "UHD analog daughterboard TX gain")
 
     myDevice = device;
     
@@ -499,3 +504,36 @@ loopend:
         workerbuffer = (workerbuffer + 1) % 2;
     }
 }
+
+
+virtual void OutputUHD::set_parameter(string parameter, string value)
+{
+    stringstream ss(value);
+    ss.exceptions ( stringstream::failbit | stringstream::badbit );
+
+    if (parameter == "txgain") {
+        ss >> myTxStream;
+#if ENABLE_UHD
+        myUsrp->set_tx_gain(myTxGain);
+#endif
+    }
+    else {
+        stringstream ss;
+        ss << "Parameter '" << parameter << "' is not exported by controllable " << get_rc_name();
+        throw ParameterError(ss.str());
+    }
+}
+
+virtual string OutputUHD::get_parameter(string parameter)
+{
+    stringstream ss;
+    if (parameter == "txgain") {
+        ss << myTxGain;
+    }
+    else {
+        ss << "Parameter '" << parameter << "' is not exported by controllable " << get_rc_name();
+        throw ParameterError(ss.str());
+    }
+    return ss.str();
+}
+

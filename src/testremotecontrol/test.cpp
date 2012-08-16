@@ -1,6 +1,7 @@
 #include <string>
 #include <map>
 #include <unistd.h>
+
 #include "RemoteControl.h"
 
 using namespace std;
@@ -10,23 +11,22 @@ class TestControllable : public RemoteControllable
     public:
         TestControllable(string name) : RemoteControllable(name)
         {
-            ADD_PARAMETER(foo, "That's the foo");
-            ADD_PARAMETER(bar, "That's the bar");
-            ADD_PARAMETER(baz, "That's the baz");
+            RC_ADD_PARAMETER(foo, "That's the foo");
+            RC_ADD_PARAMETER(bar, "That's the bar");
+            RC_ADD_PARAMETER(baz, "That's the baz");
         }
 
-        string get_rc_name() { return name_; };
-
         void set_parameter(string parameter, string value) {
+            stringstream ss(value);
+            ss.exceptions ( stringstream::failbit | stringstream::badbit );
+
             if (parameter == "foo") {
-                stringstream ss(value);
                 ss >> foo_;
             }
             else if (parameter == "bar") {
                 bar_ = value;
             }
             else if (parameter == "baz") {
-                stringstream ss(value);
                 ss >> baz_;
             }
             else {
@@ -36,30 +36,9 @@ class TestControllable : public RemoteControllable
             }
         }
 
-        void set_parameter(string parameter, double value) {
-            if (parameter == "baz") {
-                baz_ = value;
-            }
-            else {
-                stringstream ss;
-                ss << "Parameter '" << parameter << "' is not a double in controllable " << get_rc_name();
-                throw ParameterError(ss.str());
-            }
-        }
-
-        void set_parameter(string parameter, long value) {
-            if (parameter == "foo") {
-                foo_ = value;
-            }
-            else {
-                stringstream ss;
-                ss << "Parameter '" << parameter << "' is not a long in controllable " << get_rc_name();
-                throw ParameterError(ss.str());
-            }
-        }
-
         string get_parameter(string parameter) {
             stringstream ss;
+
             if (parameter == "foo") {
                 ss << foo_;
             }
@@ -75,10 +54,6 @@ class TestControllable : public RemoteControllable
                 throw ParameterError(ss.str());
             }
             return ss.str();
-        }
-
-        std::list< std::vector<std::string> > get_parameter_descriptions() {
-            return parameters_;
         }
 
     private:
