@@ -44,11 +44,14 @@ DESCRIPTION:
 #include <boost/thread/thread.hpp>
 #include <boost/thread/barrier.hpp>
 #include <boost/shared_ptr.hpp>
+#include <list>
+#include <string>
 
 #include "Log.h"
 #include "ModOutput.h"
 #include "EtiReader.h"
 #include "TimestampDecoder.h"
+#include "RemoteControl.h"
 
 #include <stdio.h>
 #include <sys/types.h>
@@ -136,7 +139,7 @@ class UHDWorker {
 };
 
 
-class OutputUHD: public ModOutput {
+class OutputUHD: public ModOutput, public RemoteControl {
     public:
         OutputUHD(const char* device,
                 unsigned sampleRate,
@@ -155,6 +158,37 @@ class OutputUHD: public ModOutput {
             myEtiReader = etiReader;
         }
 
+        /*********** REMOTE CONTROL ***************/
+        virtual std::string get_rc_name() { return "uhd"; }
+        
+        /* Tell the controllable to enrol at the given controller /
+        virtual void enrol_at(BaseRemoteController& controller) {
+            controller.enrol(this);
+        } // */
+
+        /* Return a list of possible parameters that can be set */
+        list<string> get_supported_parameters() {
+            list<string> parameterlist;
+            for (list< vector<string> >::iterator it = parameters_.begin(); it != parameters_.end(); it++) {
+                parameterlist.push_back((*it)[0]);
+            }
+            return parameterlist;
+        }
+
+        /* Return a mapping of the descriptions of all parameters */
+        virtual std::list< std::vector<std::string> > get_parameter_descriptions() = 0;
+
+        /* Base function to set parameters. */
+        virtual void set_parameter(string parameter, string value) = 0;
+
+        /* Convenience functions for other common types */
+        virtual void set_parameter(string parameter, double value) = 0;
+        virtual void set_parameter(string parameter, long value) = 0;
+
+        /* Getting a parameter always returns a string. */
+        virtual string get_parameter(string parameter) = 0;
+
+
     protected:
         Logger& myLogger;
         EtiReader *myEtiReader;
@@ -172,6 +206,9 @@ class OutputUHD: public ModOutput {
         bool enable_sync;
 
         size_t lastLen;
+
+
+        /*********** REMOTE CONTROL ***************/
 };
 
 

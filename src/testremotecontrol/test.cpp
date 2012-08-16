@@ -5,35 +5,17 @@
 
 using namespace std;
 
-#define BUILD_FOO(p) {   \
-  vector<string> p; \
-  p.push_back(#p); \
-  p.push_back("That's the" #p); \
-  parameters_.push_back(p); \
-}
-
 class TestControllable : public RemoteControllable
 {
     public:
-        TestControllable(string name)
+        TestControllable(string name) : RemoteControllable(name)
         {
-            name_ = name;
-            
-            BUILD_FOO(foo);
-            BUILD_FOO(bar);
-            BUILD_FOO(baz);
-
+            ADD_PARAMETER(foo, "That's the foo");
+            ADD_PARAMETER(bar, "That's the bar");
+            ADD_PARAMETER(baz, "That's the baz");
         }
 
         string get_rc_name() { return name_; };
-
-        list<string> get_supported_parameters() {
-            list<string> parameterlist;
-            for (list< vector<string> >::iterator it = parameters_.begin(); it != parameters_.end(); it++) {
-                parameterlist.push_back((*it)[0]);
-            }
-            return parameterlist;
-        }
 
         void set_parameter(string parameter, string value) {
             if (parameter == "foo") {
@@ -102,9 +84,7 @@ class TestControllable : public RemoteControllable
     private:
         long foo_;
         std::string bar_;
-        std::string name_;
         double baz_;
-        std::list< std::vector<std::string> > parameters_;
 
 };
 

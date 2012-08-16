@@ -39,6 +39,15 @@
 #include <boost/thread.hpp>
 #include <stdexcept>
 
+
+#define ADD_PARAMETER(p, desc) {   \
+  vector<string> p; \
+  p.push_back(#p); \
+  p.push_back(desc); \
+  parameters_.push_back(p); \
+}
+
+
 using namespace std;
 using boost::asio::ip::tcp;
 
@@ -65,6 +74,9 @@ class BaseRemoteController {
 /* Objects that support remote control must implement the following class */
 class RemoteControllable {
     public:
+
+        RemoteControllable(string name) : name_(name) {}
+
         /* return a short name used to identify the controllable.
          * It might be used in the commands the user has to type, so keep
          * it short
@@ -77,7 +89,14 @@ class RemoteControllable {
         }
 
         /* Return a list of possible parameters that can be set */
-        virtual list<string> get_supported_parameters() = 0;
+        virtual list<string> get_supported_parameters() {
+            cerr << "get_sup_par" << parameters_.size() << endl;
+            list<string> parameterlist;
+            for (list< vector<string> >::iterator it = parameters_.begin(); it != parameters_.end(); it++) {
+                parameterlist.push_back((*it)[0]);
+            }
+            return parameterlist;
+        }
 
         /* Return a mapping of the descriptions of all parameters */
         virtual std::list< std::vector<std::string> > get_parameter_descriptions() = 0;
@@ -91,6 +110,10 @@ class RemoteControllable {
 
         /* Getting a parameter always returns a string. */
         virtual string get_parameter(string parameter) = 0;
+
+    protected:
+        std::string name_;
+        std::list< std::vector<std::string> > parameters_;
 };
 
 /* Implements a Remote controller based on a simple telnet CLI
@@ -162,6 +185,7 @@ class RemoteControllerTelnet : public BaseRemoteController {
 
             list< vector<string> > allparams;
             list<string> params = controllable->get_supported_parameters();
+            cerr << "# of supported parameters " << params.size() << endl;
             for (list<string>::iterator it = params.begin(); it != params.end(); it++) {
                 vector<string> item;
                 item.push_back(*it);
