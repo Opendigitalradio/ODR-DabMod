@@ -130,9 +130,10 @@ RemoteControllerTelnet::dispatch_command(tcp::socket& socket, string command)
         else if (cmd.size() == 2) {
             try {
                 stringstream ss;
-                list<string> params = get_param_list_(cmd[1]);
-                for (list<string>::iterator it = params.begin(); it != params.end(); it++) {
-                    ss << *it << " ";
+
+                list< vector<string> > params = get_parameter_descriptions_(cmd[1]);
+                for (list< vector<string> >::iterator it = params.begin(); it != params.end(); it++) {
+                    ss << (*it)[0] << " : " << (*it)[1] << endl;
                 }
                 reply(socket, ss.str());
             }

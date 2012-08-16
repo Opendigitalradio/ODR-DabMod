@@ -26,6 +26,7 @@
 #define _REMOTECONTROL_H
 
 #include <list>
+#include <map>
 #include <string>
 #include <iostream>
 #include <string>
@@ -77,6 +78,9 @@ class RemoteControllable {
 
         /* Return a list of possible parameters that can be set */
         virtual list<string> get_supported_parameters() = 0;
+
+        /* Return a mapping of the descriptions of all parameters */
+        virtual std::list< std::vector<std::string> > get_parameter_descriptions() = 0;
 
         /* Base function to set parameters. */
         virtual void set_parameter(string parameter, string value) = 0;
@@ -133,54 +137,49 @@ class RemoteControllerTelnet : public BaseRemoteController {
             return all_tokens;
         }
 
-        list<string> get_param_list_(string controllable) {
+        RemoteControllable* get_controllable_(string name) {
             for (list<RemoteControllable*>::iterator it = cohort_.begin(); it != cohort_.end(); it++) {
-                if ((*it)->get_rc_name() == controllable)
+                if ((*it)->get_rc_name() == name)
                 {
-                    return (*it)->get_supported_parameters();
+                    return *it;
                 }
             }
             throw ParameterError("Module name unknown");
         }
 
-        list< vector<string> > get_param_list_values_(string controllable) {
-            list< vector<string> > allparams;
-            for (list<RemoteControllable*>::iterator it = cohort_.begin(); it != cohort_.end(); it++) {
-                if ((*it)->get_rc_name() == controllable)
-                {
-                    list<string> params = (*it)->get_supported_parameters();
-                    for (list<string>::iterator it2 = params.begin(); it2 != params.end(); it2++) {
-                        vector<string> item;
-                        item.push_back(*it2);
-                        item.push_back((*it)->get_parameter(*it2));
+        list< vector<string> > get_parameter_descriptions_(string name) {
+            RemoteControllable* controllable = get_controllable_(name);
+            return controllable->get_parameter_descriptions();
+        }
 
-                        allparams.push_back(item);
-                    }
-                    return allparams;
-                }
+        list<string> get_param_list_(string name) {
+            RemoteControllable* controllable = get_controllable_(name);
+            return controllable->get_supported_parameters();
+        }
+
+        list< vector<string> > get_param_list_values_(string name) {
+            RemoteControllable* controllable = get_controllable_(name);
+
+            list< vector<string> > allparams;
+            list<string> params = controllable->get_supported_parameters();
+            for (list<string>::iterator it = params.begin(); it != params.end(); it++) {
+                vector<string> item;
+                item.push_back(*it);
+                item.push_back(controllable->get_parameter(*it));
+
+                allparams.push_back(item);
             }
-            throw ParameterError("Module name unknown");
+            return allparams;
         }
         
-        string get_param_(string controllable, string param) {
-            for (list<RemoteControllable*>::iterator it = cohort_.begin(); it != cohort_.end(); it++) {
-                if ((*it)->get_rc_name() == controllable)
-                {
-                    return (*it)->get_parameter(param);
-                }
-            }
-            throw ParameterError("Module name unknown");
+        string get_param_(string name, string param) {
+            RemoteControllable* controllable = get_controllable_(name);
+            return controllable->get_parameter(param);
         }
 
-        void set_param_(string controllable, string param, string value) {
-            for (list<RemoteControllable*>::iterator it = cohort_.begin(); it != cohort_.end(); it++) {
-                if ((*it)->get_rc_name() == controllable)
-                {
-                    (*it)->set_parameter(param, value);
-                    return;
-                }
-            }
-            throw ParameterError("Module name unknown");
+        void set_param_(string name, string param, string value) {
+            RemoteControllable* controllable = get_controllable_(name);
+            return controllable->set_parameter(param, value);
         }
 
         bool running_;

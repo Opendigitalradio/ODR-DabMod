@@ -1,8 +1,16 @@
 #include <string>
+#include <map>
 #include <unistd.h>
 #include "RemoteControl.h"
 
 using namespace std;
+
+#define BUILD_FOO(p) {   \
+  vector<string> p; \
+  p.push_back(#p); \
+  p.push_back("That's the" #p); \
+  parameters_.push_back(p); \
+}
 
 class TestControllable : public RemoteControllable
 {
@@ -10,15 +18,21 @@ class TestControllable : public RemoteControllable
         TestControllable(string name)
         {
             name_ = name;
-            parameterlist_.push_back("foo");
-            parameterlist_.push_back("bar");
-            parameterlist_.push_back("baz");
+            
+            BUILD_FOO(foo);
+            BUILD_FOO(bar);
+            BUILD_FOO(baz);
+
         }
 
-        std::string get_rc_name() { return name_; };
+        string get_rc_name() { return name_; };
 
         list<string> get_supported_parameters() {
-            return parameterlist_;
+            list<string> parameterlist;
+            for (list< vector<string> >::iterator it = parameters_.begin(); it != parameters_.end(); it++) {
+                parameterlist.push_back((*it)[0]);
+            }
+            return parameterlist;
         }
 
         void set_parameter(string parameter, string value) {
@@ -81,12 +95,16 @@ class TestControllable : public RemoteControllable
             return ss.str();
         }
 
+        std::list< std::vector<std::string> > get_parameter_descriptions() {
+            return parameters_;
+        }
+
     private:
         long foo_;
         std::string bar_;
         std::string name_;
         double baz_;
-        std::list<std::string> parameterlist_;
+        std::list< std::vector<std::string> > parameters_;
 
 };
 
