@@ -37,6 +37,7 @@
 #include "PcDebug.h"
 #include "TimestampDecoder.h"
 #include "FIRFilter.h"
+#include "RemoteControl.h"
 
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/ini_parser.hpp>
@@ -150,7 +151,7 @@ int main(int argc, char* argv[])
 {
     int ret = 0;
     bool loop = false;
-    char* inputName = NULL;
+    const char* inputName = NULL;
 
     const char* outputName;
     const char* outputDevice;
@@ -190,6 +191,9 @@ int main(int argc, char* argv[])
     DabModulator* modulator = NULL;
     InputMemory* input = NULL;
     ModOutput* output = NULL;
+
+    RemoteControllerTelnet rc (2121);
+    rc.start();
 
     Logger logger;
 
@@ -305,6 +309,14 @@ int main(int argc, char* argv[])
         ptree pt;
 
         read_ini(configuration_file, pt);
+
+        // input params:
+        if (pt.get("input.loop", 0) == 1) {
+            loop = true;
+        }
+
+        string input_filename = pt.get("input.filename", "/dev/stdin");
+        inputName = input_filename.c_str();
 
         // log parameters:
         if (pt.get("log.syslog", 0) == 1) {
@@ -501,6 +513,7 @@ int main(int argc, char* argv[])
                                uhdFrequency, uhdTxGain,
                                uhd_enable_sync, uhd_mute_no_timestamps,
                                logger);
+            ((OutputUHD*)output)->enrol_at(rc);
         }
         catch (std::exception& e) {
             logger(error, "UHD initialisation failed");

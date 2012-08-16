@@ -139,7 +139,7 @@ class UHDWorker {
 };
 
 
-class OutputUHD: public ModOutput, public RemoteControl {
+class OutputUHD: public ModOutput, public RemoteControllable {
     public:
         OutputUHD(const char* device,
                 unsigned sampleRate,
@@ -165,10 +165,10 @@ class OutputUHD: public ModOutput, public RemoteControl {
         } // */
 
         /* Base function to set parameters. */
-        virtual void set_parameter(string parameter, string value) = 0;
+        virtual void set_parameter(string parameter, string value);
 
         /* Getting a parameter always returns a string. */
-        virtual string get_parameter(string parameter) = 0;
+        virtual string get_parameter(string parameter);
 
 
     protected:

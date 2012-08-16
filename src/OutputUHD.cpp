@@ -43,7 +43,7 @@ OutputUHD::OutputUHD(const char* device, unsigned sampleRate,
         double frequency, int txgain, bool enableSync, bool muteNoTimestamps,
         Logger& logger) :
     ModOutput(ModFormat(1), ModFormat(0)),
-    RemoteControl("uhd"),
+    RemoteControllable("uhd"),
     myLogger(logger),
     mySampleRate(sampleRate),
     myTxGain(txgain),
@@ -55,7 +55,7 @@ OutputUHD::OutputUHD(const char* device, unsigned sampleRate,
             device, this);
 
     /* register the parameters that can be remote controlled */
-    RC_ADD_PARAMETER("txgain", "UHD analog daughterboard TX gain")
+    RC_ADD_PARAMETER(txgain, "UHD analog daughterboard TX gain")
 
     myDevice = device;
     
@@ -506,13 +506,13 @@ loopend:
 }
 
 
-virtual void OutputUHD::set_parameter(string parameter, string value)
+void OutputUHD::set_parameter(string parameter, string value)
 {
     stringstream ss(value);
     ss.exceptions ( stringstream::failbit | stringstream::badbit );
 
     if (parameter == "txgain") {
-        ss >> myTxStream;
+        ss >> myTxGain;
 #if ENABLE_UHD
         myUsrp->set_tx_gain(myTxGain);
 #endif
@@ -524,7 +524,7 @@ virtual void OutputUHD::set_parameter(string parameter, string value)
     }
 }
 
-virtual string OutputUHD::get_parameter(string parameter)
+string OutputUHD::get_parameter(string parameter)
 {
     stringstream ss;
     if (parameter == "txgain") {

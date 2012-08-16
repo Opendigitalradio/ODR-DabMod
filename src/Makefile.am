@@ -76,7 +76,8 @@ crc_dabmod_SOURCES =  DabMod.cpp \
                       Resampler.cpp Resampler.h \
                       ConvEncoder.cpp ConvEncoder.h \
                       TimeInterleaver.cpp TimeInterleaver.h \
-					  Log.cpp Log.h
+					  Log.cpp Log.h \
+					  RemoteControl.cpp RemoteControl.h
 nodist_crc_dabmod_SOURCES	=$(FFT_SRC)
 
 dist_bin_SCRIPTS	=crc-dwap.py

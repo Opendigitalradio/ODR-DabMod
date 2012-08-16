@@ -17,7 +17,7 @@
 # along with CRC-DADMOD.  If not, see <http://www.gnu.org/licenses/>.
 
 AC_PREREQ(2.59)
-AC_INIT([CRC-DabMod], [0.3.3-sfn-r2], [pascal.charest@crc.ca])
+AC_INIT([CRC-DabMod], [0.3.3-sfn-r3], [pascal.charest@crc.ca])
 AC_CONFIG_AUX_DIR([build-aux])
 AC_CANONICAL_SYSTEM
 AM_INIT_AUTOMAKE([-Wall])
@@ -72,6 +72,7 @@ AC_SUBST([CFLAGS], ["$OPTIM $DEBUG $EXTRA"])
 AC_SUBST([CXXFLAGS], ["$OPTIM $DEBUG $EXTRA"])
 
 AC_CHECK_LIB([uhd], [main], [], [AC_MSG_ERROR([library uhd is missing])])
+AC_CHECK_LIB([boost_system], [main], [], [AC_MSG_ERROR([library boost_system is missing])])
 AC_CHECK_LIB([boost_thread], [main], [], [AC_MSG_ERROR([library boost_thread is missing])])
 
 AC_CHECK_LIB([rt], [clock_gettime], [], [AC_MSG_ERROR([library rt is missing])])
