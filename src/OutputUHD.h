@@ -102,6 +102,9 @@ struct UHDWorkerData {
     struct UHDWorkerFrameData frame1;
     size_t bufsize; // in bytes
 
+    // muting set by remote control
+    bool muting;
+
     // A barrier to synchronise the two threads
     shared_ptr<barrier> sync_barrier;
 
@@ -186,6 +189,9 @@ class OutputUHD: public ModOutput, public RemoteControllable {
         int activebuffer;
         bool mute_no_timestamps;
         bool enable_sync;
+
+        // muting can only be changed using the remote control
+        bool myMuting;
 
         size_t lastLen;
 };

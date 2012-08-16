@@ -216,4 +216,12 @@ class RemoteControllerTelnet : public BaseRemoteController {
         int port_;
 };
 
+
+/* The Dummy remote controller does nothing
+ */
+class RemoteControllerDummy : public BaseRemoteController {
+    public:
+        void enrol(RemoteControllable* controllable) {};
+};
+
 #endif

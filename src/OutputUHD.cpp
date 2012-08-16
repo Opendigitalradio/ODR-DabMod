@@ -55,7 +55,9 @@ OutputUHD::OutputUHD(const char* device, unsigned sampleRate,
             device, this);
 
     /* register the parameters that can be remote controlled */
-    RC_ADD_PARAMETER(txgain, "UHD analog daughterboard TX gain")
+    RC_ADD_PARAMETER(txgain, "UHD analog daughterboard TX gain");
+    RC_ADD_PARAMETER(freq,   "UHD transmission frequency");
+    RC_ADD_PARAMETER(muting, "mute the output by stopping the transmitter");
 
     myDevice = device;
     
@@ -96,7 +98,8 @@ OutputUHD::OutputUHD(const char* device, unsigned sampleRate,
     //set the centre frequency
     MDEBUG("OutputUHD:Setting freq to %f...\n", myFrequency);
     myUsrp->set_tx_freq(myFrequency);
-    MDEBUG("OutputUHD:Actual frequency: %f\n", myUsrp->get_tx_freq());
+    myFrequency = myUsrp->get_tx_freq();
+    MDEBUG("OutputUHD:Actual frequency: %f\n", myFrequency);
 
     myUsrp->set_tx_gain(myTxGain);
     MDEBUG("OutputUHD:Actual TX Gain: %f ...\n", myUsrp->get_tx_gain());
@@ -176,6 +179,8 @@ OutputUHD::~OutputUHD()
 int OutputUHD::process(Buffer* dataIn, Buffer* dataOut)
 {
     struct frame_timestamp ts;
+
+    uwd.muting = myMuting;
 
     // On the first call, we must do some allocation and we must fill
     // the first buffer
@@ -370,7 +375,7 @@ void UHDWorker::process(struct UHDWorkerData *uwd)
 
         }
         else { // !uwd->sourceContainsTimestamp
-            if (uwd->muteNoTimestamps) {
+            if (uwd->muting || uwd->muteNoTimestamps) {
                 /* There was some error decoding the timestamp
                  */
                 fprintf(stderr, "UHDOut: Muting sample %d : no timestamp\n",
@@ -390,7 +395,7 @@ void UHDWorker::process(struct UHDWorkerData *uwd)
 
         MDEBUG("UHDWorker::process:num_tx_samps: %zu.\n", num_tx_samps);
         */
-        while (running && (num_acc_samps < sizeIn)) {
+        while (running && !uwd->muting && (num_acc_samps < sizeIn)) {
             size_t samps_to_send = std::min(sizeIn - num_acc_samps, bufsize);
 
             //ensure the the last packet has EOB set if the timestamps has been refreshed
@@ -517,6 +522,16 @@ void OutputUHD::set_parameter(string parameter, string value)
         myUsrp->set_tx_gain(myTxGain);
 #endif
     }
+    else if (parameter == "freq") {
+        ss >> myFrequency;
+#if ENABLE_UHD
+        myUsrp->set_tx_freq(myFrequency);
+        myFrequency = myUsrp->get_tx_freq();
+#endif
+    }
+    else if (parameter == "muting") {
+        ss >> myMuting;
+    }
     else {
         stringstream ss;
         ss << "Parameter '" << parameter << "' is not exported by controllable " << get_rc_name();
@@ -529,6 +544,12 @@ string OutputUHD::get_parameter(string parameter)
     stringstream ss;
     if (parameter == "txgain") {
         ss << myTxGain;
+    }
+    else if (parameter == "freq") {
+        ss << myFrequency;
+    }
+    else if (parameter == "muting") {
+        ss << myMuting;
     }
     else {
         ss << "Parameter '" << parameter << "' is not exported by controllable " << get_rc_name();

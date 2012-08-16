@@ -192,8 +192,7 @@ int main(int argc, char* argv[])
     InputMemory* input = NULL;
     ModOutput* output = NULL;
 
-    RemoteControllerTelnet rc (2121);
-    rc.start();
+    BaseRemoteController* rc = NULL;
 
     Logger logger;
 
@@ -309,6 +308,25 @@ int main(int argc, char* argv[])
         ptree pt;
 
         read_ini(configuration_file, pt);
+
+        // remote controller:
+        if (pt.get("remotecontrol.telnet", 0) == 1) {
+            try {
+                int telnetport = pt.get<int>("remotecontrol.telnetport");
+                RemoteControllerTelnet* telnetrc = new RemoteControllerTelnet(telnetport);
+                telnetrc->start();
+                rc = telnetrc;
+            }
+            catch (std::exception &e) {
+                std::cerr << "Error: " << e.what() << "\n";
+                std::cerr << "       telnet remote control enabled, but no telnetport defined.\n";
+                goto END_MAIN;
+            }
+        }
+        else {
+            rc = new RemoteControllerDummy();
+        }
+
 
         // input params:
         if (pt.get("input.loop", 0) == 1) {
@@ -513,7 +531,7 @@ int main(int argc, char* argv[])
                                uhdFrequency, uhdTxGain,
                                uhd_enable_sync, uhd_mute_no_timestamps,
                                logger);
-            ((OutputUHD*)output)->enrol_at(rc);
+            ((OutputUHD*)output)->enrol_at(*rc);
         }
         catch (std::exception& e) {
             logger(error, "UHD initialisation failed");
