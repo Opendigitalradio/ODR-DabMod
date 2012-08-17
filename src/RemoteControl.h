@@ -4,6 +4,9 @@
    Center Canada)
 
    Written by Matthias P. Braendli, matthias.braendli@mpb.li, 2012
+
+   This module adds remote-control capability to some of the dabmod modules.
+   see testremotecontrol/test.cpp for an example of how to use this.
  */
 /*
    This file is part of CRC-DADMOD.

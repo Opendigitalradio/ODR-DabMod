@@ -42,6 +42,7 @@
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/ini_parser.hpp>
 #include <complex>
+#include <string>
 #include <stdlib.h>
 #include <unistd.h>
 #include <stdio.h>
@@ -49,7 +50,6 @@
 #include <sys/stat.h>
 #include <stdexcept>
 #include <signal.h>
-#include <string.h>
 
 #ifdef HAVE_NETINET_IN_H
 #   include <netinet/in.h>
@@ -174,7 +174,7 @@ int main(int argc, char* argv[])
     GainMode gainMode = GAIN_VAR;
     Buffer data;
 
-    const char* filterTapsFilename = NULL;
+    std::string filterTapsFilename = "";
 
     // Two configuration sources exist: command line and (new) INI file
     bool use_configuration_cmdline = false;
@@ -368,7 +368,7 @@ int main(int argc, char* argv[])
         // FIR Filter parameters:
         if (pt.get("firfilter.enabled", 0) == 1) {
             try {
-                filterTapsFilename = pt.get<std::string>("firfilter.enabled").c_str();
+                filterTapsFilename = pt.get<std::string>("firfilter.filtertapsfile");
             }
             catch (std::exception &e) {
                 std::cerr << "Error: " << e.what() << "\n";
@@ -455,7 +455,7 @@ int main(int argc, char* argv[])
 
     // When using the FIRFilter, increase the modulator offset pipelining delay
     // by the correct amount
-    if (filterTapsFilename != NULL) {
+    if (filterTapsFilename != "") {
         modconf.delay_calculation_pipeline_stages += FIRFILTER_PIPELINE_DELAY;
     }
 
@@ -543,7 +543,7 @@ int main(int argc, char* argv[])
     flowgraph = new Flowgraph();
     data.setLength(6144);
     input = new InputMemory(&data);
-    modulator = new DabModulator(modconf, outputRate, clockRate,
+    modulator = new DabModulator(modconf, rc, outputRate, clockRate,
             dabMode, gainMode, amplitude, filterTapsFilename);
     flowgraph->connect(input, modulator);
     flowgraph->connect(modulator, output);

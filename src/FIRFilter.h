@@ -32,6 +32,7 @@
 #include <boost/thread.hpp>
 #include <queue>
 
+#include "RemoteControl.h"
 #include "ModCodec.h"
 #include "PcDebug.h"
 
@@ -40,6 +41,7 @@
 
 #include <time.h>
 #include <cstdio>
+#include <string>
 
 #define FIRFILTER_PIPELINE_DELAY 1
 
@@ -94,8 +96,17 @@ public:
 };
 
 struct FIRFilterWorkerData {
+    /* Thread-safe queues to give data to and get data from
+     * the worker
+     */
     ThreadsafeQueue<Buffer*> input_queue;
     ThreadsafeQueue<Buffer*> output_queue;
+
+    /* Remote-control can change the taps while the filter
+     * runs. This lock makes sure nothing bad happens when
+     * the taps are being modified
+     */
+    mutable boost::mutex taps_mutex;
     float* taps;
     int n_taps;
 };
@@ -133,10 +144,10 @@ class FIRFilterWorker {
 };
 
 
-class FIRFilter : public ModCodec
+class FIRFilter : public ModCodec, public RemoteControllable
 {
 public:
-    FIRFilter(const char* taps_file);
+    FIRFilter(std::string taps_file);
     virtual ~FIRFilter();
     FIRFilter(const FIRFilter&);
     FIRFilter& operator=(const FIRFilter&);
@@ -144,8 +155,16 @@ public:
     int process(Buffer* const dataIn, Buffer* dataOut);
     const char* name() { return "FIRFilter"; }
 
+    /******* REMOTE CONTROL ********/
+    void set_parameter(string parameter, string value);
+    string get_parameter(string parameter);
+
+
 protected:
-    int my_Ntaps;
+    void load_filter_taps();
+
+    std::string myTapsFile;
+    int myNtaps;
     float* myFilter;
 
     FIRFilterWorker worker;

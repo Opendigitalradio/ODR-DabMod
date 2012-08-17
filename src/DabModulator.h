@@ -31,12 +31,14 @@
 #endif
 
 #include <sys/types.h>
+#include <string>
 
 #include "ModCodec.h"
 #include "EtiReader.h"
 #include "Flowgraph.h"
 #include "GainControl.h"
 #include "OutputMemory.h"
+#include "RemoteControl.h"
 
 
 class DabModulator : public ModCodec
@@ -44,9 +46,10 @@ class DabModulator : public ModCodec
 public:
     DabModulator(
             struct modulator_offset_config& modconf,
+            BaseRemoteController* rc,
             unsigned outputRate = 2048000, unsigned clockRate = 0,
             unsigned dabMode = 0, GainMode gainMode = GAIN_VAR,
-            float factor = 1.0, const char* filterTapsFilename = NULL);
+            float factor = 1.0, std::string filterTapsFilename = "");
     DabModulator(const DabModulator& copy);
     virtual ~DabModulator();
 
@@ -67,7 +70,8 @@ protected:
     EtiReader myEtiReader;
     Flowgraph* myFlowgraph;
     OutputMemory* myOutput;
-    const char* myFilterTapsFilename;
+    std::string myFilterTapsFilename;
+    BaseRemoteController* myRC;
 
     size_t myNbSymbols;
     size_t myNbCarriers;

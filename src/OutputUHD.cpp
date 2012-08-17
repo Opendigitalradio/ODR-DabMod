@@ -332,7 +332,7 @@ void UHDWorker::process(struct UHDWorkerData *uwd)
                         frame->fct, tx_second, pps_offset);
                 uwd->logger->log(info, "OutputUHD: Throwing sample %d away: incomplete timestamp %zu + %f\n",
                         frame->fct, tx_second, pps_offset);
-                usleep(20000);
+                usleep(20000); //TODO should this be TM-dependant ?
                 goto loopend;
             }
 
@@ -500,6 +500,7 @@ void UHDWorker::process(struct UHDWorkerData *uwd)
                 frame->fct,
                 tx_second,
                 pps_offset);
+        usleep(23000); // 23ms, a bit faster than realtime for TM 2
 #endif
 
         last_pps = pps_offset;

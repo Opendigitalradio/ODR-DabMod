@@ -23,6 +23,8 @@
    along with CRC-DADMOD.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <string>
+
 #include "DabModulator.h"
 #include "PcDebug.h"
 
@@ -45,13 +47,15 @@
 #include "PuncturingEncoder.h"
 #include "TimeInterleaver.h"
 #include "TimestampDecoder.h"
+#include "RemoteControl.h"
 
 
 DabModulator::DabModulator(
         struct modulator_offset_config& modconf,
+        BaseRemoteController* rc,
         unsigned outputRate, unsigned clockRate,
         unsigned dabMode, GainMode gainMode, float factor,
-        const char* filterTapsFilename
+        std::string filterTapsFilename
         ) :
     ModCodec(ModFormat(1), ModFormat(0)),
     myOutputRate(outputRate),
@@ -61,7 +65,8 @@ DabModulator::DabModulator(
     myFactor(factor),
     myEtiReader(EtiReader(modconf)),
     myFlowgraph(NULL),
-    myFilterTapsFilename(filterTapsFilename)
+    myFilterTapsFilename(filterTapsFilename),
+    myRC(rc)
 {
     PDEBUG("DabModulator::DabModulator(%u, %u, %u, %u) @ %p\n",
             outputRate, clockRate, dabMode, gainMode, this);
@@ -193,8 +198,9 @@ int DabModulator::process(Buffer* const dataIn, Buffer* dataOut)
         cifGain = new GainControl(mySpacing, myGainMode, myFactor);
         cifGuard = new GuardIntervalInserter(myNbSymbols, mySpacing,
                 myNullSize, mySymSize);
-        if (myFilterTapsFilename != NULL) {
+        if (myFilterTapsFilename != "") {
             cifFilter = new FIRFilter(myFilterTapsFilename);
+            cifFilter->enrol_at(*myRC);
         }
         myOutput = new OutputMemory();
 
@@ -338,7 +344,7 @@ int DabModulator::process(Buffer* const dataIn, Buffer* dataOut)
         myFlowgraph->connect(cifOfdm, cifGain);
         myFlowgraph->connect(cifGain, cifGuard);
 
-        if (myFilterTapsFilename != NULL) {
+        if (myFilterTapsFilename != "") {
             myFlowgraph->connect(cifGuard, cifFilter);
             if (cifRes != NULL) {
                 myFlowgraph->connect(cifFilter, cifRes);
