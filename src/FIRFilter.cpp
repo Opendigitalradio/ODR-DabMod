@@ -247,6 +247,8 @@ FIRFilter::FIRFilter(std::string taps_file) :
 
     number_of_runs = 0;
 
+    firwd.taps = new float[0];
+
     load_filter_taps();
 
     PDEBUG("FIRFilter: Starting worker\n" );
