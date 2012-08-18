@@ -151,7 +151,7 @@ int main(int argc, char* argv[])
 {
     int ret = 0;
     bool loop = false;
-    const char* inputName = NULL;
+    std::string inputName = "";
 
     const char* outputName;
     const char* outputDevice;
@@ -333,8 +333,7 @@ int main(int argc, char* argv[])
             loop = true;
         }
 
-        string input_filename = pt.get("input.filename", "/dev/stdin");
-        inputName = input_filename.c_str();
+        inputName = pt.get("input.filename", "/dev/stdin");
 
         // log parameters:
         if (pt.get("log.syslog", 0) == 1) {
@@ -461,10 +460,12 @@ int main(int argc, char* argv[])
 
 
     // Setting ETI input filename
-    if (inputName != NULL && optind < argc) {
-        inputName = argv[optind++];
-    } else {
-        inputName = (char*)"/dev/stdin";
+    if (inputName == "") {
+        if (optind < argc) {
+            inputName = argv[optind++];
+        } else {
+            inputName = "/dev/stdin";
+        }
     }
     // Checking unused arguments
     if (optind != argc) {
@@ -487,7 +488,7 @@ int main(int argc, char* argv[])
 
     // Print settings
     fprintf(stderr, "Input\n");
-    fprintf(stderr, "  Name: %s\n", inputName);
+    fprintf(stderr, "  Name: %s\n", inputName.c_str());
     fprintf(stderr, "Output\n");
     if (useUHDOutput) {
         fprintf(stderr, " UHD, Device: %s\n", outputDevice);
@@ -507,11 +508,11 @@ int main(int argc, char* argv[])
     }
 
     // Opening ETI input file
-    inputFile = fopen(inputName, "r");
+    inputFile = fopen(inputName.c_str(), "r");
     if (inputFile == NULL) {
         fprintf(stderr, "Unable to open input file!\n");
         logger(error, "Unable to open input file!");
-        perror(inputName);
+        perror(inputName.c_str());
         ret = -1;
         goto END_MAIN;
     }
@@ -569,7 +570,7 @@ int main(int argc, char* argv[])
             if (fread(&sync, sizeof(sync), 1, inputFile) != 1) {
                 fprintf(stderr, "Unable to read sync in input file!\n");
                 logger(error, "Unable to read sync in input file!");
-                perror(inputName);
+                perror(inputName.c_str());
                 ret = -1;
                 goto END_MAIN;
             }
@@ -596,7 +597,7 @@ int main(int argc, char* argv[])
             if (fread(&frameSize, sizeof(frameSize), 1, inputFile) != 1) {
                 fprintf(stderr, "Unable to read frame size in input file!\n");
                 logger(error, "Unable to read frame size in input file!");
-                perror(inputName);
+                perror(inputName.c_str());
                 ret = -1;
                 goto END_MAIN;
             }
@@ -627,7 +628,7 @@ int main(int argc, char* argv[])
             if (fread(&sync, sizeof(sync), 1, inputFile) != 1) {
                 fprintf(stderr, "Unable to read nb frame in input file!\n");
                 logger(error, "Unable to read nb frame in input file!");
-                perror(inputName);
+                perror(inputName.c_str());
                 ret = -1;
                 goto END_MAIN;
             }
@@ -725,7 +726,7 @@ START:
                     fprintf(stderr,
                             "Unable to read %i data bytes in input file!\n",
                             frameSize);
-                    perror(inputName);
+                    perror(inputName.c_str());
                     ret = -1;
                     logger(error, "Unable to read from input file!");
                     goto END_MAIN;
