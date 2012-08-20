@@ -288,7 +288,7 @@ FIRFilter::load_filter_taps()
         if (taps_fstream.eof()) {
             fprintf(stderr, "FIRFilter: file %s should contains %d taps, but EOF reached "\
                     "after %d taps !\n", myTapsFile.c_str(), n_taps, n);
-            delete myFilter;
+            delete[] myFilter;
             throw std::runtime_error("FIRFilter: filtertaps file invalid ! ");
         }
     }
@@ -296,7 +296,7 @@ FIRFilter::load_filter_taps()
     {
         boost::mutex::scoped_lock lock(firwd.taps_mutex);
 
-        delete firwd.taps;
+        delete[] firwd.taps;
 
         firwd.taps = myFilter;
         firwd.n_taps = myNtaps;
