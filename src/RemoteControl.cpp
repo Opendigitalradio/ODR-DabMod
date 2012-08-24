@@ -25,9 +25,6 @@
 #include <string>
 #include <iostream>
 #include <string>
-#include <boost/bind.hpp>
-#include <boost/shared_ptr.hpp>
-#include <boost/enable_shared_from_this.hpp>
 #include <boost/asio.hpp>
 
 #include "RemoteControl.h"
@@ -56,10 +53,14 @@ RemoteControllerTelnet::process(long)
 
             boost::system::error_code ignored_error;
 
-            boost::asio::write(socket, boost::asio::buffer(welcome_), ignored_error);
+            boost::asio::write(socket, boost::asio::buffer(welcome_),
+                    boost::asio::transfer_all(),
+                    ignored_error);
 
             while (running_ && in_message != "quit") {
-                boost::asio::write(socket, boost::asio::buffer(prompt_), ignored_error);
+                boost::asio::write(socket, boost::asio::buffer(prompt_),
+                        boost::asio::transfer_all(),
+                        ignored_error);
 
                 in_message = "";
 
@@ -214,6 +215,8 @@ RemoteControllerTelnet::reply(tcp::socket& socket, string message)
     boost::system::error_code ignored_error;
     stringstream ss;
     ss << message << "\r\n";
-    boost::asio::write(socket, boost::asio::buffer(ss.str()), ignored_error);
+    boost::asio::write(socket, boost::asio::buffer(ss.str()),
+            boost::asio::transfer_all(),
+            ignored_error);
 }
 
