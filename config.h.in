@@ -1,5 +1,8 @@
 /* config.h.in.  Generated from configure.ac by autoheader.  */
 
+/* define if the Boost library is available */
+#undef HAVE_BOOST
+
 /* Define to 1 if you have the `bzero' function. */
 #undef HAVE_BZERO
 

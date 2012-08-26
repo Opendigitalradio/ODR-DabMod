@@ -24,6 +24,8 @@ AM_INIT_AUTOMAKE([-Wall])
 AC_CONFIG_SRCDIR([src/DabMod.cpp])
 AM_CONFIG_HEADER([config.h])
 
+ACLOCAL_AMFLAGS = -I m4
+
 case $target_cpu in
     x86_64)
 AC_DEFINE([__64BIT__], [], [__16BIT__, __32BIT__])
@@ -72,6 +74,8 @@ AC_SUBST([CFLAGS], ["$OPTIM $DEBUG $EXTRA"])
 AC_SUBST([CXXFLAGS], ["$OPTIM $DEBUG $EXTRA"])
 
 AC_CHECK_LIB([uhd], [main], [], [AC_MSG_ERROR([library uhd is missing])])
+
+AX_BOOST_BASE([1.41.0], [], AC_MSG_ERROR([BOOST 1.41 or later is required]))
 AC_CHECK_LIB([boost_system], [main], [], [AC_MSG_ERROR([library boost_system is missing])])
 AC_CHECK_LIB([boost_thread], [main], [], [AC_MSG_ERROR([library boost_thread is missing])])
 
