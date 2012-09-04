@@ -154,13 +154,8 @@ int main(int argc, char* argv[])
     std::string inputName = "";
 
     const char* outputName;
-    const char* outputDevice;
     int useFileOutput = 0;
     int useUHDOutput = 0;
-    double uhdFrequency = 0.0;
-    int uhdTxGain = 0;
-    bool uhd_mute_no_timestamps = false;
-    bool uhd_enable_sync = false;
 
     FILE* inputFile = NULL;
     uint32_t sync = 0;
@@ -180,6 +175,8 @@ int main(int argc, char* argv[])
     bool use_configuration_cmdline = false;
     bool use_configuration_file = false;
     std::string configuration_file;
+
+    OutputUHDConfig outputuhd_conf;
 
     // To handle the timestamp offset of the modulator
     struct modulator_offset_config modconf;
@@ -233,13 +230,13 @@ int main(int argc, char* argv[])
             useFileOutput = 1;
             break;
         case 'F':
-            uhdFrequency = strtof(optarg, NULL);
+            outputuhd_conf.frequency = strtof(optarg, NULL);
             break;
         case 'g':
             gainMode = (GainMode)strtol(optarg, NULL, 0);
             break;
         case 'G':
-            uhdTxGain = (int)strtol(optarg, NULL, 10);
+            outputuhd_conf.txgain = (int)strtol(optarg, NULL, 10);
             break;
         case 'l':
             loop = true;
@@ -252,7 +249,7 @@ int main(int argc, char* argv[])
             }
             modconf.use_offset_fixed = true;
             modconf.offset_fixed = strtod(optarg, NULL);
-            uhd_enable_sync = true;
+            outputuhd_conf.enableSync = true;
             break;
         case 'O':
             if (modconf.use_offset_fixed)
@@ -262,7 +259,7 @@ int main(int argc, char* argv[])
             }
             modconf.use_offset_file = true;
             modconf.offset_filename = optarg;
-            uhd_enable_sync = true;
+            outputuhd_conf.enableSync = true;
             break;
         case 'm':
             dabMode = strtol(optarg, NULL, 0);
@@ -278,7 +275,7 @@ int main(int argc, char* argv[])
                 fprintf(stderr, "Options -u and -f are mutually exclusive\n");
                 goto END_MAIN;
             }
-            outputDevice = optarg;
+            outputuhd_conf.device = optarg;
             useUHDOutput = 1;
             break;
         case 'V':
@@ -399,16 +396,34 @@ int main(int argc, char* argv[])
             useFileOutput = 1;
         }
         else if (output_selected == "uhd") {
-            outputDevice = pt.get("uhdoutput.device", "").c_str();
-            uhdTxGain    = pt.get("uhdoutput.txgain", 0);
+            outputuhd_conf.device = pt.get("uhdoutput.device", "").c_str();
+            outputuhd_conf.txgain = pt.get("uhdoutput.txgain", 0);
             try {
-                uhdFrequency = pt.get<double>("uhdoutput.frequency");
+                outputuhd_conf.frequency = pt.get<double>("uhdoutput.frequency");
             }
             catch (std::exception &e) {
                 std::cerr << "Error: " << e.what() << "\n";
                 std::cerr << "       UHD output enabled, but no frequency defined.\n";
                 goto END_MAIN;
             }
+
+            outputuhd_conf.refclk_src = pt.get("uhdoutput.refclk_source", "int");
+            outputuhd_conf.pps_src = pt.get("uhdoutput.pps_source", "int");
+            outputuhd_conf.pps_polarity = pt.get("uhdoutput.pps_polarity", "pos");
+
+            string behave = pt.get("uhdoutput.behaviour_refclk_lock_lost", "ignore");
+
+            if (behave == "crash") {
+                outputuhd_conf.refclk_lock_loss_behaviour = CRASH;
+            }
+            else if (behave == "ignore") {
+                outputuhd_conf.refclk_lock_loss_behaviour = IGNORE;
+            }
+            else {
+                std::cerr << "Error: UHD output: behaviour_refclk_lock_lost invalid." << std::endl;
+                goto END_MAIN;
+            }
+
             useUHDOutput = 1;
         }
         else {
@@ -416,8 +431,8 @@ int main(int argc, char* argv[])
             goto END_MAIN;
         }
 
-        uhd_enable_sync = (pt.get("delaymanagement.synchronous", 0) == 1);
-        if (uhd_enable_sync) {
+        outputuhd_conf.enableSync = (pt.get("delaymanagement.synchronous", 0) == 1);
+        if (outputuhd_conf.enableSync) {
             try {
                 std::string delay_mgmt = pt.get<std::string>("delaymanagement.management");
                 if (delay_mgmt == "fixed") {
@@ -443,7 +458,7 @@ int main(int argc, char* argv[])
     logger(info, "starting up");
 
     // When using offset, enable frame muting
-    uhd_mute_no_timestamps = (modconf.use_offset_file || modconf.use_offset_fixed);
+    outputuhd_conf.muteNoTimestamps = (modconf.use_offset_file || modconf.use_offset_fixed);
 
     if (!(modconf.use_offset_file || modconf.use_offset_fixed)) {
         fprintf(stderr, "No Modulator offset defined, setting to 0\n");
@@ -491,7 +506,7 @@ int main(int argc, char* argv[])
     fprintf(stderr, "  Name: %s\n", inputName.c_str());
     fprintf(stderr, "Output\n");
     if (useUHDOutput) {
-        fprintf(stderr, " UHD, Device: %s\n", outputDevice);
+        fprintf(stderr, " UHD, Device: %s\n", outputuhd_conf.device);
     }
     else if (useFileOutput) {
         fprintf(stderr, "  Name: %s\n", outputName);
@@ -527,15 +542,14 @@ int main(int argc, char* argv[])
     else if (useUHDOutput) {
         fprintf(stderr, "Using UHD output\n");
         amplitude /= 32000.0f;
+        outputuhd_conf.sampleRate = outputRate;
         try {
-            output = new OutputUHD(outputDevice, outputRate,
-                               uhdFrequency, uhdTxGain,
-                               uhd_enable_sync, uhd_mute_no_timestamps,
-                               logger);
+            output = new OutputUHD(outputuhd_conf, logger);
             ((OutputUHD*)output)->enrol_at(*rc);
         }
         catch (std::exception& e) {
-            logger(error, "UHD initialisation failed");
+            logger(error, "UHD initialisation failed:");
+            logger(error, e.what());
             goto END_MAIN;
         }
         

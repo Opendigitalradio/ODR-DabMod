@@ -82,6 +82,7 @@ struct UHDWorkerFrameData {
     uint32_t fct;
 };
 
+enum refclk_lock_loss_behaviour_t { CRASH, IGNORE };
 
 struct UHDWorkerData {
     uhd::usrp::multi_usrp::sptr myUsrp;
@@ -107,6 +108,9 @@ struct UHDWorkerData {
 
     // A barrier to synchronise the two threads
     shared_ptr<barrier> sync_barrier;
+
+    // What to do when the reference clock PLL loses lock
+    refclk_lock_loss_behaviour_t refclk_lock_loss_behaviour;
 
     // The common logger
     Logger* logger;
@@ -141,15 +145,33 @@ class UHDWorker {
         uhd::tx_streamer::sptr myTxStream;
 };
 
+/* This structure is used as initial configuration for OutputUHD */
+struct OutputUHDConfig {
+    const char* device;
+    unsigned sampleRate;
+    double frequency;
+    int txgain;
+    bool enableSync;
+    bool muteNoTimestamps;
+
+    /* allowed values : auto, int, sma, mimo */
+    std::string refclk_src;
+
+    /* allowed values : int, sma, mimo */
+    std::string pps_src;
+
+    /* allowed values : pos, neg */
+    std::string pps_polarity;
+
+    /* What to do when the reference clock PLL loses lock */
+    refclk_lock_loss_behaviour_t refclk_lock_loss_behaviour;
+};
+
 
 class OutputUHD: public ModOutput, public RemoteControllable {
     public:
-        OutputUHD(const char* device,
-                unsigned sampleRate,
-                double frequency,
-                int txgain,
-                bool enableSync,
-                bool muteNoTimestamps,
+        OutputUHD(
+                OutputUHDConfig& config,
                 Logger& logger);
         ~OutputUHD();
 

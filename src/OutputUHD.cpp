@@ -39,27 +39,29 @@
 
 typedef std::complex<float> complexf;
 
-OutputUHD::OutputUHD(const char* device, unsigned sampleRate,
-        double frequency, int txgain, bool enableSync, bool muteNoTimestamps,
+OutputUHD::OutputUHD(
+        OutputUHDConfig& config,
         Logger& logger) :
     ModOutput(ModFormat(1), ModFormat(0)),
     RemoteControllable("uhd"),
-    myLogger(logger),
-    mySampleRate(sampleRate),
-    myTxGain(txgain),
-    myFrequency(frequency),
-    mute_no_timestamps(muteNoTimestamps),
-    enable_sync(enableSync)
+    myLogger(logger)
 {
+
+    mySampleRate = config.sampleRate;
+    myTxGain = config.txgain;
+    myFrequency = config.frequency;
+    mute_no_timestamps = config.muteNoTimestamps;
+    enable_sync = config.enableSync;
+    myDevice = config.device;
+
     MDEBUG("OutputUHD::OutputUHD(device: %s) @ %p\n",
-            device, this);
+            myDevice.c_str(), this);
 
     /* register the parameters that can be remote controlled */
     RC_ADD_PARAMETER(txgain, "UHD analog daughterboard TX gain");
     RC_ADD_PARAMETER(freq,   "UHD transmission frequency");
     RC_ADD_PARAMETER(muting, "mute the output by stopping the transmitter");
 
-    myDevice = device;
     
 #if ENABLE_UHD
     uhd::set_thread_priority_safe();
@@ -67,34 +69,69 @@ OutputUHD::OutputUHD(const char* device, unsigned sampleRate,
     //create a usrp device
     MDEBUG("OutputUHD:Creating the usrp device with: %s...\n",
             myDevice.c_str());
-    //try {
-        myUsrp = uhd::usrp::multi_usrp::make(myDevice);
-    /*}
-    catch (std::exception &e) {
-        fprintf(stderr, "FLABBER FLABBER FLABBER\n");
-    }*/
+
+    myUsrp = uhd::usrp::multi_usrp::make(myDevice);
+
     MDEBUG("OutputUHD:Using device: %s...\n", myUsrp->get_pp_string().c_str());
 
-    if (enable_sync) {
-        MDEBUG("OutputUHD:Setting REFCLK and PPS input...\n");
-        uhd::clock_config_t clock_config;
+    MDEBUG("OutputUHD:Setting REFCLK and PPS input...\n");
+    uhd::clock_config_t clock_config;
+
+    if (config.refclk_src == "auto") {
+        clock_config.ref_source = uhd::clock_config_t::REF_AUTO;
+    }
+    else if (config.refclk_src == "int") {
+        clock_config.ref_source = uhd::clock_config_t::REF_INT;
+    }
+    else if (config.refclk_src == "sma") {
         clock_config.ref_source = uhd::clock_config_t::REF_SMA;
-        clock_config.pps_source = uhd::clock_config_t::PPS_SMA;
-        clock_config.pps_polarity = uhd::clock_config_t::PPS_POS;
-        myUsrp->set_clock_config(clock_config, uhd::usrp::multi_usrp::ALL_MBOARDS);
+    }
+    else if (config.refclk_src == "mimo") {
+        clock_config.ref_source = uhd::clock_config_t::REF_MIMO;
+    }
+    else {
+        myLogger(error, "OutputUHD: invalid refclk_src specified");
+        throw runtime_error("OutputUHD: invalid refclk_src specified");
     }
 
+    if (config.pps_src == "int") {
+        clock_config.pps_source = uhd::clock_config_t::PPS_INT;
+    }
+    else if (config.pps_src == "sma") {
+        clock_config.pps_source = uhd::clock_config_t::PPS_SMA;
+    }
+    else if (config.pps_src == "mimo") {
+        clock_config.pps_source = uhd::clock_config_t::PPS_MIMO;
+    }
+    else {
+        myLogger(error, "OutputUHD: invalid pps_src specified");
+        throw runtime_error("OutputUHD: invalid pps_src specified");
+    }
+
+    if (config.pps_polarity == "pos") {
+        clock_config.pps_polarity = uhd::clock_config_t::PPS_POS;
+    }
+    else if (config.pps_polarity == "neg") {
+        clock_config.pps_polarity = uhd::clock_config_t::PPS_NEG;
+    }
+    else {
+        myLogger(error, "OutputUHD: invalid pps_polarity specified");
+        throw runtime_error("OutputUHD: invalid pps_polarity specified");
+    }
+
+    myUsrp->set_clock_config(clock_config, uhd::usrp::multi_usrp::ALL_MBOARDS);
+
     std::cerr << "UHD clock source is " << 
-            myUsrp->get_clock_source(0) << std::endl;
+        myUsrp->get_clock_source(0) << std::endl;
 
     std::cerr << "UHD time source is " <<
-            myUsrp->get_time_source(0) << std::endl;
+        myUsrp->get_time_source(0) << std::endl;
 
     //set the tx sample rate
     MDEBUG("OutputUHD:Setting rate to %d...\n", mySampleRate);
     myUsrp->set_tx_rate(mySampleRate);
     MDEBUG("OutputUHD:Actual TX Rate: %f Msps...\n", myUsrp->get_tx_rate());
-    
+
     //set the centre frequency
     MDEBUG("OutputUHD:Setting freq to %f...\n", myFrequency);
     myUsrp->set_tx_freq(myFrequency);
@@ -141,8 +178,8 @@ OutputUHD::OutputUHD(const char* device, unsigned sampleRate,
         fprintf(stderr, "OutputUHD: USRP time %f\n",
                 myUsrp->get_time_now().get_real_secs());
     }
-    
-    
+
+
     // preparing output thread worker data
     uwd.myUsrp = myUsrp;
 #else
@@ -155,6 +192,8 @@ OutputUHD::OutputUHD(const char* device, unsigned sampleRate,
     uwd.sampleRate = mySampleRate;
     uwd.sourceContainsTimestamp = false;
     uwd.muteNoTimestamps = mute_no_timestamps;
+    uwd.logger = &myLogger;
+    uwd.refclk_lock_loss_behaviour = config.refclk_lock_loss_behaviour;
 
     // Since we don't know the buffer size, we cannot initialise
     // the buffers here
@@ -181,6 +220,7 @@ int OutputUHD::process(Buffer* dataIn, Buffer* dataOut)
     struct frame_timestamp ts;
 
     uwd.muting = myMuting;
+
 
     // On the first call, we must do some allocation and we must fill
     // the first buffer
@@ -222,7 +262,7 @@ int OutputUHD::process(Buffer* dataIn, Buffer* dataOut)
         }
         //fprintf(stderr, "OutUHD.process:Waiting for barrier\n");
         my_sync_barrier.get()->wait();
-        
+
         // write into the our buffer while
         // the worker sends the other.
 
@@ -310,12 +350,15 @@ void UHDWorker::process(struct UHDWorkerData *uwd)
         tx_second = frame->ts.timestamp_sec;
 
         sizeIn = uwd->bufsize / sizeof(complexf);
-        
+
 #if ENABLE_UHD
         // Check for ref_lock 
         if (! uwd->myUsrp->get_mboard_sensor("ref_locked", 0).to_bool()) {
             fprintf(stderr, "UHDWorker: RefLock lost !\n");
             uwd->logger->log(alert, "OutputUHD: External reference clock lock lost !");
+            if (uwd->refclk_lock_loss_behaviour == CRASH) {
+                throw std::runtime_error("OutputUHD: External reference clock lock lost.");
+            }
         }
 
         usrp_time = uwd->myUsrp->get_time_now().get_real_secs();
@@ -338,29 +381,29 @@ void UHDWorker::process(struct UHDWorkerData *uwd)
 
             md.has_time_spec = true;
             md.time_spec = uhd::time_spec_t(tx_second, pps_offset);
-            
+
             // md is defined, let's do some checks
             if (md.time_spec.get_real_secs() + 0.2 < usrp_time) {
                 fprintf(stderr,
-                    "* Timestamp in the past! offset: %f"
-                    "  (%f) frame %d tx_second %zu; pps %f\n",
-                    md.time_spec.get_real_secs() - usrp_time,
-                    usrp_time, frame->fct, tx_second, pps_offset);
+                        "* Timestamp in the past! offset: %f"
+                        "  (%f) frame %d tx_second %zu; pps %f\n",
+                        md.time_spec.get_real_secs() - usrp_time,
+                        usrp_time, frame->fct, tx_second, pps_offset);
                 goto loopend; //skip the frame
             }
 
 #if ENABLE_UHD
             if (md.time_spec.get_real_secs() > usrp_time + TIMESTAMP_MARGIN_FUTURE) {
                 fprintf(stderr,
-                    "* Timestamp too far in the future! offset: %f\n",
-                    md.time_spec.get_real_secs() - usrp_time);
+                        "* Timestamp too far in the future! offset: %f\n",
+                        md.time_spec.get_real_secs() - usrp_time);
                 usleep(20000); //sleep so as to fill buffers
             }
 
             if (md.time_spec.get_real_secs() > usrp_time + TIMESTAMP_ABORT_FUTURE) {
                 fprintf(stderr,
-                    "* Timestamp way too far in the future! offset: %f\n",
-                    md.time_spec.get_real_secs() - usrp_time);
+                        "* Timestamp way too far in the future! offset: %f\n",
+                        md.time_spec.get_real_secs() - usrp_time);
                 fprintf(stderr, "* Aborting\n");
                 uwd->logger->log(error, "OutputUHD: timestamp is way to far in the future, aborting");
                 throw std::runtime_error("Timestamp error. Aborted.");
@@ -377,7 +420,7 @@ void UHDWorker::process(struct UHDWorkerData *uwd)
         else { // !uwd->sourceContainsTimestamp
             if (uwd->muting || uwd->muteNoTimestamps) {
                 /* There was some error decoding the timestamp
-                 */
+                */
                 fprintf(stderr, "UHDOut: Muting sample %d : no timestamp\n",
                         frame->fct);
                 usleep(20000);
@@ -390,11 +433,11 @@ void UHDWorker::process(struct UHDWorkerData *uwd)
                 myTxStream->get_max_num_samps());
 
         /*
-        size_t num_tx_samps = myTxStream->send(
-                dataIn, sizeIn, md, timeout);
+           size_t num_tx_samps = myTxStream->send(
+           dataIn, sizeIn, md, timeout);
 
-        MDEBUG("UHDWorker::process:num_tx_samps: %zu.\n", num_tx_samps);
-        */
+           MDEBUG("UHDWorker::process:num_tx_samps: %zu.\n", num_tx_samps);
+           */
         while (running && !uwd->muting && (num_acc_samps < sizeIn)) {
             size_t samps_to_send = std::min(sizeIn - num_acc_samps, bufsize);
 
@@ -410,13 +453,13 @@ void UHDWorker::process(struct UHDWorkerData *uwd)
             num_acc_samps += num_tx_samps;
 
             md.time_spec = uhd::time_spec_t(tx_second, pps_offset)
-                         + uhd::time_spec_t(0, num_acc_samps/uwd->sampleRate);
+                + uhd::time_spec_t(0, num_acc_samps/uwd->sampleRate);
 
             /*
-            fprintf(stderr, "*** pps_offset %f, md.time_spec %f, usrp->now %f\n",
-                            pps_offset,
-                            md.time_spec.get_real_secs(),
-                            uwd->myUsrp->get_time_now().get_real_secs());
+               fprintf(stderr, "*** pps_offset %f, md.time_spec %f, usrp->now %f\n",
+               pps_offset,
+               md.time_spec.get_real_secs(),
+               uwd->myUsrp->get_time_now().get_real_secs());
             // */
 
 
@@ -485,10 +528,10 @@ void UHDWorker::process(struct UHDWorkerData *uwd)
             }
 
             /*
-            bool got_async_burst_ack = false;
+               bool got_async_burst_ack = false;
             //loop through all messages for the ACK packet (may have underflow messages in queue)
             while (not got_async_burst_ack and uwd->myUsrp->get_device()->recv_async_msg(async_md, 0.2)){
-                got_async_burst_ack = (async_md.event_code == uhd::async_metadata_t::EVENT_CODE_BURST_ACK);
+            got_async_burst_ack = (async_md.event_code == uhd::async_metadata_t::EVENT_CODE_BURST_ACK);
             }
             //std::cerr << (got_async_burst_ack? "success" : "fail") << std::endl;
             // */
