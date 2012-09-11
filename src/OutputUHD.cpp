@@ -523,7 +523,10 @@ void UHDWorker::process(struct UHDWorkerData *uwd)
                 }
 
                 if (failure) {
-                    uwd->logger->log(alert, uhd_async_message);
+                    uwd->logger->log(alert, "Near frame %d: %s",
+                            frame->fct,
+                            uhd_async_message.c_str());
+
                 }
             }
 
