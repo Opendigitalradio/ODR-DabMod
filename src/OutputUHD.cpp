@@ -496,36 +496,36 @@ void UHDWorker::process(struct UHDWorkerData *uwd)
             //std::cerr << std::endl << "Waiting for async burst ACK... " << std::flush;
             uhd::async_metadata_t async_md;
             if (uwd->myUsrp->get_device()->recv_async_msg(async_md, 0)) {
-                std::string uhd_async_message = "Received UHD message ";
+                const char* uhd_async_message = "";
                 bool failure = true;
                 switch (async_md.event_code) {
                     case uhd::async_metadata_t::EVENT_CODE_BURST_ACK:
                         failure = false;
                         break;
                     case uhd::async_metadata_t::EVENT_CODE_UNDERFLOW:
-                        uhd_async_message += "Underflow";
+                        uhd_async_message = "Underflow";
                         break;
                     case uhd::async_metadata_t::EVENT_CODE_SEQ_ERROR:
-                        uhd_async_message += "Packet loss between host and device.";
+                        uhd_async_message = "Packet loss between host and device.";
                         break;
                     case uhd::async_metadata_t::EVENT_CODE_TIME_ERROR:
-                        uhd_async_message += "Packet had time that was late.";
+                        uhd_async_message = "Packet had time that was late.";
                         break;
                     case uhd::async_metadata_t::EVENT_CODE_UNDERFLOW_IN_PACKET:
-                        uhd_async_message += "Underflow occurred inside a packet.";
+                        uhd_async_message = "Underflow occurred inside a packet.";
                         break;
                     case uhd::async_metadata_t::EVENT_CODE_SEQ_ERROR_IN_BURST:
-                        uhd_async_message += "Packet loss within a burst.";
+                        uhd_async_message = "Packet loss within a burst.";
                         break;
                     default:
-                        uhd_async_message += "unknown event code";
+                        uhd_async_message = "unknown event code";
                         break;
                 }
 
                 if (failure) {
-                    uwd->logger->log(alert, "Near frame %d: %s",
+                    uwd->logger->log(alert, "Near frame %d: Received Async UHD Message '%s'",
                             frame->fct,
-                            uhd_async_message.c_str());
+                            uhd_async_message);
 
                 }
             }
