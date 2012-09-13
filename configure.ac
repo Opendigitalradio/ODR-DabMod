@@ -17,7 +17,7 @@
 # along with CRC-DADMOD.  If not, see <http://www.gnu.org/licenses/>.
 
 AC_PREREQ(2.59)
-AC_INIT([CRC-DabMod], [0.3.3-sfn-r4], [pascal.charest@crc.ca])
+AC_INIT([CRC-DabMod], [0.3.3-sfn-r7], [pascal.charest@crc.ca])
 AC_CONFIG_AUX_DIR([build-aux])
 AC_CANONICAL_SYSTEM
 AM_INIT_AUTOMAKE([-Wall])
