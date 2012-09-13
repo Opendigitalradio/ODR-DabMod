@@ -24,7 +24,6 @@
  */
 
 #include <list>
-#include <stdarg.h>
 
 #include "Log.h"
 #include "porting.h"
@@ -39,24 +38,17 @@ Logger::register_backend(LogBackend* backend) {
     //log(info, "Registered new logger " + backend->get_name());
 }
 
-void
-Logger::operator()(log_level_t level, const char* fmt, ...) {
-    va_list arg_ptr;
 
-    va_start(arg_ptr, fmt);
+void
+Logger::log(log_level_t level, std::string message) {
     for (std::list<LogBackend*>::iterator it = backends.begin(); it != backends.end(); it++) {
-        (*it)->log(level, fmt, arg_ptr);
+        (*it)->log(level, message);
     }
-    va_end(arg_ptr);
 }
 
-void
-Logger::log(log_level_t level, const char* fmt, ...) {
-    va_list arg_ptr;
 
-    va_start(arg_ptr, fmt);
-    for (std::list<LogBackend*>::iterator it = backends.begin(); it != backends.end(); it++) {
-        (*it)->log(level, fmt, arg_ptr);
-    }
-    va_end(arg_ptr);
+LogLine
+Logger::level(log_level_t level)
+{
+    return LogLine(this, level);
 }

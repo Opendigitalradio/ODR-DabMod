@@ -31,6 +31,7 @@
 
 
 #include "Eti.h"
+#include "Log.h"
 #include "FicSource.h"
 #include "SubchannelSource.h"
 #include "TimestampDecoder.h"
@@ -42,23 +43,8 @@
 
 class EtiReader
 {
-protected:
-    void sync();
-    int state;
-    uint32_t nb_frames;
-    uint16_t framesize;
-    eti_SYNC eti_sync;
-    eti_FC eti_fc;
-    std::vector<eti_STC> eti_stc;
-    eti_EOH eti_eoh;
-    eti_EOF eti_eof;
-    eti_TIST eti_tist;
-    FicSource* myFicSource;
-    std::vector<SubchannelSource*> mySources;
-    TimestampDecoder* myTimestampDecoder;
-    
 public:
-    EtiReader(struct modulator_offset_config& modconf);
+    EtiReader(struct modulator_offset_config& modconf, Logger& logger);
     virtual ~EtiReader();
     EtiReader(const EtiReader&);
     EtiReader& operator=(const EtiReader&);
@@ -81,9 +67,26 @@ public:
     bool sourceContainsTimestamp();
 
 protected:
+    /* Main program logger */
+    Logger& myLogger;
+
     /* Transform the ETI TIST to a PPS offset in ms */
     double getPPSOffset();
 
+    void sync();
+    int state;
+    uint32_t nb_frames;
+    uint16_t framesize;
+    eti_SYNC eti_sync;
+    eti_FC eti_fc;
+    std::vector<eti_STC> eti_stc;
+    eti_EOH eti_eoh;
+    eti_EOF eti_eof;
+    eti_TIST eti_tist;
+    FicSource* myFicSource;
+    std::vector<SubchannelSource*> mySources;
+    TimestampDecoder* myTimestampDecoder;
+    
 private:
     size_t myCurrentFrame;
     bool time_ext_enabled;

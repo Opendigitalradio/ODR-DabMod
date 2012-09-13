@@ -39,6 +39,7 @@
 #include "GainControl.h"
 #include "OutputMemory.h"
 #include "RemoteControl.h"
+#include "Log.h"
 
 
 class DabModulator : public ModCodec
@@ -47,6 +48,7 @@ public:
     DabModulator(
             struct modulator_offset_config& modconf,
             BaseRemoteController* rc,
+            Logger& logger,
             unsigned outputRate = 2048000, unsigned clockRate = 0,
             unsigned dabMode = 0, GainMode gainMode = GAIN_VAR,
             float factor = 1.0, std::string filterTapsFilename = "");
@@ -60,6 +62,8 @@ public:
     EtiReader* getEtiReader() { return &myEtiReader; }
 
 protected:
+    Logger& myLogger;
+
     void setMode(unsigned mode);
 
     unsigned myOutputRate;

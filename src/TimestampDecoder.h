@@ -26,10 +26,12 @@
 #define TIMESTAMP_DECODER_H
 
 #include <queue>
+#include <string>
 #include <time.h>
 #include <math.h>
 #include <stdio.h>
 #include "Eti.h"
+#include "Log.h"
 
 struct modulator_offset_config
 {
@@ -38,7 +40,7 @@ struct modulator_offset_config
     /* These two fields are used when the modulator is run with a fixed offset */
 
     bool use_offset_file;
-    const char* offset_filename;
+    std::string offset_filename;
     /* These two fields are used when the modulator reads the offset from a file */
 
     unsigned delay_calculation_pipeline_stages;
@@ -103,8 +105,10 @@ struct frame_timestamp
 class TimestampDecoder
 {
     public: 
-        TimestampDecoder(struct modulator_offset_config& config):
-            modconfig(config)
+        TimestampDecoder(
+                struct modulator_offset_config& config,
+                Logger& logger):
+            myLogger(logger), modconfig(config)
         {
             inhibit_second_update = 0;
             time_pps = 0.0;
@@ -113,6 +117,12 @@ class TimestampDecoder
             full_timestamp_received_mnsc = false;
             gmtime_r(0, &temp_time);
             offset_changed = false;
+
+            myLogger.level(info) << "Setting up timestamp decoder with " << 
+                (modconfig.use_offset_fixed ? "fixed" : 
+                (modconfig.use_offset_file ? "dynamic" : "none")) <<
+                " offset";
+
         };
 
         /* Calculate the timestamp for the current frame. */
@@ -126,6 +136,9 @@ class TimestampDecoder
         bool updateModulatorOffset();
 
     protected:
+        /* Main program logger */
+        Logger& myLogger;
+
         /* Push a new MNSC field into the decoder */
         void pushMNSCData(int framephase, uint16_t mnsc);
 

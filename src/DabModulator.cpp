@@ -48,22 +48,25 @@
 #include "TimeInterleaver.h"
 #include "TimestampDecoder.h"
 #include "RemoteControl.h"
+#include "Log.h"
 
 
 DabModulator::DabModulator(
         struct modulator_offset_config& modconf,
         BaseRemoteController* rc,
+        Logger& logger,
         unsigned outputRate, unsigned clockRate,
         unsigned dabMode, GainMode gainMode, float factor,
         std::string filterTapsFilename
         ) :
     ModCodec(ModFormat(1), ModFormat(0)),
+    myLogger(logger),
     myOutputRate(outputRate),
     myClockRate(clockRate),
     myDabMode(dabMode),
     myGainMode(gainMode),
     myFactor(factor),
-    myEtiReader(EtiReader(modconf)),
+    myEtiReader(EtiReader(modconf, myLogger)),
     myFlowgraph(NULL),
     myFilterTapsFilename(filterTapsFilename),
     myRC(rc)

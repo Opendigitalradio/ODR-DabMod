@@ -31,6 +31,7 @@
 #include "PcDebug.h"
 #include "TimestampDecoder.h"
 #include "Eti.h"
+#include "Log.h"
 
 //#define MDEBUG(fmt, args...) fprintf (LOG, fmt , ## args) 
 #define MDEBUG(fmt, args...) PDEBUG(fmt, ## args) 
@@ -90,8 +91,8 @@ void TimestampDecoder::calculateTimestamp(struct frame_timestamp& ts)
             modconfig.delay_calculation_pipeline_stages);
 
     if (queue_timestamps.size() > modconfig.delay_calculation_pipeline_stages) {
-        fprintf(stderr, "Error: Timestamp queue is too large : size %zu ! This should not happen !\n",
-                queue_timestamps.size());
+        myLogger.level(error) << "Error: Timestamp queue is too large : size " <<
+            queue_timestamps.size() << "! This should not happen !";
     }
 
     //ts.print("calc2 ");
@@ -197,7 +198,7 @@ bool TimestampDecoder::updateModulatorOffset()
     if (modconfig.use_offset_fixed)
     {
         timestamp_offset = modconfig.offset_fixed;
-        PDEBUG("Setting timestamp offset to %f\n", timestamp_offset);
+        myLogger.level(info) << "Setting fixed offset to " << timestamp_offset;
         return true;
     }
     else if (modconfig.use_offset_file)
@@ -210,7 +211,7 @@ bool TimestampDecoder::updateModulatorOffset()
 
         try
         {
-            filestream.open(modconfig.offset_filename);
+            filestream.open(modconfig.offset_filename.c_str());
             if (!filestream.eof())
             {
                 getline(filestream, filedata);
@@ -221,20 +222,20 @@ bool TimestampDecoder::updateModulatorOffset()
                 }
                 catch (bad_lexical_cast& e)
                 {
-                    fprintf(stderr, "Error parsing timestamp offset from file\n");
+                    myLogger.level(error) << "Error parsing timestamp offset from file '" << modconfig.offset_filename << "'";
                     r = false;
                 }
             }
             else
             {
-                fprintf(stderr, "Error reading from timestamp offset file: eof reached\n");
+                myLogger.level(error) << "Error reading from timestamp offset file: eof reached\n";
                 r = false;
             }
             filestream.close();
         }
         catch (exception& e)
         {
-            fprintf(stderr, "Error opening timestamp offset file\n");
+            myLogger.level(error) << "Error opening timestamp offset file\n";
             r = false;
         }
 
@@ -244,8 +245,7 @@ bool TimestampDecoder::updateModulatorOffset()
             if (timestamp_offset != newoffset)
             {
                 timestamp_offset = newoffset;
-                fprintf(stderr, "TimestampDecoder::updateTimestampOffset:" \
-                        "new offset is %f\n", timestamp_offset);
+                myLogger.level(info) << "TimestampDecoder::updateTimestampOffset: new offset is " << timestamp_offset;
                 offset_changed = true;
             }
 

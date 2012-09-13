@@ -23,6 +23,7 @@
  */
 
 #include "EtiReader.h"
+#include "Log.h"
 #include "PcDebug.h"
 #include "TimestampDecoder.h"
 
@@ -47,13 +48,16 @@ enum ETI_READER_STATE {
 };
 
 
-EtiReader::EtiReader(struct modulator_offset_config& modconf) :
-    state(EtiReaderStateSync), myFicSource(NULL)
+EtiReader::EtiReader(struct modulator_offset_config& modconf,
+        Logger& logger) :
+    myLogger(logger),
+    state(EtiReaderStateSync),
+    myFicSource(NULL)
 {
     PDEBUG("EtiReader::EtiReader()\n");
 
     myCurrentFrame = 0;
-    myTimestampDecoder = new TimestampDecoder(modconf);
+    myTimestampDecoder = new TimestampDecoder(modconf, myLogger);
 }
 
 EtiReader::~EtiReader()

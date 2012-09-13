@@ -258,7 +258,7 @@ int main(int argc, char* argv[])
                 goto END_MAIN;
             }
             modconf.use_offset_file = true;
-            modconf.offset_filename = optarg;
+            modconf.offset_filename = std::string(optarg);
             outputuhd_conf.enableSync = true;
             break;
         case 'm':
@@ -440,7 +440,7 @@ int main(int argc, char* argv[])
                     modconf.use_offset_fixed = true;
                 }
                 else if (delay_mgmt == "dynamic") {
-                    modconf.offset_filename = pt.get<std::string>("delaymanagement.dynamicoffsetfile").c_str();
+                    modconf.offset_filename = pt.get<std::string>("delaymanagement.dynamicoffsetfile");
                     modconf.use_offset_file = true;
                 }
                 else {
@@ -455,14 +455,14 @@ int main(int argc, char* argv[])
         }
     }
 
-    logger(info, "starting up");
+    logger.level(info) << "starting up";
 
     // When using offset, enable frame muting
     outputuhd_conf.muteNoTimestamps = (modconf.use_offset_file || modconf.use_offset_fixed);
 
     if (!(modconf.use_offset_file || modconf.use_offset_fixed)) {
         fprintf(stderr, "No Modulator offset defined, setting to 0\n");
-        logger(debug, "No Modulator offset defined, setting to 0");
+        logger.level(debug) << "No Modulator offset defined, setting to 0";
         modconf.use_offset_fixed = true;
         modconf.offset_fixed = 0;
     }
@@ -491,12 +491,12 @@ int main(int argc, char* argv[])
         fprintf(stderr, "\n");
         printUsage(argv[0]);
         ret = -1;
-        logger(error, "Received invalid command line arguments");
+        logger.level(error) << "Received invalid command line arguments";
         goto END_MAIN;
     }
 
     if (!useFileOutput && !useUHDOutput) {
-        logger(error, "Output not specified");
+        logger.level(error) << "Output not specified";
         fprintf(stderr, "Must specify output !");
         goto END_MAIN;
     }
@@ -526,7 +526,7 @@ int main(int argc, char* argv[])
     inputFile = fopen(inputName.c_str(), "r");
     if (inputFile == NULL) {
         fprintf(stderr, "Unable to open input file!\n");
-        logger(error, "Unable to open input file!");
+        logger.level(error) << "Unable to open input file!";
         perror(inputName.c_str());
         ret = -1;
         goto END_MAIN;
@@ -548,8 +548,7 @@ int main(int argc, char* argv[])
             ((OutputUHD*)output)->enrol_at(*rc);
         }
         catch (std::exception& e) {
-            logger(error, "UHD initialisation failed:");
-            logger(error, e.what());
+            logger.level(error) << "UHD initialisation failed:" << e.what();
             goto END_MAIN;
         }
         
@@ -558,7 +557,7 @@ int main(int argc, char* argv[])
     flowgraph = new Flowgraph();
     data.setLength(6144);
     input = new InputMemory(&data);
-    modulator = new DabModulator(modconf, rc, outputRate, clockRate,
+    modulator = new DabModulator(modconf, rc, logger, outputRate, clockRate,
             dabMode, gainMode, amplitude, filterTapsFilename);
     flowgraph->connect(input, modulator);
     flowgraph->connect(modulator, output);
@@ -583,7 +582,7 @@ int main(int argc, char* argv[])
 
             if (fread(&sync, sizeof(sync), 1, inputFile) != 1) {
                 fprintf(stderr, "Unable to read sync in input file!\n");
-                logger(error, "Unable to read sync in input file!");
+                logger.level(error) << "Unable to read sync in input file!";
                 perror(inputName.c_str());
                 ret = -1;
                 goto END_MAIN;
@@ -599,7 +598,7 @@ int main(int argc, char* argv[])
                     if (fread(data.getData(), 6144 - sizeof(sync), 1, inputFile)
                             != 1) {
                         fprintf(stderr, "Unable to seek in input file!\n");
-                        logger(error, "Unable to seek in input file!");
+                        logger.level(error) << "Unable to seek in input file!";
                         ret = -1;
                         goto END_MAIN;
                     }
@@ -610,7 +609,7 @@ int main(int argc, char* argv[])
             nbFrames = sync;
             if (fread(&frameSize, sizeof(frameSize), 1, inputFile) != 1) {
                 fprintf(stderr, "Unable to read frame size in input file!\n");
-                logger(error, "Unable to read frame size in input file!");
+                logger.level(error) << "Unable to read frame size in input file!";
                 perror(inputName.c_str());
                 ret = -1;
                 goto END_MAIN;
@@ -631,7 +630,7 @@ int main(int argc, char* argv[])
                     if (fread(data.getData(), frameSize - 4, 1, inputFile)
                             != 1) {
                         fprintf(stderr, "Unable to seek in input file!\n");
-                        logger(error, "Unable to seek in input file!");
+                        logger.level(error) << "Unable to seek in input file!";
                         ret = -1;
                         goto END_MAIN;
                     }
@@ -641,7 +640,7 @@ int main(int argc, char* argv[])
 
             if (fread(&sync, sizeof(sync), 1, inputFile) != 1) {
                 fprintf(stderr, "Unable to read nb frame in input file!\n");
-                logger(error, "Unable to read nb frame in input file!");
+                logger.level(error) << "Unable to read nb frame in input file!";
                 perror(inputName.c_str());
                 ret = -1;
                 goto END_MAIN;
@@ -652,7 +651,7 @@ int main(int argc, char* argv[])
                     if (fread(data.getData(), frameSize - 4, 1, inputFile)
                             != 1) {
                         fprintf(stderr, "Unable to seek in input file!\n");
-                        logger(error, "Unable to seek in input file!");
+                        logger.level(error) << "Unable to seek in input file!";
                         ret = -1;
                         goto END_MAIN;
                     }
@@ -665,7 +664,7 @@ int main(int argc, char* argv[])
                 sync &= 0xffffff;
                 if (fread((uint8_t*)&sync + 3, 1, 1, inputFile) != 1) {
                     fprintf(stderr, "Unable to read from input file!\n");
-                    logger(error, "Unable to read from input file!");
+                    logger.level(error) << "Unable to read from input file!";
                     ret = 1;
                     goto END_MAIN;
                 }
@@ -680,7 +679,7 @@ int main(int argc, char* argv[])
                         if (fread(data.getData(), 6144 - sizeof(sync), 1, inputFile)
                                 != 1) {
                             fprintf(stderr, "Unable to seek in input file!\n");
-                            logger(error, "Unable to seek in input file!");
+                            logger.level(error) << "Unable to seek in input file!";
                             ret = -1;
                             goto END_MAIN;
                         }
@@ -690,7 +689,7 @@ int main(int argc, char* argv[])
             }
 
             fprintf(stderr, "Bad input file format!\n");
-            logger(error, "Bad input file format!");
+            logger.level(error) << "Bad input file format!";
             ret = -1;
             goto END_MAIN;
 
@@ -708,7 +707,7 @@ START:
                 break;
             default:
                 fprintf(stderr, "unknown\n");
-                logger(error, "Input file format unknown!");
+                logger.level(error) << "Input file format unknown!";
                 ret = -1;
                 goto END_MAIN;
             }
@@ -730,7 +729,7 @@ START:
                     if (fread(&frameSize, sizeof(frameSize), 1, inputFile)
                             != 1) {
                         PDEBUG("End of file!\n");
-                        logger(error, "Reached end of file!");
+                        logger.level(error) << "Reached end of file!";
                         goto END_MAIN;
                     }
                 }
@@ -742,7 +741,7 @@ START:
                             frameSize);
                     perror(inputName.c_str());
                     ret = -1;
-                    logger(error, "Unable to read from input file!");
+                    logger.level(error) << "Unable to read from input file!";
                     goto END_MAIN;
                 }
                 memset(&((uint8_t*)data.getData())[frameSize], 0x55, 6144 - frameSize);
@@ -785,7 +784,7 @@ END_MAIN:
         fclose(inputFile);
     }
 
-    logger(info, "Terminating");
+    logger.level(info) << "Terminating";
 
     return ret;
 }

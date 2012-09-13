@@ -30,14 +30,14 @@
 #   include "config.h"
 #endif
 
-#include <string>
+#include <stdio.h>
 #include <syslog.h>
-#include <iostream>
 #include <fstream>
+#include <sstream>
+#include <iostream>
 #include <list>
 #include <stdexcept>
-
-#include <stdarg.h>
+#include <string>
 
 #include "porting.h"
 
@@ -46,12 +46,14 @@
 
 enum log_level_t {debug = 0, info, warn, error, alert, emerg};
 
+/** Abstract class all backends must inherit from */
 class LogBackend {
     public:
-        virtual void log(log_level_t level, const char* fmt, ...) = 0;
+        virtual void log(log_level_t level, std::string message) = 0;
         virtual std::string get_name() = 0;
 };
 
+/** A Logging backend for Syslog */
 class LogToSyslog : public LogBackend {
     public:
         LogToSyslog() {
@@ -63,8 +65,7 @@ class LogToSyslog : public LogBackend {
             closelog();
         }
 
-        void log(log_level_t level, const char* fmt, ...) {
-            va_list arg_ptr;
+        void log(log_level_t level, std::string message) {
 
             int syslog_level = LOG_EMERG;
             switch (level) {
@@ -76,9 +77,7 @@ class LogToSyslog : public LogBackend {
                 case emerg: syslog_level = LOG_EMERG; break;
             }
  
-            va_start(arg_ptr, fmt);
-            syslog(level, fmt, arg_ptr);
-            va_end(arg_ptr);
+            syslog(level, SYSLOG_IDENT " %s", message.c_str());
         }
 
         std::string get_name() { return name; };
@@ -91,40 +90,36 @@ class LogToFile : public LogBackend {
     public:
         LogToFile(std::string filename) {
             name = "FILE";
-            log_filename = filename;
             
-            log_stream.open(filename.c_str(), std::ios::out | std::ios::app);
-            if (!log_stream.is_open()) {
+            log_file = fopen(filename.c_str(), "a");
+            if (log_file == NULL) {
                 throw new std::runtime_error("Cannot open log file !");
             }
         }
 
         ~LogToFile() {
-            if (log_stream.is_open()) {
-                log_stream.close();
+            if (log_file != NULL) {
+                fclose(log_file);
             }
         }
 
-        void log(log_level_t level, const char* fmt, ...) {
-            va_list arg_ptr;
-            char message[200];
+        void log(log_level_t level, std::string message) {
 
             const char* log_level_text[] = {"DEBUG", "INFO", "WARN", "ERROR", "ALERT", "EMERG"};
-
-            va_start(arg_ptr, fmt);
-            snprintf(message, 200, fmt, arg_ptr);
-            log_stream << "CRC-DABMOD: " << log_level_text[(size_t)level] << ": " << message << std::endl;
-            log_stream.flush();
-            va_end(arg_ptr);
+            
+            // fprintf is thread-safe
+            fprintf(log_file, "CRC-DABMOD: %s: %s\n", log_level_text[(size_t)level], message.c_str());
+            fflush(log_file);
         }
 
         std::string get_name() { return name; };
 
     private:
         std::string name;
-        std::string log_filename;
-        std::ofstream log_stream;
+        FILE* log_file;
 };
+
+class LogLine;
 
 class Logger {
     public:
@@ -132,13 +127,41 @@ class Logger {
 
         void register_backend(LogBackend* backend);
 
-        void log(log_level_t level, std::string message) { operator()(level, "%s", message.c_str()); }
-        void log(log_level_t level, const char* fmt, ...);
+        /* The LogLevel will call this when a line is complete */
+        void log(log_level_t level, std::string message);
 
-        void operator()(log_level_t level, const char* fmt, ...);
-
+        /* Return a LogLine for the given level */
+        LogLine level(log_level_t level);
+        
     private:
         std::list<LogBackend*> backends;
+};
+
+// Accumulate a line of logs, using same syntax as stringstream
+class LogLine {
+    public:
+        LogLine(const LogLine& logline);
+        LogLine(Logger* logger, log_level_t level) :
+            logger_(logger)
+        {
+            level_ = level;
+        }
+
+        template <typename T>
+        LogLine& operator<<(T s) {
+            os << s;
+            return *this;
+        }
+
+        ~LogLine()
+        {
+            logger_->log(level_, os.str());
+        }
+
+    private:
+        std::ostringstream os;
+        log_level_t level_;
+        Logger* logger_;
 };
 
 
