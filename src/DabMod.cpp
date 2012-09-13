@@ -304,7 +304,14 @@ int main(int argc, char* argv[])
         using boost::property_tree::ptree;
         ptree pt;
 
-        read_ini(configuration_file, pt);
+        try {
+            read_ini(configuration_file, pt);
+        }
+        catch (boost::property_tree::ini_parser::ini_parser_error &e)
+        {
+            fprintf(stderr, "Error, cannot read configuration file '%s'\n", configuration_file.c_str());
+            goto END_MAIN;
+        }
 
         // remote controller:
         if (pt.get("remotecontrol.telnet", 0) == 1) {
