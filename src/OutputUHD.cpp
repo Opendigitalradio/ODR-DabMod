@@ -75,51 +75,9 @@ OutputUHD::OutputUHD(
     MDEBUG("OutputUHD:Using device: %s...\n", myUsrp->get_pp_string().c_str());
 
     MDEBUG("OutputUHD:Setting REFCLK and PPS input...\n");
-    uhd::clock_config_t clock_config;
 
-    if (config.refclk_src == "auto") {
-        clock_config.ref_source = uhd::clock_config_t::REF_AUTO;
-    }
-    else if (config.refclk_src == "int") {
-        clock_config.ref_source = uhd::clock_config_t::REF_INT;
-    }
-    else if (config.refclk_src == "sma") {
-        clock_config.ref_source = uhd::clock_config_t::REF_SMA;
-    }
-    else if (config.refclk_src == "mimo") {
-        clock_config.ref_source = uhd::clock_config_t::REF_MIMO;
-    }
-    else {
-        myLogger(error, "OutputUHD: invalid refclk_src specified");
-        throw runtime_error("OutputUHD: invalid refclk_src specified");
-    }
-
-    if (config.pps_src == "int") {
-        clock_config.pps_source = uhd::clock_config_t::PPS_INT;
-    }
-    else if (config.pps_src == "sma") {
-        clock_config.pps_source = uhd::clock_config_t::PPS_SMA;
-    }
-    else if (config.pps_src == "mimo") {
-        clock_config.pps_source = uhd::clock_config_t::PPS_MIMO;
-    }
-    else {
-        myLogger(error, "OutputUHD: invalid pps_src specified");
-        throw runtime_error("OutputUHD: invalid pps_src specified");
-    }
-
-    if (config.pps_polarity == "pos") {
-        clock_config.pps_polarity = uhd::clock_config_t::PPS_POS;
-    }
-    else if (config.pps_polarity == "neg") {
-        clock_config.pps_polarity = uhd::clock_config_t::PPS_NEG;
-    }
-    else {
-        myLogger(error, "OutputUHD: invalid pps_polarity specified");
-        throw runtime_error("OutputUHD: invalid pps_polarity specified");
-    }
-
-    myUsrp->set_clock_config(clock_config, uhd::usrp::multi_usrp::ALL_MBOARDS);
+    myUsrp->set_clock_source(config.refclk_src);
+    myUsrp->set_time_source(config.pps_src);
 
     std::cerr << "UHD clock source is " << 
         myUsrp->get_clock_source(0) << std::endl;
@@ -141,14 +99,26 @@ OutputUHD::OutputUHD(
     myUsrp->set_tx_gain(myTxGain);
     MDEBUG("OutputUHD:Actual TX Gain: %f ...\n", myUsrp->get_tx_gain());
 
+    if (enable_sync && (config.pps_src == "none")) {
+        myLogger(warn, "OutputUHD: WARNING: you are using synchronous transmission without PPS input!");
+        struct timespec now;
+        if (clock_gettime(CLOCK_REALTIME, &now)) {
+            perror("OutputUHD:Error: could not get time: ");
+            myLogger(error, "OutputUHD: could not get time");
+        }
+        else {
+            myUsrp->set_time_now(uhd::time_spec_t(now.tv_sec));
+            myLogger(info, "OutputUHD: Setting USRP time to %f",
+                    uhd::time_spec_t(now.tv_sec).get_real_secs());
+        }
+    }
 
-    if (enable_sync) {
+    if (config.pps_src != "none") {
         /* handling time for synchronisation: wait until the next full
          * second, and set the USRP time at next PPS */
         struct timespec now;
         time_t seconds;
         if (clock_gettime(CLOCK_REALTIME, &now)) {
-            fprintf(stderr, "errno: %d\n", errno);
             perror("OutputUHD:Error: could not get time: ");
             myLogger(error, "OutputUHD: could not get time");
         }
@@ -170,7 +140,7 @@ OutputUHD::OutputUHD(
 
             usleep(200000); // 200ms, we want the PPS to be later
             myUsrp->set_time_unknown_pps(uhd::time_spec_t(seconds + 2));
-            fprintf(stderr, "OutputUHD: Setting USRP time next pps to %f\n",
+            myLogger(info, "OutputUHD: Setting USRP time next pps to %f\n",
                     uhd::time_spec_t(seconds + 2).get_real_secs());
         }
 
@@ -373,7 +343,7 @@ void UHDWorker::process(struct UHDWorkerData *uwd)
                  */
                 fprintf(stderr, "UHDOut: Throwing sample %d away: incomplete timestamp %zu + %f\n",
                         frame->fct, tx_second, pps_offset);
-                uwd->logger->log(info, "OutputUHD: Throwing sample %d away: incomplete timestamp %zu + %f\n",
+                uwd->logger->log(info, "OutputUHD: Throwing sample %d away: incomplete timestamp %zu + %f",
                         frame->fct, tx_second, pps_offset);
                 usleep(20000); //TODO should this be TM-dependant ?
                 goto loopend;
@@ -432,6 +402,7 @@ void UHDWorker::process(struct UHDWorkerData *uwd)
         PDEBUG("UHDWorker::process:max_num_samps: %zu.\n",
                 myTxStream->get_max_num_samps());
 
+        uwd->logger->log(alert, "TX %d: ", frame->fct);
         /*
            size_t num_tx_samps = myTxStream->send(
            dataIn, sizeIn, md, timeout);
@@ -523,6 +494,9 @@ void UHDWorker::process(struct UHDWorkerData *uwd)
                 }
 
                 if (failure) {
+                    fprintf(stderr, "Near frame %d: Received Async UHD Message '%s'\n",
+                            frame->fct,
+                            uhd_async_message);
                     uwd->logger->log(alert, "Near frame %d: Received Async UHD Message '%s'",
                             frame->fct,
                             uhd_async_message);
