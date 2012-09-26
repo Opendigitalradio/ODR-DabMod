@@ -69,8 +69,10 @@ void Buffer::setLength(size_t len)
 {
     if (len > size) {
         void *tmp = data;
-        //data = _mm_malloc(len, 16);
-        data = memalign(16, len);
+
+        /* Align to 32-byte boundary for AVX. */
+        data = memalign(32, len);
+
         memcpy(data, tmp, this->len);
         free(tmp);
         size = len;
