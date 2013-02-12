@@ -93,6 +93,7 @@ class LogToFile : public LogBackend {
             
             log_file = fopen(filename.c_str(), "a");
             if (log_file == NULL) {
+                fprintf(stderr, "Cannot open log file !");
                 throw new std::runtime_error("Cannot open log file !");
             }
         }
