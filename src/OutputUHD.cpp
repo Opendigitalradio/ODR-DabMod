@@ -79,7 +79,7 @@ OutputUHD::OutputUHD(
     myUsrp->set_clock_source(config.refclk_src);
     myUsrp->set_time_source(config.pps_src);
 
-    std::cerr << "UHD clock source is " << 
+    std::cerr << "UHD clock source is " <<
         myUsrp->get_clock_source(0) << std::endl;
 
     std::cerr << "UHD time source is " <<
@@ -98,6 +98,8 @@ OutputUHD::OutputUHD(
 
     myUsrp->set_tx_gain(myTxGain);
     MDEBUG("OutputUHD:Actual TX Gain: %f ...\n", myUsrp->get_tx_gain());
+
+    MDEBUG("OutputUHD:Mute on missing timestamps: %s ...\n", mute_no_timestamps ? "enabled" : "disabled");
 
     if (enable_sync && (config.pps_src == "none")) {
         myLogger.level(warn) << "OutputUHD: WARNING: you are using synchronous transmission without PPS input!";
