@@ -77,7 +77,7 @@ class LogToSyslog : public LogBackend {
                 case emerg: syslog_level = LOG_EMERG; break;
             }
  
-            syslog(level, SYSLOG_IDENT " %s", message.c_str());
+            syslog(syslog_level, SYSLOG_IDENT " %s", message.c_str());
         }
 
         std::string get_name() { return name; };
