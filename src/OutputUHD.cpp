@@ -53,6 +53,7 @@ OutputUHD::OutputUHD(
     mute_no_timestamps = config.muteNoTimestamps;
     enable_sync = config.enableSync;
     myDevice = config.device;
+    myMuting = 0;
 
     MDEBUG("OutputUHD::OutputUHD(device: %s) @ %p\n",
             myDevice.c_str(), this);
@@ -403,8 +404,14 @@ void UHDWorker::process(struct UHDWorkerData *uwd)
             if (uwd->muting || uwd->muteNoTimestamps) {
                 /* There was some error decoding the timestamp
                 */
-                fprintf(stderr, "UHDOut: Muting sample %d : no timestamp\n",
-                        frame->fct);
+                if (uwd->muting) {
+                    fprintf(stderr, "UHDOut: Muting sample %d requested\n",
+                            frame->fct);
+                }
+                else {
+                    fprintf(stderr, "UHDOut: Muting sample %d : no timestamp\n",
+                            frame->fct);
+                }
                 usleep(20000);
                 goto loopend;
             }
