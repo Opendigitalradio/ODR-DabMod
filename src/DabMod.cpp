@@ -460,12 +460,11 @@ int main(int argc, char* argv[])
                 goto END_MAIN;
             }
         }
+
+        outputuhd_conf.muteNoTimestamps = (pt.get("delaymanagement.mutenotimestamps", 0) == 1);
     }
 
     logger.level(info) << "starting up";
-
-    // When using offset, enable frame muting
-    outputuhd_conf.muteNoTimestamps = (modconf.use_offset_file || modconf.use_offset_fixed);
 
     if (!(modconf.use_offset_file || modconf.use_offset_fixed)) {
         fprintf(stderr, "No Modulator offset defined, setting to 0\n");
