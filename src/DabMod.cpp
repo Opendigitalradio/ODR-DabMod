@@ -520,9 +520,9 @@ int main(int argc, char* argv[])
     fprintf(stderr, "  Sampling rate: ");
     if (outputRate > 1000) {
         if (outputRate > 1000000) {
-            fprintf(stderr, "%.3g MHz\n", outputRate / 1000000.0f);
+            fprintf(stderr, "%.4g MHz\n", outputRate / 1000000.0f);
         } else {
-            fprintf(stderr, "%.3g kHz\n", outputRate / 1000.0f);
+            fprintf(stderr, "%.4g kHz\n", outputRate / 1000.0f);
         }
     } else {
         fprintf(stderr, "%zu Hz\n", outputRate);
