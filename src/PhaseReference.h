@@ -36,7 +36,7 @@
 class PhaseReference : public ModCodec
 {
 public:
-    PhaseReference(size_t dabmode);
+    PhaseReference(unsigned int dabmode);
     virtual ~PhaseReference();
     PhaseReference(const PhaseReference&);
     PhaseReference& operator=(const PhaseReference&);
@@ -46,7 +46,7 @@ public:
     const char* name() { return "PhaseReference"; }
 
 protected:
-    size_t d_dabmode;
+    unsigned int d_dabmode;
     size_t d_carriers;
     size_t d_num;
     const static unsigned char d_h[4][32];

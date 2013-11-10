@@ -16,6 +16,11 @@
 # You should have received a copy of the GNU General Public License
 # along with CRC-DADMOD.  If not, see <http://www.gnu.org/licenses/>.
 
+if IS_HG_REPO
+HGVERSION_FLAGS = -DHGVERSION="\"`hg parents --template '-{node|short}'`\""
+else
+HGVERSION_FLAGS = -DHGVERSION="\"-modified\""
+endif
 
 FFT_DIR=$(top_builddir)/lib/kiss_fft129
 FFT_INC=-I$(FFT_DIR) -I$(FFT_DIR)/tools
@@ -35,7 +40,7 @@ $(FFT_DIR):
 		tar xzf $(top_srcdir)/lib/kiss_fft129.tar.gz -C $(top_builddir)/lib; \
 	fi
 
-crc_dabmod_CPPFLAGS = $(FFT_INC) $(FFT_FLG) -msse -msse2
+crc_dabmod_CPPFLAGS = $(FFT_INC) $(FFT_FLG) -msse -msse2 $(HGVERSION_FLAGS)
 crc_dabmod_SOURCES =  DabMod.cpp \
                       PcDebug.h \
                       porting.c porting.h \
@@ -59,6 +64,7 @@ crc_dabmod_SOURCES =  DabMod.cpp \
                       OutputUHD.cpp OutputUHD.h \
                       ModOutput.cpp ModOutput.h \
                       InputMemory.cpp InputMemory.h \
+					  InputFileReader.cpp InputReader.h \
                       OutputFile.cpp OutputFile.h \
                       FrameMultiplexer.cpp FrameMultiplexer.h \
                       ModMux.cpp ModMux.h \

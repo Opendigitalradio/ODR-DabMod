@@ -64,7 +64,7 @@ void FIRFilterWorker::process(struct FIRFilterWorkerData *fwd)
         dataOut = new Buffer();
         dataOut->setLength(dataIn->getLength());
 
-        PDEBUG("FIRFilterWorker: dataIn->getLength() %d\n", dataIn->getLength());
+        PDEBUG("FIRFilterWorker: dataIn->getLength() %lu\n", dataIn->getLength());
 
 #if __AVX__
 #define _mm256_load1_ps(x) _mm256_set_ps(x, x, x, x, x, x, x, x)
@@ -304,7 +304,7 @@ FIRFilter::FIRFilter(std::string taps_file) :
     myTapsFile(taps_file)
 {
     PDEBUG("FIRFilter::FIRFilter(%s) @ %p\n",
-            taps_file, this);
+            taps_file.c_str(), this);
 
     RC_ADD_PARAMETER(ntaps, "(Read-only) number of filter taps.");
     RC_ADD_PARAMETER(tapsfile, "Filename containing filter taps. When written to, the new file gets automatically loaded.");

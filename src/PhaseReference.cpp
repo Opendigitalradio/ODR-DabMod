@@ -42,11 +42,11 @@ const unsigned char PhaseReference::d_h[4][32] = {
 };
 
 
-PhaseReference::PhaseReference(size_t dabmode) :
+PhaseReference::PhaseReference(unsigned int dabmode) :
     ModCodec(ModFormat(0), ModFormat(0)),
     d_dabmode(dabmode)
 {
-    PDEBUG("PhaseReference::PhaseReference(%zu) @ %p\n", dabmode, this);
+    PDEBUG("PhaseReference::PhaseReference(%u) @ %p\n", dabmode, this);
 
     switch (d_dabmode) {
     case 1:
@@ -138,7 +138,7 @@ void PhaseReference::fillData()
         },
     };
 
-    if ((d_dabmode < 0) || (d_dabmode > 3)) {
+    if (d_dabmode > 3) {
         throw std::runtime_error(
                 "PhaseReference::fillData invalid DAB mode!");
     }

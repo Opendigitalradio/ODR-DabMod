@@ -170,7 +170,7 @@ void TimestampDecoder::updateTimestampPPS(double pps)
 
     if (time_pps > pps) // Second boundary crossed
     {
-        MDEBUG("TimestampDecoder::updateTimestampPPS crossed second\n", pps);
+        MDEBUG("TimestampDecoder::updateTimestampPPS crossed second\n");
 
         // The second for the next eight frames will not
         // be defined by the MNSC

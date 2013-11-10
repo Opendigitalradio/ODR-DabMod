@@ -34,6 +34,7 @@
 #include "InputMemory.h"
 #include "OutputFile.h"
 #include "OutputUHD.h"
+#include "InputReader.h"
 #include "PcDebug.h"
 #include "TimestampDecoder.h"
 #include "FIRFilter.h"
@@ -77,8 +78,8 @@ void signalHandler(int signalNb)
 
 void printUsage(char* progName, FILE* out = stderr)
 {
-    fprintf(out, "Welcome to %s %s, compiled at %s, %s\n\n",
-            PACKAGE, VERSION, __DATE__, __TIME__);
+    fprintf(out, "Welcome to %s %s%s, compiled at %s, %s\n\n",
+            PACKAGE, VERSION, HGVERSION, __DATE__, __TIME__);
     fprintf(out, "Usage with configuration file:\n");
     fprintf(out, "\t%s -C config_file.ini\n\n", progName);
 
@@ -157,11 +158,7 @@ int main(int argc, char* argv[])
     int useFileOutput = 0;
     int useUHDOutput = 0;
 
-    FILE* inputFile = NULL;
-    uint32_t sync = 0;
-    uint32_t nbFrames = 0;
-    uint32_t frame = 0;
-    uint16_t frameSize = 0;
+    uint64_t frame = 0;
     size_t outputRate = 2048000;
     size_t clockRate = 0;
     unsigned dabMode = 0;
@@ -192,6 +189,7 @@ int main(int argc, char* argv[])
     BaseRemoteController* rc = NULL;
 
     Logger logger;
+    InputFileReader inputFileReader(logger);
 
     signal(SIGINT, signalHandler);
 
@@ -529,11 +527,9 @@ int main(int argc, char* argv[])
     }
 
     // Opening ETI input file
-    inputFile = fopen(inputName.c_str(), "r");
-    if (inputFile == NULL) {
+    if (inputFileReader.Open(inputName) == -1) {
         fprintf(stderr, "Unable to open input file!\n");
         logger.level(error) << "Unable to open input file!";
-        perror(inputName.c_str());
         ret = -1;
         goto END_MAIN;
     }
@@ -572,203 +568,50 @@ int main(int argc, char* argv[])
         ((OutputUHD*)output)->setETIReader(modulator->getEtiReader());
     }
 
+    inputFileReader.PrintInfo();
+
     try {
         while (running) {
-            enum EtiStreamType {
-                ETI_STREAM_TYPE_NONE = 0,
-                ETI_STREAM_TYPE_RAW,
-                ETI_STREAM_TYPE_STREAMED,
-                ETI_STREAM_TYPE_FRAMED,
-            };
-            EtiStreamType streamType = ETI_STREAM_TYPE_NONE;
 
-            struct stat inputFileStat;
-            fstat(fileno(inputFile), &inputFileStat);
-            size_t inputFileLength = inputFileStat.st_size;
+            int framesize;
 
-            if (fread(&sync, sizeof(sync), 1, inputFile) != 1) {
-                fprintf(stderr, "Unable to read sync in input file!\n");
-                logger.level(error) << "Unable to read sync in input file!";
-                perror(inputName.c_str());
-                ret = -1;
-                goto END_MAIN;
-            }
-            if ((sync == 0x49c5f8ff) || (sync == 0xb63a07ff)) {
-                streamType = ETI_STREAM_TYPE_RAW;
-                if (inputFileLength > 0) {
-                    nbFrames = inputFileLength / 6144;
-                } else {
-                    nbFrames = (uint32_t)-1;
-                }
-                if (fseek(inputFile, -sizeof(sync), SEEK_CUR) != 0) {
-                    if (fread(data.getData(), 6144 - sizeof(sync), 1, inputFile)
-                            != 1) {
-                        fprintf(stderr, "Unable to seek in input file!\n");
-                        logger.level(error) << "Unable to seek in input file!";
-                        ret = -1;
-                        goto END_MAIN;
-                    }
-                }
-                goto START;
-            }
-
-            nbFrames = sync;
-            if (fread(&frameSize, sizeof(frameSize), 1, inputFile) != 1) {
-                fprintf(stderr, "Unable to read frame size in input file!\n");
-                logger.level(error) << "Unable to read frame size in input file!";
-                perror(inputName.c_str());
-                ret = -1;
-                goto END_MAIN;
-            }
-            sync >>= 16;
-            sync &= 0xffff;
-            sync |= ((uint32_t)frameSize) << 16;
-
-            if ((sync == 0x49c5f8ff) || (sync == 0xb63a07ff)) {
-                streamType = ETI_STREAM_TYPE_STREAMED;
-                frameSize = nbFrames & 0xffff;
-                if (inputFileLength > 0) {
-                    nbFrames = inputFileLength / (frameSize + 2);
-                } else {
-                    nbFrames = (uint32_t)-1;
-                }
-                if (fseek(inputFile, -6, SEEK_CUR) != 0) {
-                    if (fread(data.getData(), frameSize - 4, 1, inputFile)
-                            != 1) {
-                        fprintf(stderr, "Unable to seek in input file!\n");
-                        logger.level(error) << "Unable to seek in input file!";
-                        ret = -1;
-                        goto END_MAIN;
-                    }
-                }
-                goto START;
-            }
-
-            if (fread(&sync, sizeof(sync), 1, inputFile) != 1) {
-                fprintf(stderr, "Unable to read nb frame in input file!\n");
-                logger.level(error) << "Unable to read nb frame in input file!";
-                perror(inputName.c_str());
-                ret = -1;
-                goto END_MAIN;
-            }
-            if ((sync == 0x49c5f8ff) || (sync == 0xb63a07ff)) {
-                streamType = ETI_STREAM_TYPE_FRAMED;
-                if (fseek(inputFile, -6, SEEK_CUR) != 0) {
-                    if (fread(data.getData(), frameSize - 4, 1, inputFile)
-                            != 1) {
-                        fprintf(stderr, "Unable to seek in input file!\n");
-                        logger.level(error) << "Unable to seek in input file!";
-                        ret = -1;
-                        goto END_MAIN;
-                    }
-                }
-                goto START;
-            }
-
-            for (size_t i = 10; i < 6144 + 10; ++i) {
-                sync >>= 8;
-                sync &= 0xffffff;
-                if (fread((uint8_t*)&sync + 3, 1, 1, inputFile) != 1) {
-                    fprintf(stderr, "Unable to read from input file!\n");
-                    logger.level(error) << "Unable to read from input file!";
-                    ret = 1;
-                    goto END_MAIN;
-                }
-                if ((sync == 0x49c5f8ff) || (sync == 0xb63a07ff)) {
-                    streamType = ETI_STREAM_TYPE_RAW;
-                    if (inputFileLength > 0) {
-                        nbFrames = (inputFileLength - i) / 6144;
-                    } else {
-                        nbFrames = (uint32_t)-1;
-                    }
-                    if (fseek(inputFile, -sizeof(sync), SEEK_CUR) != 0) {
-                        if (fread(data.getData(), 6144 - sizeof(sync), 1, inputFile)
-                                != 1) {
-                            fprintf(stderr, "Unable to seek in input file!\n");
-                            logger.level(error) << "Unable to seek in input file!";
-                            ret = -1;
-                            goto END_MAIN;
-                        }
-                    }
-                    goto START;
-                }
-            }
-
-            fprintf(stderr, "Bad input file format!\n");
-            logger.level(error) << "Bad input file format!";
-            ret = -1;
-            goto END_MAIN;
-
-START:
-            fprintf(stderr, "Input file format: ");
-            switch (streamType) {
-            case ETI_STREAM_TYPE_RAW:
-                fprintf(stderr, "raw");
-                break;
-            case ETI_STREAM_TYPE_STREAMED:
-                fprintf(stderr, "streamed");
-                break;
-            case ETI_STREAM_TYPE_FRAMED:
-                fprintf(stderr, "framed");
-                break;
-            default:
-                fprintf(stderr, "unknown\n");
-                logger.level(error) << "Input file format unknown!";
-                ret = -1;
-                goto END_MAIN;
-            }
-            fprintf(stderr, "\n");
-            fprintf(stderr, "Input file length: %zu\n", inputFileLength);
-            fprintf(stderr, "Input file nb frames: %u\n", nbFrames);
-
-            for (frame = 0; frame < nbFrames; ++frame) {
+            PDEBUG("*****************************************\n");
+            PDEBUG("* Starting main loop\n");
+            PDEBUG("*****************************************\n");
+            while ((framesize = inputFileReader.GetNextFrame(data.getData())) > 0) {
                 if (!running) {
                     break;
                 }
 
-                PDEBUG("*****************************************\n");
-                PDEBUG("* Reading frame %u\n", frame);
-                PDEBUG("*****************************************\n");
-                if (streamType == ETI_STREAM_TYPE_RAW) {
-                    frameSize = 6144;
-                } else {
-                    if (fread(&frameSize, sizeof(frameSize), 1, inputFile)
-                            != 1) {
-                        PDEBUG("End of file!\n");
-                        logger.level(error) << "Reached end of file!";
-                        goto END_MAIN;
-                    }
-                }
-                PDEBUG("Frame size: %i\n", frameSize);
+                frame++;
 
-                if (fread(data.getData(), frameSize, 1, inputFile) != 1) {
-                    fprintf(stderr,
-                            "Unable to read %i data bytes in input file!\n",
-                            frameSize);
-                    perror(inputName.c_str());
-                    ret = -1;
-                    logger.level(error) << "Unable to read from input file!";
-                    goto END_MAIN;
-                }
-                memset(&((uint8_t*)data.getData())[frameSize], 0x55, 6144 - frameSize);
+                PDEBUG("*****************************************\n");
+                PDEBUG("* Read frame %lu\n", frame);
+                PDEBUG("*****************************************\n");
+                fprintf(stderr, "Reading frame %lu\n", frame);
 
                 ////////////////////////////////////////////////////////////////
                 // Proccessing data
                 ////////////////////////////////////////////////////////////////
                 flowgraph->run();
             }
-            fprintf(stderr, "End of file reached.\n");
-            if (!loop) {
+            if (framesize == 0) {
+                fprintf(stderr, "End of file reached.\n");
+                if (!loop) {
+                    running = false;
+                } else {
+                    fprintf(stderr, "Rewinding file.\n");
+                    inputFileReader.Rewind();
+                }
+            }
+            else {
+                fprintf(stderr, "Input read error.\n");
                 running = false;
-            } else {
-                fprintf(stderr, "Rewinding file.\n");
-                rewind(inputFile);
             }
         }
     } catch (std::exception& e) {
         fprintf(stderr, "EXCEPTION: %s\n", e.what());
         ret = -1;
-        goto END_MAIN;
     }
 
 END_MAIN:
@@ -776,7 +619,7 @@ END_MAIN:
     // Cleaning things
     ////////////////////////////////////////////////////////////////////////
     fprintf(stderr, "\n\n");
-    fprintf(stderr, "%u DAB frames encoded\n", frame);
+    fprintf(stderr, "%lu DAB frames encoded\n", frame);
     fprintf(stderr, "%f seconds encoded\n", (float)frame * 0.024f);
 
     fprintf(stderr, "\nCleaning flowgraph...\n");
@@ -784,11 +627,6 @@ END_MAIN:
 
     // Cif
     fprintf(stderr, "\nCleaning buffers...\n");
-
-    fprintf(stderr, "\nClosing input file...\n");
-    if (inputFile != NULL) {
-        fclose(inputFile);
-    }
 
     logger.level(info) << "Terminating";
 

@@ -59,7 +59,7 @@ class ParameterError : public std::exception
     public:
         ParameterError(string message) : message_(message) {}
         ~ParameterError() throw() {};
-        const char* what() { return message_.c_str(); }
+        const char* what() const throw() { return message_.c_str(); }
 
     private:
         string message_;

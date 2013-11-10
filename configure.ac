@@ -17,7 +17,7 @@
 # along with CRC-DADMOD.  If not, see <http://www.gnu.org/licenses/>.
 
 AC_PREREQ(2.59)
-AC_INIT([CRC-DabMod], [0.3.3-sfn-r7], [pascal.charest@crc.ca])
+AC_INIT([CRC-DabMod], [0.3.3-mpb], [pascal.charest@crc.ca])
 AC_CONFIG_AUX_DIR([build-aux])
 AC_CANONICAL_SYSTEM
 AM_INIT_AUTOMAKE([-Wall])
@@ -112,6 +112,8 @@ AC_COMPILE_IFELSE(
         [AC_LANG_PROGRAM([[#include <math.h>]], [[double pi = M_PIl;]])],
         [AC_MSG_RESULT([yes])], [AC_MSG_RESULT([no]) AC_DEFINE([M_PIl], [M_PI], [Replacing define])])
 AC_LANG_POP([C++])
+
+AM_CONDITIONAL([IS_HG_REPO], [hg parents])
 
 # Checks for library functions.
 # Commented to remove rpl_malloc linking error
