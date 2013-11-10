@@ -632,6 +632,8 @@ EGREP
 GREP
 BOOST_LDFLAGS
 BOOST_CPPFLAGS
+HAVE_INPUT_ZEROMQ_TEST_FALSE
+HAVE_INPUT_ZEROMQ_TEST_TRUE
 CPP
 am__fastdepCC_FALSE
 am__fastdepCC_TRUE
@@ -743,6 +745,7 @@ enable_prof
 with_debug_malloc
 enable_trace
 enable_fft_simd
+enable_input_zeromq
 with_boost
 with_boost_libdir
 '
@@ -1387,6 +1390,7 @@ Optional Features:
   --enable-prof           Enable profiling
   --enable-trace          Enable trace output
   --enable-fft-simd       Enable SIMD instructions for kiss-fft (unstable)
+  --disable-input-zeromq  Disable ZeroMQ input
 
 Optional Packages:
   --with-PACKAGE[=ARG]    use PACKAGE [ARG=yes]
@@ -4769,6 +4773,69 @@ else
   enable_fft_simd=no
 fi
 
+# ZeroMQ message queue input
+# Check whether --enable-input_zeromq was given.
+if test "${enable_input_zeromq+set}" = set; then :
+  enableval=$enable_input_zeromq;
+else
+  enable_input_zeromq=yes
+fi
+
+
+
+if test "x$enable_input_zeromq" = "xyes"; then :
+
+$as_echo "#define HAVE_INPUT_ZEROMQ 1" >>confdefs.h
+
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for zmq_init in -lzmq" >&5
+$as_echo_n "checking for zmq_init in -lzmq... " >&6; }
+if ${ac_cv_lib_zmq_zmq_init+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-lzmq  $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char zmq_init ();
+int
+main ()
+{
+return zmq_init ();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_lib_zmq_zmq_init=yes
+else
+  ac_cv_lib_zmq_zmq_init=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_zmq_zmq_init" >&5
+$as_echo "$ac_cv_lib_zmq_zmq_init" >&6; }
+if test "x$ac_cv_lib_zmq_zmq_init" = xyes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_LIBZMQ 1
+_ACEOF
+
+  LIBS="-lzmq $LIBS"
+
+else
+  as_fn_error $? "ZeroMQ libzmq is required" "$LINENO" 5
+fi
+
+fi
 if test "x$enable_debug" = "xno"; then :
   OPTIM="-O2" DEBUG="" EXTRA="$EXTRA -DNDEBUG"
 else
@@ -4784,10 +4851,19 @@ if test "x$enable_fft_simd" != "xno"; then :
   EXTRA="$EXTRA -DUSE_SIMD"
 fi
 
+ if test "x$enable_input_zeromq" = "xyes"; then
+  HAVE_INPUT_ZEROMQ_TEST_TRUE=
+  HAVE_INPUT_ZEROMQ_TEST_FALSE='#'
+else
+  HAVE_INPUT_ZEROMQ_TEST_TRUE='#'
+  HAVE_INPUT_ZEROMQ_TEST_FALSE=
+fi
+
+
+
 CFLAGS="$OPTIM $DEBUG $EXTRA"
 
 CXXFLAGS="$OPTIM $DEBUG $EXTRA"
-
 
 
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for main in -luhd" >&5
@@ -6473,6 +6549,10 @@ Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 if test -z "${am__fastdepCC_TRUE}" && test -z "${am__fastdepCC_FALSE}"; then
   as_fn_error $? "conditional \"am__fastdepCC\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${HAVE_INPUT_ZEROMQ_TEST_TRUE}" && test -z "${HAVE_INPUT_ZEROMQ_TEST_FALSE}"; then
+  as_fn_error $? "conditional \"HAVE_INPUT_ZEROMQ_TEST\" was never defined.
 Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 if test -z "${IS_HG_REPO_TRUE}" && test -z "${IS_HG_REPO_FALSE}"; then

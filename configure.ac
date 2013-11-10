@@ -61,6 +61,14 @@ AC_ARG_ENABLE([trace],
 AC_ARG_ENABLE([fft_simd],
         [AS_HELP_STRING([--enable-fft-simd], [Enable SIMD instructions for kiss-fft (unstable)])],
         [], [enable_fft_simd=no])
+# ZeroMQ message queue input
+AC_ARG_ENABLE([input_zeromq],
+        [AS_HELP_STRING([--disable-input-zeromq], [Disable ZeroMQ input])],
+        [], [enable_input_zeromq=yes])
+
+AS_IF([test "x$enable_input_zeromq" = "xyes"],
+        [AC_DEFINE(HAVE_INPUT_ZEROMQ, [1], [Define if ZeroMQ input is enabled])],
+        [AC_CHECK_LIB(zmq, zmq_init, ,[AC_MSG_ERROR([ZeroMQ libzmq is required])])])
 AS_IF([test "x$enable_debug" = "xno"],
         [OPTIM="-O2" DEBUG="" EXTRA="$EXTRA -DNDEBUG"],
         [OPTIM="-O0" DEBUG="-ggdb" EXTRA="$EXTRA -Wall"])
@@ -70,6 +78,9 @@ AS_IF([test "x$enable_trace" != "xno"],
         [EXTRA="$EXTRA -DDEBUG"])
 AS_IF([test "x$enable_fft_simd" != "xno"],
         [EXTRA="$EXTRA -DUSE_SIMD"])
+
+AM_CONDITIONAL([HAVE_INPUT_ZEROMQ_TEST], [test "x$enable_input_zeromq" = "xyes"])
+
 
 AC_SUBST([CFLAGS], ["$OPTIM $DEBUG $EXTRA"])
 AC_SUBST([CXXFLAGS], ["$OPTIM $DEBUG $EXTRA"])

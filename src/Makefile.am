@@ -22,6 +22,12 @@ else
 HGVERSION_FLAGS = -DHGVERSION="\"-modified\""
 endif
 
+if HAVE_INPUT_ZEROMQ_TEST
+ZMQ_LIBS    =-lzmq
+else
+ZMQ_LIBS    =
+endif
+
 FFT_DIR=$(top_builddir)/lib/kiss_fft129
 FFT_INC=-I$(FFT_DIR) -I$(FFT_DIR)/tools
 FFT_SRC=$(FFT_DIR)/kiss_fft.c $(FFT_DIR)/kiss_fft.h $(FFT_DIR)/tools/kiss_fftr.c $(FFT_DIR)/tools/kiss_fftr.h kiss_fftsimd.c kiss_fftsimd.h
@@ -41,6 +47,7 @@ $(FFT_DIR):
 	fi
 
 crc_dabmod_CPPFLAGS = $(FFT_INC) $(FFT_FLG) -msse -msse2 $(HGVERSION_FLAGS)
+crc_dabmod_LDADD    = $(ZMQ_LIBS)
 crc_dabmod_SOURCES =  DabMod.cpp \
                       PcDebug.h \
                       porting.c porting.h \
@@ -64,7 +71,7 @@ crc_dabmod_SOURCES =  DabMod.cpp \
                       OutputUHD.cpp OutputUHD.h \
                       ModOutput.cpp ModOutput.h \
                       InputMemory.cpp InputMemory.h \
-					  InputFileReader.cpp InputReader.h \
+					  InputFileReader.cpp InputZeroMQReader.cpp InputReader.h \
                       OutputFile.cpp OutputFile.h \
                       FrameMultiplexer.cpp FrameMultiplexer.h \
                       ModMux.cpp ModMux.h \

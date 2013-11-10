@@ -43,9 +43,10 @@
 #include "InputReader.h"
 #include "PcDebug.h"
 
-int InputFileReader::Open(std::string filename)
+int InputFileReader::Open(std::string filename, bool loop)
 {
     filename_ = filename;
+    loop_ = loop;
     inputfile_ = fopen(filename_.c_str(), "r");
     if (inputfile_ == NULL) {
         fprintf(stderr, "Unable to open input file!\n");
@@ -59,7 +60,7 @@ int InputFileReader::Open(std::string filename)
 
 int InputFileReader::Rewind()
 {
-    rewind(inputfile_);
+    rewind(inputfile_); // Also clears the EOF flag
     return IdentifyType();
 }
 
@@ -213,7 +214,7 @@ void InputFileReader::PrintInfo()
             fprintf(stderr, "framed");
             break;
         default:
-            fprintf(stderr, "unkown!");
+            fprintf(stderr, "unknown!");
             break;
     }
     fprintf(stderr, "\n");
@@ -235,9 +236,24 @@ int InputFileReader::GetNextFrame(void* buffer)
     }
     else {
         if (fread(&frameSize, sizeof(frameSize), 1, inputfile_) != 1) {
-            PDEBUG("End of file!\n");
-            logger_.level(error) << "Reached end of file!";
-            return 0;
+            logger_.level(error) << "Reached end of file.";
+            if (loop_) {
+                if (Rewind() == 0) {
+                    if (fread(&frameSize, sizeof(frameSize), 1, inputfile_) != 1) {
+                        PDEBUG("Error after rewinding file!\n");
+                        logger_.level(error) << "Error after rewinding file!";
+                        return -1;
+                    }
+                }
+                else {
+                    PDEBUG("Impossible to rewind file!\n");
+                    logger_.level(error) << "Impossible to rewind file!";
+                    return -1;
+                }
+            }
+            else {
+                return 0;
+            }
         }
     }
     if (frameSize > 6144) { // there might be a better limit
@@ -247,8 +263,25 @@ int InputFileReader::GetNextFrame(void* buffer)
     }
 
     PDEBUG("Frame size: %u\n", frameSize);
+    size_t read_bytes = fread(buffer, 1, frameSize, inputfile_);
+    if (    loop_ &&
+            streamtype_ == ETI_STREAM_TYPE_RAW && //implies frameSize == 6144
+            read_bytes == 0 && feof(inputfile_)) {
+        // in case of an EOF from a RAW that we loop, rewind
+        // otherwise, we won't tolerate it
 
-    if (fread(buffer, frameSize, 1, inputfile_) != 1) {
+        if (Rewind() == 0) {
+            read_bytes = fread(buffer, 1, frameSize, inputfile_);
+        }
+        else {
+            PDEBUG("Impossible to rewind file!\n");
+            logger_.level(error) << "Impossible to rewind file!";
+            return -1;
+        }
+    }
+
+
+    if (read_bytes != frameSize) {
         // A short read of a frame (i.e. reading an incomplete frame)
         // is not tolerated. Input files must not contain incomplete frames
         fprintf(stderr,

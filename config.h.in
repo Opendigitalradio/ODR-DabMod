@@ -22,6 +22,9 @@
 /* Define to 1 if you have the `gettimeofday' function. */
 #undef HAVE_GETTIMEOFDAY
 
+/* Define if ZeroMQ input is enabled */
+#undef HAVE_INPUT_ZEROMQ
+
 /* Define to 1 if you have the <inttypes.h> header file. */
 #undef HAVE_INTTYPES_H
 
@@ -42,6 +45,9 @@
 
 /* Define to 1 if you have the `uhd' library (-luhd). */
 #undef HAVE_LIBUHD
+
+/* Define to 1 if you have the `zmq' library (-lzmq). */
+#undef HAVE_LIBZMQ
 
 /* Define to 1 if you have the <limits.h> header file. */
 #undef HAVE_LIMITS_H

@@ -29,6 +29,7 @@
 
 #include "ModOutput.h"
 
+#include <string>
 #include <stdio.h>
 #include <sys/types.h>
 
@@ -36,14 +37,14 @@
 class OutputFile : public ModOutput
 {
 public:
-    OutputFile(const char* filename);
+    OutputFile(std::string filename);
     virtual ~OutputFile();
 
     virtual int process(Buffer* dataIn, Buffer* dataOut);
     const char* name() { return "OutputFile"; }
 
 protected:
-    const char* myFilename;
+    std::string myFilename;
     FILE* myFile;
 };
 

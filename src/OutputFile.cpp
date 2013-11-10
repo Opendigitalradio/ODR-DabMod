@@ -22,20 +22,21 @@
 #include "OutputFile.h"
 #include "PcDebug.h"
 
+#include <string>
 #include <assert.h>
 #include <stdexcept>
 
 
-OutputFile::OutputFile(const char* filename) :
+OutputFile::OutputFile(std::string filename) :
     ModOutput(ModFormat(1), ModFormat(0)),
     myFilename(filename)
 {
     PDEBUG("OutputFile::OutputFile(filename: %s) @ %p\n",
-            filename, this);
+            filename.c_str(), this);
 
-    myFile = fopen(filename, "w");
+    myFile = fopen(filename.c_str(), "w");
     if (myFile == NULL) {
-        perror(filename);
+        perror(filename.c_str());
         throw std::runtime_error(
                 "OutputFile::OutputFile() unable to open file!");
     }
