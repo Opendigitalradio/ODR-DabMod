@@ -1,0 +1,26 @@
+The file input support three file formats:
+
+    Framed format is used for file recording. It is the default format. The
+    padding can be removed from data. Format:
+        uint32_t nbFrames
+        for each frame
+          uint16_t frameSize
+          uint8_t data[frameSize]
+
+    Streamed format is used for streamed applications. As the total number of
+    frames is unknown before end of transmission, the corresponding field is
+    removed. The padding can be removed from data. Format:
+        for each frame
+          uint16_t frameSize
+          uint8_t data[frameSize]
+
+    Raw format is a bit-by-bit (but byte aligned on sync) recording of a G.703
+    data stream. The padding is always present. Format:
+        for each frame
+          uint8_t data[6144]
+
+    Please note that our raw format can also be referred to as ETI(NI, G.703) or ETI(NI).
+
+
+All numbers are little-endian.
+This description has been taken from the CRC mmbTools forum.

@@ -1,3 +1,12 @@
 Pascal Charest <pascal [dot] charest [at] crc [dot] ca> for
 the Communications Research Centre, Ottawa, Canada, 2003-2010:
     All files.
+
+Matthias P. Braendli <matthias [at] mpb [dot] li>
+    - Configuration file support
+    - UHD output integration
+    - Timestamping support required for SFN
+    - FIR filter
+    - Improvements in logging (log to file, to syslog)
+    - ZeroMQ ETI input
+    - Telnet remote-control

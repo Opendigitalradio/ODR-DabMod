@@ -4,6 +4,9 @@ Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010, 2011 2012
 Her Majesty the Queen in Right of Canada (Communications Research
 Center Canada)
 
+Copyright (C) 2013
+Matthias P. Braendli, http://mpb.li
+
 This file is part of CRC-DABMOD.
 
 CRC-DABMOD is free software: you can redistribute it and/or modify it
@@ -21,10 +24,21 @@ with CRC-DABMOD.  If not, see <http://www.gnu.org/licenses/>.
 
 OVERVIEW
 ========
-This is CRC-DABMOD 0.3.2
+This is CRC-DABMOD 0.3.3-mpb
 
 CRC-DABMOD is a DAB (Digital Audio Broadcasting) multiplexer compliant
 to ETSI EN 300 401.
+
+This version has been modified, and contains additional features compared
+to the official one:
+- Configuration file support, see doc/example.ini
+- Integrated UHD output for USRP devices, bypassing gnuradio
+- Timestamping support required for SFN
+- A FIR filter (usually done in GNURadio)
+- Improvements in logging (log to file, to syslog)
+- ETI sources: file (Raw, Framed and Streamed) and ZeroMQ (one frame per message)
+- A Telnet remote-control that can be used to change some parameters during
+  runtime
 
 The src/ directory contains the source code of CRC-DABMOD.
 
@@ -40,7 +54,9 @@ See the INSTALL file for installation instructions.
 CONTACT
 =======
 Pascal Charest <pascal [dot] charest [at] crc [dot] ca>
+Matthias P. Braendli <matthias [at] mpb [dot] li>
 
 http://mmbtools.crc.ca/
 http://www.crc.ca/mmb
 http://openmokast.org/
+http://mpb.li/

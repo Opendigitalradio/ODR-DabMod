@@ -1,3 +1,10 @@
+Required dependencies:
+======================
+
+    * Boost 1.41 or later
+    * Optional ZeroMQ http://www.zeromq.org
+        Use --disable-output-zeromq if you don't have it
+
 Simple install procedure:
 =========================
 
