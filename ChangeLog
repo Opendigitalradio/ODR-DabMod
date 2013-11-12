@@ -2,7 +2,7 @@ This file contains information about the changes done to
 the CRC-DABMOD in this repository
 
 2013-11-10: Matthias P. Braendli <matthias@mpb.li>
-	(Mercurial tag r8):
+	(tag r8):
 	* crc-dabmod:
 		Added secondary ETI input support.
 		Added ZeroMQ ETI input.
@@ -13,7 +13,7 @@ the CRC-DABMOD in this repository
 		Completed READMEs and INSTALLs
 
 2012-09-13: Matthias P. Braendli <matthias@mpb.li>
-	(Mercurial tag r7):
+	(tag r7):
 	* crc-dabmod/*:
 		Logging implementation cleaned up, and several
 		related bugs have been solved.
@@ -25,34 +25,34 @@ the CRC-DABMOD in this repository
 
 
 2012-08-26: Matthias P. Braendli <matthias@mpb.li>
-	(Mercurial tag r6):
+	(tag r6):
 	* crc-dabmod:
 		RemoteControl compatibility issue
 
 2012-08-23: Matthias P. Braendli <matthias@mpb.li>
-	(Mercurial tag r5):
+	(tag r5):
 	* crc-dabmod/*:
 		Minor fixes to FIRFilter and file configuration
 
 2012-08-17: Matthias P. Braendli <matthias@mpb.li>
-	(Mercurial tag r4):
+	(tag r4):
 	* crc-dabmod/*:
 		FIRFilter can not be remote-controlled, and supports on-the-fly change
 		of the filter taps.
 
 2012-08-16: Matthias P. Braendli <matthias@mpb.li>
-	(Mercurial tag r3):
+	(tag r3):
 	* crc-dabmod/*:
 		Implemented basic telnet remote control that can change
 		some UHD settings, and a syslog-compatible logging system.
 
 2012-08-14: Matthias P. Braendli <matthias@mpb.li>
-	(Mercurial tag r2):
+	(tag r2):
 	* crc-dabmod/*:
 		Added .INI configuration file parser.
 
 2012-08-01: Matthias P. Braendli <matthias@mpb.li>
-	(Mercurial tag r1):
+	(tag r1):
 	* crc-dabmod/*:
 		It is now possible to run dabmod with OutputUHD even
 		when no external 10MHz reference nor 1PPS are used.
