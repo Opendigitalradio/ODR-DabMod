@@ -1,0 +1,13 @@
+
+autom4te.cache
+src/*.o
+stamp-h1
+src/.deps
+lib/kiss_fft129
+**/Makefile
+config.log
+config.h
+config.status
+src/crc-dabmod
+
+.*.swp

@@ -626,8 +626,8 @@ ac_subst_vars='am__EXEEXT_FALSE
 am__EXEEXT_TRUE
 LTLIBOBJS
 LIBOBJS
-IS_HG_REPO_FALSE
-IS_HG_REPO_TRUE
+IS_GIT_REPO_FALSE
+IS_GIT_REPO_TRUE
 EGREP
 GREP
 BOOST_LDFLAGS
@@ -6226,12 +6226,12 @@ ac_link='$CC -o conftest$ac_exeext $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $
 ac_compiler_gnu=$ac_cv_c_compiler_gnu
 
 
- if hg parents; then
-  IS_HG_REPO_TRUE=
-  IS_HG_REPO_FALSE='#'
+ if test -d '.git'; then
+  IS_GIT_REPO_TRUE=
+  IS_GIT_REPO_FALSE='#'
 else
-  IS_HG_REPO_TRUE='#'
-  IS_HG_REPO_FALSE=
+  IS_GIT_REPO_TRUE='#'
+  IS_GIT_REPO_FALSE=
 fi
 
 
@@ -6555,8 +6555,8 @@ if test -z "${HAVE_INPUT_ZEROMQ_TEST_TRUE}" && test -z "${HAVE_INPUT_ZEROMQ_TEST
   as_fn_error $? "conditional \"HAVE_INPUT_ZEROMQ_TEST\" was never defined.
 Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
-if test -z "${IS_HG_REPO_TRUE}" && test -z "${IS_HG_REPO_FALSE}"; then
-  as_fn_error $? "conditional \"IS_HG_REPO\" was never defined.
+if test -z "${IS_GIT_REPO_TRUE}" && test -z "${IS_GIT_REPO_FALSE}"; then
+  as_fn_error $? "conditional \"IS_GIT_REPO\" was never defined.
 Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 

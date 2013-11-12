@@ -16,10 +16,10 @@
 # You should have received a copy of the GNU General Public License
 # along with CRC-DADMOD.  If not, see <http://www.gnu.org/licenses/>.
 
-if IS_HG_REPO
-HGVERSION_FLAGS = -DHGVERSION="\"`hg parents --template '-{node|short}'`\""
+if IS_GIT_REPO
+GITVERSION_FLAGS = -DGITVERSION="\"-`git describe --long --tags`\""
 else
-HGVERSION_FLAGS = -DHGVERSION="\"-modified\""
+GITVERSION_FLAGS = -DGITVERSION="\"-modified\""
 endif
 
 if HAVE_INPUT_ZEROMQ_TEST
@@ -46,7 +46,7 @@ $(FFT_DIR):
 		tar xzf $(top_srcdir)/lib/kiss_fft129.tar.gz -C $(top_builddir)/lib; \
 	fi
 
-crc_dabmod_CPPFLAGS = $(FFT_INC) $(FFT_FLG) -msse -msse2 $(HGVERSION_FLAGS)
+crc_dabmod_CPPFLAGS = $(FFT_INC) $(FFT_FLG) -msse -msse2 $(GITVERSION_FLAGS)
 crc_dabmod_LDADD    = $(ZMQ_LIBS)
 crc_dabmod_SOURCES =  DabMod.cpp \
                       PcDebug.h \

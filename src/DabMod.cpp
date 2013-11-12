@@ -79,7 +79,7 @@ void signalHandler(int signalNb)
 void printUsage(char* progName, FILE* out = stderr)
 {
     fprintf(out, "Welcome to %s %s%s, compiled at %s, %s\n\n",
-            PACKAGE, VERSION, HGVERSION, __DATE__, __TIME__);
+            PACKAGE, VERSION, GITVERSION, __DATE__, __TIME__);
     fprintf(out, "Usage with configuration file:\n");
     fprintf(out, "\t%s -C config_file.ini\n\n", progName);
 

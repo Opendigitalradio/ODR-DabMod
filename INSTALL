@@ -3,7 +3,7 @@ Required dependencies:
 
     * Boost 1.41 or later
     * Optional ZeroMQ http://www.zeromq.org
-        Use --disable-output-zeromq if you don't have it
+        Use --disable-input-zeromq if you don't have it
 
 Simple install procedure:
 =========================
@@ -15,6 +15,18 @@ Simple install procedure:
     % make                                  # Build CRC-DABMOD
     [ as root ]
     % make install                          # Install CRC-DABMOD
+
+Nearly as simple install procedure using repository:
+====================================================
+
+    * Download and install fec as above
+    * Clone the git repository
+    * Bootstrap autotools:
+        % aclocal && automake --gnu --add-missing && autoconf
+            or
+        % autoreconf
+            whichever works best
+    * Then use ./configure as above
 
 
 Advanced install procedure:

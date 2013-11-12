@@ -124,7 +124,7 @@ AC_COMPILE_IFELSE(
         [AC_MSG_RESULT([yes])], [AC_MSG_RESULT([no]) AC_DEFINE([M_PIl], [M_PI], [Replacing define])])
 AC_LANG_POP([C++])
 
-AM_CONDITIONAL([IS_HG_REPO], [hg parents])
+AM_CONDITIONAL([IS_GIT_REPO], [test -d '.git'])
 
 # Checks for library functions.
 # Commented to remove rpl_malloc linking error
