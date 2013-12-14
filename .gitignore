@@ -5,6 +5,10 @@ stamp-h1
 src/.deps
 lib/kiss_fft129
 **/Makefile
+Makefile.in
+aclocal.m4
+build-aux
+configure
 config.log
 config.h
 config.status
