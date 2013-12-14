@@ -20,7 +20,7 @@ AC_PREREQ(2.59)
 AC_INIT([CRC-DabMod], [0.3.3-mpb], [pascal.charest@crc.ca])
 AC_CONFIG_AUX_DIR([build-aux])
 AC_CANONICAL_SYSTEM
-AM_INIT_AUTOMAKE([-Wall])
+AM_INIT_AUTOMAKE([-Wall subdir-objects])
 AC_CONFIG_SRCDIR([src/DabMod.cpp])
 AM_CONFIG_HEADER([config.h])
 AM_SILENT_RULES([yes])
@@ -133,7 +133,5 @@ AC_FUNC_REALLOC
 AC_TYPE_SIGNAL
 AC_CHECK_FUNCS([bzero floor ftime gettimeofday memset sqrt strchr strerror strtol])
 
-AC_CONFIG_FILES([Makefile
-                 lib/Makefile
-                 src/Makefile])
+AC_CONFIG_FILES([Makefile])
 AC_OUTPUT
