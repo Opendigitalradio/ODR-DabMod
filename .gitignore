@@ -12,7 +12,6 @@ configure
 config.log
 config.h
 config.status
-crc-dabmod
-.dirstamp
+src/crc-dabmod
 
 .*.swp

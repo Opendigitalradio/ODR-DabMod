@@ -1,5 +1,5 @@
-# Copyright (C) 2007, 2008, 2009, 2010 Her Majesty the Queen in Right
-# of Canada (Communications Research Center Canada)
+# Copyright (C) 2008, 2009 Her Majesty the Queen in Right of Canada
+# (Communications Research Center Canada)
 
 # This file is part of CRC-DabMod.
 # 
@@ -16,8 +16,4 @@
 # You should have received a copy of the GNU General Public License
 # along with CRC-DabMod.  If not, see <http://www.gnu.org/licenses/>.
 
-SUBDIRS	=src lib
-
-ACLOCAL_AMFLAGS = -I m4
-
-EXTRA_DIST	=COPYING NEWS README AUTHORS ChangeLog TODO doc
+EXTRA_DIST	=kiss_fft129.tar.gz
