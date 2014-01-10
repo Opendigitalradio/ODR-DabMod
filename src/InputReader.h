@@ -164,6 +164,11 @@ class InputZeroMQReader : public InputReader
             workerdata_.in_messages = &in_messages_;
         }
 
+        ~InputZeroMQReader()
+        {
+            worker_.Stop();
+        }
+
         int Open(std::string uri);
 
         int GetNextFrame(void* buffer);
@@ -171,6 +176,7 @@ class InputZeroMQReader : public InputReader
         void PrintInfo();
 
     private:
+        InputZeroMQReader(const InputZeroMQReader& other) {}
         Logger logger_;
         std::string uri_;
 
