@@ -198,7 +198,6 @@ bool TimestampDecoder::updateModulatorOffset()
     if (modconfig.use_offset_fixed)
     {
         timestamp_offset = modconfig.offset_fixed;
-        myLogger.level(info) << "Setting fixed offset to " << timestamp_offset;
         return true;
     }
     else if (modconfig.use_offset_file)
