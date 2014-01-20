@@ -57,7 +57,7 @@ public:
 
     void calculateTimestamp(struct frame_timestamp& ts)
     {
-        myTimestampDecoder->calculateTimestamp(ts);
+        myTimestampDecoder.calculateTimestamp(ts);
     }
 
     /* Return the frame counter */
@@ -85,7 +85,7 @@ protected:
     eti_TIST eti_tist;
     FicSource* myFicSource;
     std::vector<SubchannelSource*> mySources;
-    TimestampDecoder* myTimestampDecoder;
+    TimestampDecoder myTimestampDecoder;
     
 private:
     size_t myCurrentFrame;

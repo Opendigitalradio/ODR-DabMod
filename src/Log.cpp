@@ -41,7 +41,7 @@ Logger::register_backend(LogBackend* backend) {
 
 void
 Logger::log(log_level_t level, std::string message) {
-    for (std::list<LogBackend*>::iterator it = backends.begin(); it != backends.end(); it++) {
+    for (std::list<LogBackend*>::iterator it = backends.begin(); it != backends.end(); ++it) {
         (*it)->log(level, message);
     }
 }

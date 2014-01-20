@@ -64,7 +64,7 @@ void FIRFilterWorker::process(struct FIRFilterWorkerData *fwd)
         dataOut = new Buffer();
         dataOut->setLength(dataIn->getLength());
 
-        PDEBUG("FIRFilterWorker: dataIn->getLength() %lu\n", dataIn->getLength());
+        PDEBUG("FIRFilterWorker: dataIn->getLength() %zu\n", dataIn->getLength());
 
 #if __AVX__
 #define _mm256_load1_ps(x) _mm256_set_ps(x, x, x, x, x, x, x, x)

@@ -95,7 +95,7 @@ class RemoteControllable {
         virtual list<string> get_supported_parameters() {
             cerr << "get_sup_par" << parameters_.size() << endl;
             list<string> parameterlist;
-            for (list< vector<string> >::iterator it = parameters_.begin(); it != parameters_.end(); it++) {
+            for (list< vector<string> >::iterator it = parameters_.begin(); it != parameters_.end(); ++it) {
                 parameterlist.push_back((*it)[0]);
             }
             return parameterlist;
@@ -162,7 +162,7 @@ class RemoteControllerTelnet : public BaseRemoteController {
         }
 
         RemoteControllable* get_controllable_(string name) {
-            for (list<RemoteControllable*>::iterator it = cohort_.begin(); it != cohort_.end(); it++) {
+            for (list<RemoteControllable*>::iterator it = cohort_.begin(); it != cohort_.end(); ++it) {
                 if ((*it)->get_rc_name() == name)
                 {
                     return *it;
@@ -187,7 +187,7 @@ class RemoteControllerTelnet : public BaseRemoteController {
             list< vector<string> > allparams;
             list<string> params = controllable->get_supported_parameters();
             cerr << "# of supported parameters " << params.size() << endl;
-            for (list<string>::iterator it = params.begin(); it != params.end(); it++) {
+            for (list<string>::iterator it = params.begin(); it != params.end(); ++it) {
                 vector<string> item;
                 item.push_back(*it);
                 item.push_back(controllable->get_parameter(*it));

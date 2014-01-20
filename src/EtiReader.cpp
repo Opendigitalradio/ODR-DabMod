@@ -52,12 +52,12 @@ EtiReader::EtiReader(struct modulator_offset_config& modconf,
         Logger& logger) :
     myLogger(logger),
     state(EtiReaderStateSync),
-    myFicSource(NULL)
+    myFicSource(NULL),
+    myTimestampDecoder(modconf, myLogger)
 {
     PDEBUG("EtiReader::EtiReader()\n");
 
     myCurrentFrame = 0;
-    myTimestampDecoder = new TimestampDecoder(modconf, myLogger);
 }
 
 EtiReader::~EtiReader()
@@ -276,13 +276,13 @@ int EtiReader::process(Buffer* dataIn)
     }
     
     // Update timestamps
-    myTimestampDecoder->updateTimestampEti(eti_fc.FP & 0x3,
+    myTimestampDecoder.updateTimestampEti(eti_fc.FP & 0x3,
             eti_eoh.MNSC, 
             getPPSOffset());
 
     if (getFCT() % 125 == 0) //every 3 seconds is fine enough
     {
-        myTimestampDecoder->updateModulatorOffset();
+        myTimestampDecoder.updateModulatorOffset();
     }
 
     return dataIn->getLength() - input_size;

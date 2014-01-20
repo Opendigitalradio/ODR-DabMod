@@ -114,7 +114,7 @@ void InputZeroMQWorker::RecvProcess(struct InputZeroMQThreadData* workerdata)
             }
         }
     }
-    catch ( zmq::error_t err ) {
+    catch (zmq::error_t& err) {
         printf("ZeroMQ error in RecvProcess: '%s'\n", err.what());
     }
 }

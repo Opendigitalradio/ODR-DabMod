@@ -124,7 +124,7 @@ RemoteControllerTelnet::dispatch_command(tcp::socket& socket, string command)
         stringstream ss;
 
         if (cmd.size() == 1) {
-            for (list<RemoteControllable*>::iterator it = cohort_.begin(); it != cohort_.end(); it++) {
+            for (list<RemoteControllable*>::iterator it = cohort_.begin(); it != cohort_.end(); ++it) {
                 ss << (*it)->get_rc_name() << " ";
             }
         }
@@ -133,7 +133,7 @@ RemoteControllerTelnet::dispatch_command(tcp::socket& socket, string command)
                 stringstream ss;
 
                 list< vector<string> > params = get_parameter_descriptions_(cmd[1]);
-                for (list< vector<string> >::iterator it = params.begin(); it != params.end(); it++) {
+                for (list< vector<string> >::iterator it = params.begin(); it != params.end(); ++it) {
                     ss << (*it)[0] << " : " << (*it)[1] << endl;
                 }
                 reply(socket, ss.str());
@@ -153,7 +153,7 @@ RemoteControllerTelnet::dispatch_command(tcp::socket& socket, string command)
             try {
                 stringstream ss;
                 list< vector<string> > r = get_param_list_values_(cmd[1]);
-                for (list< vector<string> >::iterator it = r.begin(); it != r.end(); it++) {
+                for (list< vector<string> >::iterator it = r.begin(); it != r.end(); ++it) {
                     ss << (*it)[0] << ": " << (*it)[1] << endl;
                 }
                 reply(socket, ss.str());
