@@ -3,8 +3,7 @@
    Her Majesty the Queen in Right of Canada (Communications Research
    Center Canada)
 
-   Includes modifications for which no copyright is claimed
-   2012, Matthias P. Braendli, matthias.braendli@mpb.li
+   Copyright (C), 2014, Matthias P. Braendli, matthias.braendli@mpb.li
  */
 /*
    This file is part of CRC-DADMOD.
@@ -30,6 +29,7 @@
 #   include "config.h"
 #endif
 
+#include <stdarg.h>
 #include <stdio.h>
 #include <syslog.h>
 #include <fstream>
@@ -38,13 +38,15 @@
 #include <list>
 #include <stdexcept>
 #include <string>
+#include <map>
 
-#include "porting.h"
-
-#define SYSLOG_IDENT "CRC-DABMOD"
+#define SYSLOG_IDENT "CRC-DABMUX"
 #define SYSLOG_FACILITY LOG_LOCAL0
 
 enum log_level_t {debug = 0, info, warn, error, alert, emerg};
+
+const std::string levels_as_str[] =
+    { "     ", "     ", "WARN ", "ERROR", "ALERT", "EMERG"} ;
 
 /** Abstract class all backends must inherit from */
 class LogBackend {
@@ -76,7 +78,7 @@ class LogToSyslog : public LogBackend {
                 case error: syslog_level = LOG_ERR; break;
                 case emerg: syslog_level = LOG_EMERG; break;
             }
- 
+
             syslog(syslog_level, SYSLOG_IDENT " %s", message.c_str());
         }
 
@@ -90,11 +92,11 @@ class LogToFile : public LogBackend {
     public:
         LogToFile(std::string filename) {
             name = "FILE";
-            
+
             log_file = fopen(filename.c_str(), "a");
             if (log_file == NULL) {
                 fprintf(stderr, "Cannot open log file !");
-                throw new std::runtime_error("Cannot open log file !");
+                throw std::runtime_error("Cannot open log file !");
             }
         }
 
@@ -106,10 +108,12 @@ class LogToFile : public LogBackend {
 
         void log(log_level_t level, std::string message) {
 
-            const char* log_level_text[] = {"DEBUG", "INFO", "WARN", "ERROR", "ALERT", "EMERG"};
-            
+            const char* log_level_text[] =
+                {"DEBUG", "INFO", "WARN", "ERROR", "ALERT", "EMERG"};
+
             // fprintf is thread-safe
-            fprintf(log_file, "CRC-DABMOD: %s: %s\n", log_level_text[(size_t)level], message.c_str());
+            fprintf(log_file, "CRC-DABMUX: %s: %s\n",
+                    log_level_text[(size_t)level], message.c_str());
             fflush(log_file);
         }
 
@@ -124,21 +128,27 @@ class LogLine;
 
 class Logger {
     public:
-        Logger();
+        Logger() {};
 
         void register_backend(LogBackend* backend);
 
-        /* The LogLevel will call this when a line is complete */
-        void log(log_level_t level, std::string message);
+        /* Log the message to all backends */
+        void log(log_level_t level, const char* fmt, ...);
 
-        /* Return a LogLine for the given level */
+        void logstr(log_level_t level, std::string message);
+
+        /* Return a LogLine for the given level
+         * so that you can write etiLog.level(info) << "stuff = " << 21 */
         LogLine level(log_level_t level);
-        
+
     private:
         std::list<LogBackend*> backends;
 };
 
+extern Logger etiLog;
+
 // Accumulate a line of logs, using same syntax as stringstream
+// The line is logged when the LogLine gets destroyed
 class LogLine {
     public:
         LogLine(const LogLine& logline);
@@ -148,6 +158,7 @@ class LogLine {
             level_ = level;
         }
 
+        // Push the new element into the stringstream
         template <typename T>
         LogLine& operator<<(T s) {
             os << s;
@@ -156,7 +167,7 @@ class LogLine {
 
         ~LogLine()
         {
-            logger_->log(level_, os.str());
+            logger_->logstr(level_, os.str());
         }
 
     private:
@@ -167,3 +178,4 @@ class LogLine {
 
 
 #endif
+

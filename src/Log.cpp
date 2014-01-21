@@ -3,8 +3,7 @@
    Her Majesty the Queen in Right of Canada (Communications Research
    Center Canada)
 
-   Includes modifications for which no copyright is claimed
-   2012, Matthias P. Braendli, matthias.braendli@mpb.li
+   Copyright (C), 2014, Matthias P. Braendli, matthias.braendli@mpb.li
  */
 /*
    This file is part of CRC-DADMOD.
@@ -24,31 +23,62 @@
  */
 
 #include <list>
+#include <stdarg.h>
 
 #include "Log.h"
-#include "porting.h"
+
+Logger etiLog;
 
 
-Logger::Logger() {
-}
-
-void
-Logger::register_backend(LogBackend* backend) {
+void Logger::register_backend(LogBackend* backend) {
     backends.push_back(backend);
     //log(info, "Registered new logger " + backend->get_name());
 }
 
 
-void
-Logger::log(log_level_t level, std::string message) {
-    for (std::list<LogBackend*>::iterator it = backends.begin(); it != backends.end(); ++it) {
+void Logger::log(log_level_t level, const char* fmt, ...)
+{
+    int size = 100;
+    std::string str;
+    va_list ap;
+    while (1) {
+        str.resize(size);
+        va_start(ap, fmt);
+        int n = vsnprintf((char *)str.c_str(), size, fmt, ap);
+        va_end(ap);
+        if (n > -1 && n < size) {
+            str.resize(n);
+            break;
+        }
+        if (n > -1)
+            size = n + 1;
+        else
+            size *= 2;
+    }
+
+    logstr(level, str);
+}
+
+void Logger::logstr(log_level_t level, std::string message)
+{
+    /* Remove a potential trailing newline.
+     * It doesn't look good in syslog
+     */
+    if (message[message.length()-1] == '\n') {
+        message.resize(message.length()-1);
+    }
+
+    for (std::list<LogBackend*>::iterator it = backends.begin();
+            it != backends.end();
+            ++it) {
         (*it)->log(level, message);
     }
+
+    std::cerr << levels_as_str[level] << " " << message << std::endl;
 }
 
 
-LogLine
-Logger::level(log_level_t level)
+LogLine Logger::level(log_level_t level)
 {
     return LogLine(this, level);
 }
