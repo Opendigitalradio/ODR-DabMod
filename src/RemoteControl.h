@@ -9,20 +9,20 @@
    see testremotecontrol/test.cpp for an example of how to use this.
  */
 /*
-   This file is part of CRC-DADMOD.
+   This file is part of CRC-DABMOD.
 
-   CRC-DADMOD is free software: you can redistribute it and/or modify
+   CRC-DABMOD is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as
    published by the Free Software Foundation, either version 3 of the
    License, or (at your option) any later version.
 
-   CRC-DADMOD is distributed in the hope that it will be useful,
+   CRC-DABMOD is distributed in the hope that it will be useful,
    but WITHOUT ANY WARRANTY; without even the implied warranty of
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
    GNU General Public License for more details.
 
    You should have received a copy of the GNU General Public License
-   along with CRC-DADMOD.  If not, see <http://www.gnu.org/licenses/>.
+   along with CRC-DABMOD.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 #ifndef _REMOTECONTROL_H
@@ -47,7 +47,7 @@
   vector<string> p; \
   p.push_back(#p); \
   p.push_back(desc); \
-  parameters_.push_back(p); \
+  m_parameters.push_back(p); \
 }
 
 
@@ -57,12 +57,12 @@ using boost::asio::ip::tcp;
 class ParameterError : public std::exception
 {
     public:
-        ParameterError(string message) : message_(message) {}
+        ParameterError(string message) : m_message(message) {}
         ~ParameterError() throw() {};
-        const char* what() const throw() { return message_.c_str(); }
+        const char* what() const throw() { return m_message.c_str(); }
 
     private:
-        string message_;
+        string m_message;
 };
 
 class RemoteControllable;
@@ -78,14 +78,14 @@ class BaseRemoteController {
 class RemoteControllable {
     public:
 
-        RemoteControllable(string name) : name_(name) {}
+        RemoteControllable(string name) : m_name(name) {}
 
         /* return a short name used to identify the controllable.
          * It might be used in the commands the user has to type, so keep
          * it short
          */
-        virtual std::string get_rc_name() { return name_; }
-        
+        virtual std::string get_rc_name() { return m_name; }
+
         /* Tell the controllable to enrol at the given controller */
         virtual void enrol_at(BaseRemoteController& controller) {
             controller.enrol(this);
@@ -93,9 +93,10 @@ class RemoteControllable {
 
         /* Return a list of possible parameters that can be set */
         virtual list<string> get_supported_parameters() {
-            cerr << "get_sup_par" << parameters_.size() << endl;
+            cerr << "get_sup_par" << m_parameters.size() << endl;
             list<string> parameterlist;
-            for (list< vector<string> >::iterator it = parameters_.begin(); it != parameters_.end(); ++it) {
+            for (list< vector<string> >::iterator it = m_parameters.begin();
+                    it != m_parameters.end(); ++it) {
                 parameterlist.push_back((*it)[0]);
             }
             return parameterlist;
@@ -103,7 +104,7 @@ class RemoteControllable {
 
         /* Return a mapping of the descriptions of all parameters */
         virtual std::list< std::vector<std::string> > get_parameter_descriptions() {
-            return parameters_;
+            return m_parameters;
         }
 
         /* Base function to set parameters. */
@@ -113,8 +114,8 @@ class RemoteControllable {
         virtual string get_parameter(string parameter) = 0;
 
     protected:
-        std::string name_;
-        std::list< std::vector<std::string> > parameters_;
+        std::string m_name;
+        std::list< std::vector<std::string> > m_parameters;
 };
 
 /* Implements a Remote controller based on a simple telnet CLI
@@ -123,19 +124,19 @@ class RemoteControllable {
 class RemoteControllerTelnet : public BaseRemoteController {
     public:
         RemoteControllerTelnet(int port) {
-            port_ = port;
-            running_ = false;
+            m_port = port;
+            m_running = false;
         };
 
         void start() {
-            running_ = true;
-            child_thread_ = boost::thread(&RemoteControllerTelnet::process, this, 0);
+            m_running = true;
+            m_child_thread = boost::thread(&RemoteControllerTelnet::process, this, 0);
         }
 
         void stop() {
-            running_ = false;
-            child_thread_.interrupt();
-            child_thread_.join();
+            m_running = false;
+            m_child_thread.interrupt();
+            m_child_thread.join();
         }
 
         void process(long);
@@ -145,7 +146,7 @@ class RemoteControllerTelnet : public BaseRemoteController {
         void reply(tcp::socket& socket, string message);
 
         void enrol(RemoteControllable* controllable) {
-            cohort_.push_back(controllable);
+            m_cohort.push_back(controllable);
         }
 
 
@@ -162,7 +163,8 @@ class RemoteControllerTelnet : public BaseRemoteController {
         }
 
         RemoteControllable* get_controllable_(string name) {
-            for (list<RemoteControllable*>::iterator it = cohort_.begin(); it != cohort_.end(); ++it) {
+            for (list<RemoteControllable*>::iterator it = m_cohort.begin();
+                    it != m_cohort.end(); ++it) {
                 if ((*it)->get_rc_name() == name)
                 {
                     return *it;
@@ -196,7 +198,7 @@ class RemoteControllerTelnet : public BaseRemoteController {
             }
             return allparams;
         }
-        
+
         string get_param_(string name, string param) {
             RemoteControllable* controllable = get_controllable_(name);
             return controllable->get_parameter(param);
@@ -207,16 +209,16 @@ class RemoteControllerTelnet : public BaseRemoteController {
             return controllable->set_parameter(param, value);
         }
 
-        bool running_;
-        boost::thread child_thread_;
+        bool m_running;
+        boost::thread m_child_thread;
 
         /* This controller commands the controllables in the cohort */
-        list<RemoteControllable*> cohort_;
+        list<RemoteControllable*> m_cohort;
 
-        std::string welcome_;
-        std::string prompt_;
+        std::string m_welcome;
+        std::string m_prompt;
 
-        int port_;
+        int m_port;
 };
 
 
@@ -228,3 +230,4 @@ class RemoteControllerDummy : public BaseRemoteController {
 };
 
 #endif
+

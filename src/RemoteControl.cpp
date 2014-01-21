@@ -6,20 +6,20 @@
    Written by Matthias P. Braendli, matthias.braendli@mpb.li, 2012
  */
 /*
-   This file is part of CRC-DADMOD.
+   This file is part of CRC-DABMOD.
 
-   CRC-DADMOD is free software: you can redistribute it and/or modify
+   CRC-DABMOD is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as
    published by the Free Software Foundation, either version 3 of the
    License, or (at your option) any later version.
 
-   CRC-DADMOD is distributed in the hope that it will be useful,
+   CRC-DABMOD is distributed in the hope that it will be useful,
    but WITHOUT ANY WARRANTY; without even the implied warranty of
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
    GNU General Public License for more details.
 
    You should have received a copy of the GNU General Public License
-   along with CRC-DADMOD.  If not, see <http://www.gnu.org/licenses/>.
+   along with CRC-DABMOD.  If not, see <http://www.gnu.org/licenses/>.
  */
 #include <list>
 #include <string>
@@ -34,17 +34,17 @@ using boost::asio::ip::tcp;
 void
 RemoteControllerTelnet::process(long)
 {
-    welcome_ = "CRC-DABMOD Remote Control CLI\nWrite 'help' for help.\n**********\n";
-    prompt_ = "> ";
+    m_welcome = "CRC-DABMOD Remote Control CLI\nWrite 'help' for help.\n**********\n";
+    m_prompt = "> ";
 
     std::string in_message;
     size_t length;
 
     try {
         boost::asio::io_service io_service;
-        tcp::acceptor acceptor(io_service, tcp::endpoint(tcp::v4(), port_));
+        tcp::acceptor acceptor(io_service, tcp::endpoint(tcp::v4(), m_port));
 
-        while (running_) {
+        while (m_running) {
             in_message = "";
 
             tcp::socket socket(io_service);
@@ -53,12 +53,12 @@ RemoteControllerTelnet::process(long)
 
             boost::system::error_code ignored_error;
 
-            boost::asio::write(socket, boost::asio::buffer(welcome_),
+            boost::asio::write(socket, boost::asio::buffer(m_welcome),
                     boost::asio::transfer_all(),
                     ignored_error);
 
-            while (running_ && in_message != "quit") {
-                boost::asio::write(socket, boost::asio::buffer(prompt_),
+            while (m_running && in_message != "quit") {
+                boost::asio::write(socket, boost::asio::buffer(m_prompt),
                         boost::asio::transfer_all(),
                         ignored_error);
 
@@ -76,7 +76,8 @@ RemoteControllerTelnet::process(long)
                 }
 
                 while (in_message.length() > 0 && 
-                        (in_message[in_message.length()-1] == '\r' || in_message[in_message.length()-1] == '\n')) {
+                        (in_message[in_message.length()-1] == '\r' ||
+                         in_message[in_message.length()-1] == '\n')) {
                     in_message.erase(in_message.length()-1, 1);
                 }
 
@@ -124,7 +125,8 @@ RemoteControllerTelnet::dispatch_command(tcp::socket& socket, string command)
         stringstream ss;
 
         if (cmd.size() == 1) {
-            for (list<RemoteControllable*>::iterator it = cohort_.begin(); it != cohort_.end(); ++it) {
+            for (list<RemoteControllable*>::iterator it = m_cohort.begin();
+                    it != m_cohort.end(); ++it) {
                 ss << (*it)->get_rc_name() << " ";
             }
         }
@@ -133,7 +135,8 @@ RemoteControllerTelnet::dispatch_command(tcp::socket& socket, string command)
                 stringstream ss;
 
                 list< vector<string> > params = get_parameter_descriptions_(cmd[1]);
-                for (list< vector<string> >::iterator it = params.begin(); it != params.end(); ++it) {
+                for (list< vector<string> >::iterator it = params.begin();
+                        it != params.end(); ++it) {
                     ss << (*it)[0] << " : " << (*it)[1] << endl;
                 }
                 reply(socket, ss.str());
@@ -153,7 +156,8 @@ RemoteControllerTelnet::dispatch_command(tcp::socket& socket, string command)
             try {
                 stringstream ss;
                 list< vector<string> > r = get_param_list_values_(cmd[1]);
-                for (list< vector<string> >::iterator it = r.begin(); it != r.end(); ++it) {
+                for (list< vector<string> >::iterator it = r.begin();
+                        it != r.end(); ++it) {
                     ss << (*it)[0] << ": " << (*it)[1] << endl;
                 }
                 reply(socket, ss.str());
@@ -209,7 +213,7 @@ RemoteControllerTelnet::dispatch_command(tcp::socket& socket, string command)
     }
 }
 
-    void
+void
 RemoteControllerTelnet::reply(tcp::socket& socket, string message)
 {
     boost::system::error_code ignored_error;
