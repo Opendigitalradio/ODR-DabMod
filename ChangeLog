@@ -1,6 +1,12 @@
 This file contains information about the changes done to
 the CRC-DABMOD in this repository
 
+2014-01-31: Matthias P. Braendli <matthias@mpb.li>
+	(tag r11)
+	* crc-dabmod:
+		Minor improvements in logging, remote control,
+		zmq input and autotools
+
 2013-12-14: Matthias P. Braendli <matthias@mpb.li>
 	(tag r10)
 	* autotools:
