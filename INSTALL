@@ -8,8 +8,8 @@ Required dependencies:
 Simple install procedure:
 =========================
 
-    % tar xjf crc-dabmod-0.3.2.tar.bz2      # Unpack the source
-    % cd crc-dabmod-0.3.2                   # Change to the source directory
+    % tar xjf odr-dabmod-X.Y.Z.tar.bz2      # Unpack the source
+    % cd odr-dabmod-X.Y.Z                   # Change to the source directory
     % ./configure --disable-debug --with-debug-malloc=yes --enable-fft-simd
                                             # Run the configure script
     % make                                  # Build ODR-DabMod

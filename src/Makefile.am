@@ -17,9 +17,9 @@
 # along with ODR-DabMod.  If not, see <http://www.gnu.org/licenses/>.
 
 if IS_GIT_REPO
-GITVERSION_FLAGS = -DGITVERSION="\"-`git describe --long --tags`\""
+GITVERSION_FLAGS = -DGITVERSION="\"`git describe`\""
 else
-GITVERSION_FLAGS = -DGITVERSION="\"-modified\""
+GITVERSION_FLAGS =
 endif
 
 if HAVE_INPUT_ZEROMQ_TEST
@@ -35,7 +35,7 @@ FFT_FLG=-ffast-math
 
 .PHONY: kiss_fft129 reed-solomon-4.0
 
-bin_PROGRAMS =  crc-dabmod
+bin_PROGRAMS =  odr-dabmod
 
 DabModulator.cpp:   $(FFT_DIR)
 
@@ -46,9 +46,9 @@ $(FFT_DIR):
 		tar xzf $(top_srcdir)/lib/kiss_fft129.tar.gz -C $(top_builddir)/lib; \
 	fi
 
-crc_dabmod_CPPFLAGS = $(FFT_INC) $(FFT_FLG) -msse -msse2 $(GITVERSION_FLAGS)
-crc_dabmod_LDADD    = $(ZMQ_LIBS)
-crc_dabmod_SOURCES =  DabMod.cpp \
+odr_dabmod_CPPFLAGS = $(FFT_INC) $(FFT_FLG) -msse -msse2 $(GITVERSION_FLAGS)
+odr_dabmod_LDADD    = $(ZMQ_LIBS)
+odr_dabmod_SOURCES =  DabMod.cpp \
                       PcDebug.h \
                       porting.c porting.h \
                       DabModulator.cpp DabModulator.h  \
@@ -89,9 +89,10 @@ crc_dabmod_SOURCES =  DabMod.cpp \
                       Resampler.cpp Resampler.h \
                       ConvEncoder.cpp ConvEncoder.h \
                       TimeInterleaver.cpp TimeInterleaver.h \
+					  ThreadsafeQueue.h \
 					  Log.cpp Log.h \
 					  RemoteControl.cpp RemoteControl.h
-nodist_crc_dabmod_SOURCES	=$(FFT_SRC)
+nodist_odr_dabmod_SOURCES	=$(FFT_SRC)
 
 dist_bin_SCRIPTS	=crc-dwap.py
 
