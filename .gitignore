@@ -12,6 +12,7 @@ configure
 config.log
 config.h
 config.status
-src/crc-dabmod
+src/odr-dabmod
+.clang_complete
 
 .*.swp
