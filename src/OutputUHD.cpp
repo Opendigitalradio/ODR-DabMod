@@ -122,8 +122,9 @@ OutputUHD::OutputUHD(
         struct timespec now;
         time_t seconds;
         if (clock_gettime(CLOCK_REALTIME, &now)) {
-            perror("OutputUHD:Error: could not get time: ");
-            myLogger.level(error) << "OutputUHD: could not get time";
+            myLogger.level(error) << "OutputUHD: could not get time :" <<
+                strerror(errno);
+            throw std::runtime_error("OutputUHD: could not get time.");
         }
         else {
             seconds = now.tv_sec;
@@ -132,10 +133,9 @@ OutputUHD::OutputUHD(
             while (seconds + 1 > now.tv_sec) {
                 usleep(1);
                 if (clock_gettime(CLOCK_REALTIME, &now)) {
-                    fprintf(stderr, "errno: %d\n", errno);
-                    perror("OutputUHD:Error: could not get time: ");
-                    myLogger.level(error) << "OutputUHD: could not get time";
-                    break;
+                    myLogger.level(error) << "OutputUHD: could not get time :" <<
+                        strerror(errno);
+                    throw std::runtime_error("OutputUHD: could not get time.");
                 }
             }
             MDEBUG("OutputUHD:sec+1: %ld ; now: %ld ...\n", seconds+1, now.tv_sec);
@@ -148,7 +148,7 @@ OutputUHD::OutputUHD(
         }
 
         usleep(1e6);
-        fprintf(stderr, "OutputUHD: USRP time %f\n",
+        myLogger.log(info,  "OutputUHD: USRP time %f\n",
                 myUsrp->get_time_now().get_real_secs());
     }
 
@@ -156,7 +156,6 @@ OutputUHD::OutputUHD(
     // preparing output thread worker data
     uwd.myUsrp = myUsrp;
 #else
-    fprintf(stderr, "OutputUHD: UHD initialisation disabled at compile-time\n");
     myLogger.level(error) << "OutputUHD: UHD initialisation disabled at compile-time";
 #endif
 
@@ -200,7 +199,6 @@ int OutputUHD::process(Buffer* dataIn, Buffer* dataOut)
     // We will only wait on the barrier on the subsequent calls to 
     // OutputUHD::process
     if (first_run) {
-        fprintf(stderr, "OutUHD.process:Initialising...\n");
         myLogger.level(debug) << "OutputUHD: UHD initialising...";
 
         uwd.bufsize = dataIn->getLength();
@@ -220,20 +218,16 @@ int OutputUHD::process(Buffer* dataIn, Buffer* dataOut)
 
         lastLen = uwd.bufsize;
         first_run = false;
-        fprintf(stderr, "OutUHD.process:Initialising complete.\n");
         myLogger.level(debug) << "OutputUHD: UHD initialising complete";
     }
     else {
 
         if (lastLen != dataIn->getLength()) {
             // I expect that this never happens.
-            fprintf(stderr,
-                    "OutUHD.process:AAAAH PANIC input length changed from %zu to %zu !\n",
-                    lastLen, dataIn->getLength());
-            myLogger.level(emerg) << "OutputUHD: Fatal error, input length changed !";
+            myLogger.level(emerg) << "OutputUHD: Fatal error, input length changed from " <<
+                    lastLen << " to " << dataIn->getLength();
             throw std::runtime_error("Non-constant input length!");
         }
-        //fprintf(stderr, "OutUHD.process:Waiting for barrier\n");
         mySyncBarrier.get()->wait();
 
         // write into the our buffer while
@@ -303,7 +297,6 @@ void UHDWorker::process()
         /* Wait for barrier */
         // this wait will hopefully always be the second one
         // because modulation should be quicker than transmission
-        //fprintf(stderr, "Worker:Waiting for barrier\n");
         uwd->sync_barrier.get()->wait();
 
         if (workerbuffer == 0) {
@@ -313,25 +306,23 @@ void UHDWorker::process()
             frame = &(uwd->frame1);
         }
         else {
-            fprintf(stderr, "UHDWorker.process: workerbuffer: %d\n", workerbuffer);
-            perror("UHDWorker.process: workerbuffer is neither 0 nor 1!\n");
+            throw std::runtime_error("UHDWorker.process: workerbuffer is neither 0 nor 1 !");
         }
 
         in = reinterpret_cast<const complexf*>(frame->buf);
         pps_offset = frame->ts.timestamp_pps_offset;
-        //
+
         // Tx second from MNSC
         tx_second = frame->ts.timestamp_sec;
 
         sizeIn = uwd->bufsize / sizeof(complexf);
 
 #if ENABLE_UHD
-        // Check for ref_lock 
+        // Check for ref_lock
         if (check_refclk_loss)
         {
             try {
                 if (! uwd->myUsrp->get_mboard_sensor("ref_locked", 0).to_bool()) {
-                    fprintf(stderr, "UHDWorker: RefLock lost !\n");
                     uwd->logger->log(alert, "OutputUHD: External reference clock lock lost !");
                     if (uwd->refclk_lock_loss_behaviour == CRASH) {
                         throw std::runtime_error("OutputUHD: External reference clock lock lost.");
@@ -340,7 +331,8 @@ void UHDWorker::process()
             }
             catch (uhd::lookup_error &e) {
                 check_refclk_loss = false;
-                uwd->logger->log(warn, "OutputUHD: This USRP does not have mboard sensor for ext clock loss. Check disabled.");
+                uwd->logger->log(warn,
+                        "OutputUHD: This USRP does not have mboard sensor for ext clock loss. Check disabled.");
             }
         }
 
@@ -354,8 +346,6 @@ void UHDWorker::process()
                 /* We have not received a full timestamp through
                  * MNSC. We sleep through the frame.
                  */
-                fprintf(stderr, "UHDOut: Throwing sample %d away: incomplete timestamp %zu + %f\n",
-                        frame->fct, tx_second, pps_offset);
                 uwd->logger->level(info) << "OutputUHD: Throwing sample " <<
                     frame->fct << " away: incomplete timestamp " << tx_second << " + " << pps_offset;
                 usleep(20000); //TODO should this be TM-dependant ?
@@ -367,34 +357,35 @@ void UHDWorker::process()
 
             // md is defined, let's do some checks
             if (md.time_spec.get_real_secs() + 0.2 < usrp_time) {
-                fprintf(stderr,
-                        "* Timestamp in the past! offset: %f"
-                        "  (%f) frame %d tx_second %zu; pps %f\n",
-                        md.time_spec.get_real_secs() - usrp_time,
-                        usrp_time, frame->fct, tx_second, pps_offset);
+                uwd->logger->level(warn) <<
+                    "OutputUHD: Timestamp in the past! offset: " <<
+                    md.time_spec.get_real_secs() - usrp_time <<
+                    "  (" << usrp_time << ")"
+                    " frame " << frame->fct <<
+                    ", tx_second " << tx_second <<
+                    ", pps " << pps_offset;
                 goto loopend; //skip the frame
             }
 
 #if ENABLE_UHD
             if (md.time_spec.get_real_secs() > usrp_time + TIMESTAMP_MARGIN_FUTURE) {
-                fprintf(stderr,
-                        "* Timestamp too far in the future! offset: %f\n",
-                        md.time_spec.get_real_secs() - usrp_time);
+                uwd->logger->level(warn) <<
+                        "OutputUHD: Timestamp too far in the future! offset: " <<
+                        md.time_spec.get_real_secs() - usrp_time;
                 usleep(20000); //sleep so as to fill buffers
             }
 
             if (md.time_spec.get_real_secs() > usrp_time + TIMESTAMP_ABORT_FUTURE) {
-                fprintf(stderr,
-                        "* Timestamp way too far in the future! offset: %f\n",
-                        md.time_spec.get_real_secs() - usrp_time);
-                fprintf(stderr, "* Aborting\n");
-                uwd->logger->log(error, "OutputUHD: timestamp is way to far in the future, aborting");
+                uwd->logger->level(error) <<
+                        "OutputUHD: Timestamp way too far in the future! offset: " <<
+                        md.time_spec.get_real_secs() - usrp_time;
                 throw std::runtime_error("Timestamp error. Aborted.");
             }
 #endif
 
             if (last_pps > pps_offset) {
-                fprintf(stderr, "UHDOut (usrp time: %f): frame %d;  tx_second %zu; pps %.9f\n",
+                uwd->logger->log(info,
+                        "OutputUHD (usrp time: %f): frame %d;  tx_second %zu; pps %.9f\n",
                         usrp_time,
                         frame->fct, tx_second, pps_offset);
             }
@@ -405,11 +396,11 @@ void UHDWorker::process()
                 /* There was some error decoding the timestamp
                 */
                 if (uwd->muting) {
-                    fprintf(stderr, "UHDOut: Muting sample %d requested\n",
+                    uwd->logger->log(info, "OutputUHD: Muting sample %d requested\n",
                             frame->fct);
                 }
                 else {
-                    fprintf(stderr, "UHDOut: Muting sample %d : no timestamp\n",
+                    uwd->logger->log(info, "OutputUHD: Muting sample %d : no timestamp\n",
                             frame->fct);
                 }
                 usleep(20000);
@@ -431,7 +422,7 @@ void UHDWorker::process()
             size_t samps_to_send = std::min(sizeIn - num_acc_samps, bufsize);
 
             //ensure the the last packet has EOB set if the timestamps has been refreshed
-            //and needs to be reconsidered.
+            //and need to be reconsidered.
             md.end_of_burst = (frame->ts.timestamp_refresh && (samps_to_send <= bufsize));
 
             //send a single packet
@@ -454,14 +445,14 @@ void UHDWorker::process()
 
             if (num_tx_samps == 0) {
 #if 1
-                fprintf(stderr,
+                uwd->logger->log(warn,
                         "UHDWorker::process() unable to write to device, skipping frame!\n");
                 break;
 #else
                 // This has been disabled, because if there is a write failure,
                 // we'd better not insist and try to go on transmitting future
                 // frames.
-                // The goal is not to try to send by all means possible. It's 
+                // The goal is not to try to send by all means possible. It's
                 // more important to make sure the SFN is not disturbed.
 
                 fprintf(stderr, "F");
@@ -482,7 +473,6 @@ void UHDWorker::process()
 #endif
             }
 
-            //std::cerr << std::endl << "Waiting for async burst ACK... " << std::flush;
             uhd::async_metadata_t async_md;
             if (uwd->myUsrp->get_device()->recv_async_msg(async_md, 0)) {
                 const char* uhd_async_message = "";
@@ -531,7 +521,7 @@ void UHDWorker::process()
 
         }
 #else // ENABLE_UHD
-        fprintf(stderr, "UHDOut UHD DISABLED: Sample %d : valid timestamp %zu + %f\n",
+        uwd->logger->log(info, "OutputUHD UHD DISABLED: Sample %d : valid timestamp %zu + %f\n",
                 frame->fct,
                 tx_second,
                 pps_offset);
