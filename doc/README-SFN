@@ -1,10 +1,10 @@
-README About the Usage of CRC-DABMOD for
+README About the Usage of ODR-DabMod for
 Synchronous Transmissions
 ========================================
 
 Summary
 -------
-CRC-DABMUX and CRC-DABMOD have a basic support for timestamped transmission,
+ODR-DabMux and ODR-DabMod have a basic support for timestamped transmission,
 when the UHD output is used.  This README explains how this functionality
 works, and how to set it up.
 
@@ -38,17 +38,17 @@ timestamps are composed of two parts:
 - A time information transmitted using the MNSC, representing the precise time
   when the frame must be transmitted, with one-second resolution.
 
-When CRC-DABMUX is called with -s, the TIST is defined in each frame. The
+When ODR-DabMux is called with -s, the TIST is defined in each frame. The
 Time is always encoded in the MNSC.
 
 When the ETI stream is sent to several modulators using non-blocking I/O, it
 is not possible to rely on a modulator to back-pressure the Ensemble multiplexer.
-It is therefore necessary to throttle multiplexer output.  CRC-DABMUX takes an
+It is therefore necessary to throttle multiplexer output.  ODR-DabMux takes an
 additional parameter -r to output one ETI frame every 24ms.
 
 The tool eti_tcp.py can be used to send the ETI stream over TCP.
 An example invocation is:
-crc-dabmux <lots of options> | ./eti_tcp/eti_tcp.py 54540
+odr-dabmux <lots of options> | ./eti_tcp/eti_tcp.py 54540
 
 Each modulator then receives the ETI stream through a TCP connection. Each frame
 contains the complete timestamp, to which an per-modulator offset is added.
@@ -66,15 +66,15 @@ In both cases, the units are seconds.
 
 Example modulator invocation (for a B100 USRP supporting 2048Msps and with a
 fixed delay of 2.3 seconds)
-nc localhost 54001 | crc-dabmod /dev/stdin -g2 \
+nc localhost 54001 | odr-dabmod /dev/stdin -g2 \
    -o 2.3 -l -u "master_clock_rate=32768000,type=b100" -F 234208000
 
 Example modulator invocation (for an USRP2 requiring resampling and with a delay
 specified in a separate file "moddelay")
-nc localhost 54001 | crc-dabmod /dev/stdin -g2 \
+nc localhost 54001 | odr-dabmod /dev/stdin -g2 \
     -O moddelay -l -r 4000000 -u "type=usrp2" -F 234208000
 
-CRC-DABMOD uses the UHD library to output modulated samples to the USRP device.
+ODR-DabMod uses the UHD library to output modulated samples to the USRP device.
 When started, it defines the USRP time using the local time and the PPS signal.
 It is therefore important to synchronise computer time using NTP.
 
@@ -97,7 +97,7 @@ The following hardware is required to test the SFN patch to the CRC mmbTools:
 - An oscilloscope to check synchronisation.
 
 When more than one USRP is plugged to one computer, the device string for the
--u option for CRC-DABMOD must specify the device. (e.g.  -u "type=b100",
+-u option for ODR-DabMod must specify the device. (e.g.  -u "type=b100",
 -u "type=usrp2" or -u "serial=ABC123")
 
 It is possible to use signal generators as REFCLK source and 1PPS, if there is
@@ -108,4 +108,5 @@ The UHD Output module (C++) has to be modified if the USRP internal GPSDO option
 is used.
 
 ###########
-june 2012, Matthias P. Braendli
+june 2012, initial version, Matthias P. Braendli
+feb 2014, renamed crc-dabXYZ to odr-dabXYZ, mpb

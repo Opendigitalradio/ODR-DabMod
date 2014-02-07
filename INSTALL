@@ -12,9 +12,9 @@ Simple install procedure:
     % cd crc-dabmod-0.3.2                   # Change to the source directory
     % ./configure --disable-debug --with-debug-malloc=yes --enable-fft-simd
                                             # Run the configure script
-    % make                                  # Build CRC-DABMOD
+    % make                                  # Build ODR-DabMod
     [ as root ]
-    % make install                          # Install CRC-DABMOD
+    % make install                          # Install ODR-DabMod
 
 Nearly as simple install procedure using repository:
 ====================================================

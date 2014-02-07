@@ -7,26 +7,26 @@ Center Canada)
 Copyright (C) 2013
 Matthias P. Braendli, http://mpb.li
 
-This file is part of CRC-DABMOD.
+This file is part of ODR-DabMod.
 
-CRC-DABMOD is free software: you can redistribute it and/or modify it
+ODR-DabMod is free software: you can redistribute it and/or modify it
 under the terms of the GNU General Public License as published by the
 Free Software Foundation, either version 3 of the License, or (at your
 option) any later version.
 
-CRC-DABMOD is distributed in the hope that it will be useful, but
+ODR-DabMod is distributed in the hope that it will be useful, but
 WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 General Public License for more details.
 
 You should have received a copy of the GNU General Public License along
-with CRC-DABMOD.  If not, see <http://www.gnu.org/licenses/>.
+with ODR-DabMod.  If not, see <http://www.gnu.org/licenses/>.
 
 OVERVIEW
 ========
-This is CRC-DABMOD 0.3.3-mpb
+This is ODR-DabMod 0.3.3-mpb
 
-CRC-DABMOD is a DAB (Digital Audio Broadcasting) multiplexer compliant
+ODR-DabMod is a DAB (Digital Audio Broadcasting) multiplexer compliant
 to ETSI EN 300 401.
 
 This version has been modified, and contains additional features compared
@@ -40,12 +40,12 @@ to the official one:
 - A Telnet remote-control that can be used to change some parameters during
   runtime
 
-The src/ directory contains the source code of CRC-DABMOD.
+The src/ directory contains the source code of ODR-DabMod.
 
-The doc/ directory contains the CRC-DABMOD documentation.
+The doc/ directory contains the ODR-DabMod documentation.
 
 The lib/ directory contains source code of libraries needed to build
-CRC-DABMOD.
+ODR-DabMod.
 
 INSTALL
 =======

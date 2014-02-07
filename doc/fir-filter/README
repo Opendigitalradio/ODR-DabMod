@@ -1,5 +1,5 @@
 This tool can be used to generate FIRFilter taps for the
-corresponding functionality in CRC-DabMod.
+corresponding functionality in ODR-DabMod.
 
 The filter parameters are defined in the script, they
 can be easily adapted there.

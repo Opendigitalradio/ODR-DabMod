@@ -7,20 +7,20 @@
    2012, Matthias P. Braendli, matthias.braendli@mpb.li
  */
 /*
-   This file is part of CRC-DADMOD.
+   This file is part of ODR-DabMod.
 
-   CRC-DADMOD is free software: you can redistribute it and/or modify
+   ODR-DabMod is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as
    published by the Free Software Foundation, either version 3 of the
    License, or (at your option) any later version.
 
-   CRC-DADMOD is distributed in the hope that it will be useful,
+   ODR-DabMod is distributed in the hope that it will be useful,
    but WITHOUT ANY WARRANTY; without even the implied warranty of
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
    GNU General Public License for more details.
 
    You should have received a copy of the GNU General Public License
-   along with CRC-DADMOD.  If not, see <http://www.gnu.org/licenses/>.
+   along with ODR-DabMod.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -127,7 +127,7 @@ void printVersion(FILE *out = stderr)
 {
     fprintf(out, "Welcome to %s %s, compiled at %s, %s\n\n",
             PACKAGE, VERSION, __DATE__, __TIME__);
-    fprintf(out, "CRC-DABMOD is copyright (C) Her Majesty the Queen in Right of Canada,\n"
+    fprintf(out, "ODR-DabMod is copyright (C) Her Majesty the Queen in Right of Canada,\n"
             "    2009, 2010, 2011, 2012 Communications Research Centre (CRC).\n"
             "\n"
             "    This program is available free of charge and is licensed to you on a\n"
@@ -141,7 +141,7 @@ void printVersion(FILE *out = stderr)
             "    In no event shall CRC be LIABLE for any LOSS, DAMAGE or COST that may be\n"
             "    incurred in connection with the use of this software.\n"
             "\n"
-            "CRC-DABMOD makes use of the following open source packages:\n"
+            "ODR-DabMod makes use of the following open source packages:\n"
             "    Kiss FFT v1.2.9 (Revised BSD) - http://kissfft.sourceforge.net/\n"
            );
 
