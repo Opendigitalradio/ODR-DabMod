@@ -125,7 +125,8 @@ class UHDWorker {
 
         void start(struct UHDWorkerData *uhdworkerdata) {
             running = true;
-            uhd_thread = boost::thread(&UHDWorker::process, this, uhdworkerdata);
+            uwd = uhdworkerdata;
+            uhd_thread = boost::thread(&UHDWorker::process, this);
         }
 
         void stop() {
@@ -134,11 +135,11 @@ class UHDWorker {
             uhd_thread.join();
         }
 
-        void process(struct UHDWorkerData *uhdworkerdata);
+        void process();
 
 
     private:
-        struct UHDWorkerData *workerdata;
+        struct UHDWorkerData *uwd;
         bool running;
         boost::thread uhd_thread;
 
@@ -184,10 +185,9 @@ class OutputUHD: public ModOutput, public RemoteControllable {
         }
 
         /*********** REMOTE CONTROL ***************/
-        /* Tell the controllable to enrol at the given controller /
-        virtual void enrol_at(BaseRemoteController& controller) {
-            controller.enrol(this);
-        } // */
+        /* virtual void enrol_at(BaseRemoteController& controller)
+         * is inherited
+         */
 
         /* Base function to set parameters. */
         virtual void set_parameter(string parameter, string value);
@@ -204,7 +204,7 @@ class OutputUHD: public ModOutput, public RemoteControllable {
         int myTxGain;
         double myFrequency;
         uhd::usrp::multi_usrp::sptr myUsrp;
-        shared_ptr<barrier> my_sync_barrier;
+        shared_ptr<barrier> mySyncBarrier;
         UHDWorker worker;
         bool first_run;
         struct UHDWorkerData uwd;

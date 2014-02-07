@@ -173,7 +173,7 @@ OutputUHD::OutputUHD(
     first_run = true;
 
     shared_ptr<barrier> b(new barrier(2));
-    my_sync_barrier = b;
+    mySyncBarrier = b;
     uwd.sync_barrier = b;
 
     worker.start(&uwd);
@@ -234,7 +234,7 @@ int OutputUHD::process(Buffer* dataIn, Buffer* dataOut)
             throw std::runtime_error("Non-constant input length!");
         }
         //fprintf(stderr, "OutUHD.process:Waiting for barrier\n");
-        my_sync_barrier.get()->wait();
+        mySyncBarrier.get()->wait();
 
         // write into the our buffer while
         // the worker sends the other.
@@ -262,7 +262,7 @@ int OutputUHD::process(Buffer* dataIn, Buffer* dataOut)
 
 }
 
-void UHDWorker::process(struct UHDWorkerData *uwd)
+void UHDWorker::process()
 {
     int workerbuffer  = 0;
     time_t tx_second = 0;
