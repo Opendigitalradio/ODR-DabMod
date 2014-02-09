@@ -1,40 +1,16 @@
-LICENSING
-=========
-Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010, 2011 2012
-Her Majesty the Queen in Right of Canada (Communications Research
-Center Canada)
-
-Copyright (C) 2013
-Matthias P. Braendli, http://mpb.li
-
-This file is part of ODR-DabMod.
-
-ODR-DabMod is free software: you can redistribute it and/or modify it
-under the terms of the GNU General Public License as published by the
-Free Software Foundation, either version 3 of the License, or (at your
-option) any later version.
-
-ODR-DabMod is distributed in the hope that it will be useful, but
-WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-General Public License for more details.
-
-You should have received a copy of the GNU General Public License along
-with ODR-DabMod.  If not, see <http://www.gnu.org/licenses/>.
-
 OVERVIEW
 ========
-This is ODR-DabMod 0.3.3-mpb
+ODR-DabMod is a fork of CRC-DabMod, which was developed by the Communications
+Research Center Canada. It has been forked by the Opendigitalradio project.
 
 ODR-DabMod is a DAB (Digital Audio Broadcasting) multiplexer compliant
 to ETSI EN 300 401.
 
-This version has been modified, and contains additional features compared
-to the official one:
+In addition to the features of CRC-DabMod, this fork contains:
 - Configuration file support, see doc/example.ini
 - Integrated UHD output for USRP devices, bypassing gnuradio
 - Timestamping support required for SFN
-- A FIR filter (usually done in GNURadio)
+- A FIR filter (usually done in GNURadio by crc-dwap.py)
 - Improvements in logging (log to file, to syslog)
 - ETI sources: file (Raw, Framed and Streamed) and ZeroMQ (one frame per message)
 - A Telnet remote-control that can be used to change some parameters during
@@ -42,7 +18,8 @@ to the official one:
 
 The src/ directory contains the source code of ODR-DabMod.
 
-The doc/ directory contains the ODR-DabMod documentation.
+The doc/ directory contains the ODR-DabMod documentation, and an example
+configuration file.
 
 The lib/ directory contains source code of libraries needed to build
 ODR-DabMod.
@@ -51,12 +28,15 @@ INSTALL
 =======
 See the INSTALL file for installation instructions.
 
+LICENCE
+=======
+See the files LICENCE and COPYING
+
 CONTACT
 =======
-Pascal Charest <pascal [dot] charest [at] crc [dot] ca>
 Matthias P. Braendli <matthias [at] mpb [dot] li>
+Pascal Charest <pascal [dot] charest [at] crc [dot] ca>
 
+http://opendigitalradio.org/
 http://mmbtools.crc.ca/
-http://www.crc.ca/mmb
-http://openmokast.org/
 http://mpb.li/
