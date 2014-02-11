@@ -33,7 +33,7 @@
 #include <cstring>
 #include <cstdio>
 #include <stdint.h>
-#include <zmq.hpp>
+#include "zmq.hpp"
 #include <boost/thread/thread.hpp>
 #include "porting.h"
 #include "InputReader.h"

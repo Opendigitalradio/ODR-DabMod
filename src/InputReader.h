@@ -32,7 +32,7 @@
 
 #include <cstdio>
 #if defined(HAVE_INPUT_ZEROMQ)
-#  include <zmq.hpp>
+#  include "zmq.hpp"
 #  include "ThreadsafeQueue.h"
 #endif
 #include "porting.h"

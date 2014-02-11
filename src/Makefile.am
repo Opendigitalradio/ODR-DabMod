@@ -91,7 +91,9 @@ odr_dabmod_SOURCES =  DabMod.cpp \
                       TimeInterleaver.cpp TimeInterleaver.h \
 					  ThreadsafeQueue.h \
 					  Log.cpp Log.h \
-					  RemoteControl.cpp RemoteControl.h
+					  RemoteControl.cpp RemoteControl.h \
+					  zmq.hpp
+
 nodist_odr_dabmod_SOURCES	=$(FFT_SRC)
 
 dist_bin_SCRIPTS	=crc-dwap.py
