@@ -35,8 +35,8 @@ GuardIntervalInserter::GuardIntervalInserter(size_t nbSymbols,
         size_t spacing,
         size_t nullSize,
         size_t symSize) :
-    ModCodec(ModFormat(d_nbSymbols * d_spacing * sizeof(complexf)),
-            ModFormat((d_nullSize + (d_nbSymbols * d_symSize))
+    ModCodec(ModFormat(nbSymbols * spacing * sizeof(complexf)),
+            ModFormat((nullSize + (nbSymbols * symSize))
                 * sizeof(complexf))),
     d_nbSymbols(nbSymbols),
     d_spacing(spacing),
