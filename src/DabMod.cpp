@@ -415,14 +415,64 @@ int main(int argc, char* argv[])
         else if (output_selected == "uhd") {
             outputuhd_conf.device = pt.get("uhdoutput.device", "").c_str();
             outputuhd_conf.txgain = pt.get("uhdoutput.txgain", 0);
-            try {
-                outputuhd_conf.frequency = pt.get<double>("uhdoutput.frequency");
-            }
-            catch (std::exception &e) {
-                std::cerr << "Error: " << e.what() << "\n";
-                std::cerr << "       UHD output enabled, but no frequency defined.\n";
+            outputuhd_conf.frequency = pt.get<double>("uhdoutput.frequency", 0);
+            std::string chan = pt.get<std::string>("uhdoutput.channel", "");
+
+            if (outputuhd_conf.frequency == 0 && chan == "") {
+                std::cerr << "       UHD output enabled, but neither frequency nor channel defined.\n";
                 goto END_MAIN;
             }
+            else if (outputuhd_conf.frequency == 0) {
+                double freq;
+                if      (chan == "5A") freq = 174928000;
+                else if (chan == "5B") freq = 176640000;
+                else if (chan == "5C") freq = 178352000;
+                else if (chan == "5D") freq = 180064000;
+                else if (chan == "6A") freq = 181936000;
+                else if (chan == "6B") freq = 183648000;
+                else if (chan == "6C") freq = 185360000;
+                else if (chan == "6D") freq = 187072000;
+                else if (chan == "7A") freq = 188928000;
+                else if (chan == "7B") freq = 190640000;
+                else if (chan == "7C") freq = 192352000;
+                else if (chan == "7D") freq = 194064000;
+                else if (chan == "8A") freq = 195936000;
+                else if (chan == "8B") freq = 197648000;
+                else if (chan == "8C") freq = 199360000;
+                else if (chan == "8D") freq = 201072000;
+                else if (chan == "9A") freq = 202928000;
+                else if (chan == "9B") freq = 204640000;
+                else if (chan == "9C") freq = 206352000;
+                else if (chan == "9D") freq = 208064000;
+                else if (chan == "10A") freq = 209936000;
+                else if (chan == "10B") freq = 211648000;
+                else if (chan == "10C") freq = 213360000;
+                else if (chan == "10D") freq = 215072000;
+                else if (chan == "11A") freq = 216928000;
+                else if (chan == "11B") freq = 218640000;
+                else if (chan == "11C") freq = 220352000;
+                else if (chan == "11D") freq = 222064000;
+                else if (chan == "12A") freq = 223936000;
+                else if (chan == "12B") freq = 225648000;
+                else if (chan == "12C") freq = 227360000;
+                else if (chan == "12D") freq = 229072000;
+                else if (chan == "13A") freq = 230784000;
+                else if (chan == "13B") freq = 232496000;
+                else if (chan == "13C") freq = 234208000;
+                else if (chan == "13D") freq = 235776000;
+                else if (chan == "13E") freq = 237488000;
+                else if (chan == "13F") freq = 239200000;
+                else {
+                    std::cerr << "       UHD output: channel " << chan << " does not exist in table\n";
+                    goto END_MAIN;
+                }
+                outputuhd_conf.frequency = freq;
+            }
+            else {
+                std::cerr << "       UHD output: cannot define both frequency and channel.\n";
+                goto END_MAIN;
+            }
+
 
             outputuhd_conf.refclk_src = pt.get("uhdoutput.refclk_source", "int");
             outputuhd_conf.pps_src = pt.get("uhdoutput.pps_source", "int");
