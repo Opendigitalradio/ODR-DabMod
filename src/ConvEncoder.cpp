@@ -101,10 +101,10 @@ int ConvEncoder::process(Buffer* const dataIn, Buffer* dataOut)
                     data <<= 1;
                     //PDEBUG("Memory: 0x%x\n", memory);
                     unsigned char poly[4] = {
-                        memory & 0x5b,
-                        memory & 0x79,
-                        memory & 0x65,
-                        memory & 0x5b
+                        (unsigned char)(memory & 0x5b),
+                        (unsigned char)(memory & 0x79),
+                        (unsigned char)(memory & 0x65),
+                        (unsigned char)(memory & 0x5b)
                     };
                     //PDEBUG("Polys: 0x%x, 0x%x, 0x%x, 0x%x\n", poly[0], poly[1], poly[2], poly[3]);
                     // For each poly
@@ -126,10 +126,10 @@ int ConvEncoder::process(Buffer* const dataIn, Buffer* dataOut)
                 memory >>= 1;
                 //PDEBUG("Memory: 0x%x\n", memory);
                 unsigned char poly[4] = {
-                    memory & 0x5b,
-                    memory & 0x79,
-                    memory & 0x65,
-                    memory & 0x5b
+                    (unsigned char)(memory & 0x5b),
+                    (unsigned char)(memory & 0x79),
+                    (unsigned char)(memory & 0x65),
+                    (unsigned char)(memory & 0x5b)
                 };
                 //PDEBUG("Polys: 0x%x, 0x%x, 0x%x, 0x%x\n", poly[0], poly[1], poly[2], poly[3]);
                 // For each poly
