@@ -270,7 +270,7 @@ void UHDWorker::process()
     struct UHDWorkerFrameData* frame;
 
     size_t num_acc_samps; //number of accumulated samples
-    int write_fail_count;
+    //int write_fail_count;
 
 #if ENABLE_UHD
     // Transmit timeout
@@ -292,7 +292,7 @@ void UHDWorker::process()
         md.has_time_spec = false;
         md.time_spec = uhd::time_spec_t(0.0);
         num_acc_samps = 0;
-        write_fail_count = 0;
+        //write_fail_count = 0;
 
         /* Wait for barrier */
         // this wait will hopefully always be the second one
