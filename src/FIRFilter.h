@@ -90,8 +90,7 @@ class FIRFilterWorker {
 
 
     private:
-        time_t calculationTime; 
-        struct FIRFilterWorkerData *workerdata;
+        time_t calculationTime;
         bool running;
         boost::thread fir_thread;
 };
