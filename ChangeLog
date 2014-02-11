@@ -1,6 +1,17 @@
 This file contains information about the changes done to
 the ODR-DabMod in this repository
 
+2014-02-11: Matthias P. Braendli <matthias@mpb.li>
+	(v0.4.1)
+	* odr-dabmod:
+		Include zmq.hpp and prefer it over the one
+		provided by the system.
+		Add the channel option to the configuration file
+		for the UHD output.
+		Replace fprintf calls by correct usage of the
+		logging subsystem.
+		Fix some compilation warnings.
+
 2014-02-07: Matthias P. Braendli <matthias@mpb.li>
 	(v0.4.0)
 	* odr-dabmod:
