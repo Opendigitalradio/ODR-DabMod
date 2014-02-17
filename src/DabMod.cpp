@@ -468,7 +468,7 @@ int main(int argc, char* argv[])
                 }
                 outputuhd_conf.frequency = freq;
             }
-            else {
+            if (outputuhd_conf.frequency != 0 && chan != "") {
                 std::cerr << "       UHD output: cannot define both frequency and channel.\n";
                 goto END_MAIN;
             }
