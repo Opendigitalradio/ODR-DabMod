@@ -143,15 +143,14 @@ class InputZeroMQWorker
 {
     public:
         InputZeroMQWorker() :
-            zmqcontext(1), subscriber(zmqcontext, ZMQ_SUB) {}
+            zmqcontext(1)  {}
 
         void Start(struct InputZeroMQThreadData* workerdata);
         void Stop();
     private:
         void RecvProcess(struct InputZeroMQThreadData* workerdata);
         bool running;
-        zmq::context_t zmqcontext;
-        zmq::socket_t subscriber;
+        zmq::context_t zmqcontext; // is thread-safe
         boost::thread recv_thread;
 };
 
