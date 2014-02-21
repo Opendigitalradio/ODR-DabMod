@@ -2,7 +2,7 @@
    Copyright (C) 2007, 2008, 2009, 2010, 2011 Her Majesty the Queen in
    Right of Canada (Communications Research Center Canada)
 
-   Copyright (C) 2013
+   Copyright (C) 2013, 2014
    Matthias P. Braendli, matthias.braendli@mpb.li
 
    An implementation for a threadsafe queue using boost thread library
@@ -34,27 +34,41 @@
 #include <boost/thread.hpp>
 #include <queue>
 
+/* This queue is meant to be used by two threads. One producer
+ * that pushes elements into the queue, and one consumer that
+ * retrieves the elements.
+ *
+ * The queue can make the consumer block until enough elements
+ * are available.
+ */
+
 template<typename T>
 class ThreadsafeQueue
 {
-private:
-    std::queue<T> the_queue;
-    mutable boost::mutex the_mutex;
-    boost::condition_variable the_condition_variable;
-    size_t the_required_size;
 public:
-
+    /* Create a new queue without any minimum required
+     * fill before it is possible to pop an element
+     */
     ThreadsafeQueue() : the_required_size(1) {}
 
+    /* Create a queue where it has to contain at least
+     * required_size elements before pop is possible
+     */
     ThreadsafeQueue(size_t required_size) : the_required_size(required_size) {}
 
+    /* Push one element into the queue, and notify another thread that
+     * might be waiting.
+     *
+     * returns the new queue size.
+     */
     size_t push(T const& val)
     {
         boost::mutex::scoped_lock lock(the_mutex);
         the_queue.push(val);
         size_t queue_size = the_queue.size();
         lock.unlock();
-        the_condition_variable.notify_one();
+
+        notify();
 
         return queue_size;
     }
@@ -94,6 +108,12 @@ public:
         popped_value = the_queue.front();
         the_queue.pop();
     }
+
+private:
+    std::queue<T> the_queue;
+    mutable boost::mutex the_mutex;
+    boost::condition_variable the_condition_variable;
+    size_t the_required_size;
 };
 
 #endif
