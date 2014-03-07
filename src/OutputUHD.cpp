@@ -322,6 +322,7 @@ void UHDWorker::process()
         if (check_refclk_loss)
         {
             try {
+                // TODO: Is this check specific to the B100 and USRP2 ?
                 if (! uwd->myUsrp->get_mboard_sensor("ref_locked", 0).to_bool()) {
                     uwd->logger->log(alert, "OutputUHD: External reference clock lock lost !");
                     if (uwd->refclk_lock_loss_behaviour == CRASH) {
