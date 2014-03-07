@@ -1,6 +1,13 @@
 This file contains information about the changes done to
 the ODR-DabMod in this repository
 
+2014-03-07: Matthias P. Braendli <matthias@mpb.li>
+	(v0.4.2)
+	* odr-dabmod:
+		Fix frequency/channel choice
+		Improvements in ZMQ input reliability
+		Use correct syslog identification
+
 2014-02-11: Matthias P. Braendli <matthias@mpb.li>
 	(v0.4.1)
 	* odr-dabmod:
