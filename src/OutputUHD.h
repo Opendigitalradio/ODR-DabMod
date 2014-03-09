@@ -148,7 +148,7 @@ class UHDWorker {
 
 /* This structure is used as initial configuration for OutputUHD */
 struct OutputUHDConfig {
-    const char* device;
+    std::string device;
     unsigned sampleRate;
     double frequency;
     int txgain;

@@ -413,7 +413,7 @@ int main(int argc, char* argv[])
             useFileOutput = 1;
         }
         else if (output_selected == "uhd") {
-            outputuhd_conf.device = pt.get("uhdoutput.device", "").c_str();
+            outputuhd_conf.device = pt.get("uhdoutput.device", "");
             outputuhd_conf.txgain = pt.get("uhdoutput.txgain", 0);
             outputuhd_conf.frequency = pt.get<double>("uhdoutput.frequency", 0);
             std::string chan = pt.get<std::string>("uhdoutput.channel", "");
@@ -580,7 +580,7 @@ int main(int argc, char* argv[])
     fprintf(stderr, "  Source: %s\n", inputName.c_str());
     fprintf(stderr, "Output\n");
     if (useUHDOutput) {
-        fprintf(stderr, " UHD, Device: %s\n", outputuhd_conf.device);
+        fprintf(stderr, " UHD, Device: %s\n", outputuhd_conf.device.c_str());
     }
     else if (useFileOutput) {
         fprintf(stderr, "  Name: %s\n", outputName.c_str());
