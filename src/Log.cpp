@@ -82,3 +82,4 @@ LogLine Logger::level(log_level_t level)
 {
     return LogLine(this, level);
 }
+

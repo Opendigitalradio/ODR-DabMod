@@ -91,6 +91,11 @@ OutputUHD::OutputUHD(
     myUsrp->set_tx_rate(mySampleRate);
     MDEBUG("OutputUHD:Actual TX Rate: %f Msps...\n", myUsrp->get_tx_rate());
 
+    if (mySampleRate != myUsrp->get_tx_rate()) {
+        MDEBUG("OutputUHD: Cannot set sample\n");
+        throw std::runtime_error("Cannot set USRP sample rate. Aborted.");
+    }
+
     //set the centre frequency
     MDEBUG("OutputUHD:Setting freq to %f...\n", myFrequency);
     myUsrp->set_tx_freq(myFrequency);
