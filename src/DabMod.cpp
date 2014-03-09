@@ -524,10 +524,15 @@ int main(int argc, char* argv[])
         outputuhd_conf.muteNoTimestamps = (pt.get("delaymanagement.mutenotimestamps", 0) == 1);
     }
 
-    logger.level(info) << "starting up";
+    logger.level(info) << "Version " <<
+#if defined(GITVERSION)
+            GITVERSION
+#else
+            VERSION
+#endif
+            << " starting up";
 
     if (!(modconf.use_offset_file || modconf.use_offset_fixed)) {
-        fprintf(stderr, "No Modulator offset defined, setting to 0\n");
         logger.level(debug) << "No Modulator offset defined, setting to 0";
         modconf.use_offset_fixed = true;
         modconf.offset_fixed = 0;
