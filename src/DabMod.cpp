@@ -327,7 +327,6 @@ int main(int argc, char* argv[])
             try {
                 int telnetport = pt.get<int>("remotecontrol.telnetport");
                 RemoteControllerTelnet* telnetrc = new RemoteControllerTelnet(telnetport);
-                telnetrc->start();
                 rc = telnetrc;
             }
             catch (std::exception &e) {
@@ -686,6 +685,14 @@ int main(int argc, char* argv[])
                 // Proccessing data
                 ////////////////////////////////////////////////////////////////
                 flowgraph->run();
+
+                /* Check every once in a while if the remote control
+                 * is still working */
+                if (rc && (frame % 250) == 0 && rc->fault_detected()) {
+                    fprintf(stderr,
+                            "Detected Remote Control fault, restarting it\n");
+                    rc->restart();
+                }
             }
             if (framesize == 0) {
                 fprintf(stderr, "End of file reached.\n");

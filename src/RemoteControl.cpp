@@ -3,7 +3,8 @@
    Her Majesty the Queen in Right of Canada (Communications Research
    Center Canada)
 
-   Written by Matthias P. Braendli, matthias.braendli@mpb.li, 2012
+   Copyright (C) 2014
+   Matthias P. Braendli, matthias.braendli@mpb.li
  */
 /*
    This file is part of ODR-DabMod.
@@ -26,13 +27,35 @@
 #include <iostream>
 #include <string>
 #include <boost/asio.hpp>
+#include <boost/thread.hpp>
 
 #include "RemoteControl.h"
 
 using boost::asio::ip::tcp;
 
-void
-RemoteControllerTelnet::process(long)
+
+void RemoteControllerTelnet::restart()
+{
+    m_restarter_thread = boost::thread(&RemoteControllerTelnet::restart_thread,
+            this, 0);
+}
+
+// This runs in a separate thread, because
+// it would take too long to be done in the main loop
+// thread.
+void RemoteControllerTelnet::restart_thread(long)
+{
+    m_running = false;
+
+    if (m_port) {
+        m_child_thread.interrupt();
+        m_child_thread.join();
+    }
+
+    m_child_thread = boost::thread(&RemoteControllerTelnet::process, this, 0);
+}
+
+void RemoteControllerTelnet::process(long)
 {
     m_welcome = "ODR-DabMod Remote Control CLI\nWrite 'help' for help.\n**********\n";
     m_prompt = "> ";
@@ -71,7 +94,7 @@ RemoteControllerTelnet::process(long)
                 std::getline(str, in_message);
 
                 if (length == 0) {
-                    std::cerr << "Connection terminated" << std::endl;
+                    std::cerr << "RC: Connection terminated" << std::endl;
                     break;
                 }
 
@@ -85,22 +108,22 @@ RemoteControllerTelnet::process(long)
                     continue;
                 }
 
-                std::cerr << "Got message '" << in_message << "'" << std::endl;
+                std::cerr << "RC: Got message '" << in_message << "'" << std::endl;
 
                 dispatch_command(socket, in_message);
             }
-            std::cerr << "Closing socket" << std::endl;
+            std::cerr << "RC: Closing socket" << std::endl;
             socket.close();
         }
     }
     catch (std::exception& e)
     {
-        std::cerr << e.what() << std::endl;
+        std::cerr << "Remote control caught exception: " << e.what() << std::endl;
+        m_fault = true;
     }
 }
 
-void
-RemoteControllerTelnet::dispatch_command(tcp::socket& socket, string command)
+void RemoteControllerTelnet::dispatch_command(tcp::socket& socket, string command)
 {
     vector<string> cmd = tokenise_(command);
 
@@ -108,9 +131,7 @@ RemoteControllerTelnet::dispatch_command(tcp::socket& socket, string command)
         reply(socket,
                 "The following commands are supported:\n"
                 "  list\n"
-                "    * Lists the modules that are loaded\n"
-                "  list MODULE\n"
-                "    * Lists the parameters exported by module MODULE\n"
+                "    * Lists the modules that are loaded and their parameters\n"
                 "  show MODULE\n"
                 "    * Lists all parameters and their values from module MODULE\n"
                 "  get MODULE PARAMETER\n"
@@ -127,22 +148,15 @@ RemoteControllerTelnet::dispatch_command(tcp::socket& socket, string command)
         if (cmd.size() == 1) {
             for (list<RemoteControllable*>::iterator it = m_cohort.begin();
                     it != m_cohort.end(); ++it) {
-                ss << (*it)->get_rc_name() << " ";
-            }
-        }
-        else if (cmd.size() == 2) {
-            try {
-                stringstream ss;
+                ss << (*it)->get_rc_name() << endl;
 
-                list< vector<string> > params = get_parameter_descriptions_(cmd[1]);
-                for (list< vector<string> >::iterator it = params.begin();
-                        it != params.end(); ++it) {
-                    ss << (*it)[0] << " : " << (*it)[1] << endl;
+                list< vector<string> >::iterator param;
+                list< vector<string> > params = (*it)->get_parameter_descriptions();
+                for (param = params.begin();
+                        param != params.end();
+                        ++param) {
+                    ss << "\t" << (*param)[0] << " : " << (*param)[1] << endl;
                 }
-                reply(socket, ss.str());
-            }
-            catch (ParameterError &e) {
-                reply(socket, e.what());
             }
         }
         else {
@@ -188,9 +202,18 @@ RemoteControllerTelnet::dispatch_command(tcp::socket& socket, string command)
         }
     }
     else if (cmd[0] == "set") {
-        if (cmd.size() == 4) {
+        if (cmd.size() >= 4) {
             try {
-                set_param_(cmd[1], cmd[2], cmd[3]);
+                stringstream new_param_value;
+                for (int i = 3; i < cmd.size(); i++) {
+                    new_param_value << cmd[i];
+
+                    if (i+1 < cmd.size()) {
+                        new_param_value << " ";
+                    }
+                }
+
+                set_param_(cmd[1], cmd[2], new_param_value.str());
                 reply(socket, "ok");
             }
             catch (ParameterError &e) {
@@ -202,7 +225,7 @@ RemoteControllerTelnet::dispatch_command(tcp::socket& socket, string command)
         }
         else
         {
-            reply(socket, "Incorrect parameters for command 'get'");
+            reply(socket, "Incorrect parameters for command 'set'");
         }
     }
     else if (cmd[0] == "quit") {
@@ -213,8 +236,7 @@ RemoteControllerTelnet::dispatch_command(tcp::socket& socket, string command)
     }
 }
 
-void
-RemoteControllerTelnet::reply(tcp::socket& socket, string message)
+void RemoteControllerTelnet::reply(tcp::socket& socket, string message)
 {
     boost::system::error_code ignored_error;
     stringstream ss;

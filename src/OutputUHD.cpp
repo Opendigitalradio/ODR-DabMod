@@ -543,7 +543,7 @@ loopend:
 }
 
 
-void OutputUHD::set_parameter(string parameter, string value)
+void OutputUHD::set_parameter(const string& parameter, const string& value)
 {
     stringstream ss(value);
     ss.exceptions ( stringstream::failbit | stringstream::badbit );
@@ -571,7 +571,7 @@ void OutputUHD::set_parameter(string parameter, string value)
     }
 }
 
-string OutputUHD::get_parameter(string parameter)
+const string OutputUHD::get_parameter(const string& parameter) const
 {
     stringstream ss;
     if (parameter == "txgain") {
