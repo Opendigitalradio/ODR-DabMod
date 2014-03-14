@@ -46,9 +46,9 @@ $(FFT_DIR):
 		tar xzf $(top_srcdir)/lib/kiss_fft129.tar.gz -C $(top_builddir)/lib; \
 	fi
 
-odr_dabmod_CPPFLAGS = $(FFT_INC) $(FFT_FLG) -msse -msse2 $(GITVERSION_FLAGS)
+odr_dabmod_CPPFLAGS = -Wall $(FFT_INC) $(FFT_FLG) -msse -msse2 $(GITVERSION_FLAGS)
 odr_dabmod_LDADD    = $(ZMQ_LIBS)
-odr_dabmod_SOURCES =  DabMod.cpp \
+odr_dabmod_SOURCES  = DabMod.cpp \
                       PcDebug.h \
                       porting.c porting.h \
                       DabModulator.cpp DabModulator.h  \
