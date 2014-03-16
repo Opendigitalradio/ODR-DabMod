@@ -305,6 +305,14 @@ int main(int argc, char* argv[])
         }
     }
 
+    std::cerr << "ODR-DabMod version " <<
+#if defined(GITVERSION)
+            GITVERSION
+#else
+            VERSION
+#endif
+            << std::endl;
+
     if (use_configuration_file && use_configuration_cmdline) {
         fprintf(stderr, "Warning: configuration file and command line parameters are defined:\n\t"
                         "Command line parameters override settings in the configuration file !\n");
@@ -538,13 +546,7 @@ int main(int argc, char* argv[])
         outputuhd_conf.muteNoTimestamps = (pt.get("delaymanagement.mutenotimestamps", 0) == 1);
     }
 
-    logger.level(info) << "Version " <<
-#if defined(GITVERSION)
-            GITVERSION
-#else
-            VERSION
-#endif
-            << " starting up";
+    logger.level(info) << "Starting up";
 
     if (!(modconf.use_offset_file || modconf.use_offset_fixed)) {
         logger.level(debug) << "No Modulator offset defined, setting to 0";
@@ -652,11 +654,9 @@ int main(int argc, char* argv[])
 
     if (useFileOutput) {
         // Opening COFDM output file
-        fprintf(stderr, "Using file output '%s'\n", outputName.c_str());
         output = new OutputFile(outputName);
     }
     else if (useUHDOutput) {
-        fprintf(stderr, "Using UHD output\n");
         amplitude /= 32000.0f;
         outputuhd_conf.sampleRate = outputRate;
         try {
