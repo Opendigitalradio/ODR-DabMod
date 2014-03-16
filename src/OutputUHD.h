@@ -2,16 +2,18 @@
    Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010 Her Majesty the
    Queen in Right of Canada (Communications Research Center Canada)
 
-   Includes modifications for which no copyright is claimed
-   2012, Matthias P. Braendli, matthias.braendli@mpb.li
+   Copyright (C) 2014
+   Matthias P. Braendli, matthias.braendli@mpb.li
+
+    http://opendigitalradio.org
 
 DESCRIPTION:
-   It is an output driver for the USRP family of devices, and uses
-   the UHD library. This version is multi-threaded. One thread runs
-   the whole modulator, and the second threads sends the data to the
-   device. The two threads are synchronised using a barrier. Communication
-   between the two threads is implemented using double buffering. At the
-   barrier, they exchange the buffers.
+   It is an output driver for the USRP family of devices, and uses the UHD
+   library. This version is multi-threaded. A separate thread sends the data to
+   the device.
+
+   Data between the modulator and the UHD thread is exchanged by swapping
+   buffers at a synchronisation barrier.
 */
 
 /*
@@ -149,6 +151,8 @@ class UHDWorker {
 /* This structure is used as initial configuration for OutputUHD */
 struct OutputUHDConfig {
     std::string device;
+    std::string usrpType; // e.g. b100, b200, usrp2
+    long masterClockRate;
     unsigned sampleRate;
     double frequency;
     int txgain;
@@ -199,18 +203,13 @@ class OutputUHD: public ModOutput, public RemoteControllable {
     protected:
         Logger& myLogger;
         EtiReader *myEtiReader;
-        std::string myDevice;
-        unsigned mySampleRate;
-        int myTxGain;
-        double myFrequency;
+        OutputUHDConfig myConf;
         uhd::usrp::multi_usrp::sptr myUsrp;
         shared_ptr<barrier> mySyncBarrier;
         UHDWorker worker;
         bool first_run;
         struct UHDWorkerData uwd;
         int activebuffer;
-        bool mute_no_timestamps;
-        bool enable_sync;
 
         // muting can only be changed using the remote control
         bool myMuting;

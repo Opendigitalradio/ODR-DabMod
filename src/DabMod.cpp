@@ -3,8 +3,10 @@
    Her Majesty the Queen in Right of Canada (Communications Research
    Center Canada)
 
-   Includes modifications for which no copyright is claimed
-   2012, Matthias P. Braendli, matthias.braendli@mpb.li
+   Copyright (C) 2014
+   Matthias P. Braendli, matthias.braendli@mpb.li
+
+    http://opendigitalradio.org
  */
 /*
    This file is part of ODR-DabMod.
@@ -413,6 +415,19 @@ int main(int argc, char* argv[])
         }
         else if (output_selected == "uhd") {
             outputuhd_conf.device = pt.get("uhdoutput.device", "");
+            outputuhd_conf.usrpType = pt.get("uhdoutput.type", "");
+            outputuhd_conf.masterClockRate = pt.get<long>("uhdoutput.master_clock_rate", 0);
+
+            if (outputuhd_conf.device.find("master_clock_rate") != std::string::npos) {
+                std::cerr << "Warning:"
+                    "setting master_clock_rate in [uhd] device is deprecated !\n";
+            }
+
+            if (outputuhd_conf.device.find("type=") != std::string::npos) {
+                std::cerr << "Warning:"
+                    "setting type in [uhd] device is deprecated !\n";
+            }
+
             outputuhd_conf.txgain = pt.get("uhdoutput.txgain", 0);
             outputuhd_conf.frequency = pt.get<double>("uhdoutput.frequency", 0);
             std::string chan = pt.get<std::string>("uhdoutput.channel", "");
@@ -584,7 +599,13 @@ int main(int argc, char* argv[])
     fprintf(stderr, "  Source: %s\n", inputName.c_str());
     fprintf(stderr, "Output\n");
     if (useUHDOutput) {
-        fprintf(stderr, " UHD, Device: %s\n", outputuhd_conf.device.c_str());
+        fprintf(stderr, " UHD\n"
+                        "  Device: %s\n"
+                        "  Type: %s\n"
+                        "  master_clock_rate: %ld\n",
+                outputuhd_conf.device.c_str(),
+                outputuhd_conf.usrpType.c_str(),
+                outputuhd_conf.masterClockRate);
     }
     else if (useFileOutput) {
         fprintf(stderr, "  Name: %s\n", outputName.c_str());

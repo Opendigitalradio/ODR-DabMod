@@ -2,8 +2,10 @@
    Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010 Her Majesty the
    Queen in Right of Canada (Communications Research Center Canada)
 
-   Includes modifications for which no copyright is claimed
-   2012, Matthias P. Braendli, matthias.braendli@mpb.li
+   Copyright (C) 2014
+   Matthias P. Braendli, matthias.braendli@mpb.li
+
+    http://opendigitalradio.org
  */
 /*
    This file is part of ODR-DabMod.
@@ -44,41 +46,66 @@ OutputUHD::OutputUHD(
         Logger& logger) :
     ModOutput(ModFormat(1), ModFormat(0)),
     RemoteControllable("uhd"),
-    myLogger(logger)
-{
+    myLogger(logger),
+    myConf(config),
+    // Since we don't know the buffer size, we cannot initialise
+    // the buffers at object initialisation.
+    first_run(true),
+    activebuffer(1)
 
-    mySampleRate = config.sampleRate;
-    myTxGain = config.txgain;
-    myFrequency = config.frequency;
-    mute_no_timestamps = config.muteNoTimestamps;
-    enable_sync = config.enableSync;
-    myDevice = config.device;
-    myMuting = 0;
+{
+    myMuting = 0; // is remote-controllable
+
+    std::stringstream device;
+    device << myConf.device;
+
+    if (myConf.masterClockRate != 0) {
+        if (device.str() != "") {
+            device << ",";
+        }
+        device << "master_clock_rate=" << myConf.masterClockRate;
+    }
+
+    if (myConf.usrpType != "") {
+        if (device.str() != "") {
+            device << ",";
+        }
+        device << "type=" << myConf.usrpType;
+    }
 
     MDEBUG("OutputUHD::OutputUHD(device: %s) @ %p\n",
-            myDevice.c_str(), this);
+            device.str().c_str(), this);
 
     /* register the parameters that can be remote controlled */
     RC_ADD_PARAMETER(txgain, "UHD analog daughterboard TX gain");
     RC_ADD_PARAMETER(freq,   "UHD transmission frequency");
     RC_ADD_PARAMETER(muting, "mute the output by stopping the transmitter");
 
-    
 #if ENABLE_UHD
     uhd::set_thread_priority_safe();
 
     //create a usrp device
     MDEBUG("OutputUHD:Creating the usrp device with: %s...\n",
-            myDevice.c_str());
+            device.str().c_str());
 
-    myUsrp = uhd::usrp::multi_usrp::make(myDevice);
+    myUsrp = uhd::usrp::multi_usrp::make(device.str());
 
     MDEBUG("OutputUHD:Using device: %s...\n", myUsrp->get_pp_string().c_str());
 
+    if (myConf.masterClockRate != 0.0) {
+        double master_clk_rate = myUsrp->get_master_clock_rate();
+        MDEBUG("OutputUHD:Checking master clock rate: %f...\n", master_clk_rate);
+
+        if (myConf.masterClockRate != master_clk_rate) {
+            throw std::runtime_error("Cannot set USRP master_clock_rate. Aborted.");
+        }
+    }
+
+
     MDEBUG("OutputUHD:Setting REFCLK and PPS input...\n");
 
-    myUsrp->set_clock_source(config.refclk_src);
-    myUsrp->set_time_source(config.pps_src);
+    myUsrp->set_clock_source(myConf.refclk_src);
+    myUsrp->set_time_source(myConf.pps_src);
 
     std::cerr << "UHD clock source is " <<
         myUsrp->get_clock_source(0) << std::endl;
@@ -87,28 +114,32 @@ OutputUHD::OutputUHD(
         myUsrp->get_time_source(0) << std::endl;
 
     //set the tx sample rate
-    MDEBUG("OutputUHD:Setting rate to %d...\n", mySampleRate);
-    myUsrp->set_tx_rate(mySampleRate);
+    MDEBUG("OutputUHD:Setting rate to %d...\n", myConf.sampleRate);
+    myUsrp->set_tx_rate(myConf.sampleRate);
     MDEBUG("OutputUHD:Actual TX Rate: %f Msps...\n", myUsrp->get_tx_rate());
 
-    if (mySampleRate != myUsrp->get_tx_rate()) {
+    if (myConf.sampleRate != myUsrp->get_tx_rate()) {
         MDEBUG("OutputUHD: Cannot set sample\n");
         throw std::runtime_error("Cannot set USRP sample rate. Aborted.");
     }
 
     //set the centre frequency
-    MDEBUG("OutputUHD:Setting freq to %f...\n", myFrequency);
-    myUsrp->set_tx_freq(myFrequency);
-    myFrequency = myUsrp->get_tx_freq();
-    MDEBUG("OutputUHD:Actual frequency: %f\n", myFrequency);
+    MDEBUG("OutputUHD:Setting freq to %f...\n", myConf.frequency);
+    myUsrp->set_tx_freq(myConf.frequency);
+    myConf.frequency = myUsrp->get_tx_freq();
+    MDEBUG("OutputUHD:Actual frequency: %f\n", myConf.frequency);
 
-    myUsrp->set_tx_gain(myTxGain);
+    myUsrp->set_tx_gain(myConf.txgain);
     MDEBUG("OutputUHD:Actual TX Gain: %f ...\n", myUsrp->get_tx_gain());
 
-    MDEBUG("OutputUHD:Mute on missing timestamps: %s ...\n", mute_no_timestamps ? "enabled" : "disabled");
+    MDEBUG("OutputUHD:Mute on missing timestamps: %s ...\n",
+            myConf.muteNoTimestamps ? "enabled" : "disabled");
 
-    if (enable_sync && (config.pps_src == "none")) {
-        myLogger.level(warn) << "OutputUHD: WARNING: you are using synchronous transmission without PPS input!";
+    if (myConf.enableSync && (myConf.pps_src == "none")) {
+        myLogger.level(warn) <<
+            "OutputUHD: WARNING:"
+            " you are using synchronous transmission without PPS input!";
+
         struct timespec now;
         if (clock_gettime(CLOCK_REALTIME, &now)) {
             perror("OutputUHD:Error: could not get time: ");
@@ -121,7 +152,7 @@ OutputUHD::OutputUHD(
         }
     }
 
-    if (config.pps_src != "none") {
+    if (myConf.pps_src != "none") {
         /* handling time for synchronisation: wait until the next full
          * second, and set the USRP time at next PPS */
         struct timespec now;
@@ -161,20 +192,18 @@ OutputUHD::OutputUHD(
     // preparing output thread worker data
     uwd.myUsrp = myUsrp;
 #else
-    myLogger.level(error) << "OutputUHD: UHD initialisation disabled at compile-time";
+    myLogger.level(error) <<
+        "OutputUHD: UHD initialisation disabled at compile-time";
 #endif
 
     uwd.frame0.ts.timestamp_valid = false;
     uwd.frame1.ts.timestamp_valid = false;
-    uwd.sampleRate = mySampleRate;
+    uwd.sampleRate = myConf.sampleRate;
     uwd.sourceContainsTimestamp = false;
-    uwd.muteNoTimestamps = mute_no_timestamps;
+    uwd.muteNoTimestamps = myConf.muteNoTimestamps;
     uwd.logger = &myLogger;
-    uwd.refclk_lock_loss_behaviour = config.refclk_lock_loss_behaviour;
+    uwd.refclk_lock_loss_behaviour = myConf.refclk_lock_loss_behaviour;
 
-    // Since we don't know the buffer size, we cannot initialise
-    // the buffers here
-    first_run = true;
 
     shared_ptr<barrier> b(new barrier(2));
     mySyncBarrier = b;
@@ -201,7 +230,7 @@ int OutputUHD::process(Buffer* dataIn, Buffer* dataOut)
 
     // On the first call, we must do some allocation and we must fill
     // the first buffer
-    // We will only wait on the barrier on the subsequent calls to 
+    // We will only wait on the barrier on the subsequent calls to
     // OutputUHD::process
     if (first_run) {
         myLogger.level(debug) << "OutputUHD: UHD initialising...";
@@ -210,7 +239,8 @@ int OutputUHD::process(Buffer* dataIn, Buffer* dataOut)
         uwd.frame0.buf = malloc(uwd.bufsize);
         uwd.frame1.buf = malloc(uwd.bufsize);
 
-        uwd.sourceContainsTimestamp = enable_sync && myEtiReader->sourceContainsTimestamp();
+        uwd.sourceContainsTimestamp = myConf.enableSync &&
+            myEtiReader->sourceContainsTimestamp();
 
         // The worker begins by transmitting buf0
         memcpy(uwd.frame0.buf, dataIn->getData(), uwd.bufsize);
@@ -229,8 +259,9 @@ int OutputUHD::process(Buffer* dataIn, Buffer* dataOut)
 
         if (lastLen != dataIn->getLength()) {
             // I expect that this never happens.
-            myLogger.level(emerg) << "OutputUHD: Fatal error, input length changed from " <<
-                    lastLen << " to " << dataIn->getLength();
+            myLogger.level(emerg) <<
+                "OutputUHD: Fatal error, input length changed from " << lastLen <<
+                " to " << dataIn->getLength();
             throw std::runtime_error("Non-constant input length!");
         }
         mySyncBarrier.get()->wait();
@@ -239,7 +270,8 @@ int OutputUHD::process(Buffer* dataIn, Buffer* dataOut)
         // the worker sends the other.
 
         myEtiReader->calculateTimestamp(ts);
-        uwd.sourceContainsTimestamp = enable_sync && myEtiReader->sourceContainsTimestamp();
+        uwd.sourceContainsTimestamp = myConf.enableSync &&
+            myEtiReader->sourceContainsTimestamp();
 
         if (activebuffer == 0) {
             memcpy(uwd.frame0.buf, dataIn->getData(), uwd.bufsize);
@@ -286,7 +318,7 @@ void UHDWorker::process()
     size_t bufsize = myTxStream->get_max_num_samps();
 #endif
 
-    bool check_refclk_loss = true;
+    bool check_refclk_loss = false;
     const complexf* in;
 
     uhd::tx_metadata_t md;
@@ -311,7 +343,8 @@ void UHDWorker::process()
             frame = &(uwd->frame1);
         }
         else {
-            throw std::runtime_error("UHDWorker.process: workerbuffer is neither 0 nor 1 !");
+            throw std::runtime_error(
+                    "UHDWorker.process: workerbuffer is neither 0 nor 1 !");
         }
 
         in = reinterpret_cast<const complexf*>(frame->buf);
@@ -329,16 +362,19 @@ void UHDWorker::process()
             try {
                 // TODO: Is this check specific to the B100 and USRP2 ?
                 if (! uwd->myUsrp->get_mboard_sensor("ref_locked", 0).to_bool()) {
-                    uwd->logger->log(alert, "OutputUHD: External reference clock lock lost !");
+                    uwd->logger->log(alert,
+                            "OutputUHD: External reference clock lock lost !");
                     if (uwd->refclk_lock_loss_behaviour == CRASH) {
-                        throw std::runtime_error("OutputUHD: External reference clock lock lost.");
+                        throw std::runtime_error(
+                                "OutputUHD: External reference clock lock lost.");
                     }
                 }
             }
             catch (uhd::lookup_error &e) {
                 check_refclk_loss = false;
                 uwd->logger->log(warn,
-                        "OutputUHD: This USRP does not have mboard sensor for ext clock loss. Check disabled.");
+                        "OutputUHD: This USRP does not have mboard sensor for ext clock loss."
+                        " Check disabled.");
             }
         }
 
@@ -352,8 +388,10 @@ void UHDWorker::process()
                 /* We have not received a full timestamp through
                  * MNSC. We sleep through the frame.
                  */
-                uwd->logger->level(info) << "OutputUHD: Throwing sample " <<
-                    frame->fct << " away: incomplete timestamp " << tx_second << " + " << pps_offset;
+                uwd->logger->level(info) <<
+                    "OutputUHD: Throwing sample " << frame->fct <<
+                    " away: incomplete timestamp " << tx_second <<
+                    " + " << pps_offset;
                 usleep(20000); //TODO should this be TM-dependant ?
                 goto loopend;
             }
@@ -391,7 +429,8 @@ void UHDWorker::process()
 
             if (last_pps > pps_offset) {
                 uwd->logger->log(info,
-                        "OutputUHD (usrp time: %f): frame %d;  tx_second %zu; pps %.9f\n",
+                        "OutputUHD (usrp time: %f): frame %d;"
+                        "  tx_second %zu; pps %.9f\n",
                         usrp_time,
                         frame->fct, tx_second, pps_offset);
             }
@@ -402,11 +441,13 @@ void UHDWorker::process()
                 /* There was some error decoding the timestamp
                 */
                 if (uwd->muting) {
-                    uwd->logger->log(info, "OutputUHD: Muting sample %d requested\n",
+                    uwd->logger->log(info,
+                            "OutputUHD: Muting sample %d requested\n",
                             frame->fct);
                 }
                 else {
-                    uwd->logger->log(info, "OutputUHD: Muting sample %d : no timestamp\n",
+                    uwd->logger->log(info,
+                            "OutputUHD: Muting sample %d : no timestamp\n",
                             frame->fct);
                 }
                 usleep(20000);
@@ -427,9 +468,10 @@ void UHDWorker::process()
         while (running && !uwd->muting && (num_acc_samps < sizeIn)) {
             size_t samps_to_send = std::min(sizeIn - num_acc_samps, bufsize);
 
-            //ensure the the last packet has EOB set if the timestamps has been refreshed
-            //and need to be reconsidered.
-            md.end_of_burst = (frame->ts.timestamp_refresh && (samps_to_send <= bufsize));
+            //ensure the the last packet has EOB set if the timestamps has been
+            //refreshed and need to be reconsidered.
+            md.end_of_burst = (frame->ts.timestamp_refresh &&
+                    (samps_to_send <= bufsize));
 
             //send a single packet
             size_t num_tx_samps = myTxStream->send(
@@ -549,16 +591,16 @@ void OutputUHD::set_parameter(const string& parameter, const string& value)
     ss.exceptions ( stringstream::failbit | stringstream::badbit );
 
     if (parameter == "txgain") {
-        ss >> myTxGain;
+        ss >> myConf.txgain;
 #if ENABLE_UHD
-        myUsrp->set_tx_gain(myTxGain);
+        myUsrp->set_tx_gain(myConf.txgain);
 #endif
     }
     else if (parameter == "freq") {
-        ss >> myFrequency;
+        ss >> myConf.frequency;
 #if ENABLE_UHD
-        myUsrp->set_tx_freq(myFrequency);
-        myFrequency = myUsrp->get_tx_freq();
+        myUsrp->set_tx_freq(myConf.frequency);
+        myConf.frequency = myUsrp->get_tx_freq();
 #endif
     }
     else if (parameter == "muting") {
@@ -566,7 +608,8 @@ void OutputUHD::set_parameter(const string& parameter, const string& value)
     }
     else {
         stringstream ss;
-        ss << "Parameter '" << parameter << "' is not exported by controllable " << get_rc_name();
+        ss << "Parameter '" << parameter
+            << "' is not exported by controllable " << get_rc_name();
         throw ParameterError(ss.str());
     }
 }
@@ -575,16 +618,17 @@ const string OutputUHD::get_parameter(const string& parameter) const
 {
     stringstream ss;
     if (parameter == "txgain") {
-        ss << myTxGain;
+        ss << myConf.txgain;
     }
     else if (parameter == "freq") {
-        ss << myFrequency;
+        ss << myConf.frequency;
     }
     else if (parameter == "muting") {
         ss << myMuting;
     }
     else {
-        ss << "Parameter '" << parameter << "' is not exported by controllable " << get_rc_name();
+        ss << "Parameter '" << parameter <<
+            "' is not exported by controllable " << get_rc_name();
         throw ParameterError(ss.str());
     }
     return ss.str();
