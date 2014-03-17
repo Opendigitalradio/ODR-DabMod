@@ -31,6 +31,7 @@
 #include "Log.h"
 #include "RemoteControl.h"
 
+#include <cmath>
 #include <iostream>
 #include <assert.h>
 #include <stdexcept>
@@ -96,11 +97,11 @@ OutputUHD::OutputUHD(
         double master_clk_rate = myUsrp->get_master_clock_rate();
         MDEBUG("OutputUHD:Checking master clock rate: %f...\n", master_clk_rate);
 
-        if (myConf.masterClockRate != master_clk_rate) {
+        if (fabs(master_clk_rate - myConf.masterClockRate) >
+                (myConf.masterClockRate * 1e-6)) {
             throw std::runtime_error("Cannot set USRP master_clock_rate. Aborted.");
         }
     }
-
 
     MDEBUG("OutputUHD:Setting REFCLK and PPS input...\n");
 
@@ -118,7 +119,8 @@ OutputUHD::OutputUHD(
     myUsrp->set_tx_rate(myConf.sampleRate);
     MDEBUG("OutputUHD:Actual TX Rate: %f Msps...\n", myUsrp->get_tx_rate());
 
-    if (myConf.sampleRate != myUsrp->get_tx_rate()) {
+    if (fabs(myUsrp->get_tx_rate() / myConf.sampleRate) >
+             myConf.sampleRate * 1e-6) {
         MDEBUG("OutputUHD: Cannot set sample\n");
         throw std::runtime_error("Cannot set USRP sample rate. Aborted.");
     }
