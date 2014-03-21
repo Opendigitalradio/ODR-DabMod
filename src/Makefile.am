@@ -28,6 +28,12 @@ else
 ZMQ_LIBS    =
 endif
 
+if HAVE_OUTPUT_UHD_TEST
+UHD_SOURCES    =OutputUHD.cpp OutputUHD.h
+else
+UHD_SOURCES    =
+endif
+
 FFT_DIR=$(top_builddir)/lib/kiss_fft129
 FFT_INC=-I$(FFT_DIR) -I$(FFT_DIR)/tools
 FFT_SRC=$(FFT_DIR)/kiss_fft.c $(FFT_DIR)/kiss_fft.h $(FFT_DIR)/tools/kiss_fftr.c $(FFT_DIR)/tools/kiss_fftr.h kiss_fftsimd.c kiss_fftsimd.h
@@ -68,7 +74,7 @@ odr_dabmod_SOURCES  = DabMod.cpp \
                       GainControl.cpp GainControl.h \
                       OutputMemory.cpp OutputMemory.h \
 					  TimestampDecoder.h TimestampDecoder.cpp \
-                      OutputUHD.cpp OutputUHD.h \
+                      $(UHD_SOURCES) \
                       ModOutput.cpp ModOutput.h \
                       InputMemory.cpp InputMemory.h \
 					  InputFileReader.cpp InputZeroMQReader.cpp InputReader.h \
