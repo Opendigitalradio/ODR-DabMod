@@ -66,6 +66,9 @@ AC_ARG_ENABLE([fft_simd],
 # ZeroMQ message queue input
 AC_ARG_ENABLE([input_zeromq],
         AS_HELP_STRING([--enable-input-zeromq], [Enable ZeroMQ input]))
+# UHD support control
+AC_ARG_ENABLE([output_uhd],
+        AS_HELP_STRING([--enable-output-uhd], [Enable UHD output]))
 
 AS_IF([test "x$enable_input_zeromq" = "xyes"],
         [AC_DEFINE(HAVE_INPUT_ZEROMQ, [1], [Define if ZeroMQ input is enabled]) ,
@@ -86,7 +89,11 @@ AM_CONDITIONAL([HAVE_INPUT_ZEROMQ_TEST], [test "x$enable_input_zeromq" = "xyes"]
 AC_SUBST([CFLAGS], ["$OPTIM $DEBUG $EXTRA"])
 AC_SUBST([CXXFLAGS], ["$OPTIM $DEBUG $EXTRA"])
 
-AC_CHECK_LIB([uhd], [main], [], [AC_MSG_ERROR([library uhd is missing])])
+AS_IF([test "x$enable_output_uhd" = "xyes"],
+        [AC_DEFINE(HAVE_OUTPUT_UHD, [1], [Define if UHD output is enabled]) ,
+         AC_CHECK_LIB([uhd], [main], [], [AC_MSG_ERROR([library uhd is missing])])])
+
+AM_CONDITIONAL([HAVE_OUTPUT_UHD_TEST], [test "x$enable_output_uhd" = "xyes"])
 
 AX_BOOST_BASE([1.41.0], [], AC_MSG_ERROR([BOOST 1.41 or later is required]))
 AC_CHECK_LIB([boost_system], [main], [], [AC_MSG_ERROR([library boost_system is missing])])

@@ -35,7 +35,9 @@
 #include "DabModulator.h"
 #include "InputMemory.h"
 #include "OutputFile.h"
-#include "OutputUHD.h"
+#if defined(HAVE_OUTPUT_UHD)
+#   include "OutputUHD.h"
+#endif
 #include "InputReader.h"
 #include "PcDebug.h"
 #include "TimestampDecoder.h"
@@ -165,7 +167,9 @@ int main(int argc, char* argv[])
 
     std::string outputName;
     int useFileOutput = 0;
+//#if defined(HAVE_OUTPUT_UHD)
     int useUHDOutput = 0;
+//#endif
 
     uint64_t frame = 0;
     size_t outputRate = 2048000;
@@ -182,7 +186,9 @@ int main(int argc, char* argv[])
     bool use_configuration_file = false;
     std::string configuration_file;
 
+#if defined(HAVE_OUTPUT_UHD)
     OutputUHDConfig outputuhd_conf;
+#endif
 
     // To handle the timestamp offset of the modulator
     struct modulator_offset_config modconf;
@@ -233,21 +239,27 @@ int main(int argc, char* argv[])
             clockRate = strtol(optarg, NULL, 0);
             break;
         case 'f':
+#if defined(HAVE_OUTPUT_UHD)
             if (useUHDOutput) {
                 fprintf(stderr, "Options -u and -f are mutually exclusive\n");
                 goto END_MAIN;
             }
+#endif
             outputName = optarg;
             useFileOutput = 1;
             break;
         case 'F':
+#if defined(HAVE_OUTPUT_UHD)
             outputuhd_conf.frequency = strtof(optarg, NULL);
+#endif
             break;
         case 'g':
             gainMode = (GainMode)strtol(optarg, NULL, 0);
             break;
         case 'G':
+#if defined(HAVE_OUTPUT_UHD)
             outputuhd_conf.txgain = (int)strtol(optarg, NULL, 10);
+#endif
             break;
         case 'l':
             loop = true;
@@ -260,7 +272,9 @@ int main(int argc, char* argv[])
             }
             modconf.use_offset_fixed = true;
             modconf.offset_fixed = strtod(optarg, NULL);
+#if defined(HAVE_OUTPUT_UHD)
             outputuhd_conf.enableSync = true;
+#endif
             break;
         case 'O':
             if (modconf.use_offset_fixed)
@@ -270,7 +284,9 @@ int main(int argc, char* argv[])
             }
             modconf.use_offset_file = true;
             modconf.offset_filename = std::string(optarg);
+#if defined(HAVE_OUTPUT_UHD)
             outputuhd_conf.enableSync = true;
+#endif
             break;
         case 'm':
             dabMode = strtol(optarg, NULL, 0);
@@ -282,12 +298,14 @@ int main(int argc, char* argv[])
             filterTapsFilename = optarg;
             break;
         case 'u':
+#if defined(HAVE_OUTPUT_UHD)
             if (useFileOutput) {
                 fprintf(stderr, "Options -u and -f are mutually exclusive\n");
                 goto END_MAIN;
             }
             outputuhd_conf.device = optarg;
             useUHDOutput = 1;
+#endif
             break;
         case 'V':
             printVersion();
@@ -421,6 +439,7 @@ int main(int argc, char* argv[])
             }
             useFileOutput = 1;
         }
+#if defined(HAVE_OUTPUT_UHD)
         else if (output_selected == "uhd") {
             outputuhd_conf.device = pt.get("uhdoutput.device", "");
             outputuhd_conf.usrpType = pt.get("uhdoutput.type", "");
@@ -515,11 +534,13 @@ int main(int argc, char* argv[])
 
             useUHDOutput = 1;
         }
+#endif
         else {
             std::cerr << "Error: Invalid output defined.\n";
             goto END_MAIN;
         }
 
+#if defined(HAVE_OUTPUT_UHD)
         outputuhd_conf.enableSync = (pt.get("delaymanagement.synchronous", 0) == 1);
         if (outputuhd_conf.enableSync) {
             try {
@@ -544,6 +565,7 @@ int main(int argc, char* argv[])
         }
 
         outputuhd_conf.muteNoTimestamps = (pt.get("delaymanagement.mutenotimestamps", 0) == 1);
+#endif
     }
 
     logger.level(info) << "Starting up";
@@ -600,6 +622,7 @@ int main(int argc, char* argv[])
     fprintf(stderr, "  Type: %s\n", inputTransport.c_str());
     fprintf(stderr, "  Source: %s\n", inputName.c_str());
     fprintf(stderr, "Output\n");
+#if defined(HAVE_OUTPUT_UHD)
     if (useUHDOutput) {
         fprintf(stderr, " UHD\n"
                         "  Device: %s\n"
@@ -610,6 +633,9 @@ int main(int argc, char* argv[])
                 outputuhd_conf.masterClockRate);
     }
     else if (useFileOutput) {
+#else
+    if (useFileOutput) {
+#endif
         fprintf(stderr, "  Name: %s\n", outputName.c_str());
     }
     fprintf(stderr, "  Sampling rate: ");
@@ -656,6 +682,7 @@ int main(int argc, char* argv[])
         // Opening COFDM output file
         output = new OutputFile(outputName);
     }
+#if defined(HAVE_OUTPUT_UHD)
     else if (useUHDOutput) {
         amplitude /= 32000.0f;
         outputuhd_conf.sampleRate = outputRate;
@@ -668,6 +695,7 @@ int main(int argc, char* argv[])
             goto END_MAIN;
         }
     }
+#endif
 
     flowgraph = new Flowgraph();
     data.setLength(6144);
@@ -677,9 +705,11 @@ int main(int argc, char* argv[])
     flowgraph->connect(input, modulator);
     flowgraph->connect(modulator, output);
 
+#if defined(HAVE_OUTPUT_UHD)
     if (useUHDOutput) {
         ((OutputUHD*)output)->setETIReader(modulator->getEtiReader());
     }
+#endif
 
     inputReader->PrintInfo();
 
@@ -746,3 +776,4 @@ END_MAIN:
 
     return ret;
 }
+
