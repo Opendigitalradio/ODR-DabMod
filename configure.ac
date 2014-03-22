@@ -68,7 +68,8 @@ AC_ARG_ENABLE([input_zeromq],
         AS_HELP_STRING([--enable-input-zeromq], [Enable ZeroMQ input]))
 # UHD support control
 AC_ARG_ENABLE([output_uhd],
-        AS_HELP_STRING([--enable-output-uhd], [Enable UHD output]))
+        [AS_HELP_STRING([--enable-output-uhd], [Enable UHD output])],
+        [], [enable_output_uhd=yes])
 
 AS_IF([test "x$enable_input_zeromq" = "xyes"],
         [AC_DEFINE(HAVE_INPUT_ZEROMQ, [1], [Define if ZeroMQ input is enabled]) ,

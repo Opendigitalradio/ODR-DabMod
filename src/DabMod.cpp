@@ -167,9 +167,7 @@ int main(int argc, char* argv[])
 
     std::string outputName;
     int useFileOutput = 0;
-//#if defined(HAVE_OUTPUT_UHD)
     int useUHDOutput = 0;
-//#endif
 
     uint64_t frame = 0;
     size_t outputRate = 2048000;
