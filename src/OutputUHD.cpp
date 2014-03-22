@@ -206,6 +206,13 @@ OutputUHD::OutputUHD(
     uwd.logger = &myLogger;
     uwd.refclk_lock_loss_behaviour = myConf.refclk_lock_loss_behaviour;
 
+    if (myConf.refclk_src == "internal") {
+        uwd.check_refclk_loss = false;
+    }
+    else {
+        uwd.check_refclk_loss = true;
+    }
+
 
     shared_ptr<barrier> b(new barrier(2));
     mySyncBarrier = b;
@@ -320,7 +327,6 @@ void UHDWorker::process()
     size_t bufsize = myTxStream->get_max_num_samps();
 #endif
 
-    bool check_refclk_loss = false;
     const complexf* in;
 
     uhd::tx_metadata_t md;
@@ -359,7 +365,7 @@ void UHDWorker::process()
 
 #if ENABLE_UHD
         // Check for ref_lock
-        if (check_refclk_loss)
+        if (uwd->check_refclk_loss)
         {
             try {
                 // TODO: Is this check specific to the B100 and USRP2 ?
@@ -373,7 +379,7 @@ void UHDWorker::process()
                 }
             }
             catch (uhd::lookup_error &e) {
-                check_refclk_loss = false;
+                uwd->check_refclk_loss = false;
                 uwd->logger->log(warn,
                         "OutputUHD: This USRP does not have mboard sensor for ext clock loss."
                         " Check disabled.");

@@ -105,6 +105,9 @@ struct UHDWorkerData {
     struct UHDWorkerFrameData frame1;
     size_t bufsize; // in bytes
 
+    // If we want to verify loss of refclk
+    bool check_refclk_loss;
+
     // muting set by remote control
     bool muting;
 
@@ -219,3 +222,4 @@ class OutputUHD: public ModOutput, public RemoteControllable {
 
 
 #endif // OUTPUT_UHD_H
+
