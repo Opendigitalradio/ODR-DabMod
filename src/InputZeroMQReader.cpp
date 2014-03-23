@@ -3,7 +3,7 @@
    Her Majesty the Queen in Right of Canada (Communications Research
    Center Canada)
 
-   Copyrigth (C) 2013
+   Copyrigth (C) 2013, 2014
    Matthias P. Braendli, matthias.braendli@mpb.li
  */
 /*
@@ -117,12 +117,15 @@ void InputZeroMQWorker::RecvProcess(struct InputZeroMQThreadData* workerdata)
             }
             else
             {
+                workerdata->in_messages->notify();
+
                 if (!buffer_full) {
-                    workerdata->in_messages->notify();
                     fprintf(stderr, "ZeroMQ buffer overfull !\n");
 
                     buffer_full = true;
                 }
+
+                queue_size = workerdata->in_messages->size();
             }
 
             if (queue_size < 5) {
@@ -132,8 +135,10 @@ void InputZeroMQWorker::RecvProcess(struct InputZeroMQThreadData* workerdata)
         }
     }
     catch (zmq::error_t& err) {
-        printf("ZeroMQ error in RecvProcess: '%s'\n", err.what());
+        fprintf(stderr, "ZeroMQ error in RecvProcess: '%s'\n", err.what());
     }
+
+    fprintf(stderr, "ZeroMQ input worker terminated\n");
 
     subscriber.close();
 }

@@ -590,6 +590,8 @@ loopend:
         // swap buffers
         workerbuffer = (workerbuffer + 1) % 2;
     }
+
+    uwd->logger->level(warn) << "UHD worker terminated";
 }
 
 
