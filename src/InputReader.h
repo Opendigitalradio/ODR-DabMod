@@ -143,15 +143,26 @@ class InputZeroMQWorker
 {
     public:
         InputZeroMQWorker() :
-            zmqcontext(1)  {}
+            running(false),
+            zmqcontext(1),
+            m_to_drop(0) { }
 
         void Start(struct InputZeroMQThreadData* workerdata);
         void Stop();
     private:
         void RecvProcess(struct InputZeroMQThreadData* workerdata);
+
         bool running;
         zmq::context_t zmqcontext; // is thread-safe
         boost::thread recv_thread;
+
+        /* We must be careful to keep frame phase consistent. If we
+         * drop a single ETI frame, we will break the transmission
+         * frame vs. ETI frame phase.
+         *
+         * Here we keep track of how many ETI frames we must drop
+         */
+        int m_to_drop;
 };
 
 class InputZeroMQReader : public InputReader
