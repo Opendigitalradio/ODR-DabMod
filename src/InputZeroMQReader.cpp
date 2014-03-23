@@ -147,6 +147,7 @@ void InputZeroMQWorker::Start(struct InputZeroMQThreadData* workerdata)
 void InputZeroMQWorker::Stop()
 {
     running = false;
+    zmqcontext.close();
     recv_thread.join();
 }
 
