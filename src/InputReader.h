@@ -135,7 +135,7 @@ class InputFileReader : public InputReader
 
 struct InputZeroMQThreadData
 {
-    ThreadsafeQueue<zmq::message_t*> *in_messages;
+    ThreadsafeQueue<uint8_t*> *in_messages;
     std::string uri;
 };
 
@@ -191,7 +191,7 @@ class InputZeroMQReader : public InputReader
         std::string uri_;
 
         InputZeroMQWorker worker_;
-        ThreadsafeQueue<zmq::message_t*> in_messages_;
+        ThreadsafeQueue<uint8_t*> in_messages_;
         struct InputZeroMQThreadData workerdata_;
 };
 
