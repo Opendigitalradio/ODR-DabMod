@@ -24,8 +24,6 @@
    along with ODR-DabMod.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#define ENABLE_UHD 1
-
 #include "OutputUHD.h"
 #include "PcDebug.h"
 #include "Log.h"
@@ -82,7 +80,6 @@ OutputUHD::OutputUHD(
     RC_ADD_PARAMETER(freq,   "UHD transmission frequency");
     RC_ADD_PARAMETER(muting, "mute the output by stopping the transmitter");
 
-#if ENABLE_UHD
     uhd::set_thread_priority_safe();
 
     //create a usrp device
@@ -193,10 +190,6 @@ OutputUHD::OutputUHD(
 
     // preparing output thread worker data
     uwd.myUsrp = myUsrp;
-#else
-    myLogger.level(error) <<
-        "OutputUHD: UHD initialisation disabled at compile-time";
-#endif
 
     uwd.frame0.ts.timestamp_valid = false;
     uwd.frame1.ts.timestamp_valid = false;
@@ -318,14 +311,12 @@ void UHDWorker::process()
     size_t num_acc_samps; //number of accumulated samples
     //int write_fail_count;
 
-#if ENABLE_UHD
     // Transmit timeout
     const double timeout = 0.2;
 
     uhd::stream_args_t stream_args("fc32"); //complex floats
     uhd::tx_streamer::sptr myTxStream = uwd->myUsrp->get_tx_stream(stream_args);
     size_t bufsize = myTxStream->get_max_num_samps();
-#endif
 
     const complexf* in;
 
@@ -363,7 +354,6 @@ void UHDWorker::process()
 
         sizeIn = uwd->bufsize / sizeof(complexf);
 
-#if ENABLE_UHD
         // Check for ref_lock
         if (uwd->check_refclk_loss)
         {
@@ -387,9 +377,6 @@ void UHDWorker::process()
         }
 
         usrp_time = uwd->myUsrp->get_time_now().get_real_secs();
-#else
-        usrp_time = 0;
-#endif
 
         if (uwd->sourceContainsTimestamp) {
             if (!frame->ts.timestamp_valid) {
@@ -419,7 +406,6 @@ void UHDWorker::process()
                 goto loopend; //skip the frame
             }
 
-#if ENABLE_UHD
             if (md.time_spec.get_real_secs() > usrp_time + TIMESTAMP_MARGIN_FUTURE) {
                 uwd->logger->level(warn) <<
                         "OutputUHD: Timestamp too far in the future! offset: " <<
@@ -433,7 +419,6 @@ void UHDWorker::process()
                         md.time_spec.get_real_secs() - usrp_time;
                 throw std::runtime_error("Timestamp error. Aborted.");
             }
-#endif
 
             if (last_pps > pps_offset) {
                 uwd->logger->log(info,
@@ -463,16 +448,9 @@ void UHDWorker::process()
             }
         }
 
-#if ENABLE_UHD
         PDEBUG("UHDWorker::process:max_num_samps: %zu.\n",
                 myTxStream->get_max_num_samps());
 
-        /*
-           size_t num_tx_samps = myTxStream->send(
-           dataIn, sizeIn, md, timeout);
-
-           MDEBUG("UHDWorker::process:num_tx_samps: %zu.\n", num_tx_samps);
-           */
         while (running && !uwd->muting && (num_acc_samps < sizeIn)) {
             size_t samps_to_send = std::min(sizeIn - num_acc_samps, bufsize);
 
@@ -576,13 +554,6 @@ void UHDWorker::process()
 
 
         }
-#else // ENABLE_UHD
-        uwd->logger->log(info, "OutputUHD UHD DISABLED: Sample %d : valid timestamp %zu + %f\n",
-                frame->fct,
-                tx_second,
-                pps_offset);
-        usleep(23000); // 23ms, a bit faster than realtime for TM 2
-#endif
 
         last_pps = pps_offset;
 
@@ -602,16 +573,12 @@ void OutputUHD::set_parameter(const string& parameter, const string& value)
 
     if (parameter == "txgain") {
         ss >> myConf.txgain;
-#if ENABLE_UHD
         myUsrp->set_tx_gain(myConf.txgain);
-#endif
     }
     else if (parameter == "freq") {
         ss >> myConf.frequency;
-#if ENABLE_UHD
         myUsrp->set_tx_freq(myConf.frequency);
         myConf.frequency = myUsrp->get_tx_freq();
-#endif
     }
     else if (parameter == "muting") {
         ss >> myMuting;
