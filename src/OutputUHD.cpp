@@ -316,7 +316,7 @@ void UHDWorker::process()
 
     uhd::stream_args_t stream_args("fc32"); //complex floats
     uhd::tx_streamer::sptr myTxStream = uwd->myUsrp->get_tx_stream(stream_args);
-    size_t bufsize = myTxStream->get_max_num_samps();
+    size_t usrp_max_num_samps = myTxStream->get_max_num_samps();
 
     const complexf* in;
 
@@ -452,12 +452,12 @@ void UHDWorker::process()
                 myTxStream->get_max_num_samps());
 
         while (running && !uwd->muting && (num_acc_samps < sizeIn)) {
-            size_t samps_to_send = std::min(sizeIn - num_acc_samps, bufsize);
+            size_t samps_to_send = std::min(sizeIn - num_acc_samps, usrp_max_num_samps);
 
             //ensure the the last packet has EOB set if the timestamps has been
             //refreshed and need to be reconsidered.
             md.end_of_burst = (frame->ts.timestamp_refresh &&
-                    (samps_to_send <= bufsize));
+                    (samps_to_send <= usrp_max_num_samps));
 
             //send a single packet
             size_t num_tx_samps = myTxStream->send(
