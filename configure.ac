@@ -19,7 +19,7 @@
 # along with ODR-DabMod.  If not, see <http://www.gnu.org/licenses/>.
 
 AC_PREREQ(2.59)
-AC_INIT([ODR-DabMod], [0.4.2], [matthias.braendli@mpb.li])
+AC_INIT([ODR-DabMod], [0.4.3], [matthias.braendli@mpb.li])
 AC_CONFIG_AUX_DIR([build-aux])
 AC_CANONICAL_SYSTEM
 AM_INIT_AUTOMAKE([-Wall])

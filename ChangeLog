@@ -1,6 +1,16 @@
 This file contains information about the changes done to
 the ODR-DabMod in this repository
 
+2014-04-04: Matthias P. Braendli <matthias@mpb.li>
+	(v0.4.3)
+	* odr-dabmod:
+		Various UHD improvements, esp. related to
+		  external clock input handling.
+		ZeroMQ input protocol format updated to avoid
+		  frame phase alignment errors (not
+		  backward compatible)
+		Various cleanup and fixes
+
 2014-03-07: Matthias P. Braendli <matthias@mpb.li>
 	(v0.4.2)
 	* odr-dabmod:
