@@ -53,12 +53,10 @@ from gnuradio import digital
 gain = 1
 sampling_freq = 2.048e6
 cutoff = 810e3
-transition_width = 150e3
-window = digital.filter.window.WIN_HAMMING
-
+transition_width = 250e3
 
 # Generate filter taps and print them out
-taps = digital.filter.firdes_low_pass(gain, sampling_freq, cutoff, transition_width, window, beta=6.76)
+taps = digital.filter.firdes_low_pass(gain, sampling_freq, cutoff, transition_width) # hamming window
 
 print(len(taps))
 for t in taps:
