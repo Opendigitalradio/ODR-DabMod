@@ -32,6 +32,7 @@
 #include "RemoteControl.h"
 
 using boost::asio::ip::tcp;
+using namespace std;
 
 
 void RemoteControllerTelnet::restart()

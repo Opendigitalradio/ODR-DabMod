@@ -32,7 +32,6 @@
 #include <map>
 #include <string>
 #include <iostream>
-#include <string>
 #include <boost/bind.hpp>
 #include <boost/shared_ptr.hpp>
 #include <boost/enable_shared_from_this.hpp>
@@ -44,25 +43,22 @@
 
 
 #define RC_ADD_PARAMETER(p, desc) {   \
-  vector<string> p; \
+  std::vector<std::string> p; \
   p.push_back(#p); \
   p.push_back(desc); \
   m_parameters.push_back(p); \
 }
 
 
-using namespace std;
-using boost::asio::ip::tcp;
-
 class ParameterError : public std::exception
 {
     public:
-        ParameterError(string message) : m_message(message) {}
+        ParameterError(std::string message) : m_message(message) {}
         ~ParameterError() throw() {};
         const char* what() const throw() { return m_message.c_str(); }
 
     private:
-        string m_message;
+        std::string m_message;
 };
 
 class RemoteControllable;
@@ -90,7 +86,7 @@ class BaseRemoteController {
 class RemoteControllable {
     public:
 
-        RemoteControllable(string name) : m_name(name) {}
+        RemoteControllable(std::string name) : m_name(name) {}
 
         /* return a short name used to identify the controllable.
          * It might be used in the commands the user has to type, so keep
@@ -104,9 +100,9 @@ class RemoteControllable {
         }
 
         /* Return a list of possible parameters that can be set */
-        virtual list<string> get_supported_parameters() const {
-            list<string> parameterlist;
-            for (list< vector<string> >::const_iterator it = m_parameters.begin();
+        virtual std::list<std::string> get_supported_parameters() const {
+            std::list<std::string> parameterlist;
+            for (std::list< std::vector<std::string> >::const_iterator it = m_parameters.begin();
                     it != m_parameters.end(); ++it) {
                 parameterlist.push_back((*it)[0]);
             }
@@ -120,11 +116,11 @@ class RemoteControllable {
         }
 
         /* Base function to set parameters. */
-        virtual void set_parameter(const string& parameter,
-                const string& value) = 0;
+        virtual void set_parameter(const std::string& parameter,
+                const std::string& value) = 0;
 
         /* Getting a parameter always returns a string. */
-        virtual const string get_parameter(const string& parameter) const = 0;
+        virtual const std::string get_parameter(const std::string& parameter) const = 0;
 
     protected:
         std::string m_name;
@@ -168,26 +164,26 @@ class RemoteControllerTelnet : public BaseRemoteController {
 
         void process(long);
 
-        void dispatch_command(tcp::socket& socket, string command);
+        void dispatch_command(boost::asio::ip::tcp::socket& socket, std::string command);
 
-        void reply(tcp::socket& socket, string message);
+        void reply(boost::asio::ip::tcp::socket& socket, std::string message);
 
         RemoteControllerTelnet& operator=(const RemoteControllerTelnet& other);
         RemoteControllerTelnet(const RemoteControllerTelnet& other);
 
-        vector<string> tokenise_(string message) {
-            vector<string> all_tokens;
+        std::vector<std::string> tokenise_(std::string message) {
+            std::vector<std::string> all_tokens;
 
             boost::char_separator<char> sep(" ");
             boost::tokenizer< boost::char_separator<char> > tokens(message, sep);
-            BOOST_FOREACH (const string& t, tokens) {
+            BOOST_FOREACH (const std::string& t, tokens) {
                 all_tokens.push_back(t);
             }
             return all_tokens;
         }
 
-        RemoteControllable* get_controllable_(string name) {
-            for (list<RemoteControllable*>::iterator it = m_cohort.begin();
+        RemoteControllable* get_controllable_(std::string name) {
+            for (std::list<RemoteControllable*>::iterator it = m_cohort.begin();
                     it != m_cohort.end(); ++it) {
                 if ((*it)->get_rc_name() == name)
                 {
@@ -197,24 +193,24 @@ class RemoteControllerTelnet : public BaseRemoteController {
             throw ParameterError("Module name unknown");
         }
 
-        list< vector<string> > get_parameter_descriptions_(string name) {
+        std::list< std::vector<std::string> > get_parameter_descriptions_(std::string name) {
             RemoteControllable* controllable = get_controllable_(name);
             return controllable->get_parameter_descriptions();
         }
 
-        list<string> get_param_list_(string name) {
+        std::list<std::string> get_param_list_(std::string name) {
             RemoteControllable* controllable = get_controllable_(name);
             return controllable->get_supported_parameters();
         }
 
-        list< vector<string> > get_param_list_values_(string name) {
+        std::list< std::vector<std::string> > get_param_list_values_(std::string name) {
             RemoteControllable* controllable = get_controllable_(name);
 
-            list< vector<string> > allparams;
-            list<string> params = controllable->get_supported_parameters();
-            for (list<string>::iterator it = params.begin();
+            std::list< std::vector<std::string> > allparams;
+            std::list<std::string> params = controllable->get_supported_parameters();
+            for (std::list<std::string>::iterator it = params.begin();
                     it != params.end(); ++it) {
-                vector<string> item;
+                std::vector<std::string> item;
                 item.push_back(*it);
                 item.push_back(controllable->get_parameter(*it));
 
@@ -223,12 +219,12 @@ class RemoteControllerTelnet : public BaseRemoteController {
             return allparams;
         }
 
-        string get_param_(string name, string param) {
+        std::string get_param_(std::string name, std::string param) {
             RemoteControllable* controllable = get_controllable_(name);
             return controllable->get_parameter(param);
         }
 
-        void set_param_(string name, string param, string value) {
+        void set_param_(std::string name, std::string param, std::string value) {
             RemoteControllable* controllable = get_controllable_(name);
             return controllable->set_parameter(param, value);
         }
@@ -242,7 +238,7 @@ class RemoteControllerTelnet : public BaseRemoteController {
         boost::thread m_child_thread;
 
         /* This controller commands the controllables in the cohort */
-        list<RemoteControllable*> m_cohort;
+        std::list<RemoteControllable*> m_cohort;
 
         std::string m_welcome;
         std::string m_prompt;

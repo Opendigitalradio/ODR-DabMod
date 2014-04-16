@@ -44,6 +44,7 @@
 #    endif
 #endif
 
+using namespace std;
 
 #include <sys/time.h>
 

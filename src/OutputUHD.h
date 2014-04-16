@@ -71,8 +71,6 @@ DESCRIPTION:
 
 typedef std::complex<float> complexf;
 
-using namespace boost;
-
 struct UHDWorkerFrameData {
     // Buffer holding frame data
     void* buf;
@@ -112,7 +110,7 @@ struct UHDWorkerData {
     bool muting;
 
     // A barrier to synchronise the two threads
-    shared_ptr<barrier> sync_barrier;
+    boost::shared_ptr<boost::barrier> sync_barrier;
 
     // What to do when the reference clock PLL loses lock
     refclk_lock_loss_behaviour_t refclk_lock_loss_behaviour;
@@ -197,10 +195,12 @@ class OutputUHD: public ModOutput, public RemoteControllable {
          */
 
         /* Base function to set parameters. */
-        virtual void set_parameter(const string& parameter, const string& value);
+        virtual void set_parameter(const std::string& parameter,
+                const std::string& value);
 
         /* Getting a parameter always returns a string. */
-        virtual const string get_parameter(const string& parameter) const;
+        virtual const std::string get_parameter(
+                const std::string& parameter) const;
 
 
     protected:
@@ -208,7 +208,7 @@ class OutputUHD: public ModOutput, public RemoteControllable {
         EtiReader *myEtiReader;
         OutputUHDConfig myConf;
         uhd::usrp::multi_usrp::sptr myUsrp;
-        shared_ptr<barrier> mySyncBarrier;
+        boost::shared_ptr<boost::barrier> mySyncBarrier;
         UHDWorker worker;
         bool first_run;
         struct UHDWorkerData uwd;

@@ -38,6 +38,9 @@
 #include <errno.h>
 #include <unistd.h>
 
+using namespace boost;
+using namespace std;
+
 typedef std::complex<float> complexf;
 
 OutputUHD::OutputUHD(

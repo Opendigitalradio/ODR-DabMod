@@ -517,7 +517,7 @@ int main(int argc, char* argv[])
             outputuhd_conf.pps_src = pt.get("uhdoutput.pps_source", "int");
             outputuhd_conf.pps_polarity = pt.get("uhdoutput.pps_polarity", "pos");
 
-            string behave = pt.get("uhdoutput.behaviour_refclk_lock_lost", "ignore");
+            std::string behave = pt.get("uhdoutput.behaviour_refclk_lock_lost", "ignore");
 
             if (behave == "crash") {
                 outputuhd_conf.refclk_lock_loss_behaviour = CRASH;

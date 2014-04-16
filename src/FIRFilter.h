@@ -108,8 +108,11 @@ public:
     const char* name() { return "FIRFilter"; }
 
     /******* REMOTE CONTROL ********/
-    virtual void set_parameter(const string& parameter, const string& value);
-    virtual const string get_parameter(const string& parameter) const;
+    virtual void set_parameter(const std::string& parameter,
+            const std::string& value);
+
+    virtual const std::string get_parameter(
+            const std::string& parameter) const;
 
 
 protected:
