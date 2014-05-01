@@ -135,11 +135,6 @@ AC_LANG_POP([C++])
 
 AM_CONDITIONAL([IS_GIT_REPO], [test -d '.git'])
 
-# Checks for library functions.
-# Commented to remove rpl_malloc linking error
-#AC_FUNC_MALLOC
-AC_FUNC_MEMCMP
-AC_FUNC_REALLOC
 AC_TYPE_SIGNAL
 AC_CHECK_FUNCS([bzero floor ftime gettimeofday memset sqrt strchr strerror strtol])
 
