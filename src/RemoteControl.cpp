@@ -206,7 +206,7 @@ void RemoteControllerTelnet::dispatch_command(tcp::socket& socket, string comman
         if (cmd.size() >= 4) {
             try {
                 stringstream new_param_value;
-                for (int i = 3; i < cmd.size(); i++) {
+                for (size_t i = 3; i < cmd.size(); i++) {
                     new_param_value << cmd[i];
 
                     if (i+1 < cmd.size()) {

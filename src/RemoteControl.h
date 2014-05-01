@@ -3,7 +3,8 @@
    Her Majesty the Queen in Right of Canada (Communications Research
    Center Canada)
 
-   Written by Matthias P. Braendli, matthias.braendli@mpb.li, 2012
+   Copyright (C) 2014
+   Matthias P. Braendli, matthias.braendli@mpb.li
 
    This module adds remote-control capability to some of the dabmod modules.
    see testremotecontrol/test.cpp for an example of how to use this.
@@ -54,7 +55,7 @@ class ParameterError : public std::exception
 {
     public:
         ParameterError(std::string message) : m_message(message) {}
-        ~ParameterError() throw() {};
+        ~ParameterError() throw() {}
         const char* what() const throw() { return m_message.c_str(); }
 
     private:
@@ -80,6 +81,8 @@ class BaseRemoteController {
          * restarted.
          */
         virtual void restart() = 0;
+
+        virtual ~BaseRemoteController() {}
 };
 
 /* Objects that support remote control must implement the following class */
@@ -87,6 +90,8 @@ class RemoteControllable {
     public:
 
         RemoteControllable(std::string name) : m_name(name) {}
+
+        virtual ~RemoteControllable() {}
 
         /* return a short name used to identify the controllable.
          * It might be used in the commands the user has to type, so keep
@@ -155,7 +160,7 @@ class RemoteControllerTelnet : public BaseRemoteController {
             m_cohort.push_back(controllable);
         }
 
-        virtual bool fault_detected() { return m_fault; };
+        virtual bool fault_detected() { return m_fault; }
 
         virtual void restart();
 
@@ -164,7 +169,8 @@ class RemoteControllerTelnet : public BaseRemoteController {
 
         void process(long);
 
-        void dispatch_command(boost::asio::ip::tcp::socket& socket, std::string command);
+        void dispatch_command(boost::asio::ip::tcp::socket& socket,
+                std::string command);
 
         void reply(boost::asio::ip::tcp::socket& socket, std::string message);
 
@@ -193,7 +199,8 @@ class RemoteControllerTelnet : public BaseRemoteController {
             throw ParameterError("Module name unknown");
         }
 
-        std::list< std::vector<std::string> > get_parameter_descriptions_(std::string name) {
+        std::list< std::vector<std::string> >
+            get_parameter_descriptions_(std::string name) {
             RemoteControllable* controllable = get_controllable_(name);
             return controllable->get_parameter_descriptions();
         }
@@ -203,7 +210,8 @@ class RemoteControllerTelnet : public BaseRemoteController {
             return controllable->get_supported_parameters();
         }
 
-        std::list< std::vector<std::string> > get_param_list_values_(std::string name) {
+        std::list< std::vector<std::string> >
+            get_param_list_values_(std::string name) {
             RemoteControllable* controllable = get_controllable_(name);
 
             std::list< std::vector<std::string> > allparams;
@@ -251,11 +259,11 @@ class RemoteControllerTelnet : public BaseRemoteController {
  */
 class RemoteControllerDummy : public BaseRemoteController {
     public:
-        void enrol(RemoteControllable* controllable) {};
+        void enrol(RemoteControllable*) {}
 
-        bool fault_detected() { return false; };
+        bool fault_detected() { return false; }
 
-        virtual void restart() {};
+        virtual void restart() {}
 };
 
 #endif
