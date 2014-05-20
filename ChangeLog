@@ -1,6 +1,15 @@
 This file contains information about the changes done to
 the ODR-DabMod in this repository
 
+2014-05-20: Matthias P. Braendli <matthias@mpb.li>
+	(v0.4.4)
+	* odr-dabmod:
+		Merge patch for USRP1 subdevice setting.
+		Merge patch to correct ZMQ input command line
+		  argument.
+	* generate-firfilter.py:
+		Get FIRFilter generator script to work
+		  with newer GNURadio versions.
 2014-04-04: Matthias P. Braendli <matthias@mpb.li>
 	(v0.4.3)
 	* odr-dabmod:
