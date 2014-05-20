@@ -108,6 +108,11 @@ OutputUHD::OutputUHD(
     myUsrp->set_clock_source(myConf.refclk_src);
     myUsrp->set_time_source(myConf.pps_src);
 
+    if (myConf.subDevice != "") {
+        myUsrp->set_tx_subdev_spec(uhd::usrp::subdev_spec_t(myConf.subDevice),
+                uhd::usrp::multi_usrp::ALL_MBOARDS);
+    }
+
     std::cerr << "UHD clock source is " <<
         myUsrp->get_clock_source(0) << std::endl;
 

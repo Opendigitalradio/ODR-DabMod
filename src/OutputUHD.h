@@ -153,6 +153,10 @@ class UHDWorker {
 struct OutputUHDConfig {
     std::string device;
     std::string usrpType; // e.g. b100, b200, usrp2
+
+    // The USRP1 can accept two daughterboards
+    std::string subDevice; // e.g. A:0
+
     long masterClockRate;
     unsigned sampleRate;
     double frequency;

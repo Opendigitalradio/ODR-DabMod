@@ -441,6 +441,7 @@ int main(int argc, char* argv[])
         else if (output_selected == "uhd") {
             outputuhd_conf.device = pt.get("uhdoutput.device", "");
             outputuhd_conf.usrpType = pt.get("uhdoutput.type", "");
+            outputuhd_conf.subDevice = pt.get("uhdoutput.subdevice", "");
             outputuhd_conf.masterClockRate = pt.get<long>("uhdoutput.master_clock_rate", 0);
 
             if (outputuhd_conf.device.find("master_clock_rate") != std::string::npos) {
