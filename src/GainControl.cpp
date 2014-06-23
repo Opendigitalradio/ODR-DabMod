@@ -117,7 +117,7 @@ int GainControl::process(Buffer* const dataIn, Buffer* dataOut)
     }
 
     for (size_t i = 0; i < sizeIn; i += d_frameSize) {
-        gain = myFactor * computeGain(in, d_frameSize);
+        gain = d_factor * computeGain(in, d_frameSize);
 
         PDEBUG("********** Gain: %10f **********\n", gain);
 
