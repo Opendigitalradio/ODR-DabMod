@@ -51,7 +51,8 @@ public:
             Logger& logger,
             unsigned outputRate = 2048000, unsigned clockRate = 0,
             unsigned dabMode = 0, GainMode gainMode = GAIN_VAR,
-            float factor = 1.0, std::string filterTapsFilename = "");
+            float digGain = 1.0, float normalise = 1.0,
+            std::string filterTapsFilename = "");
     DabModulator(const DabModulator& copy);
     virtual ~DabModulator();
 
@@ -70,7 +71,8 @@ protected:
     unsigned myClockRate;
     unsigned myDabMode;
     GainMode myGainMode;
-    float myFactor;
+    float myDigGain;
+    float myNormalise;
     EtiReader myEtiReader;
     Flowgraph* myFlowgraph;
     OutputMemory* myOutput;

@@ -26,35 +26,47 @@
 
 #include <stdio.h>
 #include <stdexcept>
+#include <string>
+
+using namespace std;
 
 
-GainControl::GainControl(size_t framesize, GainMode mode, float factor) :
-    ModCodec(ModFormat(framesize * sizeof(complexf)), ModFormat(framesize * sizeof(complexf))),
+GainControl::GainControl(size_t framesize,
+                GainMode mode,
+                float digGain,
+                float normalise) :
+    ModCodec(ModFormat(framesize * sizeof(complexf)),
+             ModFormat(framesize * sizeof(complexf))),
+    RemoteControllable("gain"),
 #ifdef __SSE__
     d_frameSize(framesize * sizeof(complexf) / sizeof(__m128)),
 #else // !__SSE__
     d_frameSize(framesize),
 #endif
-    d_factor(factor)
+    d_digGain(digGain),
+    d_normalise(normalise)
 {
     PDEBUG("GainControl::GainControl(%zu, %u) @ %p\n", framesize, mode, this);
 
+    /* register the parameters that can be remote controlled */
+    RC_ADD_PARAMETER(digital, "Digital Gain");
+
     switch(mode) {
-    case GAIN_FIX:
-        PDEBUG("Gain mode: fix\n");
-        computeGain = computeGainFix;
-        break;
-    case GAIN_MAX:
-        PDEBUG("Gain mode: max\n");
-        computeGain = computeGainMax;
-        break;
-    case GAIN_VAR:
-        PDEBUG("Gain mode: var\n");
-        computeGain = computeGainVar;
-        break;
-    default:
-        throw std::runtime_error(
-                "GainControl::GainControl invalid computation gain mode!");
+        case GAIN_FIX:
+            PDEBUG("Gain mode: fix\n");
+            computeGain = computeGainFix;
+            break;
+        case GAIN_MAX:
+            PDEBUG("Gain mode: max\n");
+            computeGain = computeGainMax;
+            break;
+        case GAIN_VAR:
+            PDEBUG("Gain mode: var\n");
+            computeGain = computeGainVar;
+            break;
+        default:
+            throw std::runtime_error(
+                    "GainControl::GainControl invalid computation gain mode!");
     }
 }
 
@@ -89,7 +101,7 @@ int GainControl::process(Buffer* const dataIn, Buffer* dataOut)
 
     for (size_t i = 0; i < sizeIn; i += d_frameSize) {
         gain128.m = computeGain(in, d_frameSize);
-        gain128.m = _mm_mul_ps(gain128.m, _mm_set1_ps(d_factor));
+        gain128.m = _mm_mul_ps(gain128.m, _mm_set1_ps(d_normalise * d_digGain));
 
         PDEBUG("********** Gain: %10f **********\n", gain128.f[0]);
 
@@ -117,7 +129,7 @@ int GainControl::process(Buffer* const dataIn, Buffer* dataOut)
     }
 
     for (size_t i = 0; i < sizeIn; i += d_frameSize) {
-        gain = d_factor * computeGain(in, d_frameSize);
+        gain = d_normalise * d_digGain * computeGain(in, d_frameSize);
 
         PDEBUG("********** Gain: %10f **********\n", gain);
 
@@ -367,3 +379,36 @@ float GainControl::computeGainVar(const complexf* in, size_t sizeIn)
     return gain;
 }
 #endif // __SSE__
+
+void GainControl::set_parameter(const string& parameter, const string& value)
+{
+    stringstream ss(value);
+    ss.exceptions ( stringstream::failbit | stringstream::badbit );
+
+    if (parameter == "digital") {
+        float new_factor;
+        ss >> new_factor;
+        d_digGain = new_factor;
+    }
+    else {
+        stringstream ss;
+        ss << "Parameter '" << parameter
+            << "' is not exported by controllable " << get_rc_name();
+        throw ParameterError(ss.str());
+    }
+}
+
+const string GainControl::get_parameter(const string& parameter) const
+{
+    stringstream ss;
+    if (parameter == "digital") {
+        ss << std::fixed << d_digGain;
+    }
+    else {
+        ss << "Parameter '" << parameter <<
+            "' is not exported by controllable " << get_rc_name();
+        throw ParameterError(ss.str());
+    }
+    return ss.str();
+}
+

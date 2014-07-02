@@ -27,12 +27,12 @@
 #   include <config.h>
 #endif
 
-
 #include "ModCodec.h"
-
+#include "RemoteControl.h"
 
 #include <sys/types.h>
 #include <complex>
+#include <string>
 #ifdef __SSE__
 #   include <xmmintrin.h>
 #endif
@@ -42,31 +42,44 @@ typedef std::complex<float> complexf;
 
 enum GainMode { GAIN_FIX, GAIN_MAX, GAIN_VAR };
 
-class GainControl : public ModCodec
+class GainControl : public ModCodec, public RemoteControllable
 {
-public:
-    GainControl(size_t frameSize, GainMode mode = GAIN_VAR, float factor = 1.0f);
-    virtual ~GainControl();
-    GainControl(const GainControl&);
-    GainControl& operator=(const GainControl&);
+    public:
+        GainControl(size_t framesize,
+                GainMode mode = GAIN_VAR,
+                float digGain = 1.0f,
+                float normalise = 1.0f);
+
+        virtual ~GainControl();
+        GainControl(const GainControl&);
+        GainControl& operator=(const GainControl&);
 
 
-    int process(Buffer* const dataIn, Buffer* dataOut);
-    const char* name() { return "GainControl"; }
+        int process(Buffer* const dataIn, Buffer* dataOut);
+        const char* name() { return "GainControl"; }
 
-protected:
-    size_t d_frameSize;
-    float d_factor;
+        /* Functions for the remote control */
+        /* Base function to set parameters. */
+        virtual void set_parameter(const std::string& parameter,
+                const std::string& value);
+
+        /* Getting a parameter always returns a string. */
+        virtual const std::string get_parameter(const std::string& parameter) const;
+
+    protected:
+        size_t d_frameSize;
+        float d_digGain;
+        float d_normalise;
 #ifdef __SSE__
-    __m128 (*computeGain)(const __m128* in, size_t sizeIn);
-    __m128 static computeGainFix(const __m128* in, size_t sizeIn);
-    __m128 static computeGainMax(const __m128* in, size_t sizeIn);
-    __m128 static computeGainVar(const __m128* in, size_t sizeIn);
+        __m128 (*computeGain)(const __m128* in, size_t sizeIn);
+        __m128 static computeGainFix(const __m128* in, size_t sizeIn);
+        __m128 static computeGainMax(const __m128* in, size_t sizeIn);
+        __m128 static computeGainVar(const __m128* in, size_t sizeIn);
 #else // !__SSE__
-    float (*computeGain)(const complexf* in, size_t sizeIn);
-    float static computeGainFix(const complexf* in, size_t sizeIn);
-    float static computeGainMax(const complexf* in, size_t sizeIn);
-    float static computeGainVar(const complexf* in, size_t sizeIn);
+        float (*computeGain)(const complexf* in, size_t sizeIn);
+        float static computeGainFix(const complexf* in, size_t sizeIn);
+        float static computeGainMax(const complexf* in, size_t sizeIn);
+        float static computeGainVar(const complexf* in, size_t sizeIn);
 #endif // __SSE__
 };
 

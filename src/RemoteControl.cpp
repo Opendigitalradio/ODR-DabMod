@@ -224,8 +224,7 @@ void RemoteControllerTelnet::dispatch_command(tcp::socket& socket, string comman
                 reply(socket, "Error: Invalid parameter value. ");
             }
         }
-        else
-        {
+        else {
             reply(socket, "Incorrect parameters for command 'set'");
         }
     }

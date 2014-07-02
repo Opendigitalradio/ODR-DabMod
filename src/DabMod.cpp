@@ -101,7 +101,7 @@ void printUsage(char* progName, FILE* out = stderr)
             " [-o offset]"
             " [-O offsetfile]"
             " [-T filter_taps_file]"
-            " [-a amplitude]"
+            " [-a gain]"
             " [-c clockrate]"
             " [-g gainMode]"
             " [-h]"
@@ -173,7 +173,8 @@ int main(int argc, char* argv[])
     size_t outputRate = 2048000;
     size_t clockRate = 0;
     unsigned dabMode = 0;
-    float amplitude = 1.0f;
+    float digitalgain = 1.0f;
+    float normalise = 1.0f;
     GainMode gainMode = GAIN_VAR;
     Buffer data;
 
@@ -231,7 +232,7 @@ int main(int argc, char* argv[])
             break;
 
         case 'a':
-            amplitude = strtof(optarg, NULL);
+            digitalgain = strtof(optarg, NULL);
             break;
         case 'c':
             clockRate = strtol(optarg, NULL, 0);
@@ -400,7 +401,7 @@ int main(int argc, char* argv[])
         gainMode = (GainMode)pt.get("modulator.gainmode", 0);
         dabMode = pt.get("modulator.mode", dabMode);
         clockRate = pt.get("modulator.dac_clk_rate", (size_t)0);
-        amplitude = pt.get("modulator.digital_gain", amplitude);
+        digitalgain = pt.get("modulator.digital_gain", digitalgain);
         outputRate = pt.get("modulator.rate", outputRate);
         
         // FIR Filter parameters:
@@ -683,7 +684,7 @@ int main(int argc, char* argv[])
     }
 #if defined(HAVE_OUTPUT_UHD)
     else if (useUHDOutput) {
-        amplitude /= 32000.0f;
+        normalise = 1.0f/32768.0f;
         outputuhd_conf.sampleRate = outputRate;
         try {
             output = new OutputUHD(outputuhd_conf, logger);
@@ -700,7 +701,7 @@ int main(int argc, char* argv[])
     data.setLength(6144);
     input = new InputMemory(&data);
     modulator = new DabModulator(modconf, rc, logger, outputRate, clockRate,
-            dabMode, gainMode, amplitude, filterTapsFilename);
+            dabMode, gainMode, digitalgain, normalise, filterTapsFilename);
     flowgraph->connect(input, modulator);
     flowgraph->connect(modulator, output);
 

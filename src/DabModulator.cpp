@@ -56,7 +56,8 @@ DabModulator::DabModulator(
         BaseRemoteController* rc,
         Logger& logger,
         unsigned outputRate, unsigned clockRate,
-        unsigned dabMode, GainMode gainMode, float factor,
+        unsigned dabMode, GainMode gainMode,
+        float digGain, float normalise,
         std::string filterTapsFilename
         ) :
     ModCodec(ModFormat(1), ModFormat(0)),
@@ -65,7 +66,8 @@ DabModulator::DabModulator(
     myClockRate(clockRate),
     myDabMode(dabMode),
     myGainMode(gainMode),
-    myFactor(factor),
+    myDigGain(digGain),
+    myNormalise(normalise),
     myEtiReader(EtiReader(modconf, myLogger)),
     myFlowgraph(NULL),
     myFilterTapsFilename(filterTapsFilename),
@@ -198,7 +200,9 @@ int DabModulator::process(Buffer* const dataIn, Buffer* dataOut)
         }
 
         cifOfdm = new OfdmGenerator((1 + myNbSymbols), myNbCarriers, mySpacing);
-        cifGain = new GainControl(mySpacing, myGainMode, myFactor);
+        cifGain = new GainControl(mySpacing, myGainMode, myDigGain, myNormalise);
+        cifGain->enrol_at(*myRC);
+
         cifGuard = new GuardIntervalInserter(myNbSymbols, mySpacing,
                 myNullSize, mySymSize);
         if (myFilterTapsFilename != "") {
