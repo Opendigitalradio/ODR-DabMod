@@ -684,7 +684,7 @@ int main(int argc, char* argv[])
     }
 #if defined(HAVE_OUTPUT_UHD)
     else if (useUHDOutput) {
-        normalise = 1.0f/32768.0f;
+        normalise = 1.0f/48764.0f;
         outputuhd_conf.sampleRate = outputRate;
         try {
             output = new OutputUHD(outputuhd_conf, logger);
