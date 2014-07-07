@@ -2,6 +2,11 @@
    Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012
    Her Majesty the Queen in Right of Canada (Communications Research
    Center Canada)
+
+   Copyright (C) 2014
+   Matthias P. Braendli, matthias.braendli@mpb.li
+
+    http://opendigitalradio.org
  */
 /*
    This file is part of ODR-DabMod.
@@ -54,7 +59,6 @@ class GainControl : public ModCodec, public RemoteControllable
         GainControl(const GainControl&);
         GainControl& operator=(const GainControl&);
 
-
         int process(Buffer* const dataIn, Buffer* dataOut);
         const char* name() { return "GainControl"; }
 
@@ -75,13 +79,13 @@ class GainControl : public ModCodec, public RemoteControllable
         __m128 static computeGainFix(const __m128* in, size_t sizeIn);
         __m128 static computeGainMax(const __m128* in, size_t sizeIn);
         __m128 static computeGainVar(const __m128* in, size_t sizeIn);
-#else // !__SSE__
+#else
         float (*computeGain)(const complexf* in, size_t sizeIn);
         float static computeGainFix(const complexf* in, size_t sizeIn);
         float static computeGainMax(const complexf* in, size_t sizeIn);
         float static computeGainVar(const complexf* in, size_t sizeIn);
-#endif // __SSE__
+#endif
 };
 
-
 #endif // GAIN_CONTROL_H
+

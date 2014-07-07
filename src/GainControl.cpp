@@ -2,6 +2,11 @@
    Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012
    Her Majesty the Queen in Right of Canada (Communications Research
    Center Canada)
+
+   Copyright (C) 2014
+   Matthias P. Braendli, matthias.braendli@mpb.li
+
+    http://opendigitalradio.org
  */
 /*
    This file is part of ODR-DabMod.
@@ -74,7 +79,6 @@ GainControl::GainControl(size_t framesize,
 GainControl::~GainControl()
 {
     PDEBUG("GainControl::~GainControl() @ %p\n", this);
-
 }
 
 
@@ -87,11 +91,11 @@ int GainControl::process(Buffer* const dataIn, Buffer* dataOut)
     dataOut->setLength(dataIn->getLength());
 
 #ifdef __SSE__
-    const __m128* in = reinterpret_cast<const __m128*>(dataIn->getData());
-    __m128* out = reinterpret_cast<__m128*>(dataOut->getData());
-    size_t sizeIn = dataIn->getLength() / sizeof(__m128);
-    size_t sizeOut = dataOut->getLength() / sizeof(__m128);
-    __u128 gain128;
+    const __m128* in  = reinterpret_cast<const __m128*>(dataIn->getData());
+    __m128* out       = reinterpret_cast<__m128*>(dataOut->getData());
+    size_t  sizeIn    = dataIn->getLength() / sizeof(__m128);
+    size_t  sizeOut   = dataOut->getLength() / sizeof(__m128);
+    __u128  gain128;
 
     if ((sizeIn % d_frameSize) != 0) {
         PDEBUG("%zu != %zu\n", sizeIn, d_frameSize);
@@ -112,15 +116,15 @@ int GainControl::process(Buffer* const dataIn, Buffer* dataOut)
             out[sample] = _mm_mul_ps(in[sample], gain128.m);
         }
 
-        in += d_frameSize;
+        in  += d_frameSize;
         out += d_frameSize;
     }
 #else // !__SSE__
     const complexf* in = reinterpret_cast<const complexf*>(dataIn->getData());
-    complexf* out = reinterpret_cast<complexf*>(dataOut->getData());
-    size_t sizeIn = dataIn->getLength() / sizeof(complexf);
+    complexf* out  = reinterpret_cast<complexf*>(dataOut->getData());
+    size_t sizeIn  = dataIn->getLength() / sizeof(complexf);
     size_t sizeOut = dataOut->getLength() / sizeof(complexf);
-    float gain;
+    float  gain;
 
     if ((sizeIn % d_frameSize) != 0) {
         PDEBUG("%zu != %zu\n", sizeIn, d_frameSize);
@@ -140,11 +144,11 @@ int GainControl::process(Buffer* const dataIn, Buffer* dataOut)
             out[sample] = in[sample] * gain;
         }
 
-        in += d_frameSize;
+        in  += d_frameSize;
         out += d_frameSize;
     }
 #endif // __SSE__
-    
+
     return sizeOut;
 }
 
@@ -154,15 +158,7 @@ __m128 GainControl::computeGainFix(const __m128* in, size_t sizeIn)
 {
     return _mm_set1_ps(512.0f);
 }
-#else // !__SSE__
-float GainControl::computeGainFix(const complexf* in, size_t sizeIn)
-{
-    return 512.0f;
-}
-#endif // __SSE__
 
-
-#ifdef __SSE__
 __m128 GainControl::computeGainMax(const __m128* in, size_t sizeIn)
 {
     __u128 gain128;
@@ -201,69 +197,18 @@ __m128 GainControl::computeGainMax(const __m128* in, size_t sizeIn)
     ////////////////////////////////////////////////////////////////////////////
     // max = max(-min, max)
     max128.m = _mm_max_ps(_mm_mul_ps(min128.m, _mm_set1_ps(-1.0f)), max128.m);
+
     // Detect NULL
     if ((int)max128.f[0] != 0) {
         gain128.m = _mm_div_ps(factor128, max128.m);
-    } else {
+    }
+    else {
         gain128.m = _mm_set1_ps(1.0f);
     }
 
     return gain128.m;
 }
-#else // !__SSE__
-float GainControl::computeGainMax(const complexf* in, size_t sizeIn)
-{
-    float gain;
-    float min;
-    float max;
-    static const float factor = 0x7fff;
 
-    ////////////////////////////////////////////////////////////////////////
-    // Computing max, min and average
-    ////////////////////////////////////////////////////////////////////////
-    min = __FLT_MAX__;
-    max = __FLT_MIN__;
-
-    for (size_t sample = 0; sample < sizeIn; ++sample) {
-        if (in[sample].real() < min) {
-            min = in[sample].real();
-        }
-        if (in[sample].real() > max) {
-            max = in[sample].real();
-        }
-        if (in[sample].imag() < min) {
-            min = in[sample].imag();
-        }
-        if (in[sample].imag() > max) {
-            max = in[sample].imag();
-        }
-    }
-
-    PDEBUG("********** Min:  %10f **********\n", min);
-    PDEBUG("********** Max:  %10f **********\n", max);
-
-    ////////////////////////////////////////////////////////////////////////////
-    // Computing gain
-    ////////////////////////////////////////////////////////////////////////////
-    // gain = factor128 / max(-min, max)
-    min = -min;
-    if (min > max) {
-        max = min;
-    }
-
-    // Detect NULL
-    if ((int)max != 0) {
-        gain = factor / max;
-    } else {
-        gain = 1.0f;
-    }
-
-    return gain;
-}
-#endif // __SSE__
-
-
-#ifdef __SSE__
 __m128 GainControl::computeGainVar(const __m128* in, size_t sizeIn)
 {
     __u128 gain128;
@@ -273,15 +218,12 @@ __m128 GainControl::computeGainVar(const __m128* in, size_t sizeIn)
     static const __m128 factor128 = _mm_set1_ps(0x7fff);
 
     mean128.m = _mm_setzero_ps();
-//    var128.m = _mm_setzero_ps();
 
     for (size_t sample = 0; sample < sizeIn; ++sample) {
         __m128 delta128 = _mm_sub_ps(in[sample], mean128.m);
         __m128 i128 = _mm_set1_ps(sample + 1);
         __m128 q128 = _mm_div_ps(delta128, i128);
         mean128.m = _mm_add_ps(mean128.m, q128);
-//        var128.m = _mm_add_ps(var128.m,
-//                _mm_mul_ps(delta128, _mm_sub_ps(in[sample], mean128.m)));
     }
 
     // Merging average
@@ -328,7 +270,65 @@ __m128 GainControl::computeGainVar(const __m128* in, size_t sizeIn)
 
     return gain128.m;
 }
+
 #else // !__SSE__
+
+float GainControl::computeGainFix(const complexf* in, size_t sizeIn)
+{
+    return 512.0f;
+}
+
+float GainControl::computeGainMax(const complexf* in, size_t sizeIn)
+{
+    float gain;
+    float min;
+    float max;
+    static const float factor = 0x7fff;
+
+    ////////////////////////////////////////////////////////////////////////
+    // Computing max, min and average
+    ////////////////////////////////////////////////////////////////////////
+    min = __FLT_MAX__;
+    max = __FLT_MIN__;
+
+    for (size_t sample = 0; sample < sizeIn; ++sample) {
+        if (in[sample].real() < min) {
+            min = in[sample].real();
+        }
+        if (in[sample].real() > max) {
+            max = in[sample].real();
+        }
+        if (in[sample].imag() < min) {
+            min = in[sample].imag();
+        }
+        if (in[sample].imag() > max) {
+            max = in[sample].imag();
+        }
+    }
+
+    PDEBUG("********** Min:  %10f **********\n", min);
+    PDEBUG("********** Max:  %10f **********\n", max);
+
+    ////////////////////////////////////////////////////////////////////////////
+    // Computing gain
+    ////////////////////////////////////////////////////////////////////////////
+    // gain = factor128 / max(-min, max)
+    min = -min;
+    if (min > max) {
+        max = min;
+    }
+
+    // Detect NULL
+    if ((int)max != 0) {
+        gain = factor / max;
+    }
+    else {
+        gain = 1.0f;
+    }
+
+    return gain;
+}
+
 float GainControl::computeGainVar(const complexf* in, size_t sizeIn)
 {
     float gain;
@@ -352,9 +352,10 @@ float GainControl::computeGainVar(const complexf* in, size_t sizeIn)
     ////////////////////////////////////////////////////////////////////////
     var = complexf(0.0f, 0.0f);
     for (size_t sample = 0; sample < sizeIn; ++sample) {
-        complexf diff = in[sample] - mean;
-        complexf delta = complexf(diff.real() * diff.real(), diff.imag() * diff.imag()) - var;
-        float i = sample + 1;
+        complexf diff  = in[sample] - mean;
+        complexf delta = complexf(diff.real() * diff.real(),
+                                  diff.imag() * diff.imag()) - var;
+        float    i = sample + 1;
         complexf q = delta / i;
         var = var + q;
     }
@@ -372,13 +373,14 @@ float GainControl::computeGainVar(const complexf* in, size_t sizeIn)
     // Detect NULL
     if ((int)var.real() == 0) {
         gain = factor / var.real();
-    } else {
+    }
+    else {
         gain = 1.0f;
     }
 
     return gain;
 }
-#endif // __SSE__
+#endif // !__SSE__
 
 void GainControl::set_parameter(const string& parameter, const string& value)
 {
