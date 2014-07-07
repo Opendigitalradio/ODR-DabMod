@@ -1,6 +1,11 @@
 /*
    Copyright (C) 2007, 2008, 2009, 2010, 2011 Her Majesty the Queen in
    Right of Canada (Communications Research Center Canada)
+
+   Copyright (C) 2014
+   Matthias P. Braendli, matthias.braendli@mpb.li
+
+    http://opendigitalradio.org
  */
 /*
    This file is part of ODR-DabMod.
@@ -26,6 +31,18 @@
 #   include "config.h"
 #endif
 
+// This enables a rudimentary histogram functionality
+// It gets printed when the OutputMemory gets destroyed
+#define OUTPUT_MEM_HISTOGRAM 0
+
+#if OUTPUT_MEM_HISTOGRAM
+// The samples can go up to 100000 in value, make
+// sure that HIST_BINS * HIST_BIN_SIZE is large
+// enough !
+#  define HIST_BINS 10
+#  define HIST_BIN_SIZE 10000
+#endif
+
 
 #include "ModOutput.h"
 
@@ -42,7 +59,14 @@ public:
 
 protected:
     Buffer* myDataOut;
+
+#if OUTPUT_MEM_HISTOGRAM
+    // keep track of max value
+    float    myMax;
+
+    long int myHistogram[HIST_BINS];
+#endif
 };
 
-
 #endif // OUTPUT_MEMORY_H
+

@@ -1,6 +1,11 @@
 /*
    Copyright (C) 2007, 2008, 2009, 2010, 2011 Her Majesty the Queen in
    Right of Canada (Communications Research Center Canada)
+
+   Copyright (C) 2014
+   Matthias P. Braendli, matthias.braendli@mpb.li
+
+    http://opendigitalradio.org
  */
 /*
    This file is part of ODR-DabMod.
@@ -24,6 +29,7 @@
 
 #include <stdexcept>
 #include <string.h>
+#include <math.h>
 
 
 OutputMemory::OutputMemory(Buffer* dataOut)
@@ -32,11 +38,29 @@ OutputMemory::OutputMemory(Buffer* dataOut)
     PDEBUG("OutputMemory::OutputMemory(%p) @ %p\n", dataOut, this);
 
     setOutput(dataOut);
+
+#if OUTPUT_MEM_HISTOGRAM
+    myMax = 0.0f;
+    for (int i = 0; i < HIST_BINS; i++) {
+        myHistogram[i] = 0.0f;
+    }
+#endif
 }
 
 
 OutputMemory::~OutputMemory()
 {
+#if OUTPUT_MEM_HISTOGRAM
+    fprintf(stderr, "* OutputMemory max %f\n", myMax);
+    fprintf(stderr, "* HISTOGRAM\n");
+
+    for (int i = 0; i < HIST_BINS; i++) {
+        fprintf(stderr, "** %5d - %5d: %ld\n",
+                i * HIST_BIN_SIZE,
+                (i+1) * HIST_BIN_SIZE - 1,
+                myHistogram[i]);
+    }
+#endif
     PDEBUG("OutputMemory::~OutputMemory() @ %p\n", this);
 }
 
@@ -56,5 +80,19 @@ int OutputMemory::process(Buffer* dataIn, Buffer* dataOut)
 
     *myDataOut = *dataIn;
 
+#if OUTPUT_MEM_HISTOGRAM
+    const float* in = (const float*)dataIn->getData();
+    const size_t len = dataIn->getLength() / sizeof(float);
+
+    for (size_t i = 0; i < len; i++) {
+        float absval = fabsf(in[i]);
+        if (myMax < absval)
+            myMax = absval;
+
+        myHistogram[lrintf(absval) / HIST_BIN_SIZE]++;
+    }
+#endif
+
     return myDataOut->getLength();
 }
+
