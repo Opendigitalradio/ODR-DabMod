@@ -684,7 +684,17 @@ int main(int argc, char* argv[])
     }
 #if defined(HAVE_OUTPUT_UHD)
     else if (useUHDOutput) {
-        normalise = 1.0f/32768.0f;
+
+        /* UHD requires the input I and Q samples to be in the interval
+         * [-1.0,1.0], otherwise they get truncated, which creates very
+         * wide-spectrum spikes. Depending on the Transmission Mode, the
+         * Gain Mode and the sample rate (and maybe other parameters), the
+         * samples can have peaks up to about 48000. The value of 50000
+         * should guarantee that with a digital gain of 1.0, UHD never clips
+         * our samples.
+         */
+        normalise = 1.0f/50000.0f;
+
         outputuhd_conf.sampleRate = outputRate;
         try {
             output = new OutputUHD(outputuhd_conf, logger);
