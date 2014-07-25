@@ -102,12 +102,15 @@ int BlockPartitioner::process(std::vector<Buffer*> dataIn, Buffer* dataOut)
 #endif
 
     if (dataIn[0]->getLength() != d_ficSize) {
+        fprintf(stderr, "FIC is length %zu, should be %zu\n",
+                dataIn[0]->getLength(), d_ficSize);
+
         throw std::runtime_error(
-                "BlockPartitioner::process input size not valid!");
+                "BlockPartitioner::process input 0 size not valid!");
     }
     if (dataIn[1]->getLength() != d_cifSize) {
         throw std::runtime_error(
-                "BlockPartitioner::process input size not valid!");
+                "BlockPartitioner::process input 1 size not valid!");
     }
 
     // Synchronize CIF phase
