@@ -362,10 +362,6 @@ int main(int argc, char* argv[])
                 goto END_MAIN;
             }
         }
-        else {
-            rc = new RemoteControllerDummy();
-        }
-
 
         // input params:
         if (pt.get("input.loop", 0) == 1) {
@@ -567,6 +563,11 @@ int main(int argc, char* argv[])
         outputuhd_conf.muteNoTimestamps = (pt.get("delaymanagement.mutenotimestamps", 0) == 1);
 #endif
     }
+    if (!rc) {
+        logger.level(warn) << "No Remote-Control started";
+        rc = new RemoteControllerDummy();
+    }
+
 
     logger.level(info) << "Starting up";
 
