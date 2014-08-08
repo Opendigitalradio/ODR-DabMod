@@ -3,7 +3,7 @@ OVERVIEW
 ODR-DabMod is a fork of CRC-DabMod, which was developed by the Communications
 Research Center Canada. It has been forked by the Opendigitalradio project.
 
-ODR-DabMod is a DAB (Digital Audio Broadcasting) multiplexer compliant
+ODR-DabMod is a DAB (Digital Audio Broadcasting) modulator compliant
 to ETSI EN 300 401.
 
 In addition to the features of CRC-DabMod, this fork contains:
