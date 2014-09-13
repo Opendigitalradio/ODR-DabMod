@@ -667,7 +667,13 @@ int main(int argc, char* argv[])
         ret = -1;
         goto END_MAIN;
 #else
-        inputZeroMQReader.Open(inputName.substr(4));
+        // The URL might start with zmq+tcp://
+        if (inputName.substr(0, 4) == "zmq+") {
+            inputZeroMQReader.Open(inputName.substr(4));
+        }
+        else {
+            inputZeroMQReader.Open(inputName);
+        }
         inputReader = &inputZeroMQReader;
 #endif
     }
