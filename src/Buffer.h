@@ -29,28 +29,47 @@
 
 #include <unistd.h>
 
-
+/* Buffer is a container for a byte array, that is memcpy'ed
+ * on assignment and by the copy-constructor.
+ *
+ * The allocation/freeing of the data is handled internally.
+ */
 class Buffer {
-protected:
-    size_t len;
-    size_t size;
-    void *data;
+    protected:
+        /* Current length of the data in the Buffer */
+        size_t len;
 
-public:
-    Buffer(const Buffer& copy);
-    Buffer(size_t len = 0, const void *data = NULL);
-    ~Buffer();
+        /* Allocated size of the Buffer */
+        size_t size;
 
-    Buffer &operator=(const Buffer &copy);
-    Buffer &operator+=(const Buffer &copy);
+        /* Pointer to the data. Memory allocation is entirely
+         * handled by setLength.
+         */
+        void *data;
 
-    void setLength(size_t len);
-    void setData(const void *data, size_t len);
-    void appendData(const void *data, size_t len);
+    public:
+        Buffer(const Buffer& copy);
+        Buffer(size_t len = 0, const void *data = NULL);
+        ~Buffer();
 
-    size_t getLength();
-    void *getData();
+        /* Resize the buffer, reallocate memory if needed */
+        void setLength(size_t len);
+
+        /* Replace the data in the Buffer by the new data given.
+         * Reallocates memory if needed.
+         */
+        void setData(const void *data, size_t len);
+        Buffer &operator=(const Buffer &copy);
+
+        /* Concatenate the current data with the new data given.
+         * Reallocates memory if needed.
+         */
+        void appendData(const void *data, size_t len);
+        Buffer &operator+=(const Buffer &copy);
+
+        size_t getLength() const { return len; }
+        void *getData() const { return data; }
 };
 
-
 #endif // BUFFER_H
+

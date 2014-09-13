@@ -73,8 +73,10 @@ void Buffer::setLength(size_t len)
         /* Align to 32-byte boundary for AVX. */
         data = memalign(32, len);
 
-        memcpy(data, tmp, this->len);
-        free(tmp);
+        if (tmp != NULL) {
+            memcpy(data, tmp, this->len);
+            free(tmp);
+        }
         size = len;
     }
     this->len = len;
@@ -97,14 +99,3 @@ void Buffer::appendData(const void *data, size_t len)
     }
 }
 
-
-size_t Buffer::getLength()
-{
-    return len;
-}
-
-
-void *Buffer::getData()
-{
-    return data;
-}
