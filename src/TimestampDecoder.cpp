@@ -2,8 +2,10 @@
    Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010 Her Majesty the
    Queen in Right of Canada (Communications Research Center Canada)
 
-   Includes modifications for which no copyright is claimed
-   2012, Matthias P. Braendli, matthias.braendli@mpb.li
+   Copyright (C) 2014
+   Matthias P. Braendli, matthias.braendli@mpb.li
+
+    http://opendigitalradio.org
  */
 /*
    This file is part of ODR-DabMod.
@@ -45,6 +47,7 @@ void TimestampDecoder::calculateTimestamp(struct frame_timestamp& ts)
     ts_queued->timestamp_valid = full_timestamp_received_mnsc;
     ts_queued->timestamp_sec = time_secs;
     ts_queued->timestamp_pps_offset = time_pps;
+    ts_queued->fct = latestFCT;
 
     ts_queued->timestamp_refresh = offset_changed;
     offset_changed = false;
@@ -65,6 +68,7 @@ void TimestampDecoder::calculateTimestamp(struct frame_timestamp& ts)
         ts.timestamp_sec = 0;
         ts.timestamp_pps_offset = 0;
         ts.timestamp_refresh = false;
+        ts.fct = 0;
     }
     else {
         //fprintf(stderr, ". %zu ", queue_timestamps.size());
@@ -179,13 +183,17 @@ void TimestampDecoder::updateTimestampPPS(double pps)
     }
 
     time_pps = pps;
-
 }
 
-void TimestampDecoder::updateTimestampEti(int framephase, uint16_t mnsc, double pps)
+void TimestampDecoder::updateTimestampEti(
+        int framephase,
+        uint16_t mnsc,
+        double pps,
+        uint32_t fct)
 {
     updateTimestampPPS(pps);
     pushMNSCData(framephase, mnsc);
+    latestFCT = fct;
 }
 
 

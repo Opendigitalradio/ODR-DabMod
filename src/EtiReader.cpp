@@ -2,8 +2,10 @@
    Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010, 2011 Her Majesty
    the Queen in Right of Canada (Communications Research Center Canada)
 
-   Includes modifications for which no copyright is claimed
-   2012, Matthias P. Braendli, matthias.braendli@mpb.li
+   Copyright (C) 2014
+   Matthias P. Braendli, matthias.braendli@mpb.li
+
+    http://opendigitalradio.org
  */
 /*
    This file is part of ODR-DabMod.
@@ -269,18 +271,17 @@ int EtiReader::process(Buffer* dataIn)
             }
             break;
         default:
-    //        throw std::runtime_error("Invalid state!");
+            // throw std::runtime_error("Invalid state!");
             PDEBUG("Invalid state (%i)!", state);
             input_size = 0;
         }
     }
-    
+
     // Update timestamps
     myTimestampDecoder.updateTimestampEti(eti_fc.FP & 0x3,
-            eti_eoh.MNSC, 
-            getPPSOffset());
+            eti_eoh.MNSC, getPPSOffset(), eti_fc.FCT);
 
-    if (getFCT() % 125 == 0) //every 3 seconds is fine enough
+    if (eti_fc.FCT % 125 == 0) //every 3 seconds is fine enough
     {
         myTimestampDecoder.updateModulatorOffset();
     }
@@ -306,7 +307,3 @@ double EtiReader::getPPSOffset()
     return pps;
 }
 
-uint32_t EtiReader::getFCT()
-{
-    return eti_fc.FCT;
-}

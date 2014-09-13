@@ -2,8 +2,10 @@
    Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010, 2011 Her Majesty
    the Queen in Right of Canada (Communications Research Center Canada)
 
-   Includes modifications for which no copyright is claimed
-   2012, Matthias P. Braendli, matthias.braendli@mpb.li
+   Copyright (C) 2014
+   Matthias P. Braendli, matthias.braendli@mpb.li
+
+    http://opendigitalradio.org
  */
 /*
    This file is part of ODR-DabMod.
@@ -59,9 +61,6 @@ public:
     {
         myTimestampDecoder.calculateTimestamp(ts);
     }
-
-    /* Return the frame counter */
-    uint32_t getFCT();
 
     /* Returns true if we have valid time stamps in the ETI*/
     bool sourceContainsTimestamp();

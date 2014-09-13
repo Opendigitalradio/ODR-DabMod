@@ -58,6 +58,9 @@ OutputUHD::OutputUHD(
 {
     myMuting = 0; // is remote-controllable
 
+#if FAKE_UHD
+    MDEBUG("OutputUHD:Using fake UHD output");
+#else
     std::stringstream device;
     device << myConf.device;
 
@@ -198,6 +201,7 @@ OutputUHD::OutputUHD(
 
     // preparing output thread worker data
     uwd.myUsrp = myUsrp;
+#endif
 
     uwd.frame0.ts.timestamp_valid = false;
     uwd.frame1.ts.timestamp_valid = false;
@@ -257,7 +261,15 @@ int OutputUHD::process(Buffer* dataIn, Buffer* dataOut)
 
         myEtiReader->calculateTimestamp(ts);
         uwd.frame0.ts = ts;
-        uwd.frame0.fct = myEtiReader->getFCT();
+
+        switch (myEtiReader->getMode()) {
+            case 1: uwd.fct_increment = 4; break;
+            case 2:
+            case 3: uwd.fct_increment = 1; break;
+            case 4: uwd.fct_increment = 2; break;
+            default: break;
+        }
+
 
         activebuffer = 1;
 
@@ -287,13 +299,11 @@ int OutputUHD::process(Buffer* dataIn, Buffer* dataOut)
             memcpy(uwd.frame0.buf, dataIn->getData(), uwd.bufsize);
 
             uwd.frame0.ts = ts;
-            uwd.frame0.fct = myEtiReader->getFCT();
         }
         else if (activebuffer == 1) {
             memcpy(uwd.frame1.buf, dataIn->getData(), uwd.bufsize);
 
             uwd.frame1.ts = ts;
-            uwd.frame1.fct = myEtiReader->getFCT();
         }
 
         activebuffer = (activebuffer + 1) % 2;
@@ -322,9 +332,13 @@ void UHDWorker::process()
     // Transmit timeout
     const double timeout = 0.2;
 
+#if FAKE_UHD == 0
     uhd::stream_args_t stream_args("fc32"); //complex floats
     uhd::tx_streamer::sptr myTxStream = uwd->myUsrp->get_tx_stream(stream_args);
     size_t usrp_max_num_samps = myTxStream->get_max_num_samps();
+#else
+    size_t usrp_max_num_samps = 2048; // arbitrarily chosen
+#endif
 
     const complexf* in;
 
@@ -362,6 +376,19 @@ void UHDWorker::process()
 
         sizeIn = uwd->bufsize / sizeof(complexf);
 
+#if FAKE_UHD
+        if (expected_next_fct != -1) {
+            if (expected_next_fct != frame->ts.fct) {
+                uwd->logger->level(warn) <<
+                    "OutputUHD: Incorrect expect fct " << frame->ts.fct;
+
+                // TODO here we should disrupt the UHD streamer so that
+                // it resyncs to the correct timestamps
+            }
+        }
+
+        expected_next_fct = (frame->ts.fct + uwd->fct_increment) % 250;
+#else
         // Check for ref_lock
         if (uwd->check_refclk_loss)
         {
@@ -392,7 +419,7 @@ void UHDWorker::process()
                  * MNSC. We sleep through the frame.
                  */
                 uwd->logger->level(info) <<
-                    "OutputUHD: Throwing sample " << frame->fct <<
+                    "OutputUHD: Throwing sample " << frame->ts.fct <<
                     " away: incomplete timestamp " << tx_second <<
                     " + " << pps_offset;
                 usleep(20000); //TODO should this be TM-dependant ?
@@ -408,7 +435,7 @@ void UHDWorker::process()
                     "OutputUHD: Timestamp in the past! offset: " <<
                     md.time_spec.get_real_secs() - usrp_time <<
                     "  (" << usrp_time << ")"
-                    " frame " << frame->fct <<
+                    " frame " << frame->ts.fct <<
                     ", tx_second " << tx_second <<
                     ", pps " << pps_offset;
                 goto loopend; //skip the frame
@@ -433,7 +460,7 @@ void UHDWorker::process()
                         "OutputUHD (usrp time: %f): frame %d;"
                         "  tx_second %zu; pps %.9f\n",
                         usrp_time,
-                        frame->fct, tx_second, pps_offset);
+                        frame->ts.fct, tx_second, pps_offset);
             }
 
         }
@@ -444,20 +471,21 @@ void UHDWorker::process()
                 if (uwd->muting) {
                     uwd->logger->log(info,
                             "OutputUHD: Muting sample %d requested\n",
-                            frame->fct);
+                            frame->ts.fct);
                 }
                 else {
                     uwd->logger->log(info,
                             "OutputUHD: Muting sample %d : no timestamp\n",
-                            frame->fct);
+                            frame->ts.fct);
                 }
                 usleep(20000);
                 goto loopend;
             }
         }
+#endif
 
         PDEBUG("UHDWorker::process:max_num_samps: %zu.\n",
-                myTxStream->get_max_num_samps());
+                usrp_max_num_samps);
 
         while (running && !uwd->muting && (num_acc_samps < sizeIn)) {
             size_t samps_to_send = std::min(sizeIn - num_acc_samps, usrp_max_num_samps);
@@ -467,10 +495,16 @@ void UHDWorker::process()
             md.end_of_burst = (frame->ts.timestamp_refresh &&
                     (samps_to_send <= usrp_max_num_samps));
 
+#if FAKE_UHD
+            // This is probably very approximate
+            usleep( (1000000 / uwd->sampleRate) * samps_to_send);
+            size_t num_tx_samps = samps_to_send;
+#else
             //send a single packet
             size_t num_tx_samps = myTxStream->send(
                     &in[num_acc_samps],
                     samps_to_send, md, timeout);
+#endif
 
             num_acc_samps += num_tx_samps;
 
@@ -515,6 +549,7 @@ void UHDWorker::process()
 #endif
             }
 
+#if FAKE_UHD == 0
             uhd::async_metadata_t async_md;
             if (uwd->myUsrp->get_device()->recv_async_msg(async_md, 0)) {
                 const char* uhd_async_message = "";
@@ -545,11 +580,12 @@ void UHDWorker::process()
 
                 if (failure) {
                     uwd->logger->level(alert) << "Near frame " <<
-                            frame->fct << ": Received Async UHD Message '" << 
+                            frame->ts.fct << ": Received Async UHD Message '" << 
                             uhd_async_message << "'";
 
                 }
             }
+#endif
 
             /*
                bool got_async_burst_ack = false;
