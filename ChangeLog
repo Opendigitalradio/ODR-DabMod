@@ -1,6 +1,13 @@
 This file contains information about the changes done to
 the ODR-DabMod in this repository
 
+2014-09-26: Matthias P. Braendli <matthias@mpb.li>
+	(v0.4.5)
+	* odr-dabmod:
+		Change UHD normalisation to reduce risk of nonlinearities.
+		Add digital gain setting to RC.
+		Fix handling of timestamps when using ZMQ input, for the SFN
+		scenario.
 2014-05-20: Matthias P. Braendli <matthias@mpb.li>
 	(v0.4.4)
 	* odr-dabmod:
