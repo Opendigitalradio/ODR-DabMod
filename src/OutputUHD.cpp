@@ -346,7 +346,10 @@ void UHDWorker::process()
     md.start_of_burst = false;
     md.end_of_burst = false;
 
+    int expected_next_fct = -1;
+
     while (running) {
+        bool fct_discontinuity = false;
         md.has_time_spec = false;
         md.time_spec = uhd::time_spec_t(0.0);
         num_acc_samps = 0;
@@ -376,19 +379,20 @@ void UHDWorker::process()
 
         sizeIn = uwd->bufsize / sizeof(complexf);
 
-#if FAKE_UHD
+        /* Verify that the FCT value is correct. If we miss one transmission
+         * frame we must interrupt UHD and resync to the timestamps
+         */
         if (expected_next_fct != -1) {
-            if (expected_next_fct != frame->ts.fct) {
+            if (expected_next_fct != (int)frame->ts.fct) {
                 uwd->logger->level(warn) <<
                     "OutputUHD: Incorrect expect fct " << frame->ts.fct;
 
-                // TODO here we should disrupt the UHD streamer so that
-                // it resyncs to the correct timestamps
+                fct_discontinuity = true;
             }
         }
 
         expected_next_fct = (frame->ts.fct + uwd->fct_increment) % 250;
-#else
+
         // Check for ref_lock
         if (uwd->check_refclk_loss)
         {
@@ -482,7 +486,6 @@ void UHDWorker::process()
                 goto loopend;
             }
         }
-#endif
 
         PDEBUG("UHDWorker::process:max_num_samps: %zu.\n",
                 usrp_max_num_samps);
@@ -492,8 +495,13 @@ void UHDWorker::process()
 
             //ensure the the last packet has EOB set if the timestamps has been
             //refreshed and need to be reconsidered.
-            md.end_of_burst = (frame->ts.timestamp_refresh &&
-                    (samps_to_send <= usrp_max_num_samps));
+            //Also, if we saw that the FCT did not increment as expected, which
+            //could be due to a lost incoming packet.
+            md.end_of_burst = (
+                    uwd->sourceContainsTimestamp &&
+                    (frame->ts.timestamp_refresh || fct_discontinuity) &&
+                    samps_to_send <= usrp_max_num_samps );
+
 
 #if FAKE_UHD
             // This is probably very approximate
@@ -586,17 +594,6 @@ void UHDWorker::process()
                 }
             }
 #endif
-
-            /*
-               bool got_async_burst_ack = false;
-            //loop through all messages for the ACK packet (may have underflow messages in queue)
-            while (not got_async_burst_ack and uwd->myUsrp->get_device()->recv_async_msg(async_md, 0.2)){
-            got_async_burst_ack = (async_md.event_code == uhd::async_metadata_t::EVENT_CODE_BURST_ACK);
-            }
-            //std::cerr << (got_async_burst_ack? "success" : "fail") << std::endl;
-            // */
-
-
         }
 
         last_pps = pps_offset;

@@ -297,11 +297,13 @@ bool EtiReader::sourceContainsTimestamp()
 
 double EtiReader::getPPSOffset()
 {
-    if (!sourceContainsTimestamp())
+    if (!sourceContainsTimestamp()) {
+        //fprintf(stderr, "****** SOURCE NO TS\n");
         return 0.0;
+    }
 
     uint32_t timestamp = ntohl(eti_tist.TIST) & 0xFFFFFF;
-    //fprintf(stderr, "TIST 0x%x\n", timestamp);
+    //fprintf(stderr, "****** TIST 0x%x\n", timestamp);
     double pps = timestamp / 16384000.0; // seconds
 
     return pps;

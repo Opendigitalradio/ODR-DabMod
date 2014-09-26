@@ -35,7 +35,7 @@
 #include "Eti.h"
 #include "Log.h"
 
-//#define MDEBUG(fmt, args...) fprintf (LOG, fmt , ## args) 
+//#define MDEBUG(fmt, args...) fprintf (LOG, "*****" fmt , ## args) 
 #define MDEBUG(fmt, args...) PDEBUG(fmt, ## args) 
 
 
@@ -52,6 +52,7 @@ void TimestampDecoder::calculateTimestamp(struct frame_timestamp& ts)
     ts_queued->timestamp_refresh = offset_changed;
     offset_changed = false;
 
+    MDEBUG("time_secs=%d, time_pps=%f\n", time_secs, time_pps);
     *ts_queued += timestamp_offset;
 
     queue_timestamps.push(ts_queued);
@@ -90,7 +91,7 @@ void TimestampDecoder::calculateTimestamp(struct frame_timestamp& ts)
         delete ts_queued;
     }
 
-    PDEBUG("Timestamp queue size %zu, delay_calc %u\n",
+    MDEBUG("Timestamp queue size %zu, delay_calc %u\n",
             queue_timestamps.size(),
             modconfig.delay_calculation_pipeline_stages);
 
@@ -157,13 +158,14 @@ void TimestampDecoder::pushMNSCData(int framephase, uint16_t mnsc)
 
 void TimestampDecoder::updateTimestampSeconds(uint32_t secs)
 {
-    MDEBUG("TimestampDecoder::updateTimestampSeconds(%d)\n", secs);
     if (inhibit_second_update > 0)
     {
+        MDEBUG("TimestampDecoder::updateTimestampSeconds(%d) inhibit\n", secs);
         inhibit_second_update--;
     }
     else
     {
+        MDEBUG("TimestampDecoder::updateTimestampSeconds(%d) apply\n", secs);
         time_secs = secs;
     }
 }
@@ -229,13 +231,16 @@ bool TimestampDecoder::updateModulatorOffset()
                 }
                 catch (bad_lexical_cast& e)
                 {
-                    myLogger.level(error) << "Error parsing timestamp offset from file '" << modconfig.offset_filename << "'";
+                    myLogger.level(error) <<
+                        "Error parsing timestamp offset from file '" <<
+                        modconfig.offset_filename << "'";
                     r = false;
                 }
             }
             else
             {
-                myLogger.level(error) << "Error reading from timestamp offset file: eof reached\n";
+                myLogger.level(error) <<
+                    "Error reading from timestamp offset file: eof reached\n";
                 r = false;
             }
             filestream.close();
@@ -252,7 +257,9 @@ bool TimestampDecoder::updateModulatorOffset()
             if (timestamp_offset != newoffset)
             {
                 timestamp_offset = newoffset;
-                myLogger.level(info) << "TimestampDecoder::updateTimestampOffset: new offset is " << timestamp_offset;
+                myLogger.level(info) <<
+                    "TimestampDecoder::updateTimestampOffset: new offset is " <<
+                    timestamp_offset;
                 offset_changed = true;
             }
 
@@ -264,3 +271,4 @@ bool TimestampDecoder::updateModulatorOffset()
         return false;
     }
 }
+
