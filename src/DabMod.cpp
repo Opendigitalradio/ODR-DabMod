@@ -56,11 +56,11 @@
 #include <stdexcept>
 #include <signal.h>
 
-#ifdef HAVE_NETINET_IN_H
+#if HAVE_NETINET_IN_H
 #   include <netinet/in.h>
 #endif
 
-#ifdef HAVE_DECL__MM_MALLOC
+#if HAVE_DECL__MM_MALLOC
 #   include <mm_malloc.h>
 #else
 #   define memalign(a, b)   malloc(b)

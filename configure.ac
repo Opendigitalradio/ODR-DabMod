@@ -133,6 +133,26 @@ AC_COMPILE_IFELSE(
         [AC_MSG_RESULT([yes])], [AC_MSG_RESULT([no]) AC_DEFINE([M_PIl], [M_PI], [Replacing define])])
 AC_LANG_POP([C++])
 
+# Check for SSE
+AC_MSG_CHECKING(for SSE in current arch/CFLAGS)
+AC_LINK_IFELSE([
+AC_LANG_PROGRAM([[
+#include <xmmintrin.h>
+__m128 testfunc(float *a, float *b) {
+  return _mm_add_ps(_mm_loadu_ps(a), _mm_loadu_ps(b));
+}
+]])],
+[
+has_sse=yes
+],
+[
+has_sse=no
+]
+)
+AC_MSG_RESULT($has_sse)
+
+AM_CONDITIONAL([HAVE_SSE], [test "x$has_sse" = "xyes"])
+
 AM_CONDITIONAL([IS_GIT_REPO], [test -d '.git'])
 
 AC_TYPE_SIGNAL

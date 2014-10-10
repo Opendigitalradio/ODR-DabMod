@@ -26,7 +26,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <malloc.h>
-#ifdef HAVE_DECL__MM_MALLOC
+#if HAVE_DECL__MM_MALLOC
 #   include <mm_malloc.h>
 #else
 #   define memalign(a, b)   malloc(b)

@@ -23,10 +23,10 @@
 #include "PcDebug.h"
 
 
-#ifdef __ppc__
-#   define memalign(a, b)   malloc(b)
-#else // !__ppc__
+#if HAVE_DECL__MM_MALLOC
 #   include <mm_malloc.h>
+#else
+#   define memalign(a, b)   malloc(b)
 #endif
 #include <sys/types.h>
 #include <string.h>
