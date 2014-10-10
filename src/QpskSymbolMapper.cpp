@@ -109,7 +109,6 @@ int QpskSymbolMapper::process(Buffer* const dataIn, Buffer* dataOut)
         inOffset += d_carriers / 8;
     }
 #else // !__SSE__
-#error "Code section not verified"
     const unsigned char* in = reinterpret_cast<const unsigned char*>(dataIn->getData());
     float* out = reinterpret_cast<float*>(dataOut->getData());
     if (dataIn->getLength() % (d_carriers / 4) != 0) {
@@ -142,7 +141,6 @@ int QpskSymbolMapper::process(Buffer* const dataIn, Buffer* dataOut)
     size_t inOffset = 0;
     size_t outOffset = 0;
     unsigned char tmp;
-    fprintf(stderr, "TODO: Validate QpskSymbolMapper::process without SSE\n");
     for (size_t i = 0; i < dataIn->getLength(); i += d_carriers / 4) {
         for (size_t j = 0; j < d_carriers / 8; ++j) {
             tmp =  (in[inOffset] & 0xc0) >> 4;
@@ -150,15 +148,15 @@ int QpskSymbolMapper::process(Buffer* const dataIn, Buffer* dataOut)
             memcpy(&out[outOffset], symbols[tmp], sizeof(float) * 4);
             tmp =  (in[inOffset] & 0x30) >> 2;
             tmp |= (in[inOffset + (d_carriers / 8)] & 0x30) >> 4;
-            memcpy(&out[outOffset + 1], symbols[tmp], sizeof(float) * 4);
+            memcpy(&out[outOffset + 4], symbols[tmp], sizeof(float) * 4);
             tmp =  (in[inOffset] & 0x0c);
             tmp |= (in[inOffset + (d_carriers / 8)] & 0x0c) >> 2;
-            memcpy(&out[outOffset + 2], symbols[tmp], sizeof(float) * 4);
+            memcpy(&out[outOffset + 8], symbols[tmp], sizeof(float) * 4);
             tmp =  (in[inOffset] & 0x03) << 2;
             tmp |= (in[inOffset + (d_carriers / 8)] & 0x03);
-            memcpy(&out[outOffset + 3], symbols[tmp], sizeof(float) * 4);
+            memcpy(&out[outOffset + 12], symbols[tmp], sizeof(float) * 4);
             ++inOffset;
-            outOffset += 4;
+            outOffset += 4*4;
         }
         inOffset += d_carriers / 8;
     }
@@ -166,3 +164,4 @@ int QpskSymbolMapper::process(Buffer* const dataIn, Buffer* dataOut)
 
     return 1;
 }
+
