@@ -63,6 +63,9 @@ AC_ARG_ENABLE([trace],
 AC_ARG_ENABLE([fft_simd],
         [AS_HELP_STRING([--enable-fft-simd], [Enable SIMD instructions for kiss-fft (unstable)])],
         [], [enable_fft_simd=no])
+AC_ARG_ENABLE([fftw],
+        [AS_HELP_STRING([--enable-fftw], [Use FFTW3 instead of Kiss FFT])],
+        [], [enable_fftw=no])
 # ZeroMQ message queue input
 AC_ARG_ENABLE([input_zeromq],
         AS_HELP_STRING([--enable-input-zeromq], [Enable ZeroMQ input]))
@@ -83,6 +86,10 @@ AS_IF([test "x$enable_trace" != "xno"],
         [EXTRA="$EXTRA -DDEBUG"])
 AS_IF([test "x$enable_fft_simd" != "xno"],
         [EXTRA="$EXTRA -DUSE_SIMD"])
+AS_IF([test "x$enable_fftw" != "xno"],
+        [EXTRA="$EXTRA -DUSE_FFTW"])
+
+AM_CONDITIONAL([USE_KISS_FFT], [test "x$enable_fftw" = "xno"])
 
 AM_CONDITIONAL([HAVE_INPUT_ZEROMQ_TEST], [test "x$enable_input_zeromq" = "xyes"])
 
@@ -90,6 +97,7 @@ AM_CONDITIONAL([HAVE_INPUT_ZEROMQ_TEST], [test "x$enable_input_zeromq" = "xyes"]
 AC_SUBST([CFLAGS], ["$OPTIM $DEBUG $EXTRA"])
 AC_SUBST([CXXFLAGS], ["$OPTIM $DEBUG $EXTRA"])
 
+# Checks for libraries.
 AS_IF([test "x$enable_output_uhd" = "xyes"],
         [AC_DEFINE(HAVE_OUTPUT_UHD, [1], [Define if UHD output is enabled]) ,
          AC_CHECK_LIB([uhd], [main], [], [AC_MSG_ERROR([library uhd is missing])])])
@@ -102,7 +110,11 @@ AC_CHECK_LIB([boost_thread], [main], [], [AC_MSG_ERROR([library boost_thread is 
 
 AC_CHECK_LIB([rt], [clock_gettime], [], [AC_MSG_ERROR([library rt is missing])])
 
-# Checks for libraries.
+AS_IF([test "x$enable_fftw" != "xno"],
+    [AC_CHECK_LIB([fftw3f], [fftw_execute],
+        AC_MSG_NOTICE([Found FFTW3]),
+        AC_MSG_NOTICE([Failed to find FFTW3]) )] )
+
 AS_IF([test "x$enable_debug" != "xno"],
         [AS_IF([test "x$with_debug_malloc" != "xno"],
             [AS_IF([test "x$with_debug_malloc" = "xyes"],
@@ -162,3 +174,37 @@ AC_CONFIG_FILES([Makefile
                  lib/Makefile
                  src/Makefile])
 AC_OUTPUT
+
+echo
+echo "***********************************************"
+echo
+enabled=""
+disabled=""
+for feat in debug prof trace fftw fft_simd output_uhd input_zeromq
+do
+    eval var=\$enable_$feat
+    AS_IF([test "x$var" = "xyes"],
+          [enabled="$enabled $feat"],
+          [disabled="$disabled $feat"])
+done
+echo "  Features"
+echo "  Enabled: $enabled"
+echo "  Disabled: $disabled"
+echo
+echo
+enabled=""
+disabled=""
+for feat in with_debug_malloc has_sse
+do
+    eval var=\$$feat
+    AS_IF([test "x$var" = "xyes"],
+          [enabled="$enabled $feat"],
+          [disabled="$disabled $feat"])
+done
+echo "  Options"
+echo "  Active: $enabled"
+echo "  Disabled: $disabled"
+
+echo
+echo "***********************************************"
+echo

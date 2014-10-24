@@ -40,6 +40,8 @@ else
 SIMD_CFLAGS =
 endif
 
+bin_PROGRAMS =  odr-dabmod
+
 FFT_DIR=$(top_builddir)/lib/kiss_fft129
 FFT_INC=-I$(FFT_DIR) -I$(FFT_DIR)/tools
 FFT_SRC=$(FFT_DIR)/kiss_fft.c $(FFT_DIR)/kiss_fft.h $(FFT_DIR)/tools/kiss_fftr.c $(FFT_DIR)/tools/kiss_fftr.h kiss_fftsimd.c kiss_fftsimd.h
@@ -47,11 +49,15 @@ FFT_FLG=-ffast-math
 
 .PHONY: kiss_fft129 reed-solomon-4.0
 
-bin_PROGRAMS =  odr-dabmod
-
 DabModulator.cpp:   $(FFT_DIR)
 
 BUILT_SOURCES:  $(FFT_DIR)
+
+if USE_KISS_FFT
+FFT_LDADD=
+else
+FFT_LDADD=-lfftw3f -lm
+endif
 
 $(FFT_DIR):
 	if [ ! -e $(FFT_DIR) ]; then \
@@ -59,7 +65,7 @@ $(FFT_DIR):
 	fi
 
 odr_dabmod_CPPFLAGS = -Wall $(FFT_INC) $(FFT_FLG) $(SIMD_CFLAGS) $(GITVERSION_FLAGS)
-odr_dabmod_LDADD    = $(ZMQ_LIBS)
+odr_dabmod_LDADD    = $(ZMQ_LIBS) $(FFT_LDADD)
 odr_dabmod_SOURCES  = DabMod.cpp \
                       PcDebug.h \
                       porting.c porting.h \
@@ -114,3 +120,4 @@ EXTRA_DIST	=kiss_fftsimd.c kiss_fftsimd.h
 
 clean-local:
 	rm -rf $(FFT_DIR)
+

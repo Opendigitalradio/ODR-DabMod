@@ -1,6 +1,11 @@
 /*
    Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010, 2011 Her Majesty
    the Queen in Right of Canada (Communications Research Center Canada)
+
+   Copyright (C) 2014
+   Matthias P. Braendli, matthias.braendli@mpb.li
+
+    http://opendigitalradio.org
  */
 /*
    This file is part of ODR-DabMod.
@@ -21,9 +26,15 @@
 
 #include "OfdmGenerator.h"
 #include "PcDebug.h"
-#include "kiss_fftsimd.h"
+#if USE_FFTW
+#  include "fftw3.h"
+#  define FFT_TYPE fftwf_complex
+#else
+#  include "kiss_fftsimd.h"
+#endif
 
 #include <stdio.h>
+#include <string.h>
 #include <stdexcept>
 #include <assert.h>
 #include <complex>
@@ -37,7 +48,11 @@ OfdmGenerator::OfdmGenerator(size_t nbSymbols,
     ModCodec(ModFormat(nbSymbols * nbCarriers * sizeof(FFT_TYPE)),
             ModFormat(nbSymbols * spacing * sizeof(FFT_TYPE))),
     myFftPlan(NULL),
+#if USE_FFTW
+    myFftIn(NULL), myFftOut(NULL),
+#else
     myFftBuffer(NULL),
+#endif
     myNbSymbols(nbSymbols),
     myNbCarriers(nbCarriers),
     mySpacing(spacing)
@@ -57,7 +72,8 @@ OfdmGenerator::OfdmGenerator(size_t nbSymbols,
         myNegDst = spacing - (nbCarriers / 2);
         myNegSrc = (nbCarriers + 1) / 2;
         myNegSize = nbCarriers / 2;
-    } else {
+    }
+    else {
         myPosDst = (nbCarriers & 1 ? 0 : 1);
         myPosSrc = nbCarriers / 2;
         myPosSize = (nbCarriers + 1) / 2;
@@ -77,8 +93,25 @@ OfdmGenerator::OfdmGenerator(size_t nbSymbols,
     PDEBUG("  myZeroDst: %u\n", myZeroDst);
     PDEBUG("  myZeroSize: %u\n", myZeroSize);
 
+#if USE_FFTW
+    const int N = mySpacing; // The size of the FFT
+    myFftIn = (FFT_TYPE*)fftwf_malloc(sizeof(FFT_TYPE) * N);
+    myFftOut = (FFT_TYPE*)fftwf_malloc(sizeof(FFT_TYPE) * N);
+    myFftPlan = fftwf_plan_dft_1d(N,
+            myFftIn, myFftOut,
+            FFTW_BACKWARD, FFTW_MEASURE);
+
+    if (sizeof(complexf) != sizeof(FFT_TYPE)) {
+        printf("sizeof(complexf) %d\n", sizeof(complexf));
+        printf("sizeof(FFT_TYPE) %d\n", sizeof(FFT_TYPE));
+        throw std::runtime_error(
+                "OfdmGenerator::process complexf size is not FFT_TYPE size!");
+    }
+#else
     myFftPlan = kiss_fft_alloc(mySpacing, 1, NULL, NULL);
     myFftBuffer = (FFT_TYPE*)memalign(16, mySpacing * sizeof(FFT_TYPE));
+#endif
+
 }
 
 
@@ -86,15 +119,31 @@ OfdmGenerator::~OfdmGenerator()
 {
     PDEBUG("OfdmGenerator::~OfdmGenerator() @ %p\n", this);
 
+#if USE_FFTW
+    if (myFftIn) {
+         fftwf_free(myFftIn);
+    }
+
+    if (myFftOut) {
+         fftwf_free(myFftOut);
+    }
+
+    if (myFftPlan) {
+        fftwf_destroy_plan(myFftPlan);
+    }
+
+#else
     if (myFftPlan != NULL) {
         kiss_fft_free(myFftPlan);
     }
+
     if (myFftBuffer != NULL) {
         free(myFftBuffer);
     }
-    kiss_fft_cleanup();
-}
 
+    kiss_fft_cleanup();
+#endif
+}
 
 int OfdmGenerator::process(Buffer* const dataIn, Buffer* dataOut)
 {
@@ -105,6 +154,7 @@ int OfdmGenerator::process(Buffer* const dataIn, Buffer* dataOut)
 
     FFT_TYPE* in = reinterpret_cast<FFT_TYPE*>(dataIn->getData());
     FFT_TYPE* out = reinterpret_cast<FFT_TYPE*>(dataOut->getData());
+
     size_t sizeIn = dataIn->getLength() / sizeof(complexf);
     size_t sizeOut = dataOut->getLength() / sizeof(complexf);
 
@@ -125,7 +175,27 @@ int OfdmGenerator::process(Buffer* const dataIn, Buffer* dataOut)
                 "OfdmGenerator::process output size not valid!");
     }
 
-#ifdef USE_SIMD
+#if USE_FFTW
+    // No SIMD/no-SIMD distinction, it's too early to optimize anything
+    for (size_t i = 0; i < myNbSymbols; ++i) {
+        myFftIn[0][0] = 0;
+        myFftIn[0][1] = 0;
+
+        bzero(&myFftIn[myZeroDst], myZeroSize * sizeof(FFT_TYPE));
+        memcpy(&myFftIn[myPosDst], &in[myPosSrc],
+                myPosSize * sizeof(FFT_TYPE));
+        memcpy(&myFftIn[myNegDst], &in[myNegSrc],
+                myNegSize * sizeof(FFT_TYPE));
+
+        fftwf_execute(myFftPlan);
+
+        memcpy(out, myFftOut, mySpacing * sizeof(FFT_TYPE));
+
+        in += myNbCarriers;
+        out += mySpacing;
+    }
+#else
+#  ifdef USE_SIMD
     for (size_t i = 0, j = 0; i < sizeIn; ) {
         // Pack 4 fft operations
         typedef struct {
@@ -154,7 +224,8 @@ int OfdmGenerator::process(Buffer* const dataIn, Buffer* dataOut)
                     dataBuffer[myNegDst + l].i[k] = cplxIn[i + myNegSrc + l].imag();
                 }
                 i += myNbCarriers;
-            } else {
+            }
+            else {
                 for (size_t l = 0; l < myNbCarriers; ++l) {
                     dataBuffer[l].r[k] = 0.0f;
                     dataBuffer[l].i[k] = 0.0f;
@@ -174,7 +245,7 @@ int OfdmGenerator::process(Buffer* const dataIn, Buffer* dataOut)
             }
         }
     }
-#else
+#  else
     for (size_t i = 0; i < myNbSymbols; ++i) {
         FFT_REAL(myFftBuffer[0]) = 0;
         FFT_IMAG(myFftBuffer[0]) = 0;
@@ -189,7 +260,9 @@ int OfdmGenerator::process(Buffer* const dataIn, Buffer* dataOut)
         in += myNbCarriers;
         out += mySpacing;
     }
+#  endif
 #endif
 
     return sizeOut;
 }
+
