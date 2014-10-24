@@ -102,8 +102,8 @@ OfdmGenerator::OfdmGenerator(size_t nbSymbols,
             FFTW_BACKWARD, FFTW_MEASURE);
 
     if (sizeof(complexf) != sizeof(FFT_TYPE)) {
-        printf("sizeof(complexf) %d\n", sizeof(complexf));
-        printf("sizeof(FFT_TYPE) %d\n", sizeof(FFT_TYPE));
+        printf("sizeof(complexf) %zu\n", sizeof(complexf));
+        printf("sizeof(FFT_TYPE) %zu\n", sizeof(FFT_TYPE));
         throw std::runtime_error(
                 "OfdmGenerator::process complexf size is not FFT_TYPE size!");
     }

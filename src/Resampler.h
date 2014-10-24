@@ -1,6 +1,11 @@
 /*
    Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010, 2011 Her Majesty
    the Queen in Right of Canada (Communications Research Center Canada)
+
+   Copyright (C) 2014
+   Matthias P. Braendli, matthias.braendli@mpb.li
+
+    http://opendigitalradio.org
  */
 /*
    This file is part of ODR-DabMod.
@@ -28,12 +33,19 @@
 
 #include "porting.h"
 #include "ModCodec.h"
-#include "kiss_fftsimd.h"
+#if USE_FFTW
+#  include <sys/types.h>
+#  include <fftw3.h>
 
+#  define FFT_TYPE fftwf_complex
+#  define FFT_PLAN fftwf_plan
 
-#include <sys/types.h>
-#include <kiss_fft.h>
-#include <tools/kiss_fftr.h>
+#else
+#  include "kiss_fftsimd.h"
+#  include <sys/types.h>
+#  include <kiss_fft.h>
+#  include <tools/kiss_fftr.h>
+#endif
 #include <complex>
 typedef std::complex<float> complexf;
 
@@ -68,5 +80,5 @@ protected:
     float myFactor;
 };
 
-
 #endif // RESAMPLER_H
+

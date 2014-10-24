@@ -36,14 +36,6 @@
 #define FFT_IMAG(a) (a).i
 
 
-#ifdef __SSE__
-#include <xmmintrin.h>
-union __u128 {
-    __m128 m;
-    float f[4];
-};
-#endif
-
 
 #ifdef USE_SIMD
 

@@ -27,11 +27,19 @@
 
 #include "GainControl.h"
 #include "PcDebug.h"
-#include "kiss_fftsimd.h"
 
 #include <stdio.h>
 #include <stdexcept>
 #include <string>
+
+#ifdef __SSE__
+#  include <xmmintrin.h>
+union __u128 {
+    __m128 m;
+    float f[4];
+};
+#endif
+
 
 using namespace std;
 
