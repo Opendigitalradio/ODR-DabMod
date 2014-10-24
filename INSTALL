@@ -4,6 +4,8 @@ Required dependencies:
     * Boost 1.41 or later
     * Optional ZeroMQ http://www.zeromq.org
         Use --disable-input-zeromq if you don't have it
+    * Optional FFTW 3.x (KISS FFT is default)
+        Enable with --enable-fftw
 
 Simple install procedure:
 =========================
@@ -16,22 +18,40 @@ Simple install procedure:
     [ as root ]
     % make install                          # Install ODR-DabMod
 
+Configure options
+=================
+The configure script can be launch with a variety of options:
+
+ --enable-input-zeromq  Enable ZeroMQ input (to be used with ODR-DabMux)
+ --enable-output-uhd    Includes the binding to the UHD driver for USRPs
+
+You have the choice between two FFT libraries: KISS FFT and FFTW. KISS FFT is a
+proven library, but it's performance is worse than with the new FFTW. With the
+default KISS FFT, you have the choice between using the normal version, or the
+SIMD accelerated version, which is a bit faster. The corresponding options are:
+
+ --enable-fftw          Use FFTW3 instead of KISS FFT (experimental, better performance)
+ --enable-fft-simd      Enable SIMD instructions for KISS FFT
+
+Debugging options: You should disable debug to improve ODR-DabMod performance.
+By default, debug is enabled.
+ --disable-debug        Do not compile with debugging, and enable optimisations
+ --enable-trace         Create debugging files for each DSP block for data analysis
+
+For more information, call:
+
+    % ./configure --help
+
 Nearly as simple install procedure using repository:
 ====================================================
 
     * Download and install fec as above
     * Clone the git repository
     * Bootstrap autotools:
+        % ./bootstrap.sh
+            In case this fails, try one of the following:
         % aclocal && automake --gnu --add-missing && autoconf
             or
         % autoreconf
-            whichever works best
     * Then use ./configure as above
 
-
-Advanced install procedure:
-===========================
-
-The configure script can be launch with a variety of options, launch the
-following command for a complete list:
-    % ./configure --help
