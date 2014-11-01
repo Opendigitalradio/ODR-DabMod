@@ -726,12 +726,14 @@ int main(int argc, char* argv[])
         }
     }
 #endif
+#if defined(HAVE_OUTPUT_ZEROMQ)
     else if (useZeroMQOutput) {
         /* We normalise the same way as for the UHD output */
         normalise = 1.0f/50000.0f;
 
         output = new OutputZeroMQ(outputName);
     }
+#endif
 
     flowgraph = new Flowgraph();
     data.setLength(6144);

@@ -52,8 +52,6 @@ class OutputZeroMQ : public ModOutput
                                       // tcp://*:58300
 
         std::string m_name;
-
-        Buffer* m_data_out;
 };
 
 #endif // HAVE_OUTPUT_ZEROMQ_H
