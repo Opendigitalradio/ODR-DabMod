@@ -38,6 +38,7 @@
 #if defined(HAVE_OUTPUT_UHD)
 #   include "OutputUHD.h"
 #endif
+#include "OutputZeroMQ.h"
 #include "InputReader.h"
 #include "PcDebug.h"
 #include "TimestampDecoder.h"
@@ -166,6 +167,7 @@ int main(int argc, char* argv[])
     std::string inputTransport = "file";
 
     std::string outputName;
+    int useZeroMQOutput = 0;
     int useFileOutput = 0;
     int useUHDOutput = 0;
 
@@ -399,7 +401,7 @@ int main(int argc, char* argv[])
         clockRate = pt.get("modulator.dac_clk_rate", (size_t)0);
         digitalgain = pt.get("modulator.digital_gain", digitalgain);
         outputRate = pt.get("modulator.rate", outputRate);
-        
+
         // FIR Filter parameters:
         if (pt.get("firfilter.enabled", 0) == 1) {
             try {
@@ -531,6 +533,12 @@ int main(int argc, char* argv[])
             useUHDOutput = 1;
         }
 #endif
+#if defined(HAVE_OUTPUT_ZEROMQ)
+        else if (output_selected == "zmq") {
+            outputName = pt.get<std::string>("zmqoutput.listen");
+            useZeroMQOutput = 1;
+        }
+#endif
         else {
             std::cerr << "Error: Invalid output defined.\n";
             goto END_MAIN;
@@ -612,7 +620,7 @@ int main(int argc, char* argv[])
         goto END_MAIN;
     }
 
-    if (!useFileOutput && !useUHDOutput) {
+    if (!useFileOutput && !useUHDOutput && !useZeroMQOutput) {
         logger.level(error) << "Output not specified";
         fprintf(stderr, "Must specify output !");
         goto END_MAIN;
@@ -623,8 +631,12 @@ int main(int argc, char* argv[])
     fprintf(stderr, "  Type: %s\n", inputTransport.c_str());
     fprintf(stderr, "  Source: %s\n", inputName.c_str());
     fprintf(stderr, "Output\n");
+
+    if (useFileOutput) {
+        fprintf(stderr, "  Name: %s\n", outputName.c_str());
+    }
 #if defined(HAVE_OUTPUT_UHD)
-    if (useUHDOutput) {
+    else if (useUHDOutput) {
         fprintf(stderr, " UHD\n"
                         "  Device: %s\n"
                         "  Type: %s\n"
@@ -633,12 +645,13 @@ int main(int argc, char* argv[])
                 outputuhd_conf.usrpType.c_str(),
                 outputuhd_conf.masterClockRate);
     }
-    else if (useFileOutput) {
-#else
-    if (useFileOutput) {
 #endif
-        fprintf(stderr, "  Name: %s\n", outputName.c_str());
+    else if (useZeroMQOutput) {
+        fprintf(stderr, " ZeroMQ\n"
+                        "  Listening on: %s\n",
+                        outputName.c_str());
     }
+
     fprintf(stderr, "  Sampling rate: ");
     if (outputRate > 1000) {
         if (outputRate > 1000000) {
@@ -713,6 +726,12 @@ int main(int argc, char* argv[])
         }
     }
 #endif
+    else if (useZeroMQOutput) {
+        /* We normalise the same way as for the UHD output */
+        normalise = 1.0f/50000.0f;
+
+        output = new OutputZeroMQ(outputName);
+    }
 
     flowgraph = new Flowgraph();
     data.setLength(6144);

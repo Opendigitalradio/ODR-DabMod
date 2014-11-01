@@ -22,12 +22,6 @@ else
 GITVERSION_FLAGS =
 endif
 
-if HAVE_INPUT_ZEROMQ_TEST
-ZMQ_LIBS    = -lzmq
-else
-ZMQ_LIBS    =
-endif
-
 if HAVE_OUTPUT_UHD_TEST
 UHD_SOURCES    = OutputUHD.cpp OutputUHD.h
 else
@@ -76,7 +70,7 @@ endif
 
 odr_dabmod_CPPFLAGS = -Wall \
 					  $(FFT_INC) $(FFT_FLG) $(SIMD_CFLAGS) $(GITVERSION_FLAGS)
-odr_dabmod_LDADD    = $(ZMQ_LIBS) $(FFT_LDADD)
+odr_dabmod_LDADD    = $(FFT_LDADD)
 odr_dabmod_SOURCES  = DabMod.cpp \
 					  PcDebug.h \
 					  porting.c porting.h \
@@ -96,6 +90,7 @@ odr_dabmod_SOURCES  = DabMod.cpp \
 					  Flowgraph.cpp Flowgraph.h \
 					  GainControl.cpp GainControl.h \
 					  OutputMemory.cpp OutputMemory.h \
+					  OutputZeroMQ.cpp OutputZeroMQ.h \
 					  TimestampDecoder.h TimestampDecoder.cpp \
 					  $(UHD_SOURCES) \
 					  ModOutput.cpp ModOutput.h \

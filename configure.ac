@@ -74,6 +74,10 @@ AC_ARG_ENABLE([kiss_fft],
 AC_ARG_ENABLE([input_zeromq],
         AS_HELP_STRING([--enable-input-zeromq], [Enable ZeroMQ input]))
 
+# ZeroMQ message IQ output
+AC_ARG_ENABLE([output_zeromq],
+        AS_HELP_STRING([--enable-output-zeromq], [Enable ZeroMQ output]))
+
 # UHD support control
 AC_ARG_ENABLE([output_uhd],
         [AS_HELP_STRING([--enable-output-uhd], [Enable UHD output])],
@@ -91,7 +95,10 @@ echo "Checking input zeromq"
 
 AS_IF([test "x$enable_input_zeromq" = "xyes"],
         [AC_DEFINE(HAVE_INPUT_ZEROMQ, [1], [Define if ZeroMQ input is enabled]) ,
-         AC_CHECK_LIB(zmq, zmq_init, ,[AC_MSG_ERROR([ZeroMQ libzmq is required])])])
+         AC_CHECK_LIB(zmq, zmq_init, ZMQ_LIBS="-lzmq" ,[AC_MSG_ERROR([ZeroMQ libzmq is required])])])
+AS_IF([test "x$enable_output_zeromq" = "xyes"],
+        [AC_DEFINE(HAVE_OUTPUT_ZEROMQ, [1], [Define if ZeroMQ output is enabled]) ,
+         AC_CHECK_LIB(zmq, zmq_init, ZMQ_LIBS="-lzmq" ,[AC_MSG_ERROR([ZeroMQ libzmq is required])])])
 AS_IF([test "x$enable_debug" = "xno"],
         [OPTIM="-O2" DEBUG="" EXTRA="$EXTRA -DNDEBUG"],
         [OPTIM="-O0" DEBUG="-ggdb" EXTRA="$EXTRA"])
@@ -101,7 +108,6 @@ AS_IF([test "x$enable_prof" != "xno"],
 # Define conditionals for Makefile.am
 AM_CONDITIONAL([USE_KISS_FFT], [test "x$enable_fftw" = "xno"])
 AM_CONDITIONAL([DEBUG], [test "x$enable_trace" = "xyes"])
-AM_CONDITIONAL([HAVE_INPUT_ZEROMQ_TEST], [test "x$enable_input_zeromq" = "xyes"])
 AM_CONDITIONAL([IS_GIT_REPO], [test -d '.git'])
 
 # Defines for config.h
@@ -116,7 +122,7 @@ AX_PTHREAD([], AC_MSG_ERROR([requires pthread]))
 
 AC_SUBST([CFLAGS], ["$OPTIM $DEBUG $EXTRA $FFTW_CFLAGS $PTHREAD_CFLAGS"])
 AC_SUBST([CXXFLAGS], ["$OPTIM $DEBUG $EXTRA $FFTW_CFLAGS $PTHREAD_CFLAGS"])
-AC_SUBST([LIBS], ["$FFTW_LIBS $PTHREAD_LIBS"])
+AC_SUBST([LIBS], ["$FFTW_LIBS $PTHREAD_LIBS $ZMQ_LIBS"])
 
 # Checks for UHD.
 AS_IF([test "x$enable_output_uhd" = "xyes"],
@@ -199,7 +205,7 @@ echo "***********************************************"
 echo
 enabled=""
 disabled=""
-for feat in debug prof trace fftw fft_simd output_uhd input_zeromq
+for feat in debug prof trace fftw fft_simd output_uhd input_zeromq output_zeromq
 do
     eval var=\$enable_$feat
     AS_IF([test "x$var" = "xyes"],
