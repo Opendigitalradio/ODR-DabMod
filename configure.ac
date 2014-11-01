@@ -112,9 +112,11 @@ AS_IF([test "x$enable_fftw" = "xno"],
 AS_IF([test "x$enable_fftw" = "xyes"],
       [AC_DEFINE(USE_FFTW, [1], [Define to enable FFTW])])
 
-AC_SUBST([CFLAGS], ["$OPTIM $DEBUG $EXTRA $FFTW_CFLAGS"])
-AC_SUBST([CXXFLAGS], ["$OPTIM $DEBUG $EXTRA $FFTW_CFLAGS"])
-AC_SUBST([LIBS], ["$FFTW_LIBS"])
+AX_PTHREAD([], AC_MSG_ERROR([requires pthread]))
+
+AC_SUBST([CFLAGS], ["$OPTIM $DEBUG $EXTRA $FFTW_CFLAGS $PTHREAD_CFLAGS"])
+AC_SUBST([CXXFLAGS], ["$OPTIM $DEBUG $EXTRA $FFTW_CFLAGS $PTHREAD_CFLAGS"])
+AC_SUBST([LIBS], ["$FFTW_LIBS $PTHREAD_LIBS"])
 
 # Checks for UHD.
 AS_IF([test "x$enable_output_uhd" = "xyes"],
