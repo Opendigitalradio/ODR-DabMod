@@ -113,7 +113,8 @@ AS_IF([test "x$enable_fftw" = "xyes"],
       [AC_DEFINE(USE_FFTW, [1], [Define to enable FFTW])])
 
 AC_SUBST([CFLAGS], ["$OPTIM $DEBUG $EXTRA $FFTW_CFLAGS"])
-AC_SUBST([CXXFLAGS], ["$OPTIM $DEBUG $EXTRA $FFTW_LIBS"])
+AC_SUBST([CXXFLAGS], ["$OPTIM $DEBUG $EXTRA $FFTW_CFLAGS"])
+AC_SUBST([LIBS], ["$FFTW_LIBS"])
 
 # Checks for UHD.
 AS_IF([test "x$enable_output_uhd" = "xyes"],
