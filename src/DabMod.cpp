@@ -259,7 +259,7 @@ int main(int argc, char* argv[])
             break;
         case 'G':
 #if defined(HAVE_OUTPUT_UHD)
-            outputuhd_conf.txgain = (int)strtol(optarg, NULL, 10);
+            outputuhd_conf.txgain = strtod(optarg, NULL);
 #endif
             break;
         case 'l':
@@ -453,7 +453,7 @@ int main(int argc, char* argv[])
                     "setting type in [uhd] device is deprecated !\n";
             }
 
-            outputuhd_conf.txgain = pt.get("uhdoutput.txgain", 0);
+            outputuhd_conf.txgain = pt.get("uhdoutput.txgain", 0.0);
             outputuhd_conf.frequency = pt.get<double>("uhdoutput.frequency", 0);
             std::string chan = pt.get<std::string>("uhdoutput.channel", "");
 
