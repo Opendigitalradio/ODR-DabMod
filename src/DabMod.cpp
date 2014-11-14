@@ -138,8 +138,13 @@ void printVersion(FILE *out = stderr)
 {
     fprintf(out, "Welcome to %s %s, compiled at %s, %s\n\n",
             PACKAGE, VERSION, __DATE__, __TIME__);
-    fprintf(out, "ODR-DabMod is copyright (C) Her Majesty the Queen in Right of Canada,\n"
-            "    2009, 2010, 2011, 2012 Communications Research Centre (CRC).\n"
+    fprintf(out,
+            "    ODR-DabMod is copyright (C) Her Majesty the Queen in Right of Canada,\n"
+            "    2009, 2010, 2011, 2012 Communications Research Centre (CRC),\n"
+            "     and\n"
+            "    Copyright (C) 2014 Matthias P. Braendli, matthias.braendli@mpb.li\n"
+            "\n"
+            "    http://opendigitalradio.org\n"
             "\n"
             "    This program is available free of charge and is licensed to you on a\n"
             "    non-exclusive basis; you may not redistribute it.\n"
@@ -152,8 +157,10 @@ void printVersion(FILE *out = stderr)
             "    In no event shall CRC be LIABLE for any LOSS, DAMAGE or COST that may be\n"
             "    incurred in connection with the use of this software.\n"
             "\n"
+#if USE_KISS_FFT
             "ODR-DabMod makes use of the following open source packages:\n"
             "    Kiss FFT v1.2.9 (Revised BSD) - http://kissfft.sourceforge.net/\n"
+#endif
            );
 
 }
