@@ -92,11 +92,11 @@ void printUsage(char* progName, FILE* out = stderr)
 #endif
             __DATE__, __TIME__);
     fprintf(out, "Usage with configuration file:\n");
-    fprintf(out, "\t%s -C config_file.ini\n\n", progName);
+    fprintf(out, "\t%s [-C] config_file.ini\n\n", progName);
 
     fprintf(out, "Usage with command line options:\n");
     fprintf(out, "\t%s"
-            " [input]"
+            " input"
             " (-f filename | -u uhddevice -F frequency) "
             " [-G txgain]"
             " [-o offset]"
@@ -368,6 +368,18 @@ int main(int argc, char* argv[])
                         "Command line parameters override settings in the configuration file !\n");
     }
 
+    // No argument given ? You can't be serious ! Show usage.
+    if (argc == 1) {
+        printUsage(argv[0]);
+        goto END_MAIN;
+    }
+
+    // If only one argument is given, interpret as configuration file name
+    if (argc == 2) {
+        use_configuration_file = true;
+        configuration_file = argv[1];
+    }
+
     if (use_configuration_file) {
         // First read parameters from the file
         using boost::property_tree::ptree;
@@ -624,7 +636,7 @@ int main(int argc, char* argv[])
     }
 
     // Setting ETI input filename
-    if (inputName == "") {
+    if (use_configuration_cmdline && inputName == "") {
         if (optind < argc) {
             inputName = argv[optind++];
 
@@ -640,7 +652,7 @@ int main(int argc, char* argv[])
     }
 
     // Checking unused arguments
-    if (optind != argc) {
+    if (use_configuration_cmdline && optind != argc) {
         fprintf(stderr, "Invalid arguments:");
         while (optind != argc) {
             fprintf(stderr, " %s", argv[optind++]);
