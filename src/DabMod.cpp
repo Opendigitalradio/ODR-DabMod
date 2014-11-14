@@ -339,6 +339,30 @@ int main(int argc, char* argv[])
 #endif
             << std::endl;
 
+    std::cerr << "Using FFT library " <<
+#if defined(USE_FFTW)
+        "FFTW" <<
+#endif
+#if defined(USE_KISS_FFT)
+        "Kiss FFT" <<
+#endif
+#if defined(USE_SIMD)
+        " (with fft_simd)" <<
+#endif
+        "\n";
+
+    std::cerr << "Compiled with features: " <<
+#if defined(HAVE_INPUT_ZEROMQ)
+        "input_zeromq " <<
+#endif
+#if defined(HAVE_OUTPUT_UHD)
+        "output_uhd " <<
+#endif
+#if defined(HAVE_OUTPUT_ZEROMQ)
+        "output_zeromq " <<
+#endif
+        "\n";
+
     if (use_configuration_file && use_configuration_cmdline) {
         fprintf(stderr, "Warning: configuration file and command line parameters are defined:\n\t"
                         "Command line parameters override settings in the configuration file !\n");
@@ -578,6 +602,7 @@ int main(int argc, char* argv[])
         outputuhd_conf.muteNoTimestamps = (pt.get("delaymanagement.mutenotimestamps", 0) == 1);
 #endif
     }
+
     if (!rc) {
         logger.level(warn) << "No Remote-Control started";
         rc = new RemoteControllerDummy();
