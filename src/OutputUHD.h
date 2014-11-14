@@ -42,6 +42,8 @@ DESCRIPTION:
 #   include <config.h>
 #endif
 
+#ifdef HAVE_OUTPUT_UHD
+
 #include <uhd/utils/thread_priority.hpp>
 #include <uhd/utils/safe_main.hpp>
 #include <uhd/usrp/multi_usrp.hpp>
@@ -230,6 +232,7 @@ class OutputUHD: public ModOutput, public RemoteControllable {
         size_t lastLen;
 };
 
+#endif // HAVE_OUTPUT_UHD
 
 #endif // OUTPUT_UHD_H
 

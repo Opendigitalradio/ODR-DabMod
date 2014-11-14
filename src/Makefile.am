@@ -22,12 +22,6 @@ else
 GITVERSION_FLAGS =
 endif
 
-if HAVE_OUTPUT_UHD_TEST
-UHD_SOURCES    = OutputUHD.cpp OutputUHD.h
-else
-UHD_SOURCES    =
-endif
-
 if HAVE_SSE
 SIMD_CFLAGS = -msse -msse2
 else
@@ -92,7 +86,7 @@ odr_dabmod_SOURCES  = DabMod.cpp \
 					  OutputMemory.cpp OutputMemory.h \
 					  OutputZeroMQ.cpp OutputZeroMQ.h \
 					  TimestampDecoder.h TimestampDecoder.cpp \
-					  $(UHD_SOURCES) \
+					  OutputUHD.cpp OutputUHD.h \
 					  ModOutput.cpp ModOutput.h \
 					  InputMemory.cpp InputMemory.h \
 					  InputFileReader.cpp InputZeroMQReader.cpp InputReader.h \

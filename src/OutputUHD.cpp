@@ -25,6 +25,9 @@
  */
 
 #include "OutputUHD.h"
+
+#ifdef HAVE_OUTPUT_UHD
+
 #include "PcDebug.h"
 #include "Log.h"
 #include "RemoteControl.h"
@@ -652,3 +655,4 @@ const string OutputUHD::get_parameter(const string& parameter) const
     return ss.str();
 }
 
+#endif // HAVE_OUTPUT_UHD
