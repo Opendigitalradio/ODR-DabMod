@@ -1,6 +1,14 @@
 This file contains information about the changes done to
 the ODR-DabMod in this repository
 
+2014-12-09: Matthias P. Braendli <matthias@mpb.li>
+	(v0.5.0)
+	* odr-dabmod:
+		Add support for ARM processors.
+		Use FFTW instead of KISS FFT by default.
+		Add a ZeroMQ I/Q output.
+		Support more fine-grained UHD TX gain.
+		Make the -C flag optional to simplify the usage.
 2014-09-26: Matthias P. Braendli <matthias@mpb.li>
 	(v0.4.5)
 	* odr-dabmod:
