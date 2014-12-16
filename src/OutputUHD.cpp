@@ -45,7 +45,9 @@ typedef std::complex<float> complexf;
 
 OutputUHD::OutputUHD(
         OutputUHDConfig& config,
-        Logger& logger) :
+        Logger& logger,
+		zmq::context_t *pContext,
+		const std::string &zmqCtrlEndpoint) :
     ModOutput(ModFormat(1), ModFormat(0)),
     RemoteControllable("uhd"),
     myLogger(logger),
@@ -225,6 +227,14 @@ OutputUHD::OutputUHD(
 
     worker.start(&uwd);
 
+	m_pZmqRepThread = NULL;
+	if (!zmqCtrlEndpoint.empty())
+	{
+		m_pContext = pContext;
+		m_zmqCtrlEndpoint = zmqCtrlEndpoint;
+		m_pZmqRepThread = new boost::thread(boost::bind(&OutputUHD::ZmqCtrl, this));
+	}
+
     MDEBUG("OutputUHD:UHD ready.\n");
 }
 
@@ -232,6 +242,12 @@ OutputUHD::OutputUHD(
 OutputUHD::~OutputUHD()
 {
     MDEBUG("OutputUHD::~OutputUHD() @ %p\n", this);
+	if (m_pZmqRepThread != NULL)
+	{
+		m_pZmqRepThread->interrupt();
+		m_pZmqRepThread->join();
+	}
+
     worker.stop();
 	if (!first_run) {
 		free(uwd.frame0.buf);
@@ -667,3 +683,98 @@ const string OutputUHD::get_parameter(const string& parameter) const
     return ss.str();
 }
 
+void OutputUHD::RecvAll(zmq::socket_t* pSocket, std::vector<std::string> &message)
+{
+	int more = -1;
+	size_t more_size = sizeof(more);
+
+	while (more != 0)
+	{				
+		zmq::message_t msg;
+		pSocket->recv(&msg);
+		message.push_back(std::string((char*)msg.data(), msg.size()));
+		pSocket->getsockopt(ZMQ_RCVMORE, &more, &more_size);
+	}
+}
+
+void OutputUHD::SendOkReply(zmq::socket_t *pSocket)
+{
+	zmq::message_t msg(2);
+	char repCode[2] = {'o', 'k'};
+	memcpy ((void*) msg.data(), repCode, 2);
+	pSocket->send(msg, 0);
+}
+
+void OutputUHD::SendFailReply(zmq::socket_t *pSocket, const std::string &error)
+{
+	zmq::message_t msg1(4);
+	char repCode[4] = {'f', 'a', 'i', 'l'};
+	memcpy ((void*) msg1.data(), repCode, 4);
+	pSocket->send(msg1, ZMQ_SNDMORE);
+
+	zmq::message_t msg2(error.length());
+	memcpy ((void*) msg2.data(), error.c_str(), error.length());
+	pSocket->send(msg2, 0);
+}
+
+//TODO: Should be implemented as an alternative to RemoteControllerTelnet and
+//moved to the RemoteControl.h/cpp file instead.
+void OutputUHD::ZmqCtrl()
+{
+	// create zmq reply socket for receiving ctrl parameters
+	zmq::socket_t repSocket(*m_pContext, ZMQ_REP);
+	std::cout << "Starting output UHD control thread" << std::endl;
+	try
+	{
+		// connect the socket
+		int hwm = 5;
+		int linger = 0;
+		repSocket.setsockopt(ZMQ_RCVHWM, &hwm, sizeof(hwm)); 
+		repSocket.setsockopt(ZMQ_SNDHWM, &hwm, sizeof(hwm));
+		repSocket.setsockopt(ZMQ_LINGER, &linger, sizeof(linger));
+		repSocket.connect(m_zmqCtrlEndpoint.c_str());
+		
+		// create pollitem that polls the  ZMQ sockets
+		zmq::pollitem_t pollItems[] = { {repSocket, 0, ZMQ_POLLIN, 0} };
+		for(;;)
+		{
+			zmq::poll(pollItems, 1, 100);
+			std::vector<std::string> msg;
+			if (pollItems[0].revents & ZMQ_POLLIN)
+			{
+				RecvAll(&repSocket, msg);
+				std::string module((char*)msg[0].data(), msg[0].size());
+				if (module == "uhd")
+				{
+					if (msg.size() != 3)
+					{
+						SendFailReply(&repSocket, "Wrong request format");
+						continue;
+					}
+					
+					std::string param((char*) msg[1].data(), msg[1].size());
+					std::string value((char*) msg[2].data(), msg[2].size());
+					try
+					{
+						set_parameter(param, value);
+					}
+					catch (ParameterError &err)
+					{
+						SendFailReply(&repSocket, err.what());
+						continue;
+					}
+					SendOkReply(&repSocket);
+				}
+			}
+
+			// check if thread is interrupted
+			boost::this_thread::interruption_point();
+		}
+	}
+	catch (boost::thread_interrupted&) {}
+	catch (zmq::error_t &e)
+	{
+		std::cerr << "ZMQ error: " << std::string(e.what()) << std::endl;
+	}
+	repSocket.close();
+}

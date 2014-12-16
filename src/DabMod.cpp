@@ -55,6 +55,7 @@
 #include <sys/stat.h>
 #include <stdexcept>
 #include <signal.h>
+#include <zmq.hpp>
 
 #ifdef HAVE_NETINET_IN_H
 #   include <netinet/in.h>
@@ -188,6 +189,9 @@ int main(int argc, char* argv[])
 #if defined(HAVE_OUTPUT_UHD)
     OutputUHDConfig outputuhd_conf;
 #endif
+
+	zmq::context_t zmqCtrlContext(1);
+	std::string zmqCtrlEndpoint = "";
 
     // To handle the timestamp offset of the modulator
     struct modulator_offset_config modconf;
@@ -363,8 +367,8 @@ int main(int argc, char* argv[])
             }
         }
 
-		//std::string zmqCtrlEndpoint = pt.get("remotecontrol.zmqctrlendpoint", "");
-		//std::cout << "ZmqCtrlEndpoint: " << zmqCtrlEndpoint << std::endl;
+		zmqCtrlEndpoint = pt.get("remotecontrol.zmqctrlendpoint", "");
+		std::cout << "ZmqCtrlEndpoint: " << zmqCtrlEndpoint << std::endl;
 
         // input params:
         if (pt.get("input.loop", 0) == 1) {
@@ -701,7 +705,7 @@ int main(int argc, char* argv[])
 
         outputuhd_conf.sampleRate = outputRate;
         try {
-            output = new OutputUHD(outputuhd_conf, logger);
+            output = new OutputUHD(outputuhd_conf, logger, &zmqCtrlContext, zmqCtrlEndpoint);
             ((OutputUHD*)output)->enrol_at(*rc);
         }
         catch (std::exception& e) {

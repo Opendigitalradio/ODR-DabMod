@@ -181,9 +181,12 @@ struct OutputUHDConfig {
 
 class OutputUHD: public ModOutput, public RemoteControllable {
     public:
+
         OutputUHD(
                 OutputUHDConfig& config,
-                Logger& logger);
+                Logger& logger,
+				zmq::context_t *pContext,
+				const std::string &zmqCtrlEndpoint);
         ~OutputUHD();
 
         int process(Buffer* dataIn, Buffer* dataOut);
@@ -221,9 +224,22 @@ class OutputUHD: public ModOutput, public RemoteControllable {
 
         // muting can only be changed using the remote control
         bool myMuting;
+
+	private:
+		// zmq receiving method
+		//TODO: Should be implemented as an alternative to RemoteControllerTelnet and
+		//moved to the RemoteControl.h/cpp file instead.
+		void ZmqCtrl(void);
+		void RecvAll(zmq::socket_t* pSocket, std::vector<std::string> &message);
+		void SendOkReply(zmq::socket_t *pSocket);
+		void SendFailReply(zmq::socket_t *pSocket, const std::string &error);
+
+		// data
 		int myStaticDelay;
 		std::vector<complexf> m_delayBuf;
-		
+		zmq::context_t *m_pContext;
+		std::string m_zmqCtrlEndpoint;		
+		boost::thread *m_pZmqRepThread;
         size_t lastLen;
 };
 
