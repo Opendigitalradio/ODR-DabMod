@@ -363,6 +363,9 @@ int main(int argc, char* argv[])
             }
         }
 
+		//std::string zmqCtrlEndpoint = pt.get("remotecontrol.zmqctrlendpoint", "");
+		//std::cout << "ZmqCtrlEndpoint: " << zmqCtrlEndpoint << std::endl;
+
         // input params:
         if (pt.get("input.loop", 0) == 1) {
             loop = true;

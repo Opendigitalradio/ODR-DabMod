@@ -53,10 +53,12 @@ OutputUHD::OutputUHD(
     // Since we don't know the buffer size, we cannot initialise
     // the buffers at object initialisation.
     first_run(true),
-    activebuffer(1)
+    activebuffer(1),
+	m_delayBuf(196608)
 
 {
     myMuting = 0; // is remote-controllable
+    myStaticDelay = 0; // is remote-controllable
 
     std::stringstream device;
     device << myConf.device;
@@ -81,7 +83,9 @@ OutputUHD::OutputUHD(
     /* register the parameters that can be remote controlled */
     RC_ADD_PARAMETER(txgain, "UHD analog daughterboard TX gain");
     RC_ADD_PARAMETER(freq,   "UHD transmission frequency");
-    RC_ADD_PARAMETER(muting, "mute the output by stopping the transmitter");
+    RC_ADD_PARAMETER(muting, "Mute the output by stopping the transmitter");
+    RC_ADD_PARAMETER(staticdelay, "Set static delay (uS) between 0 and 96000");
+    RC_ADD_PARAMETER(iqbalance, "Set I/Q balance between 0 and 1.0");
 
     uhd::set_thread_priority_safe();
 
@@ -229,6 +233,10 @@ OutputUHD::~OutputUHD()
 {
     MDEBUG("OutputUHD::~OutputUHD() @ %p\n", this);
     worker.stop();
+	if (!first_run) {
+		free(uwd.frame0.buf);
+		free(uwd.frame1.buf);
+	}
 }
 
 int OutputUHD::process(Buffer* dataIn, Buffer* dataOut)
@@ -283,14 +291,35 @@ int OutputUHD::process(Buffer* dataIn, Buffer* dataOut)
         uwd.sourceContainsTimestamp = myConf.enableSync &&
             myEtiReader->sourceContainsTimestamp();
 
+		// calculate delay
+		uint32_t noSampleDelay = (myStaticDelay * 2048) / 1000;
+		uint32_t noByteDelay = noSampleDelay * sizeof(complexf);
+
+		uint8_t* pInData = (uint8_t*) dataIn->getData();
         if (activebuffer == 0) {
-            memcpy(uwd.frame0.buf, dataIn->getData(), uwd.bufsize);
+			uint8_t *pTmp = (uint8_t*) uwd.frame0.buf;
+			// copy remain from delaybuf
+            memcpy(pTmp, &m_delayBuf[0], noByteDelay);
+			// copy new data
+            memcpy(&pTmp[noByteDelay], pInData, uwd.bufsize - noByteDelay);
+			// copy remaining data to delay buf
+			memcpy(&m_delayBuf[0], &pInData[uwd.bufsize - noByteDelay], noByteDelay);
+
+            //memcpy(uwd.frame0.buf, dataIn->getData(), uwd.bufsize);
 
             uwd.frame0.ts = ts;
             uwd.frame0.fct = myEtiReader->getFCT();
         }
         else if (activebuffer == 1) {
-            memcpy(uwd.frame1.buf, dataIn->getData(), uwd.bufsize);
+			uint8_t *pTmp = (uint8_t*) uwd.frame1.buf;
+			// copy remain from delaybuf
+            memcpy(pTmp, &m_delayBuf[0], noByteDelay);
+			// copy new data
+            memcpy(&pTmp[noByteDelay], pInData, uwd.bufsize - noByteDelay);
+			// copy remaining data to delay buf
+			memcpy(&m_delayBuf[0], &pInData[uwd.bufsize - noByteDelay], noByteDelay);
+
+            //memcpy(uwd.frame1.buf, dataIn->getData(), uwd.bufsize);
 
             uwd.frame1.ts = ts;
             uwd.frame1.fct = myEtiReader->getFCT();
@@ -591,6 +620,22 @@ void OutputUHD::set_parameter(const string& parameter, const string& value)
     else if (parameter == "muting") {
         ss >> myMuting;
     }
+    else if (parameter == "staticdelay") {
+		int adjust;
+		ss >> adjust;
+		int newStaticDelay = myStaticDelay + adjust;
+		if (newStaticDelay > 96000)
+			myStaticDelay = newStaticDelay - 96000;
+		else if (newStaticDelay < 0)
+			myStaticDelay = newStaticDelay + 96000;
+		else
+			myStaticDelay = newStaticDelay;
+    }
+    else if (parameter == "iqbalance") {
+        ss >> myConf.frequency;
+        myUsrp->set_tx_freq(myConf.frequency);
+        myConf.frequency = myUsrp->get_tx_freq();
+    }
     else {
         stringstream ss;
         ss << "Parameter '" << parameter
@@ -610,6 +655,9 @@ const string OutputUHD::get_parameter(const string& parameter) const
     }
     else if (parameter == "muting") {
         ss << myMuting;
+    }
+    else if (parameter == "staticdelay") {
+        ss << myStaticDelay;
     }
     else {
         ss << "Parameter '" << parameter <<

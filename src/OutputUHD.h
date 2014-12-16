@@ -48,6 +48,7 @@ DESCRIPTION:
 #include <boost/shared_ptr.hpp>
 #include <list>
 #include <string>
+#include <zmq.hpp>
 
 #include "Log.h"
 #include "ModOutput.h"
@@ -220,7 +221,9 @@ class OutputUHD: public ModOutput, public RemoteControllable {
 
         // muting can only be changed using the remote control
         bool myMuting;
-
+		int myStaticDelay;
+		std::vector<complexf> m_delayBuf;
+		
         size_t lastLen;
 };
 
