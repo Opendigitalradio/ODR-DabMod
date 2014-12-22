@@ -727,12 +727,12 @@ void OutputUHD::ZmqCtrl()
 	try
 	{
 		// connect the socket
-		int hwm = 5;
+		int hwm = 100;
 		int linger = 0;
 		repSocket.setsockopt(ZMQ_RCVHWM, &hwm, sizeof(hwm)); 
 		repSocket.setsockopt(ZMQ_SNDHWM, &hwm, sizeof(hwm));
 		repSocket.setsockopt(ZMQ_LINGER, &linger, sizeof(linger));
-		repSocket.connect(m_zmqCtrlEndpoint.c_str());
+		repSocket.bind(m_zmqCtrlEndpoint.c_str());
 		
 		// create pollitem that polls the  ZMQ sockets
 		zmq::pollitem_t pollItems[] = { {repSocket, 0, ZMQ_POLLIN, 0} };
@@ -746,24 +746,34 @@ void OutputUHD::ZmqCtrl()
 				std::string module((char*)msg[0].data(), msg[0].size());
 				if (module == "uhd")
 				{
-					if (msg.size() != 3)
+					if (msg.size() < 2)
 					{
 						SendFailReply(&repSocket, "Wrong request format");
 						continue;
 					}
-					
+
 					std::string param((char*) msg[1].data(), msg[1].size());
-					std::string value((char*) msg[2].data(), msg[2].size());
-					try
+					if (msg.size() == 2 && param == "ping")
 					{
-						set_parameter(param, value);
+						SendOkReply(&repSocket);
 					}
-					catch (ParameterError &err)
+					else if (msg.size() != 3)
 					{
-						SendFailReply(&repSocket, err.what());
-						continue;
+						SendFailReply(&repSocket, "Wrong request format");
 					}
-					SendOkReply(&repSocket);
+					else
+					{
+						std::string value((char*) msg[2].data(), msg[2].size());
+						try
+						{
+							set_parameter(param, value);
+							SendOkReply(&repSocket);
+						}
+						catch (ParameterError &err)
+						{
+							SendFailReply(&repSocket, err.what());
+						}
+					}
 				}
 			}
 
