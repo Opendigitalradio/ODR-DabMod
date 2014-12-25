@@ -54,7 +54,10 @@ int FormatConverter::process(Buffer* const dataIn, Buffer* dataOut)
 
     float* in = reinterpret_cast<float*>(dataIn->getData());
 
-#ifdef  __SSE__
+#if 0
+    // Disabled because subscripting a __m64 doesn't seem to work
+    // on all platforms.
+
     /*
       _mm_cvtps_pi8 does:
              |<----------- 128 bits ------------>|
