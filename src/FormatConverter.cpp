@@ -35,6 +35,9 @@
 #include <stdexcept>
 #include <assert.h>
 
+#ifdef __SSE__
+#  include <xmmintrin.h>
+#endif
 
 FormatConverter::FormatConverter(void) :
     ModCodec(ModFormat(sizeof(complexf)),
@@ -50,13 +53,20 @@ int FormatConverter::process(Buffer* const dataIn, Buffer* dataOut)
     dataOut->setLength(sizeIn * sizeof(int8_t));
 
     float* in = reinterpret_cast<float*>(dataIn->getData());
-    int8_t* out = reinterpret_cast<int8_t*>(dataOut->getData());
 
-#if 0
-    // WARNING: Untested Code Ahead
+#ifdef  __SSE__
+    /*
+      _mm_cvtps_pi8 does:
+             |<----------- 128 bits ------------>|
+      __m128 |   I1   |   Q1   |   I2   |   Q2   | in float
+      __m64  |I1Q1I2Q2|00000000|                   in int8_t
+     */
+
+    uint32_t* out = reinterpret_cast<uint32_t*>(dataOut->getData());
+
     assert(sizeIn % 16 == 0);
     assert((uintptr_t)in % 16 == 0);
-    for(int i = 0; i < sizeIn; i+=16)
+    for(size_t i = 0, j = 0; i < sizeIn; i+=16, j+=4)
     {
         __m128 a1 = _mm_load_ps(in+i+0);
         __m128 a2 = _mm_load_ps(in+i+4);
@@ -66,23 +76,17 @@ int FormatConverter::process(Buffer* const dataIn, Buffer* dataOut)
         __m64 b2 = _mm_cvtps_pi8(a2);
         __m64 b3 = _mm_cvtps_pi8(a3);
         __m64 b4 = _mm_cvtps_pi8(a4);
-        _mm_store_ps(out+i+0, b1);
-        _mm_store_ps(out+i+4, b2);
-        _mm_store_ps(out+i+8, b3);
-        _mm_store_ps(out+i+12, b4);
+        out[j+0]  = b1[0];
+        out[j+1]  = b2[0];
+        out[j+2]  = b3[0];
+        out[j+3]  = b4[0];
     }
 #else
+    int8_t* out = reinterpret_cast<int8_t*>(dataOut->getData());
+
     // Slow implementation that uses _ftol()
     for (size_t i = 0; i < sizeIn; i++) {
-        if (in[i] > 127.0f) {
-            out[i] = 127;
-        }
-        else if (in[i] < -127.0f) {
-            out[i] = -127;
-        }
-        else {
-            out[i] = in[i];
-        }
+        out[i] = in[i];
     }
 #endif
 
