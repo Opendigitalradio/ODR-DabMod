@@ -38,6 +38,7 @@
 #if defined(HAVE_OUTPUT_UHD)
 #   include "OutputUHD.h"
 #endif
+#include "OutputZeroMQ.h"
 #include "InputReader.h"
 #include "PcDebug.h"
 #include "TimestampDecoder.h"
@@ -91,11 +92,11 @@ void printUsage(char* progName, FILE* out = stderr)
 #endif
             __DATE__, __TIME__);
     fprintf(out, "Usage with configuration file:\n");
-    fprintf(out, "\t%s -C config_file.ini\n\n", progName);
+    fprintf(out, "\t%s [-C] config_file.ini\n\n", progName);
 
     fprintf(out, "Usage with command line options:\n");
     fprintf(out, "\t%s"
-            " [input]"
+            " input"
             " (-f filename | -u uhddevice -F frequency) "
             " [-G txgain]"
             " [-o offset]"
@@ -137,8 +138,13 @@ void printVersion(FILE *out = stderr)
 {
     fprintf(out, "Welcome to %s %s, compiled at %s, %s\n\n",
             PACKAGE, VERSION, __DATE__, __TIME__);
-    fprintf(out, "ODR-DabMod is copyright (C) Her Majesty the Queen in Right of Canada,\n"
-            "    2009, 2010, 2011, 2012 Communications Research Centre (CRC).\n"
+    fprintf(out,
+            "    ODR-DabMod is copyright (C) Her Majesty the Queen in Right of Canada,\n"
+            "    2009, 2010, 2011, 2012 Communications Research Centre (CRC),\n"
+            "     and\n"
+            "    Copyright (C) 2014 Matthias P. Braendli, matthias.braendli@mpb.li\n"
+            "\n"
+            "    http://opendigitalradio.org\n"
             "\n"
             "    This program is available free of charge and is licensed to you on a\n"
             "    non-exclusive basis; you may not redistribute it.\n"
@@ -151,8 +157,10 @@ void printVersion(FILE *out = stderr)
             "    In no event shall CRC be LIABLE for any LOSS, DAMAGE or COST that may be\n"
             "    incurred in connection with the use of this software.\n"
             "\n"
+#if USE_KISS_FFT
             "ODR-DabMod makes use of the following open source packages:\n"
             "    Kiss FFT v1.2.9 (Revised BSD) - http://kissfft.sourceforge.net/\n"
+#endif
            );
 
 }
@@ -166,6 +174,7 @@ int main(int argc, char* argv[])
     std::string inputTransport = "file";
 
     std::string outputName;
+    int useZeroMQOutput = 0;
     int useFileOutput = 0;
     int useUHDOutput = 0;
 
@@ -257,7 +266,7 @@ int main(int argc, char* argv[])
             break;
         case 'G':
 #if defined(HAVE_OUTPUT_UHD)
-            outputuhd_conf.txgain = (int)strtol(optarg, NULL, 10);
+            outputuhd_conf.txgain = strtod(optarg, NULL);
 #endif
             break;
         case 'l':
@@ -330,9 +339,45 @@ int main(int argc, char* argv[])
 #endif
             << std::endl;
 
+    std::cerr << "Using FFT library " <<
+#if defined(USE_FFTW)
+        "FFTW" <<
+#endif
+#if defined(USE_KISS_FFT)
+        "Kiss FFT" <<
+#endif
+#if defined(USE_SIMD)
+        " (with fft_simd)" <<
+#endif
+        "\n";
+
+    std::cerr << "Compiled with features: " <<
+#if defined(HAVE_INPUT_ZEROMQ)
+        "input_zeromq " <<
+#endif
+#if defined(HAVE_OUTPUT_UHD)
+        "output_uhd " <<
+#endif
+#if defined(HAVE_OUTPUT_ZEROMQ)
+        "output_zeromq " <<
+#endif
+        "\n";
+
     if (use_configuration_file && use_configuration_cmdline) {
         fprintf(stderr, "Warning: configuration file and command line parameters are defined:\n\t"
                         "Command line parameters override settings in the configuration file !\n");
+    }
+
+    // No argument given ? You can't be serious ! Show usage.
+    if (argc == 1) {
+        printUsage(argv[0]);
+        goto END_MAIN;
+    }
+
+    // If only one argument is given, interpret as configuration file name
+    if (argc == 2) {
+        use_configuration_file = true;
+        configuration_file = argv[1];
     }
 
     if (use_configuration_file) {
@@ -399,7 +444,7 @@ int main(int argc, char* argv[])
         clockRate = pt.get("modulator.dac_clk_rate", (size_t)0);
         digitalgain = pt.get("modulator.digital_gain", digitalgain);
         outputRate = pt.get("modulator.rate", outputRate);
-        
+
         // FIR Filter parameters:
         if (pt.get("firfilter.enabled", 0) == 1) {
             try {
@@ -451,7 +496,7 @@ int main(int argc, char* argv[])
                     "setting type in [uhd] device is deprecated !\n";
             }
 
-            outputuhd_conf.txgain = pt.get("uhdoutput.txgain", 0);
+            outputuhd_conf.txgain = pt.get("uhdoutput.txgain", 0.0);
             outputuhd_conf.frequency = pt.get<double>("uhdoutput.frequency", 0);
             std::string chan = pt.get<std::string>("uhdoutput.channel", "");
 
@@ -531,6 +576,12 @@ int main(int argc, char* argv[])
             useUHDOutput = 1;
         }
 #endif
+#if defined(HAVE_OUTPUT_ZEROMQ)
+        else if (output_selected == "zmq") {
+            outputName = pt.get<std::string>("zmqoutput.listen");
+            useZeroMQOutput = 1;
+        }
+#endif
         else {
             std::cerr << "Error: Invalid output defined.\n";
             goto END_MAIN;
@@ -563,6 +614,7 @@ int main(int argc, char* argv[])
         outputuhd_conf.muteNoTimestamps = (pt.get("delaymanagement.mutenotimestamps", 0) == 1);
 #endif
     }
+
     if (!rc) {
         logger.level(warn) << "No Remote-Control started";
         rc = new RemoteControllerDummy();
@@ -584,7 +636,7 @@ int main(int argc, char* argv[])
     }
 
     // Setting ETI input filename
-    if (inputName == "") {
+    if (use_configuration_cmdline && inputName == "") {
         if (optind < argc) {
             inputName = argv[optind++];
 
@@ -600,7 +652,7 @@ int main(int argc, char* argv[])
     }
 
     // Checking unused arguments
-    if (optind != argc) {
+    if (use_configuration_cmdline && optind != argc) {
         fprintf(stderr, "Invalid arguments:");
         while (optind != argc) {
             fprintf(stderr, " %s", argv[optind++]);
@@ -612,7 +664,7 @@ int main(int argc, char* argv[])
         goto END_MAIN;
     }
 
-    if (!useFileOutput && !useUHDOutput) {
+    if (!useFileOutput && !useUHDOutput && !useZeroMQOutput) {
         logger.level(error) << "Output not specified";
         fprintf(stderr, "Must specify output !");
         goto END_MAIN;
@@ -623,8 +675,12 @@ int main(int argc, char* argv[])
     fprintf(stderr, "  Type: %s\n", inputTransport.c_str());
     fprintf(stderr, "  Source: %s\n", inputName.c_str());
     fprintf(stderr, "Output\n");
+
+    if (useFileOutput) {
+        fprintf(stderr, "  Name: %s\n", outputName.c_str());
+    }
 #if defined(HAVE_OUTPUT_UHD)
-    if (useUHDOutput) {
+    else if (useUHDOutput) {
         fprintf(stderr, " UHD\n"
                         "  Device: %s\n"
                         "  Type: %s\n"
@@ -633,12 +689,13 @@ int main(int argc, char* argv[])
                 outputuhd_conf.usrpType.c_str(),
                 outputuhd_conf.masterClockRate);
     }
-    else if (useFileOutput) {
-#else
-    if (useFileOutput) {
 #endif
-        fprintf(stderr, "  Name: %s\n", outputName.c_str());
+    else if (useZeroMQOutput) {
+        fprintf(stderr, " ZeroMQ\n"
+                        "  Listening on: %s\n",
+                        outputName.c_str());
     }
+
     fprintf(stderr, "  Sampling rate: ");
     if (outputRate > 1000) {
         if (outputRate > 1000000) {
@@ -711,6 +768,14 @@ int main(int argc, char* argv[])
             logger.level(error) << "UHD initialisation failed:" << e.what();
             goto END_MAIN;
         }
+    }
+#endif
+#if defined(HAVE_OUTPUT_ZEROMQ)
+    else if (useZeroMQOutput) {
+        /* We normalise the same way as for the UHD output */
+        normalise = 1.0f/50000.0f;
+
+        output = new OutputZeroMQ(outputName);
     }
 #endif
 
