@@ -53,7 +53,7 @@
 
 DabModulator::DabModulator(
         struct modulator_offset_config& modconf,
-        BaseRemoteController* rc,
+        RemoteControllers* rcs,
         Logger& logger,
         unsigned outputRate, unsigned clockRate,
         unsigned dabMode, GainMode gainMode,
@@ -71,7 +71,7 @@ DabModulator::DabModulator(
     myEtiReader(EtiReader(modconf, myLogger)),
     myFlowgraph(NULL),
     myFilterTapsFilename(filterTapsFilename),
-    myRC(rc)
+    myRCs(rcs)
 {
     PDEBUG("DabModulator::DabModulator(%u, %u, %u, %u) @ %p\n",
             outputRate, clockRate, dabMode, gainMode, this);
@@ -201,13 +201,13 @@ int DabModulator::process(Buffer* const dataIn, Buffer* dataOut)
 
         cifOfdm = new OfdmGenerator((1 + myNbSymbols), myNbCarriers, mySpacing);
         cifGain = new GainControl(mySpacing, myGainMode, myDigGain, myNormalise);
-        cifGain->enrol_at(*myRC);
+        cifGain->enrol_at(*myRCs);
 
         cifGuard = new GuardIntervalInserter(myNbSymbols, mySpacing,
                 myNullSize, mySymSize);
         if (myFilterTapsFilename != "") {
             cifFilter = new FIRFilter(myFilterTapsFilename);
-            cifFilter->enrol_at(*myRC);
+            cifFilter->enrol_at(*myRCs);
         }
         myOutput = new OutputMemory();
 

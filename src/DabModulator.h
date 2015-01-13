@@ -47,7 +47,7 @@ class DabModulator : public ModCodec
 public:
     DabModulator(
             struct modulator_offset_config& modconf,
-            BaseRemoteController* rc,
+            RemoteControllers* rcs,
             Logger& logger,
             unsigned outputRate = 2048000, unsigned clockRate = 0,
             unsigned dabMode = 0, GainMode gainMode = GAIN_VAR,
@@ -77,7 +77,7 @@ protected:
     Flowgraph* myFlowgraph;
     OutputMemory* myOutput;
     std::string myFilterTapsFilename;
-    BaseRemoteController* myRC;
+    RemoteControllers* myRCs;
 
     size_t myNbSymbols;
     size_t myNbCarriers;

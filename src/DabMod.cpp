@@ -55,7 +55,7 @@
 #include <sys/stat.h>
 #include <stdexcept>
 #include <signal.h>
-#include <zmq.hpp>
+//#include <zmq.hpp>
 
 #ifdef HAVE_NETINET_IN_H
 #   include <netinet/in.h>
@@ -190,8 +190,8 @@ int main(int argc, char* argv[])
     OutputUHDConfig outputuhd_conf;
 #endif
 
-	zmq::context_t zmqCtrlContext(1);
-	std::string zmqCtrlEndpoint = "";
+	//zmq::context_t zmqCtrlContext(1);
+	//std::string zmqCtrlEndpoint = "";
 
     // To handle the timestamp offset of the modulator
     struct modulator_offset_config modconf;
@@ -204,7 +204,8 @@ int main(int argc, char* argv[])
     InputMemory* input = NULL;
     ModOutput* output = NULL;
 
-    BaseRemoteController* rc = NULL;
+    //BaseRemoteController* rc = NULL;
+    RemoteControllers rcs;
 
     Logger logger;
     InputFileReader inputFileReader(logger);
@@ -358,7 +359,7 @@ int main(int argc, char* argv[])
             try {
                 int telnetport = pt.get<int>("remotecontrol.telnetport");
                 RemoteControllerTelnet* telnetrc = new RemoteControllerTelnet(telnetport);
-                rc = telnetrc;
+                rcs.add_controller(telnetrc);
             }
             catch (std::exception &e) {
                 std::cerr << "Error: " << e.what() << "\n";
@@ -367,8 +368,22 @@ int main(int argc, char* argv[])
             }
         }
 
-		zmqCtrlEndpoint = pt.get("remotecontrol.zmqctrlendpoint", "");
-		std::cout << "ZmqCtrlEndpoint: " << zmqCtrlEndpoint << std::endl;
+#if defined(HAVE_INPUT_ZEROMQ)
+        if (pt.get("remotecontrol.zmqctrl", 0) == 1) {
+            try {
+				std::string zmqCtrlEndpoint = 
+					pt.get("remotecontrol.zmqctrlendpoint", "");
+				std::cout << "ZmqCtrlEndpoint: " << zmqCtrlEndpoint << std::endl;
+                RemoteControllerZmq* zmqrc = new RemoteControllerZmq(zmqCtrlEndpoint);
+                rcs.add_controller(zmqrc);
+            }
+            catch (std::exception &e) {
+                std::cerr << "Error: " << e.what() << "\n";
+                std::cerr << "       zmq remote control enabled, but no endpoint defined.\n";
+                goto END_MAIN;
+            }
+        }
+#endif
 
         // input params:
         if (pt.get("input.loop", 0) == 1) {
@@ -570,9 +585,9 @@ int main(int argc, char* argv[])
         outputuhd_conf.muteNoTimestamps = (pt.get("delaymanagement.mutenotimestamps", 0) == 1);
 #endif
     }
-    if (!rc) {
+    if (rcs.get_no_controllers() == 0) {
         logger.level(warn) << "No Remote-Control started";
-        rc = new RemoteControllerDummy();
+        rcs.add_controller(new RemoteControllerDummy());
     }
 
 
@@ -705,8 +720,8 @@ int main(int argc, char* argv[])
 
         outputuhd_conf.sampleRate = outputRate;
         try {
-            output = new OutputUHD(outputuhd_conf, logger, &zmqCtrlContext, zmqCtrlEndpoint);
-            ((OutputUHD*)output)->enrol_at(*rc);
+            output = new OutputUHD(outputuhd_conf, logger/*, &zmqCtrlContext, zmqCtrlEndpoint*/);
+            ((OutputUHD*)output)->enrol_at(rcs);
         }
         catch (std::exception& e) {
             logger.level(error) << "UHD initialisation failed:" << e.what();
@@ -718,7 +733,7 @@ int main(int argc, char* argv[])
     flowgraph = new Flowgraph();
     data.setLength(6144);
     input = new InputMemory(&data);
-    modulator = new DabModulator(modconf, rc, logger, outputRate, clockRate,
+    modulator = new DabModulator(modconf, &rcs, logger, outputRate, clockRate,
             dabMode, gainMode, digitalgain, normalise, filterTapsFilename);
     flowgraph->connect(input, modulator);
     flowgraph->connect(modulator, output);
@@ -757,10 +772,8 @@ int main(int argc, char* argv[])
 
                 /* Check every once in a while if the remote control
                  * is still working */
-                if (rc && (frame % 250) == 0 && rc->fault_detected()) {
-                    fprintf(stderr,
-                            "Detected Remote Control fault, restarting it\n");
-                    rc->restart();
+                if (rcs.get_no_controllers() > 0 && (frame % 250) == 0) {
+					rcs.check_faults();
                 }
             }
             if (framesize == 0) {

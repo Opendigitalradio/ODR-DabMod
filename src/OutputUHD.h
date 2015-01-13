@@ -48,7 +48,6 @@ DESCRIPTION:
 #include <boost/shared_ptr.hpp>
 #include <list>
 #include <string>
-#include <zmq.hpp>
 
 #include "Log.h"
 #include "ModOutput.h"
@@ -184,9 +183,7 @@ class OutputUHD: public ModOutput, public RemoteControllable {
 
         OutputUHD(
                 OutputUHDConfig& config,
-                Logger& logger,
-				zmq::context_t *pContext,
-				const std::string &zmqCtrlEndpoint);
+                Logger& logger);
         ~OutputUHD();
 
         int process(Buffer* dataIn, Buffer* dataOut);
@@ -226,20 +223,9 @@ class OutputUHD: public ModOutput, public RemoteControllable {
         bool myMuting;
 
 	private:
-		// zmq receiving method
-		//TODO: Should be implemented as an alternative to RemoteControllerTelnet and
-		//moved to the RemoteControl.h/cpp file instead.
-		void ZmqCtrl(void);
-		void RecvAll(zmq::socket_t* pSocket, std::vector<std::string> &message);
-		void SendOkReply(zmq::socket_t *pSocket);
-		void SendFailReply(zmq::socket_t *pSocket, const std::string &error);
-
 		// data
 		int myStaticDelay;
-		std::vector<complexf> m_delayBuf;
-		zmq::context_t *m_pContext;
-		std::string m_zmqCtrlEndpoint;		
-		boost::thread *m_pZmqRepThread;
+		std::vector<complexf> myDelayBuf;
         size_t lastLen;
 };
 
