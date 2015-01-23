@@ -1,6 +1,11 @@
 /*
    Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010, 2011 Her Majesty
    the Queen in Right of Canada (Communications Research Center Canada)
+
+   Copyright (C) 2014
+   Matthias P. Braendli, matthias.braendli@mpb.li
+
+    http://opendigitalradio.org
  */
 /*
    This file is part of ODR-DabMod.
@@ -28,10 +33,14 @@
 
 #include "porting.h"
 #include "ModCodec.h"
-#include "kiss_fftsimd.h"
 
+#if USE_FFTW
+#  include "fftw3.h"
+#else
+#  include "kiss_fftsimd.h"
+#  include <kiss_fft.h>
+#endif
 
-#include <kiss_fft.h>
 #include <sys/types.h>
 
 
@@ -48,8 +57,13 @@ public:
     const char* name() { return "OfdmGenerator"; }
 
 protected:
+#if USE_FFTW
+    fftwf_plan myFftPlan;
+    fftwf_complex *myFftIn, *myFftOut;
+#else
     FFT_PLAN myFftPlan;
     FFT_TYPE *myFftBuffer;
+#endif
     size_t myNbSymbols;
     size_t myNbCarriers;
     size_t mySpacing;
@@ -63,5 +77,5 @@ protected:
     unsigned myZeroSize;
 };
 
-
 #endif // OFDM_GENERATOR_H
+

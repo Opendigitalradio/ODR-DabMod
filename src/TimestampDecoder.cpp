@@ -2,8 +2,10 @@
    Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010 Her Majesty the
    Queen in Right of Canada (Communications Research Center Canada)
 
-   Includes modifications for which no copyright is claimed
-   2012, Matthias P. Braendli, matthias.braendli@mpb.li
+   Copyright (C) 2014
+   Matthias P. Braendli, matthias.braendli@mpb.li
+
+    http://opendigitalradio.org
  */
 /*
    This file is part of ODR-DabMod.
@@ -33,7 +35,7 @@
 #include "Eti.h"
 #include "Log.h"
 
-//#define MDEBUG(fmt, args...) fprintf (LOG, fmt , ## args) 
+//#define MDEBUG(fmt, args...) fprintf (LOG, "*****" fmt , ## args) 
 #define MDEBUG(fmt, args...) PDEBUG(fmt, ## args) 
 
 
@@ -45,10 +47,12 @@ void TimestampDecoder::calculateTimestamp(struct frame_timestamp& ts)
     ts_queued->timestamp_valid = full_timestamp_received_mnsc;
     ts_queued->timestamp_sec = time_secs;
     ts_queued->timestamp_pps_offset = time_pps;
+    ts_queued->fct = latestFCT;
 
     ts_queued->timestamp_refresh = offset_changed;
     offset_changed = false;
 
+    MDEBUG("time_secs=%d, time_pps=%f\n", time_secs, time_pps);
     *ts_queued += timestamp_offset;
 
     queue_timestamps.push(ts_queued);
@@ -65,6 +69,7 @@ void TimestampDecoder::calculateTimestamp(struct frame_timestamp& ts)
         ts.timestamp_sec = 0;
         ts.timestamp_pps_offset = 0;
         ts.timestamp_refresh = false;
+        ts.fct = 0;
     }
     else {
         //fprintf(stderr, ". %zu ", queue_timestamps.size());
@@ -86,7 +91,7 @@ void TimestampDecoder::calculateTimestamp(struct frame_timestamp& ts)
         delete ts_queued;
     }
 
-    PDEBUG("Timestamp queue size %zu, delay_calc %u\n",
+    MDEBUG("Timestamp queue size %zu, delay_calc %u\n",
             queue_timestamps.size(),
             modconfig.delay_calculation_pipeline_stages);
 
@@ -153,13 +158,14 @@ void TimestampDecoder::pushMNSCData(int framephase, uint16_t mnsc)
 
 void TimestampDecoder::updateTimestampSeconds(uint32_t secs)
 {
-    MDEBUG("TimestampDecoder::updateTimestampSeconds(%d)\n", secs);
     if (inhibit_second_update > 0)
     {
+        MDEBUG("TimestampDecoder::updateTimestampSeconds(%d) inhibit\n", secs);
         inhibit_second_update--;
     }
     else
     {
+        MDEBUG("TimestampDecoder::updateTimestampSeconds(%d) apply\n", secs);
         time_secs = secs;
     }
 }
@@ -179,13 +185,17 @@ void TimestampDecoder::updateTimestampPPS(double pps)
     }
 
     time_pps = pps;
-
 }
 
-void TimestampDecoder::updateTimestampEti(int framephase, uint16_t mnsc, double pps)
+void TimestampDecoder::updateTimestampEti(
+        int framephase,
+        uint16_t mnsc,
+        double pps,
+        uint32_t fct)
 {
     updateTimestampPPS(pps);
     pushMNSCData(framephase, mnsc);
+    latestFCT = fct;
 }
 
 
@@ -221,13 +231,16 @@ bool TimestampDecoder::updateModulatorOffset()
                 }
                 catch (bad_lexical_cast& e)
                 {
-                    myLogger.level(error) << "Error parsing timestamp offset from file '" << modconfig.offset_filename << "'";
+                    myLogger.level(error) <<
+                        "Error parsing timestamp offset from file '" <<
+                        modconfig.offset_filename << "'";
                     r = false;
                 }
             }
             else
             {
-                myLogger.level(error) << "Error reading from timestamp offset file: eof reached\n";
+                myLogger.level(error) <<
+                    "Error reading from timestamp offset file: eof reached\n";
                 r = false;
             }
             filestream.close();
@@ -244,7 +257,9 @@ bool TimestampDecoder::updateModulatorOffset()
             if (timestamp_offset != newoffset)
             {
                 timestamp_offset = newoffset;
-                myLogger.level(info) << "TimestampDecoder::updateTimestampOffset: new offset is " << timestamp_offset;
+                myLogger.level(info) <<
+                    "TimestampDecoder::updateTimestampOffset: new offset is " <<
+                    timestamp_offset;
                 offset_changed = true;
             }
 
@@ -256,3 +271,4 @@ bool TimestampDecoder::updateModulatorOffset()
         return false;
     }
 }
+

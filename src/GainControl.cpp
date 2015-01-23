@@ -27,11 +27,19 @@
 
 #include "GainControl.h"
 #include "PcDebug.h"
-#include "kiss_fftsimd.h"
 
 #include <stdio.h>
 #include <stdexcept>
 #include <string>
+
+#ifdef __SSE__
+#  include <xmmintrin.h>
+union __u128 {
+    __m128 m;
+    float f[4];
+};
+#endif
+
 
 using namespace std;
 
@@ -224,13 +232,26 @@ __m128 GainControl::computeGainVar(const __m128* in, size_t sizeIn)
         __m128 i128 = _mm_set1_ps(sample + 1);
         __m128 q128 = _mm_div_ps(delta128, i128);
         mean128.m = _mm_add_ps(mean128.m, q128);
+
+        /*
+        tmp128.m = in[sample];
+        printf("S %zu, %.2f+%.2fj\t",
+                sample,
+                tmp128.f[0], tmp128.f[1]);
+        printf(": %.2f+%.2fj\n", mean128.f[0], mean128.f[1]);
+
+        printf("S %zu, %.2f+%.2fj\t",
+                sample,
+                tmp128.f[2], tmp128.f[3]);
+        printf(": %.2f+%.2fj\n", mean128.f[2], mean128.f[3]);
+        */
     }
 
     // Merging average
     tmp128.m = _mm_shuffle_ps(mean128.m, mean128.m, _MM_SHUFFLE(1, 0, 3, 2));
     mean128.m = _mm_add_ps(mean128.m, tmp128.m);
     mean128.m = _mm_mul_ps(mean128.m, _mm_set1_ps(0.5f));
-    PDEBUG("********** Mean:  %10f, %10f, %10f, %10f **********\n",
+    PDEBUG("********** Mean:  %10f + %10fj %10f + %10fj **********\n",
             mean128.f[0], mean128.f[1], mean128.f[2], mean128.f[3]);
 
     ////////////////////////////////////////////////////////////////////////
@@ -243,16 +264,32 @@ __m128 GainControl::computeGainVar(const __m128* in, size_t sizeIn)
         __m128 i128 = _mm_set1_ps(sample + 1);
         __m128 q128 = _mm_div_ps(delta128, i128);
         var128.m = _mm_add_ps(var128.m, q128);
+
+        /*
+        __u128 udiff128;  udiff128.m = diff128;
+        __u128 udelta128; udelta128.m = delta128;
+        for (int off=0; off<4; off+=2) {
+            printf("S %zu, %.2f+%.2fj\t",
+                    sample,
+                    udiff128.f[off], udiff128.f[1+off]);
+            printf(": %.2f+%.2fj\t", udelta128.f[off], udelta128.f[1+off]);
+            printf(": %.2f+%.2fj\n", var128.f[off], var128.f[1+off]);
+        }
+        */
+
     }
-    // Merging average
+    PDEBUG("********** Vars:  %10f + %10fj, %10f + %10fj **********\n",
+            var128.f[0], var128.f[1], var128.f[2], var128.f[3]);
+
+    // Merging standard deviations
     tmp128.m = _mm_shuffle_ps(var128.m, var128.m, _MM_SHUFFLE(1, 0, 3, 2));
     var128.m = _mm_add_ps(var128.m, tmp128.m);
     var128.m = _mm_mul_ps(var128.m, _mm_set1_ps(0.5f));
     var128.m = _mm_sqrt_ps(var128.m);
-    PDEBUG("********** Var:   %10f, %10f, %10f, %10f **********\n",
+    PDEBUG("********** Var:   %10f + %10fj, %10f + %10fj **********\n",
             var128.f[0], var128.f[1], var128.f[2], var128.f[3]);
     var128.m = _mm_mul_ps(var128.m, _mm_set1_ps(4.0f));
-    PDEBUG("********** 4*Var: %10f, %10f, %10f, %10f **********\n",
+    PDEBUG("********** 4*Var: %10f + %10fj, %10f + %10fj **********\n",
             var128.f[0], var128.f[1], var128.f[2], var128.f[3]);
 
     ////////////////////////////////////////////////////////////////////////////
@@ -333,7 +370,17 @@ float GainControl::computeGainVar(const complexf* in, size_t sizeIn)
 {
     float gain;
     complexf mean;
-    complexf var;
+
+    /* The variance calculation is a bit strange, because we
+     * emulate the exact same functionality as the SSE code,
+     * which is the most used one.
+     *
+     * TODO: verify that this actually corresponds to the
+     * gain mode suggested in EN 300 798 Clause 5.3 Numerical Range.
+     */
+    complexf var1;
+    complexf var2;
+
     static const float factor = 0x7fff;
 
     mean = complexf(0.0f, 0.0f);
@@ -343,25 +390,66 @@ float GainControl::computeGainVar(const complexf* in, size_t sizeIn)
         float i = sample + 1;
         complexf q = delta / i;
         mean = mean + q;
+
+        /*
+        printf("F %zu, %.2f+%.2fj\t",
+                sample,
+                in[sample].real(), in[sample].imag());
+
+        printf(": %.2f+%.2fj\n", mean.real(), mean.imag());
+        */
     }
 
-    PDEBUG("********** Mean:  %10f, %10f **********\n", mean.real(), mean.imag());
+    PDEBUG("********** Mean:  %10f + %10fj **********\n", mean.real(), mean.imag());
 
     ////////////////////////////////////////////////////////////////////////
     // Computing standard deviation
     ////////////////////////////////////////////////////////////////////////
-    var = complexf(0.0f, 0.0f);
+    var1 = complexf(0.0f, 0.0f);
+    var2 = complexf(0.0f, 0.0f);
     for (size_t sample = 0; sample < sizeIn; ++sample) {
         complexf diff  = in[sample] - mean;
-        complexf delta = complexf(diff.real() * diff.real(),
-                                  diff.imag() * diff.imag()) - var;
-        float    i = sample + 1;
-        complexf q = delta / i;
-        var = var + q;
+        complexf delta;
+        complexf q;
+
+        float    i = (sample/2) + 1;
+        if (sample % 2 == 0) {
+            delta = complexf(diff.real() * diff.real(),
+                             diff.imag() * diff.imag()) - var1;
+            q = delta / i;
+
+            var1 += q;
+        }
+        else {
+            delta = complexf(diff.real() * diff.real(),
+                             diff.imag() * diff.imag()) - var2;
+            q = delta / i;
+
+            var2 += q;
+        }
+
+        /*
+        printf("F %zu, %.2f+%.2fj\t",
+                sample,
+                diff.real(), diff.imag());
+
+        printf(": %.2f+%.2fj\t", delta.real(), delta.imag());
+        printf(": %.2f+%.2fj\t", var1.real(), var1.imag());
+        printf(": %.2f+%.2fj\n", var2.real(), var2.imag());
+        */
     }
-    PDEBUG("********** Var:   %10f, %10f **********\n", var.real(), var.imag());
+
+    PDEBUG("********** Vars:  %10f + %10fj, %10f + %10fj **********\n",
+                var1.real(), var1.imag(),
+                var2.real(), var2.imag());
+
+    // Merge standard deviations in the same way the SSE version does it
+    complexf tmpvar = (var1 + var2) * 0.5f;
+    complexf var(sqrt(tmpvar.real()), sqrt(tmpvar.imag()));
+    PDEBUG("********** Var:   %10f + %10fj **********\n", var.real(), var.imag());
+
     var = var * 4.0f;
-    PDEBUG("********** 4*Var: %10f, %10f **********\n", var.real(), var.imag());
+    PDEBUG("********** 4*Var: %10f + %10fj **********\n", var.real(), var.imag());
 
     ////////////////////////////////////////////////////////////////////////////
     // Computing gain
@@ -372,10 +460,10 @@ float GainControl::computeGainVar(const complexf* in, size_t sizeIn)
     }
     // Detect NULL
     if ((int)var.real() == 0) {
-        gain = factor / var.real();
+        gain = 1.0f;
     }
     else {
-        gain = 1.0f;
+        gain = factor / var.real();
     }
 
     return gain;

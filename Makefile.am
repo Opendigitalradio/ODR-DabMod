@@ -1,5 +1,7 @@
 # Copyright (C) 2007, 2008, 2009, 2010 Her Majesty the Queen in Right
 # of Canada (Communications Research Center Canada)
+#
+# Copyright (C) 2014 Matthias P. Braendli, http://mpb.li
 
 # This file is part of ODR-DabMod.
 # 
@@ -16,8 +18,8 @@
 # You should have received a copy of the GNU General Public License
 # along with ODR-DabMod.  If not, see <http://www.gnu.org/licenses/>.
 
-SUBDIRS	=src lib
+SUBDIRS = src lib
 
 ACLOCAL_AMFLAGS = -I m4
 
-EXTRA_DIST	=COPYING NEWS README AUTHORS ChangeLog TODO doc
+EXTRA_DIST = COPYING NEWS README.md AUTHORS ChangeLog TODO doc

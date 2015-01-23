@@ -7,14 +7,15 @@ ODR-DabMod is a DAB (Digital Audio Broadcasting) modulator compliant
 to ETSI EN 300 401.
 
 In addition to the features of CRC-DabMod, this fork contains:
+
 - Configuration file support, see doc/example.ini
-- Integrated UHD output for USRP devices, bypassing gnuradio
-  - Tested for USRP1, B100, USRP2
-  - B200 support in development
+- Integrated UHD output for USRP devices
+  - Tested for B200, B100, USRP2, USRP1
+  - With WBX daughterboard (where appropriate)
 - Timestamping support required for SFN
 - A FIR filter (previously done in GNURadio by crc-dwap.py)
 - Improvements in logging (log to file, to syslog)
-- ETI sources: file (Raw, Framed and Streamed) and ZeroMQ (one frame per message)
+- ETI sources: file (Raw, Framed and Streamed) and ZeroMQ
 - A Telnet remote-control that can be used to change some parameters during
   runtime
 

@@ -2,8 +2,10 @@
    Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010 Her Majesty the
    Queen in Right of Canada (Communications Research Center Canada)
 
-   Includes modifications for which no copyright is claimed
-   2012, Matthias P. Braendli, matthias.braendli@mpb.li
+   Copyright (C) 2014
+   Matthias P. Braendli, matthias.braendli@mpb.li
+
+    http://opendigitalradio.org
  */
 /*
    This file is part of ODR-DabMod.
@@ -52,6 +54,9 @@ struct modulator_offset_config
 
 struct frame_timestamp
 {
+    // Which frame count does this timestamp apply to
+    uint32_t fct;
+
     uint32_t timestamp_sec;
     double timestamp_pps_offset;
     bool timestamp_valid;
@@ -64,6 +69,7 @@ struct frame_timestamp
             this->timestamp_pps_offset = rhs.timestamp_pps_offset;
             this->timestamp_valid = rhs.timestamp_valid;
             this->timestamp_refresh = rhs.timestamp_refresh;
+            this->fct = rhs.fct;
         }
 
         return *this;
@@ -104,7 +110,7 @@ struct frame_timestamp
 /* This module decodes MNSC time information */
 class TimestampDecoder
 {
-    public: 
+    public:
         TimestampDecoder(
                 struct modulator_offset_config& config,
                 Logger& logger):
@@ -113,6 +119,7 @@ class TimestampDecoder
             inhibit_second_update = 0;
             time_pps = 0.0;
             time_secs = 0;
+            latestFCT = 0;
             enableDecode = false;
             full_timestamp_received_mnsc = false;
             gmtime_r(0, &temp_time);
@@ -129,7 +136,11 @@ class TimestampDecoder
         void calculateTimestamp(struct frame_timestamp& ts);
 
         /* Update timestamp data from data in ETI */
-        void updateTimestampEti(int framephase, uint16_t mnsc, double pps);
+        void updateTimestampEti(
+                int framephase,
+                uint16_t mnsc,
+                double pps,
+                uint32_t fct);
 
         /* Update the modulator timestamp offset according to the modconf
          */
@@ -147,7 +158,7 @@ class TimestampDecoder
          * the timestamp
          */
         void updateTimestampPPS(double pps);
-        
+
         /* Update the timestamp when a full set of MNSC data is
          * known. This function can be called at most every four
          * frames when the data is transferred using the MNSC.
@@ -156,6 +167,7 @@ class TimestampDecoder
 
         struct tm temp_time;
         uint32_t time_secs;
+        uint32_t latestFCT;
         double time_pps;
         double timestamp_offset;
         int inhibit_second_update;

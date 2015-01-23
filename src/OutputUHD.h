@@ -36,9 +36,13 @@ DESCRIPTION:
 #ifndef OUTPUT_UHD_H
 #define OUTPUT_UHD_H
 
+#define FAKE_UHD 0
+
 #ifdef HAVE_CONFIG_H
 #   include <config.h>
 #endif
+
+#ifdef HAVE_OUTPUT_UHD
 
 #include <uhd/utils/thread_priority.hpp>
 #include <uhd/utils/safe_main.hpp>
@@ -77,15 +81,14 @@ struct UHDWorkerFrameData {
 
     // Full timestamp
     struct frame_timestamp ts;
-
-    // Frame counter
-    uint32_t fct;
 };
 
 enum refclk_lock_loss_behaviour_t { CRASH, IGNORE };
 
 struct UHDWorkerData {
+#if FAKE_UHD == 0
     uhd::usrp::multi_usrp::sptr myUsrp;
+#endif
     unsigned sampleRate;
 
     // Double buffering between the two threads
@@ -117,7 +120,12 @@ struct UHDWorkerData {
 
     // The common logger
     Logger* logger;
-}; 
+
+    // What transmission mode we're using defines by how
+    // much the FCT should increment for each
+    // transmission frame.
+    int fct_increment;
+};
 
 
 class UHDWorker {
@@ -160,7 +168,7 @@ struct OutputUHDConfig {
     long masterClockRate;
     unsigned sampleRate;
     double frequency;
-    int txgain;
+    double txgain;
     bool enableSync;
     bool muteNoTimestamps;
 
@@ -229,6 +237,7 @@ class OutputUHD: public ModOutput, public RemoteControllable {
         size_t lastLen;
 };
 
+#endif // HAVE_OUTPUT_UHD
 
 #endif // OUTPUT_UHD_H
 

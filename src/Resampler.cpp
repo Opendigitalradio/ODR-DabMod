@@ -1,6 +1,11 @@
 /*
    Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010, 2011 Her Majesty
    the Queen in Right of Canada (Communications Research Center Canada)
+
+   Copyright (C) 2014
+   Matthias P. Braendli, matthias.braendli@mpb.li
+
+    http://opendigitalradio.org
  */
 /*
    This file is part of ODR-DabMod.
@@ -22,17 +27,16 @@
 #include "Resampler.h"
 #include "PcDebug.h"
 
-
-#ifdef __ppc__
-#   define memalign(a, b)   malloc(b)
-#else // !__ppc__
-#   include <mm_malloc.h>
-#endif
+#include <malloc.h>
 #include <sys/types.h>
 #include <string.h>
 #include <stdexcept>
 #include <assert.h>
 
+#if USE_FFTW
+#  define FFT_REAL(x) x[0]
+#  define FFT_IMAG(x) x[1]
+#endif
 
 unsigned gcd(unsigned a, unsigned b)
 {
@@ -59,6 +63,9 @@ Resampler::Resampler(size_t inputRate, size_t outputRate, size_t resolution) :
 {
     PDEBUG("Resampler::Resampler(%zu, %zu) @ %p\n", inputRate, outputRate, this);
 
+#if USE_FFTW
+    fprintf(stderr, "This software uses the FFTW library.\n\n");
+#else
     fprintf(stderr, "This software uses KISS FFT.\n\n");
     fprintf(stderr, "Copyright (c) 2003-2004 Mark Borgerding\n"
             "\n"
@@ -92,6 +99,7 @@ Resampler::Resampler(size_t inputRate, size_t outputRate, size_t resolution) :
             "OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY "
             "OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE "
             "POSSIBILITY OF SUCH DAMAGE.\n");
+#endif
 
     size_t divisor = gcd(inputRate, outputRate);
     L = outputRate / divisor;
@@ -119,6 +127,22 @@ Resampler::Resampler(size_t inputRate, size_t outputRate, size_t resolution) :
         PDEBUG("Window[%zu] = %f\n", i, myWindow[i]);
     }
 
+#if USE_FFTW
+    myFftIn = (FFT_TYPE*)fftwf_malloc(sizeof(FFT_TYPE) * myFftSizeIn);
+    myFront = (FFT_TYPE*)fftwf_malloc(sizeof(FFT_TYPE) * myFftSizeIn);
+    myFftPlan1 = fftwf_plan_dft_1d(myFftSizeIn,
+            myFftIn, myFront,
+            FFTW_FORWARD, FFTW_MEASURE);
+
+    myBack = (FFT_TYPE*)fftwf_malloc(sizeof(FFT_TYPE) * myFftSizeOut);
+    myFftOut = (FFT_TYPE*)fftwf_malloc(sizeof(FFT_TYPE) * myFftSizeOut);
+    myFftPlan2 = fftwf_plan_dft_1d(myFftSizeOut,
+            myBack, myFftOut,
+            FFTW_BACKWARD, FFTW_MEASURE);
+
+    myBufferIn = (complexf*)fftwf_malloc(sizeof(FFT_TYPE) * myFftSizeIn / 2);
+    myBufferOut = (complexf*)fftwf_malloc(sizeof(FFT_TYPE) * myFftSizeOut / 2);
+#else
     myFftIn = (FFT_TYPE*)memalign(16, myFftSizeIn * sizeof(FFT_TYPE));
     myFftOut = (FFT_TYPE*)memalign(16, myFftSizeOut * sizeof(FFT_TYPE));
     myBufferIn = (complexf*)memalign(16, myFftSizeIn / 2 * sizeof(FFT_TYPE));
@@ -127,6 +151,7 @@ Resampler::Resampler(size_t inputRate, size_t outputRate, size_t resolution) :
     myBack = (FFT_TYPE*)memalign(16, myFftSizeOut * sizeof(FFT_TYPE));
     myFftPlan1 = kiss_fft_alloc(myFftSizeIn, 0, NULL, NULL);
     myFftPlan2 = kiss_fft_alloc(myFftSizeOut, 1, NULL, NULL);
+#endif
 
     memset(myBufferIn, 0, myFftSizeIn / 2 * sizeof(FFT_TYPE));
     memset(myBufferOut, 0, myFftSizeOut / 2 * sizeof(FFT_TYPE));
@@ -137,34 +162,30 @@ Resampler::~Resampler()
 {
     PDEBUG("Resampler::~Resampler() @ %p\n", this);
 
-    if (myFftPlan1 != NULL) {
-        free(myFftPlan1);
-    }
-    if (myFftPlan2 != NULL) {
-        free(myFftPlan2);
-    }
-    if (myFftIn != NULL) {
-        free(myFftIn);
-    }
-    if (myFftOut != NULL) {
-        free(myFftOut);
-    }
-    if (myBufferIn != NULL) {
-        free(myBufferIn);
-    }
-    if (myBufferOut != NULL) {
-        free(myBufferOut);
-    }
-    if (myFront != NULL) {
-        free(myFront);
-    }
-    if (myBack != NULL) {
-        free(myBack);
-    }
-    if (myWindow != NULL) {
-        free(myWindow);
-    }
+#if USE_FFTW
+    if (myFftPlan1 != NULL) { fftwf_free(myFftPlan1); }
+    if (myFftPlan2 != NULL) { fftwf_free(myFftPlan2); }
+    if (myFftIn != NULL) { fftwf_free(myFftIn); }
+    if (myFftOut != NULL) { fftwf_free(myFftOut); }
+    if (myBufferIn != NULL) { fftwf_free(myBufferIn); }
+    if (myBufferOut != NULL) { fftwf_free(myBufferOut); }
+    if (myFront != NULL) { fftwf_free(myFront); }
+    if (myBack != NULL) { fftwf_free(myBack); }
+    if (myWindow != NULL) { fftwf_free(myWindow); }
+    fftwf_destroy_plan(myFftPlan1);
+    fftwf_destroy_plan(myFftPlan2);
+#else
+    if (myFftPlan1 != NULL) { free(myFftPlan1); }
+    if (myFftPlan2 != NULL) { free(myFftPlan2); }
+    if (myFftIn != NULL) { free(myFftIn); }
+    if (myFftOut != NULL) { free(myFftOut); }
+    if (myBufferIn != NULL) { free(myBufferIn); }
+    if (myBufferOut != NULL) { free(myBufferOut); }
+    if (myFront != NULL) { free(myFront); }
+    if (myBack != NULL) { free(myBack); }
+    if (myWindow != NULL) { free(myWindow); }
     kiss_fft_cleanup();
+#endif
 }
 
 
@@ -179,7 +200,7 @@ int Resampler::process(Buffer* const dataIn, Buffer* dataOut)
     FFT_TYPE* out = reinterpret_cast<FFT_TYPE*>(dataOut->getData());
     size_t sizeIn = dataIn->getLength() / sizeof(complexf);
 
-#ifdef USE_SIMD
+#if defined(USE_SIMD) && !USE_FFTW
     size_t sizeOut = dataOut->getLength() / sizeof(complexf);
 
     typedef struct {
@@ -263,7 +284,9 @@ int Resampler::process(Buffer* const dataIn, Buffer* dataOut)
             j += myFftSizeOut / 2;
         }
     }
-#else
+#endif
+
+#if USE_FFTW || (!defined(USE_SIMD))
     for (size_t i = 0, j = 0; i < sizeIn; i += myFftSizeIn / 2, j += myFftSizeOut / 2) {
         memcpy(myFftIn, myBufferIn, myFftSizeIn / 2 * sizeof(FFT_TYPE));
         memcpy(myFftIn + (myFftSizeIn / 2), in + i, myFftSizeIn / 2 * sizeof(FFT_TYPE));
@@ -273,7 +296,11 @@ int Resampler::process(Buffer* const dataIn, Buffer* dataOut)
             FFT_IMAG(myFftIn[k]) *= myWindow[k];
         }
 
+#if USE_FFTW
+        fftwf_execute(myFftPlan1);
+#else
         kiss_fft(myFftPlan1, myFftIn, myFront);
+#endif
 
         if (myFftSizeOut > myFftSizeIn) {
             memset(myBack, 0, myFftSizeOut * sizeof(FFT_TYPE));
@@ -304,7 +331,11 @@ int Resampler::process(Buffer* const dataIn, Buffer* dataOut)
             FFT_IMAG(myBack[k]) *= myFactor;
         }
 
+#if USE_FFTW
+        fftwf_execute(myFftPlan2);
+#else
         kiss_fft(myFftPlan2, myBack, myFftOut);
+#endif
 
         for (size_t k = 0; k < myFftSizeOut / 2; ++k) {
             FFT_REAL(out[j + k]) = myBufferOut[k].real() + FFT_REAL(myFftOut[k]);
@@ -316,3 +347,4 @@ int Resampler::process(Buffer* const dataIn, Buffer* dataOut)
 
     return 1;
 }
+

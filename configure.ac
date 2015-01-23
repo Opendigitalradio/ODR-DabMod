@@ -19,10 +19,10 @@
 # along with ODR-DabMod.  If not, see <http://www.gnu.org/licenses/>.
 
 AC_PREREQ(2.59)
-AC_INIT([ODR-DabMod], [0.4.4], [matthias.braendli@mpb.li])
+AC_INIT([ODR-DabMod], [0.5.0], [matthias.braendli@mpb.li])
 AC_CONFIG_AUX_DIR([build-aux])
 AC_CANONICAL_SYSTEM
-AM_INIT_AUTOMAKE([-Wall])
+AM_INIT_AUTOMAKE([-Wall foreign])
 AC_CONFIG_SRCDIR([src/DabMod.cpp])
 AM_CONFIG_HEADER([config.h])
 AM_SILENT_RULES([yes])
@@ -48,53 +48,86 @@ AC_PROG_MKDIR_P
 
 EXTRA=""
 AC_ARG_ENABLE([debug],
-        [AS_HELP_STRING([--disable-debug], [Disable debugger symbols])],
-        [], [enable_debug=yes])
+        [AS_HELP_STRING([--enable-debug], [Enable debugger symbols])],
+        [], [enable_debug=no])
 AC_ARG_ENABLE([prof],
         [AS_HELP_STRING([--enable-prof], [Enable profiling])],
         [], [enable_prof=no])
 AC_ARG_WITH([debug-malloc],
-        [AS_HELP_STRING([--with-debug-malloc[=yes|no|duma|efence|...]],
+        [AS_HELP_STRING([--with-debug-malloc[=no|yes|duma|efence|...]],
             [Add malloc debugger support])],
-        [], [with_debug_malloc=yes])
+        [], [with_debug_malloc=no])
 AC_ARG_ENABLE([trace],
         [AS_HELP_STRING([--enable-trace], [Enable trace output])],
         [], [enable_trace=no])
+
+# Which FFT library to use
 AC_ARG_ENABLE([fft_simd],
-        [AS_HELP_STRING([--enable-fft-simd], [Enable SIMD instructions for kiss-fft (unstable)])],
+        [AS_HELP_STRING([--enable-fft-simd],
+                        [Enable SIMD instructions for kiss-fft (unstable)])],
         [], [enable_fft_simd=no])
+AC_ARG_ENABLE([kiss_fft],
+        [AS_HELP_STRING([--enable-kiss-fft], [Prefer KISS FFT over FFTW3])],
+        [], [enable_kiss=no])
+
 # ZeroMQ message queue input
 AC_ARG_ENABLE([input_zeromq],
         AS_HELP_STRING([--enable-input-zeromq], [Enable ZeroMQ input]))
+
+# ZeroMQ message IQ output
+AC_ARG_ENABLE([output_zeromq],
+        AS_HELP_STRING([--enable-output-zeromq], [Enable ZeroMQ output]))
+
 # UHD support control
 AC_ARG_ENABLE([output_uhd],
         [AS_HELP_STRING([--enable-output-uhd], [Enable UHD output])],
         [], [enable_output_uhd=yes])
 
+AS_IF([test "x$enable_kiss" = "xno"],
+      [PKG_CHECK_MODULES([FFTW], [fftw3f], enable_fftw=yes, enable_fftw=no)],
+      [enable_fftw=no])
+
+AS_IF([test "x$enable_fftw" = "xyes"],
+      AC_MSG_NOTICE([Found FFTW3]),
+      AC_MSG_NOTICE([Using Kiss FFT]) )
+
+echo "Checking input zeromq"
+
 AS_IF([test "x$enable_input_zeromq" = "xyes"],
         [AC_DEFINE(HAVE_INPUT_ZEROMQ, [1], [Define if ZeroMQ input is enabled]) ,
-         AC_CHECK_LIB(zmq, zmq_init, ,[AC_MSG_ERROR([ZeroMQ libzmq is required])])])
+         AC_CHECK_LIB(zmq, zmq_init, ZMQ_LIBS="-lzmq" ,[AC_MSG_ERROR([ZeroMQ libzmq is required])])])
+AS_IF([test "x$enable_output_zeromq" = "xyes"],
+        [AC_DEFINE(HAVE_OUTPUT_ZEROMQ, [1], [Define if ZeroMQ output is enabled]) ,
+         AC_CHECK_LIB(zmq, zmq_init, ZMQ_LIBS="-lzmq" ,[AC_MSG_ERROR([ZeroMQ libzmq is required])])])
 AS_IF([test "x$enable_debug" = "xno"],
         [OPTIM="-O2" DEBUG="" EXTRA="$EXTRA -DNDEBUG"],
-        [OPTIM="-O0" DEBUG="-ggdb" EXTRA="$EXTRA -Wall"])
+        [OPTIM="-O0" DEBUG="-ggdb" EXTRA="$EXTRA"])
 AS_IF([test "x$enable_prof" != "xno"],
         [EXTRA="$EXTRA -pg"])
-AS_IF([test "x$enable_trace" != "xno"],
-        [EXTRA="$EXTRA -DDEBUG"])
-AS_IF([test "x$enable_fft_simd" != "xno"],
-        [EXTRA="$EXTRA -DUSE_SIMD"])
 
-AM_CONDITIONAL([HAVE_INPUT_ZEROMQ_TEST], [test "x$enable_input_zeromq" = "xyes"])
+# Define conditionals for Makefile.am
+AM_CONDITIONAL([USE_KISS_FFT], [test "x$enable_fftw" = "xno"])
+AM_CONDITIONAL([DEBUG], [test "x$enable_trace" = "xyes"])
+AM_CONDITIONAL([IS_GIT_REPO], [test -d '.git'])
 
+# Defines for config.h
+AS_IF([test "x$enable_fft_simd" = "xyes"],
+      [AC_DEFINE(USE_SIMD, [1], [Define to enable KISS FFT SIMD])])
+AS_IF([test "x$enable_fftw" = "xno"],
+      [AC_DEFINE(USE_KISS_FFT, [1], [Define to enable KISS])])
+AS_IF([test "x$enable_fftw" = "xyes"],
+      [AC_DEFINE(USE_FFTW, [1], [Define to enable FFTW])])
 
-AC_SUBST([CFLAGS], ["$OPTIM $DEBUG $EXTRA"])
-AC_SUBST([CXXFLAGS], ["$OPTIM $DEBUG $EXTRA"])
+AX_PTHREAD([], AC_MSG_ERROR([requires pthread]))
 
+AC_SUBST([CFLAGS], ["$OPTIM $DEBUG $EXTRA $FFTW_CFLAGS $PTHREAD_CFLAGS"])
+AC_SUBST([CXXFLAGS], ["$OPTIM $DEBUG $EXTRA $FFTW_CFLAGS $PTHREAD_CFLAGS"])
+AC_SUBST([LIBS], ["$FFTW_LIBS $PTHREAD_LIBS $ZMQ_LIBS"])
+
+# Checks for UHD.
 AS_IF([test "x$enable_output_uhd" = "xyes"],
         [AC_DEFINE(HAVE_OUTPUT_UHD, [1], [Define if UHD output is enabled]) ,
          AC_CHECK_LIB([uhd], [main], [], [AC_MSG_ERROR([library uhd is missing])])])
-
-AM_CONDITIONAL([HAVE_OUTPUT_UHD_TEST], [test "x$enable_output_uhd" = "xyes"])
 
 AX_BOOST_BASE([1.41.0], [], AC_MSG_ERROR([BOOST 1.41 or later is required]))
 AC_CHECK_LIB([boost_system], [main], [], [AC_MSG_ERROR([library boost_system is missing])])
@@ -102,7 +135,8 @@ AC_CHECK_LIB([boost_thread], [main], [], [AC_MSG_ERROR([library boost_thread is 
 
 AC_CHECK_LIB([rt], [clock_gettime], [], [AC_MSG_ERROR([library rt is missing])])
 
-# Checks for libraries.
+# Tests for different memory allocation debuggers.
+# Valgrind doesn't need any.
 AS_IF([test "x$enable_debug" != "xno"],
         [AS_IF([test "x$with_debug_malloc" != "xno"],
             [AS_IF([test "x$with_debug_malloc" = "xyes"],
@@ -133,7 +167,28 @@ AC_COMPILE_IFELSE(
         [AC_MSG_RESULT([yes])], [AC_MSG_RESULT([no]) AC_DEFINE([M_PIl], [M_PI], [Replacing define])])
 AC_LANG_POP([C++])
 
-AM_CONDITIONAL([IS_GIT_REPO], [test -d '.git'])
+
+# Check for SSE
+AC_MSG_CHECKING(for SSE in current arch/CFLAGS)
+AC_LINK_IFELSE([
+AC_LANG_PROGRAM([[
+#include <xmmintrin.h>
+__m128 testfunc(float *a, float *b) {
+  return _mm_add_ps(_mm_loadu_ps(a), _mm_loadu_ps(b));
+}
+]])],
+[
+has_sse=yes
+],
+[
+has_sse=no
+]
+)
+AC_MSG_RESULT($has_sse)
+
+AM_CONDITIONAL([HAVE_SSE], [test "x$has_sse" = "xyes"])
+
+# TODO: Check for NEON
 
 AC_TYPE_SIGNAL
 AC_CHECK_FUNCS([bzero floor ftime gettimeofday memset sqrt strchr strerror strtol])
@@ -142,3 +197,37 @@ AC_CONFIG_FILES([Makefile
                  lib/Makefile
                  src/Makefile])
 AC_OUTPUT
+
+echo
+echo "***********************************************"
+echo
+enabled=""
+disabled=""
+for feat in debug prof trace fftw fft_simd output_uhd input_zeromq output_zeromq
+do
+    eval var=\$enable_$feat
+    AS_IF([test "x$var" = "xyes"],
+          [enabled="$enabled $feat"],
+          [disabled="$disabled $feat"])
+done
+echo "  Features"
+echo "  Enabled: $enabled"
+echo "  Disabled: $disabled"
+echo
+echo
+enabled=""
+disabled=""
+for feat in with_debug_malloc has_sse
+do
+    eval var=\$$feat
+    AS_IF([test "x$var" != "xno"],
+          [enabled="$enabled $feat"],
+          [disabled="$disabled $feat"])
+done
+echo "  Options"
+echo "  Active: $enabled"
+echo "  Disabled: $disabled"
+
+echo
+echo "***********************************************"
+echo
