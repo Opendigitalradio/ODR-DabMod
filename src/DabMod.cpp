@@ -213,7 +213,7 @@ int main(int argc, char* argv[])
 
     Logger logger;
     InputFileReader inputFileReader(logger);
-#if defined(HAVE_INPUT_ZEROMQ)
+#if defined(HAVE_ZEROMQ)
     InputZeroMQReader inputZeroMQReader(logger);
 #endif
     InputReader* inputReader;
@@ -352,14 +352,11 @@ int main(int argc, char* argv[])
         "\n";
 
     std::cerr << "Compiled with features: " <<
-#if defined(HAVE_INPUT_ZEROMQ)
-        "input_zeromq " <<
+#if defined(HAVE_ZEROMQ)
+        "zeromq " <<
 #endif
 #if defined(HAVE_OUTPUT_UHD)
         "output_uhd " <<
-#endif
-#if defined(HAVE_OUTPUT_ZEROMQ)
-        "output_zeromq " <<
 #endif
         "\n";
 
@@ -408,7 +405,7 @@ int main(int argc, char* argv[])
             }
         }
 
-#if defined(HAVE_INPUT_ZEROMQ)
+#if defined(HAVE_ZEROMQ)
         if (pt.get("remotecontrol.zmqctrl", 0) == 1) {
             try {
                 std::string zmqCtrlEndpoint = pt.get("remotecontrol.zmqctrlendpoint", "");
@@ -592,7 +589,7 @@ int main(int argc, char* argv[])
             useUHDOutput = 1;
         }
 #endif
-#if defined(HAVE_OUTPUT_ZEROMQ)
+#if defined(HAVE_ZEROMQ)
         else if (output_selected == "zmq") {
             outputName = pt.get<std::string>("zmqoutput.listen");
             useZeroMQOutput = 1;
@@ -735,7 +732,7 @@ int main(int argc, char* argv[])
         inputReader = &inputFileReader;
     }
     else if (inputTransport == "zeromq") {
-#if !defined(HAVE_INPUT_ZEROMQ)
+#if !defined(HAVE_ZEROMQ)
         fprintf(stderr, "Error, ZeroMQ input transport selected, but not compiled in!\n");
         ret = -1;
         goto END_MAIN;
@@ -786,7 +783,7 @@ int main(int argc, char* argv[])
         }
     }
 #endif
-#if defined(HAVE_OUTPUT_ZEROMQ)
+#if defined(HAVE_ZEROMQ)
     else if (useZeroMQOutput) {
         /* We normalise the same way as for the UHD output */
         normalise = 1.0f/50000.0f;

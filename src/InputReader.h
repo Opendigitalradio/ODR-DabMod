@@ -31,7 +31,7 @@
 #endif
 
 #include <cstdio>
-#if defined(HAVE_INPUT_ZEROMQ)
+#if defined(HAVE_ZEROMQ)
 #  include "zmq.hpp"
 #  include "ThreadsafeQueue.h"
 #endif
@@ -130,7 +130,7 @@ class InputFileReader : public InputReader
                             // after 2**32 * 24ms ~= 3.3 years
 };
 
-#if defined(HAVE_INPUT_ZEROMQ)
+#if defined(HAVE_ZEROMQ)
 /* A ZeroMQ input. See www.zeromq.org for more info */
 
 struct InputZeroMQThreadData

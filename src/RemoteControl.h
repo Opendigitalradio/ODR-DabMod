@@ -33,7 +33,7 @@
 #   include "config.h"
 #endif
 
-#if defined(HAVE_INPUT_ZEROMQ)
+#if defined(HAVE_ZEROMQ)
 #include <zmq.hpp>
 #endif
 
@@ -295,7 +295,7 @@ class RemoteControllerTelnet : public BaseRemoteController {
         int m_port;
 };
 
-#if defined(HAVE_INPUT_ZEROMQ)
+#if defined(HAVE_ZEROMQ)
 /* Implements a Remote controller using zmq transportlayer
  * that listens on localhost
  */

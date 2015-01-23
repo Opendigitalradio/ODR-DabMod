@@ -30,7 +30,7 @@
 #include <string.h>
 #include <sstream>
 
-#if defined(HAVE_OUTPUT_ZEROMQ)
+#if defined(HAVE_ZEROMQ)
 
 OutputZeroMQ::OutputZeroMQ(std::string endpoint, Buffer* dataOut)
     : ModOutput(ModFormat(1), ModFormat(0)),
@@ -63,5 +63,5 @@ int OutputZeroMQ::process(Buffer* dataIn, Buffer* dataOut)
     return dataIn->getLength();
 }
 
-#endif // HAVE_OUTPUT_ZEROMQ_H
+#endif // HAVE_ZEROMQ
 

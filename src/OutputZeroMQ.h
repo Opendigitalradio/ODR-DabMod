@@ -31,7 +31,7 @@
 #   include "config.h"
 #endif
 
-#if defined(HAVE_OUTPUT_ZEROMQ)
+#if defined(HAVE_ZEROMQ)
 
 #include "ModOutput.h"
 #include "zmq.hpp"
@@ -54,7 +54,7 @@ class OutputZeroMQ : public ModOutput
         std::string m_name;
 };
 
-#endif // HAVE_OUTPUT_ZEROMQ_H
+#endif // HAVE_ZEROMQ
 
 #endif // OUTPUT_ZEROMQ_H
 

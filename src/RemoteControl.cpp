@@ -248,7 +248,7 @@ void RemoteControllerTelnet::reply(tcp::socket& socket, string message)
 }
 
 
-#if defined(HAVE_INPUT_ZEROMQ)
+#if defined(HAVE_ZEROMQ)
 
 void RemoteControllerZmq::restart()
 {

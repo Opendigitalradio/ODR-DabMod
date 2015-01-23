@@ -29,7 +29,7 @@
 #   include "config.h"
 #endif
 
-#if defined(HAVE_INPUT_ZEROMQ)
+#if defined(HAVE_ZEROMQ)
 
 #include <string>
 #include <cstring>
