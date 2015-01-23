@@ -222,10 +222,10 @@ class OutputUHD: public ModOutput, public RemoteControllable {
         // muting can only be changed using the remote control
         bool myMuting;
 
-	private:
-		// data
-		int myStaticDelay;
-		std::vector<complexf> myDelayBuf;
+    private:
+        // data
+        int myStaticDelay;
+        std::vector<complexf> myDelayBuf;
         size_t lastLen;
 };
 

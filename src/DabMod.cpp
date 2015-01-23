@@ -55,7 +55,6 @@
 #include <sys/stat.h>
 #include <stdexcept>
 #include <signal.h>
-//#include <zmq.hpp>
 
 #ifdef HAVE_NETINET_IN_H
 #   include <netinet/in.h>
@@ -190,9 +189,6 @@ int main(int argc, char* argv[])
     OutputUHDConfig outputuhd_conf;
 #endif
 
-	//zmq::context_t zmqCtrlContext(1);
-	//std::string zmqCtrlEndpoint = "";
-
     // To handle the timestamp offset of the modulator
     struct modulator_offset_config modconf;
     modconf.use_offset_file = false;
@@ -204,7 +200,6 @@ int main(int argc, char* argv[])
     InputMemory* input = NULL;
     ModOutput* output = NULL;
 
-    //BaseRemoteController* rc = NULL;
     RemoteControllers rcs;
 
     Logger logger;
@@ -371,9 +366,8 @@ int main(int argc, char* argv[])
 #if defined(HAVE_INPUT_ZEROMQ)
         if (pt.get("remotecontrol.zmqctrl", 0) == 1) {
             try {
-				std::string zmqCtrlEndpoint = 
-					pt.get("remotecontrol.zmqctrlendpoint", "");
-				std::cout << "ZmqCtrlEndpoint: " << zmqCtrlEndpoint << std::endl;
+                std::string zmqCtrlEndpoint = pt.get("remotecontrol.zmqctrlendpoint", "");
+                std::cerr << "ZmqCtrlEndpoint: " << zmqCtrlEndpoint << std::endl;
                 RemoteControllerZmq* zmqrc = new RemoteControllerZmq(zmqCtrlEndpoint);
                 rcs.add_controller(zmqrc);
             }
@@ -720,7 +714,7 @@ int main(int argc, char* argv[])
 
         outputuhd_conf.sampleRate = outputRate;
         try {
-            output = new OutputUHD(outputuhd_conf, logger/*, &zmqCtrlContext, zmqCtrlEndpoint*/);
+            output = new OutputUHD(outputuhd_conf, logger);
             ((OutputUHD*)output)->enrol_at(rcs);
         }
         catch (std::exception& e) {
@@ -773,7 +767,7 @@ int main(int argc, char* argv[])
                 /* Check every once in a while if the remote control
                  * is still working */
                 if (rcs.get_no_controllers() > 0 && (frame % 250) == 0) {
-					rcs.check_faults();
+                    rcs.check_faults();
                 }
             }
             if (framesize == 0) {

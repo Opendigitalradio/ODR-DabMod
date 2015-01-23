@@ -93,40 +93,37 @@ class BaseRemoteController {
         virtual ~BaseRemoteController() {}
 };
 
-class RemoteControllers {
 /* Holds all our remote controllers, i.e. we may have more than
  * one type of controller running.
-*/
+ */
+class RemoteControllers {
     public:
-		RemoteControllers() {}
-		virtual ~RemoteControllers() {}
+        void add_controller(BaseRemoteController *rc) {
+            m_controllers.push_back(rc);
+        }
 
-		void add_controller(BaseRemoteController *rc) {
-			m_controllers.push_back(rc);
-		}
-
-		void add_controllable(RemoteControllable *rc) {
+        void add_controllable(RemoteControllable *rc) {
             for (std::list<BaseRemoteController*>::iterator it = m_controllers.begin();
                     it != m_controllers.end(); ++it) {
-				(*it)->enrol(rc);
-			}
-		}
-	
+                (*it)->enrol(rc);
+            }
+        }
+
         void check_faults() {
             for (std::list<BaseRemoteController*>::iterator it = m_controllers.begin();
                     it != m_controllers.end(); ++it) {
-				if ((*it)->fault_detected())
-				{
-					fprintf(stderr,
-							"Detected Remote Control fault, restarting it\n");
-					(*it)->restart();
-				}
-			}
-		}
-		size_t get_no_controllers() { return m_controllers.size(); }
+                if ((*it)->fault_detected())
+                {
+                    fprintf(stderr,
+                            "Detected Remote Control fault, restarting it\n");
+                    (*it)->restart();
+                }
+            }
+        }
+        size_t get_no_controllers() { return m_controllers.size(); }
 
-	private:
-		std::list<BaseRemoteController*> m_controllers;
+    private:
+        std::list<BaseRemoteController*> m_controllers;
 };
 
 /* Objects that support remote control must implement the following class */
@@ -306,15 +303,14 @@ class RemoteControllerZmq : public BaseRemoteController {
     public:
         RemoteControllerZmq()
             : m_running(false), m_fault(false),
-			m_zmqContext(1),
+            m_zmqContext(1),
             m_endpoint("") { }
 
         RemoteControllerZmq(std::string endpoint)
             : m_running(true), m_fault(false),
             m_child_thread(&RemoteControllerZmq::process, this),
-			m_zmqContext(1),
-            m_endpoint(endpoint)
-        { }
+            m_zmqContext(1),
+            m_endpoint(endpoint) { }
 
         ~RemoteControllerZmq() {
             m_running = false;
@@ -336,9 +332,9 @@ class RemoteControllerZmq : public BaseRemoteController {
     private:
         void restart_thread();
 
-		void recv_all(zmq::socket_t* pSocket, std::vector<std::string> &message);
-		void send_ok_reply(zmq::socket_t *pSocket);
-		void send_fail_reply(zmq::socket_t *pSocket, const std::string &error);
+        void recv_all(zmq::socket_t* pSocket, std::vector<std::string> &message);
+        void send_ok_reply(zmq::socket_t *pSocket);
+        void send_fail_reply(zmq::socket_t *pSocket, const std::string &error);
         void process();
 
 
@@ -377,8 +373,8 @@ class RemoteControllerZmq : public BaseRemoteController {
         /* This controller commands the controllables in the cohort */
         std::list<RemoteControllable*> m_cohort;
 
-		zmq::context_t m_zmqContext;
-		std::string m_endpoint;
+        zmq::context_t m_zmqContext;
+        std::string m_endpoint;
 };
 #endif
 
