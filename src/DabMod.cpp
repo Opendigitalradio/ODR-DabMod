@@ -71,13 +71,13 @@
 typedef std::complex<float> complexf;
 
 
-bool running = true;
+volatile sig_atomic_t running = 1;
 
 void signalHandler(int signalNb)
 {
     PDEBUG("signalHandler(%i)\n", signalNb);
 
-    running = false;
+    running = 0;
 }
 
 
@@ -218,7 +218,14 @@ int main(int argc, char* argv[])
 #endif
     InputReader* inputReader;
 
-    signal(SIGINT, signalHandler);
+    struct sigaction sa;
+    memset(&sa, 0, sizeof(struct sigaction));
+    sa.sa_handler = &signalHandler;
+
+    if (sigaction(SIGINT, &sa, NULL) == -1) {
+        perror("sigaction");
+        return EXIT_FAILURE;
+    }
 
     // Set timezone to UTC
     setenv("TZ", "", 1);
@@ -844,7 +851,7 @@ int main(int argc, char* argv[])
             else {
                 fprintf(stderr, "Input read error.\n");
             }
-            running = false;
+            running = 0;
         }
     } catch (std::exception& e) {
         fprintf(stderr, "EXCEPTION: %s\n", e.what());
