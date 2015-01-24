@@ -1,6 +1,14 @@
 This file contains information about the changes done to
 the ODR-DabMod in this repository
 
+2015-01-24: Matthias P. Braendli <matthias@mpb.li>
+	(v0.5.1)
+	* odr-dabmod:
+		Security: force Telnet RC to listen only on
+		localhost.
+		Add raspine's ZeroMQ RC and UHD staticdelay setting
+		Add I/Q format converter (signed 8-bit)
+
 2014-12-09: Matthias P. Braendli <matthias@mpb.li>
 	(v0.5.0)
 	* odr-dabmod:

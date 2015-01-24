@@ -16,8 +16,9 @@ In addition to the features of CRC-DabMod, this fork contains:
 - A FIR filter (previously done in GNURadio by crc-dwap.py)
 - Improvements in logging (log to file, to syslog)
 - ETI sources: file (Raw, Framed and Streamed) and ZeroMQ
-- A Telnet remote-control that can be used to change some parameters during
-  runtime
+- A Telnet and ZeroMQ remote-control that can be used to change
+  some parameters during runtime
+- 8-bit signed I/Q output format
 
 The src/ directory contains the source code of ODR-DabMod.
 
