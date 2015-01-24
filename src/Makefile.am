@@ -110,6 +110,7 @@ odr_dabmod_SOURCES  = DabMod.cpp \
 					  ThreadsafeQueue.h \
 					  Log.cpp Log.h \
 					  RemoteControl.cpp RemoteControl.h \
+					  FormatConverter.cpp FormatConverter.h \
 					  zmq.hpp
 
 nodist_odr_dabmod_SOURCES = $(FFT_SRC)

@@ -35,6 +35,7 @@
 #include "DabModulator.h"
 #include "InputMemory.h"
 #include "OutputFile.h"
+#include "FormatConverter.h"
 #if defined(HAVE_OUTPUT_UHD)
 #   include "OutputUHD.h"
 #endif
@@ -176,6 +177,7 @@ int main(int argc, char* argv[])
     std::string outputName;
     int useZeroMQOutput = 0;
     int useFileOutput = 0;
+    std::string fileOutputFormat = "complexf";
     int useUHDOutput = 0;
 
     uint64_t frame = 0;
@@ -186,6 +188,17 @@ int main(int argc, char* argv[])
     float normalise = 1.0f;
     GainMode gainMode = GAIN_VAR;
     Buffer data;
+
+
+    /* UHD requires the input I and Q samples to be in the interval
+     * [-1.0,1.0], otherwise they get truncated, which creates very
+     * wide-spectrum spikes. Depending on the Transmission Mode, the
+     * Gain Mode and the sample rate (and maybe other parameters), the
+     * samples can have peaks up to about 48000. The value of 50000
+     * should guarantee that with a digital gain of 1.0, UHD never clips
+     * our samples.
+     */
+    const float normalise_factor = 50000.0f;
 
     std::string filterTapsFilename = "";
 
@@ -207,6 +220,7 @@ int main(int argc, char* argv[])
     Flowgraph* flowgraph = NULL;
     DabModulator* modulator = NULL;
     InputMemory* input = NULL;
+    FormatConverter* format_converter = NULL;
     ModOutput* output = NULL;
 
     RemoteControllers rcs;
@@ -498,6 +512,8 @@ int main(int argc, char* argv[])
                 goto END_MAIN;
             }
             useFileOutput = 1;
+
+            fileOutputFormat = pt.get("fileoutput.format", fileOutputFormat);
         }
 #if defined(HAVE_OUTPUT_UHD)
         else if (output_selected == "uhd") {
@@ -761,23 +777,23 @@ int main(int argc, char* argv[])
         goto END_MAIN;
     }
 
-
     if (useFileOutput) {
-        // Opening COFDM output file
-        output = new OutputFile(outputName);
+        if (fileOutputFormat == "complexf") {
+            output = new OutputFile(outputName);
+        }
+        else if (fileOutputFormat == "s8") {
+            // We must normalise the samples to the interval [-127.0; 127.0]
+            normalise = 127.0f / normalise_factor;
+
+            format_converter = new FormatConverter();
+
+            output = new OutputFile(outputName);
+        }
     }
 #if defined(HAVE_OUTPUT_UHD)
     else if (useUHDOutput) {
 
-        /* UHD requires the input I and Q samples to be in the interval
-         * [-1.0,1.0], otherwise they get truncated, which creates very
-         * wide-spectrum spikes. Depending on the Transmission Mode, the
-         * Gain Mode and the sample rate (and maybe other parameters), the
-         * samples can have peaks up to about 48000. The value of 50000
-         * should guarantee that with a digital gain of 1.0, UHD never clips
-         * our samples.
-         */
-        normalise = 1.0f/50000.0f;
+        normalise = 1.0f / normalise_factor;
 
         outputuhd_conf.sampleRate = outputRate;
         try {
@@ -793,7 +809,7 @@ int main(int argc, char* argv[])
 #if defined(HAVE_ZEROMQ)
     else if (useZeroMQOutput) {
         /* We normalise the same way as for the UHD output */
-        normalise = 1.0f/50000.0f;
+        normalise = 1.0f / normalise_factor;
 
         output = new OutputZeroMQ(outputName);
     }
@@ -805,7 +821,13 @@ int main(int argc, char* argv[])
     modulator = new DabModulator(modconf, &rcs, logger, outputRate, clockRate,
             dabMode, gainMode, digitalgain, normalise, filterTapsFilename);
     flowgraph->connect(input, modulator);
-    flowgraph->connect(modulator, output);
+    if (format_converter) {
+        flowgraph->connect(modulator, format_converter);
+        flowgraph->connect(format_converter, output);
+    }
+    else {
+        flowgraph->connect(modulator, output);
+    }
 
 #if defined(HAVE_OUTPUT_UHD)
     if (useUHDOutput) {

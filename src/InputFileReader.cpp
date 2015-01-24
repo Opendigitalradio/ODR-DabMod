@@ -284,13 +284,18 @@ int InputFileReader::GetNextFrame(void* buffer)
     if (read_bytes != frameSize) {
         // A short read of a frame (i.e. reading an incomplete frame)
         // is not tolerated. Input files must not contain incomplete frames
-        fprintf(stderr,
-                "Unable to read a complete frame of %u data bytes from input file!\n",
-                frameSize);
+        if (read_bytes != 0) {
+            fprintf(stderr,
+                    "Unable to read a complete frame of %u data bytes from input file!\n",
+                    frameSize);
 
-        perror(filename_.c_str());
-        logger_.level(error) << "Unable to read from input file!";
-        return -1;
+            perror(filename_.c_str());
+            logger_.level(error) << "Unable to read from input file!";
+            return -1;
+        }
+        else {
+            return 0;
+        }
     }
 
     memset(&((uint8_t*)buffer)[frameSize], 0x55, 6144 - frameSize);
