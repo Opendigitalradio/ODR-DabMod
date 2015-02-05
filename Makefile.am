@@ -67,7 +67,7 @@ FFT_INC=
 FFT_FLG=
 endif
 
-odr_dabmod_CPPFLAGS = -Wall \
+odr_dabmod_CPPFLAGS = -Wall -Isrc \
 					  $(FFT_INC) $(FFT_FLG) $(SIMD_CFLAGS) $(GITVERSION_FLAGS)
 odr_dabmod_LDADD    = $(FFT_LDADD)
 odr_dabmod_SOURCES  = src/DabMod.cpp \
