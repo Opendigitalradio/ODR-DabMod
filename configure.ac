@@ -21,8 +21,9 @@
 AC_PREREQ(2.59)
 AC_INIT([ODR-DabMod], [0.5.1], [matthias.braendli@mpb.li])
 AC_CONFIG_AUX_DIR([build-aux])
+AC_CONFIG_MACRO_DIR([m4])
 AC_CANONICAL_SYSTEM
-AM_INIT_AUTOMAKE([-Wall foreign])
+AM_INIT_AUTOMAKE([-Wall foreign subdir-objects])
 AC_CONFIG_SRCDIR([src/DabMod.cpp])
 AM_CONFIG_HEADER([config.h])
 AM_SILENT_RULES([yes])
@@ -186,9 +187,7 @@ AM_CONDITIONAL([HAVE_SSE], [test "x$has_sse" = "xyes"])
 AC_TYPE_SIGNAL
 AC_CHECK_FUNCS([bzero floor ftime gettimeofday memset sqrt strchr strerror strtol])
 
-AC_CONFIG_FILES([Makefile
-                 lib/Makefile
-                 src/Makefile])
+AC_CONFIG_FILES([Makefile])
 AC_OUTPUT
 
 echo
