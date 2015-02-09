@@ -39,6 +39,7 @@ class COdrModCtrl
 		//
 		// For a detailed description of the various parameters, see
 		// example.ini.
+		virtual bool Ping(void);
 		virtual bool GetDigitalGain(double &gain, std::string &error);
 		virtual bool GetTxGain(double &gain, std::string &error);
 		virtual bool GetTxFrequency(double &freqHz, std::string &error);

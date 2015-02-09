@@ -36,6 +36,15 @@
 #include "OdrModCtrl.hpp"
 #include <sstream>
 
+#define MOD_GAIN "gain"
+#define MOD_UHD "uhd"
+
+#define PARAM_DIG_GAIN "digital"
+#define PARAM_TX_GAIN "txgain"
+#define PARAM_FREQ "freq"
+#define PARAM_MUTE "muting"
+#define PARAM_STAT_DELAY "staticdelay"
+
 COdrModCtrl::COdrModCtrl(zmq::context_t *pContext, std::string odrEndpoint,
 		unsigned int timeoutMs)
 {
@@ -56,55 +65,86 @@ COdrModCtrl::~COdrModCtrl()
 //// public get methods /////////////////////////////////////////////////////////
 bool COdrModCtrl::GetDigitalGain(double &gain, std::string &error)
 {
-	return DoGet("gain", "digital", gain, error);
+	return DoGet(MOD_GAIN, PARAM_DIG_GAIN, gain, error);
 }
 
 bool COdrModCtrl::GetTxGain(double &gain, std::string &error)
 {
-	return DoGet("uhd", "txgain", gain, error);
+	return DoGet(MOD_UHD, PARAM_TX_GAIN, gain, error);
 }
 
 bool COdrModCtrl::GetTxFrequency(double &freqHz, std::string &error)
 {
-	return DoGet("uhd", "freq", freqHz, error);
+	return DoGet(MOD_UHD, PARAM_FREQ, freqHz, error);
 }
 
 bool COdrModCtrl::GetMuting(bool &mute, std::string &error)
 {
-	return DoGet("uhd", "muting", (uint32_t&) mute, error);
+	return DoGet(MOD_UHD, PARAM_MUTE, (uint32_t&) mute, error);
 }
 
 bool COdrModCtrl::GetStaticDelay(uint32_t &delayUs, std::string &error)
 {
-	return DoGet("uhd", "staticdelay", delayUs, error);
+	return DoGet(MOD_UHD, PARAM_STAT_DELAY, delayUs, error);
 }
 
 
 //// public set methods /////////////////////////////////////////////////////////
 
+bool COdrModCtrl::Ping()
+{
+	std::string error;
+	if (m_pReqSocket == NULL)
+	{
+		m_pReqSocket = new zmq::socket_t(*m_pContext, ZMQ_REQ);
+		if (!ConnectSocket(m_pReqSocket, m_odrEndpoint, error))
+			return false;
+	}
+
+	std::vector<std::string> msg;
+	msg.push_back("ping");
+
+	// send the message
+	if (!SendMessage(m_pReqSocket, msg, error))
+	{
+		// destroy the socket according to the "Lazy Pirate Pattern" in 
+		// the zmq guide
+		m_pReqSocket->close();
+		delete m_pReqSocket;
+		m_pReqSocket = NULL;
+		return false;
+	}
+
+	// wait for reply
+	if (!RecvAll(m_pReqSocket, msg, m_timeoutMs, error))
+		return false;
+
+	return true;
+}
+
 bool COdrModCtrl::SetDigitalGain(const double gain, std::string &error)
 {
-	return DoSet("gain", "digital", gain, error);
+	return DoSet(MOD_GAIN, PARAM_DIG_GAIN, gain, error);
 }
 
 bool COdrModCtrl::SetTxGain(const double gain, std::string &error)
 {
-	return DoSet("uhd", "txgain", gain, error);
+	return DoSet(MOD_UHD, PARAM_TX_GAIN, gain, error);
 }
 
 bool COdrModCtrl::SetTxFrequency(const double freqHz, std::string &error)
 {
-	return DoSet("uhd", "freq", freqHz, error);
+	return DoSet(MOD_UHD, PARAM_FREQ, freqHz, error);
 }
 
 bool COdrModCtrl::SetMuting(const bool mute, std::string &error)
 {
-	return DoSet("uhd", "muting", mute, error);
+	return DoSet(MOD_UHD, PARAM_MUTE, mute, error);
 }
 
 bool COdrModCtrl::SetStaticDelay(const uint32_t delayUs, std::string &error)
 {
-	return DoSet("uhd", "staticdelay", delayUs, error);
+	return DoSet(MOD_UHD, PARAM_STAT_DELAY, delayUs, error);
 }
 
 

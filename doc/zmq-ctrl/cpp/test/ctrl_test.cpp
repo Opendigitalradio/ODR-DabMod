@@ -40,6 +40,11 @@ struct TemplateVars
 // made for setting invalid parameters.
 BOOST_FIXTURE_TEST_SUITE(test_template1, TemplateVars)
 
+BOOST_AUTO_TEST_CASE (Ping)
+{
+	BOOST_CHECK(modCtrl.Ping() == true);
+}
+
 BOOST_AUTO_TEST_CASE (DigitalGain)
 {
 	BOOST_CHECK(modCtrl.SetDigitalGain(0.5, error) == true);
@@ -75,7 +80,7 @@ BOOST_AUTO_TEST_CASE (Muting)
 
 BOOST_AUTO_TEST_CASE (StaticDelay)
 {
-	// reset first or else test will fail on successive calls	
+	// reset first or else test will fail on successive runs	
 	BOOST_CHECK(modCtrl.SetStaticDelay(-1, error) == true);
 	BOOST_CHECK(modCtrl.SetStaticDelay(45000, error) == true);
 	uint32_t value;
