@@ -341,7 +341,7 @@ int OutputUHD::process(Buffer* dataIn, Buffer* dataOut)
             myEtiReader->sourceContainsTimestamp();
 
         // calculate delay
-        uint32_t noSampleDelay = (myStaticDelayUs * myConf.sampleRate / 1000) / 1000;
+        uint32_t noSampleDelay = (myStaticDelayUs * (myConf.sampleRate / 1000)) / 1000;
         uint32_t noByteDelay = noSampleDelay * sizeof(complexf);
 
         uint8_t* pInData = (uint8_t*) dataIn->getData();
@@ -690,10 +690,10 @@ void OutputUHD::set_parameter(const string& parameter, const string& value)
         int adjust;
         ss >> adjust;
         int newStaticDelayUs = myStaticDelayUs + adjust;
-        if (newStaticDelayUs > myTFDurationMs * 1000)
-            myStaticDelayUs = newStaticDelayUs - myTFDurationMs * 1000;
+        if (newStaticDelayUs > (myTFDurationMs * 1000))
+            myStaticDelayUs = newStaticDelayUs - (myTFDurationMs * 1000);
         else if (newStaticDelayUs < 0)
-            myStaticDelayUs = newStaticDelayUs + myTFDurationMs * 1000;
+            myStaticDelayUs = newStaticDelayUs + (myTFDurationMs * 1000);
         else
             myStaticDelayUs = newStaticDelayUs;
     }
