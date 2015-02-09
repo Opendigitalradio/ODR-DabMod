@@ -80,8 +80,9 @@ BOOST_AUTO_TEST_CASE (Muting)
 
 BOOST_AUTO_TEST_CASE (StaticDelay)
 {
-	// reset first or else test will fail on successive runs	
-	BOOST_CHECK(modCtrl.SetStaticDelay(-1, error) == true);
+	// reset first (by setting out of range value) or else test
+	// will fail on successive runs
+	BOOST_CHECK(modCtrl.SetStaticDelay(100000, error) == true);
 	BOOST_CHECK(modCtrl.SetStaticDelay(45000, error) == true);
 	uint32_t value;
 	BOOST_CHECK(modCtrl.GetStaticDelay(value, error) == true);

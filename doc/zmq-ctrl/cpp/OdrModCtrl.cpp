@@ -142,7 +142,7 @@ bool COdrModCtrl::SetMuting(const bool mute, std::string &error)
 	return DoSet(MOD_UHD, PARAM_MUTE, mute, error);
 }
 
-bool COdrModCtrl::SetStaticDelay(const uint32_t delayUs, std::string &error)
+bool COdrModCtrl::SetStaticDelay(const int32_t delayUs, std::string &error)
 {
 	return DoSet(MOD_UHD, PARAM_STAT_DELAY, delayUs, error);
 }

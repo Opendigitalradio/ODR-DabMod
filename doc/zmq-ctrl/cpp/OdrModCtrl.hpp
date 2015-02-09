@@ -50,7 +50,7 @@ class COdrModCtrl
 		virtual bool SetTxGain(const double gain, std::string &error);
 		virtual bool SetTxFrequency(const double freqHz, std::string &error);
 		virtual bool SetMuting(const bool mute, std::string &error);
-		virtual bool SetStaticDelay(const uint32_t delayUs, std::string &error);
+		virtual bool SetStaticDelay(const int32_t delayUs, std::string &error);
 	
 	private:
 		// methods
