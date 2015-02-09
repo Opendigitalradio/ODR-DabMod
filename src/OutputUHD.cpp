@@ -269,7 +269,6 @@ void OutputUHD::SetDelayBuffer(unsigned int dabMode)
     default:
         throw std::runtime_error("OutPutUHD: invalid DAB mode");
     }
-	fprintf(stderr, "DelayBuf = %d\n", myTFDurationMs * myConf.sampleRate / 1000);
 	// The buffer size equals the number of samples per transmission frame so
 	// we calculate it by multiplying the duration of the transmission frame
 	// with the samplerate.
@@ -687,15 +686,23 @@ void OutputUHD::set_parameter(const string& parameter, const string& value)
         ss >> myMuting;
     }
     else if (parameter == "staticdelay") {
-        int adjust;
+        int64_t adjust;
         ss >> adjust;
-        int newStaticDelayUs = myStaticDelayUs + adjust;
-        if (newStaticDelayUs > (myTFDurationMs * 1000))
-            myStaticDelayUs = newStaticDelayUs - (myTFDurationMs * 1000);
-        else if (newStaticDelayUs < 0)
-            myStaticDelayUs = newStaticDelayUs + (myTFDurationMs * 1000);
-        else
-            myStaticDelayUs = newStaticDelayUs;
+		if (adjust > (myTFDurationMs * 1000))
+		{ // reset static delay for values outside range
+			myStaticDelayUs = 0;
+		}
+		else
+		{ // the new adjust value is added to the existing delay and the result
+			// is wrapped around at TF duration
+			int newStaticDelayUs = myStaticDelayUs + adjust;
+			if (newStaticDelayUs > (myTFDurationMs * 1000))
+				myStaticDelayUs = newStaticDelayUs - (myTFDurationMs * 1000);
+			else if (newStaticDelayUs < 0)
+				myStaticDelayUs = newStaticDelayUs + (myTFDurationMs * 1000);
+			else
+				myStaticDelayUs = newStaticDelayUs;
+		}
     }
     else if (parameter == "iqbalance") {
         ss >> myConf.frequency;
