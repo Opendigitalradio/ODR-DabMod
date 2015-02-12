@@ -1,0 +1,14 @@
+Instructions for zmq ctrl api test program
+
+Dependencies boost, zmq (and cpp binding through zmq.hpp)
+
+Build instruction (make sure your in the directory of this file)
+* mkdir build
+* cd build
+* cmake ../
+* make
+
+Run
+* make sure the ODR-DABMOD is started and that zmq ctrl api is enabled
+* make sure the zmq endpoint matches (see ctrl_test.cpp)
+* run the ctrl_test

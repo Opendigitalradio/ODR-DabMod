@@ -57,11 +57,11 @@ OutputUHD::OutputUHD(
     // the buffers at object initialisation.
     first_run(true),
     activebuffer(1),
-    myDelayBuf(196608)
+    myDelayBuf(0)
 
 {
     myMuting = 0; // is remote-controllable
-    myStaticDelay = 0; // is remote-controllable
+    myStaticDelayUs = 0; // is remote-controllable
 
 #if FAKE_UHD
     MDEBUG("OutputUHD:Using fake UHD output");
@@ -225,6 +225,7 @@ OutputUHD::OutputUHD(
         uwd.check_refclk_loss = true;
     }
 
+    SetDelayBuffer(config.dabMode);
 
     shared_ptr<barrier> b(new barrier(2));
     mySyncBarrier = b;
@@ -244,6 +245,34 @@ OutputUHD::~OutputUHD()
         free(uwd.frame0.buf);
         free(uwd.frame1.buf);
     }
+}
+
+void OutputUHD::SetDelayBuffer(unsigned int dabMode)
+{
+    // find out the duration of the transmission frame (Table 2 in ETSI 300 401)
+    switch (dabMode) {
+        case 0: // could happen when called from constructor and we take the mode from ETI
+            myTFDurationMs = 0;
+            break;
+        case 1:
+            myTFDurationMs = 96;
+            break;
+        case 2:
+            myTFDurationMs = 24;
+            break;
+        case 3:
+            myTFDurationMs = 24;
+            break;
+        case 4:
+            myTFDurationMs = 48;
+            break;
+        default:
+            throw std::runtime_error("OutputUHD: invalid DAB mode");
+    }
+    // The buffer size equals the number of samples per transmission frame so
+    // we calculate it by multiplying the duration of the transmission frame
+    // with the samplerate.
+    myDelayBuf.resize(myTFDurationMs * myConf.sampleRate / 1000);
 }
 
 int OutputUHD::process(Buffer* dataIn, Buffer* dataOut)
@@ -281,6 +310,11 @@ int OutputUHD::process(Buffer* dataIn, Buffer* dataOut)
             default: break;
         }
 
+        // we only set the delay buffer from the dab mode signaled in ETI if the
+        // dab mode was not set in contructor
+        if (myTFDurationMs == 0) {
+            SetDelayBuffer(myEtiReader->getMode());
+        }
 
         activebuffer = 1;
 
@@ -307,7 +341,7 @@ int OutputUHD::process(Buffer* dataIn, Buffer* dataOut)
             myEtiReader->sourceContainsTimestamp();
 
         // calculate delay
-        uint32_t noSampleDelay = (myStaticDelay * 2048) / 1000;
+        uint32_t noSampleDelay = (myStaticDelayUs * (myConf.sampleRate / 1000)) / 1000;
         uint32_t noByteDelay = noSampleDelay * sizeof(complexf);
 
         uint8_t* pInData = (uint8_t*) dataIn->getData();
@@ -653,15 +687,23 @@ void OutputUHD::set_parameter(const string& parameter, const string& value)
         ss >> myMuting;
     }
     else if (parameter == "staticdelay") {
-        int adjust;
+        int64_t adjust;
         ss >> adjust;
-        int newStaticDelay = myStaticDelay + adjust;
-        if (newStaticDelay > 96000)
-            myStaticDelay = newStaticDelay - 96000;
-        else if (newStaticDelay < 0)
-            myStaticDelay = newStaticDelay + 96000;
+        if (adjust > (myTFDurationMs * 1000))
+        { // reset static delay for values outside range
+            myStaticDelayUs = 0;
+        }
         else
-            myStaticDelay = newStaticDelay;
+        { // the new adjust value is added to the existing delay and the result
+            // is wrapped around at TF duration
+            int newStaticDelayUs = myStaticDelayUs + adjust;
+            if (newStaticDelayUs > (myTFDurationMs * 1000))
+                myStaticDelayUs = newStaticDelayUs - (myTFDurationMs * 1000);
+            else if (newStaticDelayUs < 0)
+                myStaticDelayUs = newStaticDelayUs + (myTFDurationMs * 1000);
+            else
+                myStaticDelayUs = newStaticDelayUs;
+        }
     }
     else if (parameter == "iqbalance") {
         ss >> myConf.frequency;
@@ -689,7 +731,7 @@ const string OutputUHD::get_parameter(const string& parameter) const
         ss << myMuting;
     }
     else if (parameter == "staticdelay") {
-        ss << myStaticDelay;
+        ss << myStaticDelayUs;
     }
     else {
         ss << "Parameter '" << parameter <<
