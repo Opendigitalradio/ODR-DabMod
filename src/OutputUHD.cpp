@@ -225,7 +225,7 @@ OutputUHD::OutputUHD(
         uwd.check_refclk_loss = true;
     }
 
-	SetDelayBuffer(config.dabMode);
+    SetDelayBuffer(config.dabMode);
 
     shared_ptr<barrier> b(new barrier(2));
     mySyncBarrier = b;
@@ -249,30 +249,30 @@ OutputUHD::~OutputUHD()
 
 void OutputUHD::SetDelayBuffer(unsigned int dabMode)
 {
-	// find out the duration of the transmission frame (Table 2 in ETSI 300 401)
+    // find out the duration of the transmission frame (Table 2 in ETSI 300 401)
     switch (dabMode) {
-    case 0: // could happen when called from constructor and we take the mode from ETI
-		myTFDurationMs = 0;
-		break;
-    case 1:
-		myTFDurationMs = 96;
-        break;
-    case 2:
-		myTFDurationMs = 24;
-        break;
-    case 3:
-		myTFDurationMs = 24;
-        break;
-    case 4:
-		myTFDurationMs = 48;
-        break;
-    default:
-        throw std::runtime_error("OutPutUHD: invalid DAB mode");
+        case 0: // could happen when called from constructor and we take the mode from ETI
+            myTFDurationMs = 0;
+            break;
+        case 1:
+            myTFDurationMs = 96;
+            break;
+        case 2:
+            myTFDurationMs = 24;
+            break;
+        case 3:
+            myTFDurationMs = 24;
+            break;
+        case 4:
+            myTFDurationMs = 48;
+            break;
+        default:
+            throw std::runtime_error("OutputUHD: invalid DAB mode");
     }
-	// The buffer size equals the number of samples per transmission frame so
-	// we calculate it by multiplying the duration of the transmission frame
-	// with the samplerate.
-	myDelayBuf.resize(myTFDurationMs * myConf.sampleRate / 1000);
+    // The buffer size equals the number of samples per transmission frame so
+    // we calculate it by multiplying the duration of the transmission frame
+    // with the samplerate.
+    myDelayBuf.resize(myTFDurationMs * myConf.sampleRate / 1000);
 }
 
 int OutputUHD::process(Buffer* dataIn, Buffer* dataOut)
@@ -310,10 +310,11 @@ int OutputUHD::process(Buffer* dataIn, Buffer* dataOut)
             default: break;
         }
 
-		// we only set the delay buffer from the dab mode signaled in ETI if the
-		// dab mode was not set in contructor
-		if (myTFDurationMs == 0)
-			SetDelayBuffer(myEtiReader->getMode());
+        // we only set the delay buffer from the dab mode signaled in ETI if the
+        // dab mode was not set in contructor
+        if (myTFDurationMs == 0) {
+            SetDelayBuffer(myEtiReader->getMode());
+        }
 
         activebuffer = 1;
 
@@ -688,21 +689,21 @@ void OutputUHD::set_parameter(const string& parameter, const string& value)
     else if (parameter == "staticdelay") {
         int64_t adjust;
         ss >> adjust;
-		if (adjust > (myTFDurationMs * 1000))
-		{ // reset static delay for values outside range
-			myStaticDelayUs = 0;
-		}
-		else
-		{ // the new adjust value is added to the existing delay and the result
-			// is wrapped around at TF duration
-			int newStaticDelayUs = myStaticDelayUs + adjust;
-			if (newStaticDelayUs > (myTFDurationMs * 1000))
-				myStaticDelayUs = newStaticDelayUs - (myTFDurationMs * 1000);
-			else if (newStaticDelayUs < 0)
-				myStaticDelayUs = newStaticDelayUs + (myTFDurationMs * 1000);
-			else
-				myStaticDelayUs = newStaticDelayUs;
-		}
+        if (adjust > (myTFDurationMs * 1000))
+        { // reset static delay for values outside range
+            myStaticDelayUs = 0;
+        }
+        else
+        { // the new adjust value is added to the existing delay and the result
+            // is wrapped around at TF duration
+            int newStaticDelayUs = myStaticDelayUs + adjust;
+            if (newStaticDelayUs > (myTFDurationMs * 1000))
+                myStaticDelayUs = newStaticDelayUs - (myTFDurationMs * 1000);
+            else if (newStaticDelayUs < 0)
+                myStaticDelayUs = newStaticDelayUs + (myTFDurationMs * 1000);
+            else
+                myStaticDelayUs = newStaticDelayUs;
+        }
     }
     else if (parameter == "iqbalance") {
         ss >> myConf.frequency;

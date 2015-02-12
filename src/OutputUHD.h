@@ -171,7 +171,7 @@ struct OutputUHDConfig {
     double txgain;
     bool enableSync;
     bool muteNoTimestamps;
-	unsigned dabMode;
+    unsigned dabMode;
 
     /* allowed values : auto, int, sma, mimo */
     std::string refclk_src;
@@ -232,12 +232,13 @@ class OutputUHD: public ModOutput, public RemoteControllable {
         bool myMuting;
 
     private:
-		// methods
-		void SetDelayBuffer(unsigned int dabMode);
+        // Resize the internal delay buffer according to the dabMode and
+        // the sample rate.
+        void SetDelayBuffer(unsigned int dabMode);
 
         // data
         int myStaticDelayUs; // static delay in microseconds
-		int myTFDurationMs; // TF duration in milliseconds
+        int myTFDurationMs; // TF duration in milliseconds
         std::vector<complexf> myDelayBuf;
         size_t lastLen;
 };

@@ -535,7 +535,7 @@ int main(int argc, char* argv[])
             outputuhd_conf.txgain = pt.get("uhdoutput.txgain", 0.0);
             outputuhd_conf.frequency = pt.get<double>("uhdoutput.frequency", 0);
             std::string chan = pt.get<std::string>("uhdoutput.channel", "");
-			outputuhd_conf.dabMode = dabMode;
+            outputuhd_conf.dabMode = dabMode;
 
             if (outputuhd_conf.frequency == 0 && chan == "") {
                 std::cerr << "       UHD output enabled, but neither frequency nor channel defined.\n";
