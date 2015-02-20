@@ -3,7 +3,7 @@
    Her Majesty the Queen in Right of Canada (Communications Research
    Center Canada)
 
-   Copyright (C) 2013, 2014
+   Copyright (C) 2013, 2014, 2015
    Matthias P. Braendli, matthias.braendli@mpb.li
 
     http://opendigitalradio.org
@@ -41,8 +41,6 @@
 #include "InputReader.h"
 #include "PcDebug.h"
 
-#define MAX_QUEUE_SIZE 50
-
 #define NUM_FRAMES_PER_ZMQ_MESSAGE 4
 /* A concatenation of four ETI frames,
  * whose maximal size is 6144.
@@ -64,10 +62,11 @@ struct zmq_dab_message_t
     uint8_t  buf[NUM_FRAMES_PER_ZMQ_MESSAGE*6144];
 };
 
-int InputZeroMQReader::Open(std::string uri)
+int InputZeroMQReader::Open(const std::string& uri, unsigned max_queued_frames)
 {
     uri_ = uri;
     workerdata_.uri = uri;
+    workerdata_.max_queued_frames = max_queued_frames;
     // launch receiver thread
     worker_.Start(&workerdata_);
 
@@ -123,7 +122,7 @@ void InputZeroMQWorker::RecvProcess(struct InputZeroMQThreadData* workerdata)
                 }
                 m_to_drop--;
             }
-            else if (queue_size < MAX_QUEUE_SIZE) {
+            else if (queue_size < workerdata->max_queued_frames) {
                 if (buffer_full) {
                     fprintf(stderr, "ZeroMQ buffer recovered: %zu elements\n",
                             queue_size);

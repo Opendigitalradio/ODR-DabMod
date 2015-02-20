@@ -68,6 +68,8 @@
 #   define memalign(a, b)   malloc(b)
 #endif
 
+#define ZMQ_INPUT_MAX_FRAME_QUEUE 50
+
 
 typedef std::complex<float> complexf;
 
@@ -87,6 +89,7 @@ int main(int argc, char* argv[])
     bool loop = false;
     std::string inputName = "";
     std::string inputTransport = "file";
+    unsigned inputMaxFramesQueued = ZMQ_INPUT_MAX_FRAME_QUEUE;
 
     std::string outputName;
     int useZeroMQOutput = 0;
@@ -362,6 +365,9 @@ int main(int argc, char* argv[])
         }
 
         inputTransport = pt.get("input.transport", "file");
+        inputMaxFramesQueued = pt.get("input.max_frames_queued",
+                ZMQ_INPUT_MAX_FRAME_QUEUE);
+
         inputName = pt.get("input.source", "/dev/stdin");
 
         // log parameters:
@@ -677,10 +683,10 @@ int main(int argc, char* argv[])
 #else
         // The URL might start with zmq+tcp://
         if (inputName.substr(0, 4) == "zmq+") {
-            inputZeroMQReader.Open(inputName.substr(4));
+            inputZeroMQReader.Open(inputName.substr(4), inputMaxFramesQueued);
         }
         else {
-            inputZeroMQReader.Open(inputName);
+            inputZeroMQReader.Open(inputName, inputMaxFramesQueued);
         }
         inputReader = &inputZeroMQReader;
 #endif

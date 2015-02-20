@@ -3,7 +3,7 @@
    Her Majesty the Queen in Right of Canada (Communications Research
    Center Canada)
 
-   Copyrigth (C) 2013
+   Copyrigth (C) 2013, 2015
    Matthias P. Braendli, matthias.braendli@mpb.li
  */
 /*
@@ -137,6 +137,7 @@ struct InputZeroMQThreadData
 {
     ThreadsafeQueue<uint8_t*> *in_messages;
     std::string uri;
+    unsigned max_queued_frames;
 };
 
 class InputZeroMQWorker
@@ -179,7 +180,7 @@ class InputZeroMQReader : public InputReader
             worker_.Stop();
         }
 
-        int Open(std::string uri);
+        int Open(const std::string& uri, unsigned max_queued_frames);
 
         int GetNextFrame(void* buffer);
 
@@ -197,3 +198,4 @@ class InputZeroMQReader : public InputReader
 
 #endif
 #endif
+
