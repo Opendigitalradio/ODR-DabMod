@@ -346,7 +346,7 @@ int DabModulator::process(Buffer* const dataIn, Buffer* dataOut)
         myFlowgraph->connect(cifFreq, cifDiff);
         myFlowgraph->connect(cifNull, cifSig);
         myFlowgraph->connect(cifDiff, cifSig);
-        if (myClockRate) { // TODO review
+        if (useCicEq) {
             myFlowgraph->connect(cifSig, cifCicEq);
             myFlowgraph->connect(cifCicEq, cifOfdm);
         } else {
