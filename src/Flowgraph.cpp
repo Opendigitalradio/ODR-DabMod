@@ -1,6 +1,11 @@
 /*
    Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010, 2011 Her Majesty
    the Queen in Right of Canada (Communications Research Center Canada)
+
+   Copyright (C) 2015
+   Matthias P. Braendli, matthias.braendli@mpb.li
+
+    http://opendigitalradio.org
  */
 /*
    This file is part of ODR-DabMod.
@@ -38,19 +43,18 @@
 #include <sys/time.h>
 #endif
 
-#include <boost/shared_ptr.hpp>
-
 using namespace boost;
 
 typedef std::vector<shared_ptr<Node> >::iterator NodeIterator;
 typedef std::vector<shared_ptr<Edge> >::iterator EdgeIterator;
 
 
-Node::Node(ModPlugin* plugin) :
+Node::Node(shared_ptr<ModPlugin> plugin) :
     myPlugin(plugin),
     myProcessTime(0)
 {
-    PDEBUG("Node::Node(plugin(%s): %p) @ %p\n", plugin->name(), plugin, this);
+    PDEBUG("Node::Node(plugin(%s): %p) @ %p\n",
+            plugin->name(), plugin.get(), this);
 
 }
 
@@ -59,9 +63,6 @@ Node::~Node()
 {
     PDEBUG("Node::~Node() @ %p\n", this);
 
-    if (myPlugin != NULL) {
-        delete myPlugin;
-    }
     assert(myInputBuffers.size() == 0);
     assert(myOutputBuffers.size() == 0);
 }
@@ -72,8 +73,8 @@ Edge::Edge(shared_ptr<Node>& srcNode, shared_ptr<Node>& dstNode) :
     myDstNode(dstNode)
 {
     PDEBUG("Edge::Edge(srcNode(%s): %p, dstNode(%s): %p) @ %p\n",
-            srcNode->plugin()->name(), srcNode,
-            dstNode->plugin()->name(), dstNode,
+            srcNode->plugin()->name(), srcNode.get(),
+            dstNode->plugin()->name(), dstNode.get(),
             this);
 
     myBuffer = shared_ptr<Buffer>(new Buffer());
@@ -112,7 +113,7 @@ Edge::~Edge()
 int Node::process()
 {
     PDEBUG("Edge::process()\n");
-    PDEBUG(" Plugin name: %s (%p)\n", myPlugin->name(), myPlugin);
+    PDEBUG(" Plugin name: %s (%p)\n", myPlugin->name(), myPlugin.get());
 
     // the plugin process() still wants vector<Buffer*>
     // arguments.
@@ -165,11 +166,10 @@ Flowgraph::~Flowgraph()
     }
 }
 
-
-void Flowgraph::connect(ModPlugin* input, ModPlugin* output)
+void Flowgraph::connect(shared_ptr<ModPlugin> input, shared_ptr<ModPlugin> output)
 {
     PDEBUG("Flowgraph::connect(input(%s): %p, output(%s): %p)\n",
-            input->name(), input, output->name(), output);
+            input->name(), input.get(), output->name(), output.get());
 
     NodeIterator inputNode;
     NodeIterator outputNode;
@@ -237,3 +237,4 @@ bool Flowgraph::run()
     }
     return true;
 }
+

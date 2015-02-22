@@ -46,6 +46,7 @@
 #include "FIRFilter.h"
 #include "RemoteControl.h"
 
+#include <boost/shared_ptr.hpp>
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/ini_parser.hpp>
 #include <complex>
@@ -73,6 +74,7 @@
 
 typedef std::complex<float> complexf;
 
+using namespace boost;
 
 volatile sig_atomic_t running = 1;
 
@@ -134,11 +136,9 @@ int main(int argc, char* argv[])
     modconf.use_offset_fixed = false;
     modconf.delay_calculation_pipeline_stages = 0;
 
-    Flowgraph* flowgraph = NULL;
-    DabModulator* modulator = NULL;
-    InputMemory* input = NULL;
-    FormatConverter* format_converter = NULL;
-    ModOutput* output = NULL;
+    shared_ptr<Flowgraph> flowgraph(new Flowgraph());
+    shared_ptr<FormatConverter> format_converter;
+    shared_ptr<ModOutput> output;
 
     RemoteControllers rcs;
 
@@ -188,7 +188,7 @@ int main(int argc, char* argv[])
 #if defined(HAVE_OUTPUT_UHD)
             if (useUHDOutput) {
                 fprintf(stderr, "Options -u and -f are mutually exclusive\n");
-                goto END_MAIN;
+                throw std::invalid_argument("Invalid command line options");
             }
 #endif
             outputName = optarg;
@@ -214,7 +214,7 @@ int main(int argc, char* argv[])
             if (modconf.use_offset_file)
             {
                 fprintf(stderr, "Options -o and -O are mutually exclusive\n");
-                goto END_MAIN;
+                throw std::invalid_argument("Invalid command line options");
             }
             modconf.use_offset_fixed = true;
             modconf.offset_fixed = strtod(optarg, NULL);
@@ -226,7 +226,7 @@ int main(int argc, char* argv[])
             if (modconf.use_offset_fixed)
             {
                 fprintf(stderr, "Options -o and -O are mutually exclusive\n");
-                goto END_MAIN;
+                throw std::invalid_argument("Invalid command line options");
             }
             modconf.use_offset_file = true;
             modconf.offset_filename = std::string(optarg);
@@ -247,7 +247,7 @@ int main(int argc, char* argv[])
 #if defined(HAVE_OUTPUT_UHD)
             if (useFileOutput) {
                 fprintf(stderr, "Options -u and -f are mutually exclusive\n");
-                goto END_MAIN;
+                throw std::invalid_argument("Invalid command line options");
             }
             outputuhd_conf.device = optarg;
             useUHDOutput = 1;
@@ -255,17 +255,17 @@ int main(int argc, char* argv[])
             break;
         case 'V':
             printVersion();
-            goto END_MAIN;
+            throw std::invalid_argument("");
             break;
         case '?':
         case 'h':
             printUsage(argv[0]);
-            goto END_MAIN;
+            throw std::invalid_argument("");
             break;
         default:
             fprintf(stderr, "Option '%c' not coded yet!\n", c);
             ret = -1;
-            goto END_MAIN;
+            throw std::invalid_argument("Invalid command line options");
         }
     }
 
@@ -306,7 +306,7 @@ int main(int argc, char* argv[])
     // No argument given ? You can't be serious ! Show usage.
     if (argc == 1) {
         printUsage(argv[0]);
-        goto END_MAIN;
+        throw std::invalid_argument("Invalid command line options");
     }
 
     // If only one argument is given, interpret as configuration file name
@@ -326,7 +326,7 @@ int main(int argc, char* argv[])
         catch (boost::property_tree::ini_parser::ini_parser_error &e)
         {
             fprintf(stderr, "Error, cannot read configuration file '%s'\n", configuration_file.c_str());
-            goto END_MAIN;
+            throw std::runtime_error("Cannot read configuration file");
         }
 
         // remote controller:
@@ -339,7 +339,7 @@ int main(int argc, char* argv[])
             catch (std::exception &e) {
                 std::cerr << "Error: " << e.what() << "\n";
                 std::cerr << "       telnet remote control enabled, but no telnetport defined.\n";
-                goto END_MAIN;
+                throw std::runtime_error("Configuration error");
             }
         }
 
@@ -354,7 +354,7 @@ int main(int argc, char* argv[])
             catch (std::exception &e) {
                 std::cerr << "Error: " << e.what() << "\n";
                 std::cerr << "       zmq remote control enabled, but no endpoint defined.\n";
-                goto END_MAIN;
+                throw std::runtime_error("Configuration error");
             }
         }
 #endif
@@ -384,7 +384,7 @@ int main(int argc, char* argv[])
             catch (std::exception &e) {
                 std::cerr << "Error: " << e.what() << "\n";
                 std::cerr << "       Configuration enables file log, but does not specify log filename\n";
-                goto END_MAIN;
+                throw std::runtime_error("Configuration error");
             }
 
             LogToFile* log_file = new LogToFile(logfilename);
@@ -407,7 +407,7 @@ int main(int argc, char* argv[])
             catch (std::exception &e) {
                 std::cerr << "Error: " << e.what() << "\n";
                 std::cerr << "       Configuration enables firfilter, but does not specify filter taps file\n";
-                goto END_MAIN;
+                throw std::runtime_error("Configuration error");
             }
         }
 
@@ -419,7 +419,7 @@ int main(int argc, char* argv[])
         catch (std::exception &e) {
             std::cerr << "Error: " << e.what() << "\n";
             std::cerr << "       Configuration does not specify output\n";
-            goto END_MAIN;
+            throw std::runtime_error("Configuration error");
         }
 
         if (output_selected == "file") {
@@ -429,7 +429,7 @@ int main(int argc, char* argv[])
             catch (std::exception &e) {
                 std::cerr << "Error: " << e.what() << "\n";
                 std::cerr << "       Configuration does not specify file name for file output\n";
-                goto END_MAIN;
+                throw std::runtime_error("Configuration error");
             }
             useFileOutput = 1;
 
@@ -459,7 +459,7 @@ int main(int argc, char* argv[])
 
             if (outputuhd_conf.frequency == 0 && chan == "") {
                 std::cerr << "       UHD output enabled, but neither frequency nor channel defined.\n";
-                goto END_MAIN;
+                throw std::runtime_error("Configuration error");
             }
             else if (outputuhd_conf.frequency == 0) {
                 double freq;
@@ -503,13 +503,13 @@ int main(int argc, char* argv[])
                 else if (chan == "13F") freq = 239200000;
                 else {
                     std::cerr << "       UHD output: channel " << chan << " does not exist in table\n";
-                    goto END_MAIN;
+                    throw std::out_of_range("UHD channel selection error");
                 }
                 outputuhd_conf.frequency = freq;
             }
             else if (outputuhd_conf.frequency != 0 && chan != "") {
                 std::cerr << "       UHD output: cannot define both frequency and channel.\n";
-                goto END_MAIN;
+                throw std::runtime_error("Configuration error");
             }
 
 
@@ -527,7 +527,7 @@ int main(int argc, char* argv[])
             }
             else {
                 std::cerr << "Error: UHD output: behaviour_refclk_lock_lost invalid." << std::endl;
-                goto END_MAIN;
+                throw std::runtime_error("Configuration error");
             }
 
             useUHDOutput = 1;
@@ -541,7 +541,7 @@ int main(int argc, char* argv[])
 #endif
         else {
             std::cerr << "Error: Invalid output defined.\n";
-            goto END_MAIN;
+            throw std::runtime_error("Configuration error");
         }
 
 #if defined(HAVE_OUTPUT_UHD)
@@ -564,7 +564,7 @@ int main(int argc, char* argv[])
             catch (std::exception &e) {
                 std::cerr << "Error: " << e.what() << "\n";
                 std::cerr << "       Synchronised transmission enabled, but delay management specification is incomplete.\n";
-                goto END_MAIN;
+                throw std::runtime_error("Configuration error");
             }
         }
 
@@ -618,13 +618,13 @@ int main(int argc, char* argv[])
         printUsage(argv[0]);
         ret = -1;
         logger.level(error) << "Received invalid command line arguments";
-        goto END_MAIN;
+        throw std::invalid_argument("Invalid command line options");
     }
 
     if (!useFileOutput && !useUHDOutput && !useZeroMQOutput) {
         logger.level(error) << "Output not specified";
         fprintf(stderr, "Must specify output !");
-        goto END_MAIN;
+        throw std::runtime_error("Configuration error");
     }
 
     // Print settings
@@ -670,7 +670,7 @@ int main(int argc, char* argv[])
             fprintf(stderr, "Unable to open input file!\n");
             logger.level(error) << "Unable to open input file!";
             ret = -1;
-            goto END_MAIN;
+            throw std::runtime_error("Unable to open input");
         }
 
         inputReader = &inputFileReader;
@@ -679,7 +679,7 @@ int main(int argc, char* argv[])
 #if !defined(HAVE_ZEROMQ)
         fprintf(stderr, "Error, ZeroMQ input transport selected, but not compiled in!\n");
         ret = -1;
-        goto END_MAIN;
+        throw std::runtime_error("Unable to open input");
 #else
         // The URL might start with zmq+tcp://
         if (inputName.substr(0, 4) == "zmq+") {
@@ -695,20 +695,20 @@ int main(int argc, char* argv[])
     {
         fprintf(stderr, "Error, invalid input transport %s selected!\n", inputTransport.c_str());
         ret = -1;
-        goto END_MAIN;
+        throw std::runtime_error("Unable to open input");
     }
 
     if (useFileOutput) {
         if (fileOutputFormat == "complexf") {
-            output = new OutputFile(outputName);
+            output = shared_ptr<OutputFile>(new OutputFile(outputName));
         }
         else if (fileOutputFormat == "s8") {
             // We must normalise the samples to the interval [-127.0; 127.0]
             normalise = 127.0f / normalise_factor;
 
-            format_converter = new FormatConverter();
+            format_converter = shared_ptr<FormatConverter>(new FormatConverter());
 
-            output = new OutputFile(outputName);
+            output = shared_ptr<OutputFile>(new OutputFile(outputName));
         }
     }
 #if defined(HAVE_OUTPUT_UHD)
@@ -717,14 +717,8 @@ int main(int argc, char* argv[])
         normalise = 1.0f / normalise_factor;
 
         outputuhd_conf.sampleRate = outputRate;
-        try {
-            output = new OutputUHD(outputuhd_conf, logger);
-            ((OutputUHD*)output)->enrol_at(rcs);
-        }
-        catch (std::exception& e) {
-            logger.level(error) << "UHD initialisation failed:" << e.what();
-            goto END_MAIN;
-        }
+        output = shared_ptr<OutputUHD>(new OutputUHD(outputuhd_conf, logger));
+        ((OutputUHD*)output.get())->enrol_at(rcs);
     }
 #endif
 #if defined(HAVE_ZEROMQ)
@@ -732,15 +726,14 @@ int main(int argc, char* argv[])
         /* We normalise the same way as for the UHD output */
         normalise = 1.0f / normalise_factor;
 
-        output = new OutputZeroMQ(outputName);
+        output = shared_ptr<OutputZeroMQ>(new OutputZeroMQ(outputName));
     }
 #endif
 
-    flowgraph = new Flowgraph();
     data.setLength(6144);
-    input = new InputMemory(&data);
-    modulator = new DabModulator(modconf, &rcs, logger, outputRate, clockRate,
-            dabMode, gainMode, digitalgain, normalise, filterTapsFilename);
+    shared_ptr<InputMemory> input(new InputMemory(&data));
+    shared_ptr<DabModulator> modulator(new DabModulator(modconf, &rcs, logger, outputRate, clockRate,
+            dabMode, gainMode, digitalgain, normalise, filterTapsFilename));
     flowgraph->connect(input, modulator);
     if (format_converter) {
         flowgraph->connect(modulator, format_converter);
@@ -752,7 +745,7 @@ int main(int argc, char* argv[])
 
 #if defined(HAVE_OUTPUT_UHD)
     if (useUHDOutput) {
-        ((OutputUHD*)output)->setETIReader(modulator->getEtiReader());
+        ((OutputUHD*)output.get())->setETIReader(modulator->getEtiReader());
     }
 #endif
 
@@ -801,16 +794,12 @@ int main(int argc, char* argv[])
         ret = -1;
     }
 
-END_MAIN:
     ////////////////////////////////////////////////////////////////////////
     // Cleaning things
     ////////////////////////////////////////////////////////////////////////
     fprintf(stderr, "\n\n");
     fprintf(stderr, "%lu DAB frames encoded\n", frame);
     fprintf(stderr, "%f seconds encoded\n", (float)frame * 0.024f);
-
-    fprintf(stderr, "\nCleaning flowgraph...\n");
-    delete flowgraph;
 
     // Cif
     fprintf(stderr, "\nCleaning buffers...\n");

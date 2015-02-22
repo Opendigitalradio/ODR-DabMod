@@ -50,7 +50,7 @@
 class OutputMemory : public ModOutput
 {
 public:
-    OutputMemory(Buffer* dataOut = NULL);
+    OutputMemory(Buffer* dataOut);
     virtual ~OutputMemory();
     virtual int process(Buffer* dataIn, Buffer* dataOut);
     const char* name() { return "OutputMemory"; }

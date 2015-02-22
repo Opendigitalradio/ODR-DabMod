@@ -29,7 +29,7 @@
 
 #include "ModMux.h"
 #include "SubchannelSource.h"
-
+#include <boost/shared_ptr.hpp>
 
 #include <sys/types.h>
 
@@ -37,7 +37,8 @@
 class FrameMultiplexer : public ModMux
 {
 public:
-    FrameMultiplexer(size_t frameSize, const std::vector<SubchannelSource*>* subchannels);
+    FrameMultiplexer(size_t frameSize,
+            const std::vector<boost::shared_ptr<SubchannelSource> >* subchannels);
     virtual ~FrameMultiplexer();
     FrameMultiplexer(const FrameMultiplexer&);
     FrameMultiplexer& operator=(const FrameMultiplexer&);
@@ -48,8 +49,8 @@ public:
 
 protected:
     size_t d_frameSize;
-    const std::vector<SubchannelSource*>* mySubchannels;
+    const std::vector<boost::shared_ptr<SubchannelSource> >* mySubchannels;
 };
 
-
 #endif // FRAME_MULTIPLEXER_H
+
