@@ -38,9 +38,12 @@
 #include <sys/time.h>
 #endif
 
+#include <boost/shared_ptr.hpp>
 
-typedef std::vector<Node*>::iterator NodeIterator;
-typedef std::vector<Edge*>::iterator EdgeIterator;
+using namespace boost;
+
+typedef std::vector<shared_ptr<Node> >::iterator NodeIterator;
+typedef std::vector<shared_ptr<Edge> >::iterator EdgeIterator;
 
 
 Node::Node(ModPlugin* plugin) :
@@ -64,7 +67,7 @@ Node::~Node()
 }
 
 
-Edge::Edge(Node* srcNode, Node* dstNode) :
+Edge::Edge(shared_ptr<Node>& srcNode, shared_ptr<Node>& dstNode) :
     mySrcNode(srcNode),
     myDstNode(dstNode)
 {
@@ -73,7 +76,7 @@ Edge::Edge(Node* srcNode, Node* dstNode) :
             dstNode->plugin()->name(), dstNode,
             this);
 
-    myBuffer = new Buffer();
+    myBuffer = shared_ptr<Buffer>(new Buffer());
     srcNode->myOutputBuffers.push_back(myBuffer);
     dstNode->myInputBuffers.push_back(myBuffer);
 }
@@ -83,7 +86,7 @@ Edge::~Edge()
 {
     PDEBUG("Edge::~Edge() @ %p\n", this);
 
-    std::vector<Buffer*>::iterator buffer;
+    std::vector<shared_ptr<Buffer> >::iterator buffer;
     if (myBuffer != NULL) {
         for (buffer = mySrcNode->myOutputBuffers.begin();
                 buffer != mySrcNode->myOutputBuffers.end();
@@ -102,7 +105,6 @@ Edge::~Edge()
                 break;
             }
         }
-        delete myBuffer;
     }
 }
 
@@ -112,7 +114,24 @@ int Node::process()
     PDEBUG("Edge::process()\n");
     PDEBUG(" Plugin name: %s (%p)\n", myPlugin->name(), myPlugin);
 
-    return myPlugin->process(myInputBuffers, myOutputBuffers);
+    // the plugin process() still wants vector<Buffer*>
+    // arguments.
+    std::vector<Buffer*> inBuffers;
+    std::vector<shared_ptr<Buffer> >::iterator buffer;
+    for (buffer = myInputBuffers.begin();
+         buffer != myInputBuffers.end();
+         ++buffer) {
+        inBuffers.push_back(buffer->get());
+    }
+
+    std::vector<Buffer*> outBuffers;
+    for (buffer = myOutputBuffers.begin();
+         buffer != myOutputBuffers.end();
+         ++buffer) {
+        outBuffers.push_back(buffer->get());
+    }
+
+    return myPlugin->process(inBuffers, outBuffers);
 }
 
 
@@ -128,15 +147,10 @@ Flowgraph::~Flowgraph()
 {
     PDEBUG("Flowgraph::~Flowgraph() @ %p\n", this);
 
-    std::vector<Edge*>::const_iterator edge;
-    for (edge = edges.begin(); edge != edges.end(); ++edge) {
-        delete *edge;
-    }
-
     if (myProcessTime) {
         fprintf(stderr, "Process time:\n");
     }
-    std::vector<Node*>::const_iterator node;
+    std::vector<shared_ptr<Node> >::const_iterator node;
     for (node = nodes.begin(); node != nodes.end(); ++node) {
         if (myProcessTime) {
             fprintf(stderr, "  %30s: %10u us (%2.2f %%)\n",
@@ -144,7 +158,6 @@ Flowgraph::~Flowgraph()
                     (unsigned)(*node)->processTime(),
                     (*node)->processTime() * 100.0 / myProcessTime);
         }
-        delete *node;
     }
     if (myProcessTime) {
         fprintf(stderr, "  %30s: %10u us (100.00 %%)\n", "total",
@@ -167,7 +180,7 @@ void Flowgraph::connect(ModPlugin* input, ModPlugin* output)
         }
     }
     if (inputNode == nodes.end()) {
-        inputNode = nodes.insert(nodes.end(), new Node(input));
+        inputNode = nodes.insert(nodes.end(), shared_ptr<Node>(new Node(input)));
     }
 
     for (outputNode = nodes.begin(); outputNode != nodes.end(); ++outputNode) {
@@ -176,14 +189,14 @@ void Flowgraph::connect(ModPlugin* input, ModPlugin* output)
         }
     }
     if (outputNode == nodes.end()) {
-        outputNode = nodes.insert(nodes.end(), new Node(output));
+        outputNode = nodes.insert(nodes.end(), shared_ptr<Node>(new Node(output)));
         for (inputNode = nodes.begin(); inputNode != nodes.end(); ++inputNode) {
             if ((*inputNode)->plugin() == input) {
                 break;
             }
         }
     } else if (inputNode > outputNode) {
-        Node* node = *outputNode;
+        shared_ptr<Node> node = *outputNode;
         nodes.erase(outputNode);
         outputNode = nodes.insert(nodes.end(), node);
         for (inputNode = nodes.begin(); inputNode != nodes.end(); ++inputNode) {
@@ -196,7 +209,7 @@ void Flowgraph::connect(ModPlugin* input, ModPlugin* output)
     assert((*inputNode)->plugin() == input);
     assert((*outputNode)->plugin() == output);
 
-    edges.push_back(new Edge(*inputNode, *outputNode));
+    edges.push_back(shared_ptr<Edge>(new Edge(*inputNode, *outputNode)));
 }
 
 
@@ -204,7 +217,7 @@ bool Flowgraph::run()
 {
     PDEBUG("Flowgraph::run()\n");
 
-    std::vector<Node*>::const_iterator node;
+    std::vector<shared_ptr<Node> >::const_iterator node;
     timeval start, stop;
     time_t diff;
 
