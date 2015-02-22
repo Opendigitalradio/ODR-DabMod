@@ -138,6 +138,8 @@ struct InputZeroMQThreadData
     ThreadsafeQueue<uint8_t*> *in_messages;
     std::string uri;
     unsigned max_queued_frames;
+
+    bool running;
 };
 
 class InputZeroMQWorker
