@@ -175,6 +175,7 @@ class InputZeroMQReader : public InputReader
             logger_(logger), in_messages_(10)
         {
             workerdata_.in_messages = &in_messages_;
+            workerdata_.running     = false;
         }
 
         ~InputZeroMQReader()

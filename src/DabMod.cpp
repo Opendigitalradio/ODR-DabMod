@@ -172,7 +172,7 @@ int main(int argc, char* argv[])
     Logger logger;
     InputFileReader inputFileReader(logger);
 #if defined(HAVE_ZEROMQ)
-    InputZeroMQReader inputZeroMQReader(logger);
+    shared_ptr<InputZeroMQReader> inputZeroMQReader(new InputZeroMQReader(logger));
 #endif
 
     struct sigaction sa;
@@ -707,14 +707,8 @@ int main(int argc, char* argv[])
         ret = -1;
         throw std::runtime_error("Unable to open input");
 #else
-        // The URL might start with zmq+tcp://
-        if (inputName.substr(0, 4) == "zmq+") {
-            inputZeroMQReader.Open(inputName.substr(4), inputMaxFramesQueued);
-        }
-        else {
-            inputZeroMQReader.Open(inputName, inputMaxFramesQueued);
-        }
-        m.inputReader = &inputZeroMQReader;
+        inputZeroMQReader->Open(inputName, inputMaxFramesQueued);
+        m.inputReader = inputZeroMQReader.get();
 #endif
     }
     else
@@ -724,37 +718,38 @@ int main(int argc, char* argv[])
         throw std::runtime_error("Unable to open input");
     }
 
-    while (run_again) {
-        Flowgraph flowgraph;
-
-        if (useFileOutput) {
-            if (fileOutputFormat == "complexf") {
-                output = shared_ptr<OutputFile>(new OutputFile(outputName));
-            }
-            else if (fileOutputFormat == "s8") {
-                // We must normalise the samples to the interval [-127.0; 127.0]
-                normalise = 127.0f / normalise_factor;
-
-                format_converter = shared_ptr<FormatConverter>(new FormatConverter());
-
-                output = shared_ptr<OutputFile>(new OutputFile(outputName));
-            }
+    if (useFileOutput) {
+        if (fileOutputFormat == "complexf") {
+            output = shared_ptr<OutputFile>(new OutputFile(outputName));
         }
+        else if (fileOutputFormat == "s8") {
+            // We must normalise the samples to the interval [-127.0; 127.0]
+            normalise = 127.0f / normalise_factor;
+
+            format_converter = shared_ptr<FormatConverter>(new FormatConverter());
+
+            output = shared_ptr<OutputFile>(new OutputFile(outputName));
+        }
+    }
 #if defined(HAVE_OUTPUT_UHD)
-        else if (useUHDOutput) {
-            normalise = 1.0f / normalise_factor;
-            outputuhd_conf.sampleRate = outputRate;
-            output = shared_ptr<OutputUHD>(new OutputUHD(outputuhd_conf, logger));
-            ((OutputUHD*)output.get())->enrol_at(rcs);
-        }
+    else if (useUHDOutput) {
+        normalise = 1.0f / normalise_factor;
+        outputuhd_conf.sampleRate = outputRate;
+        output = shared_ptr<OutputUHD>(new OutputUHD(outputuhd_conf, logger));
+        ((OutputUHD*)output.get())->enrol_at(rcs);
+    }
 #endif
 #if defined(HAVE_ZEROMQ)
-        else if (useZeroMQOutput) {
-            /* We normalise the same way as for the UHD output */
-            normalise = 1.0f / normalise_factor;
-            output = shared_ptr<OutputZeroMQ>(new OutputZeroMQ(outputName));
-        }
+    else if (useZeroMQOutput) {
+        /* We normalise the same way as for the UHD output */
+        normalise = 1.0f / normalise_factor;
+        output = shared_ptr<OutputZeroMQ>(new OutputZeroMQ(outputName));
+    }
 #endif
+
+
+    while (run_again) {
+        Flowgraph flowgraph;
 
         m.flowgraph = &flowgraph;
         m.data.setLength(6144);
@@ -789,15 +784,26 @@ int main(int argc, char* argv[])
                 run_again = false;
                 ret = 1;
                 break;
+#if defined(HAVE_ZEROMQ)
+            case MOD_AGAIN:
+                fprintf(stderr, "\nRestart modulator\n");
+                running = true;
+                if (inputTransport == "zeromq") {
+                    run_again = true;
+
+                    // Create a new input reader
+                    inputZeroMQReader = shared_ptr<InputZeroMQReader>(
+                            new InputZeroMQReader(logger));
+                    inputZeroMQReader->Open(inputName, inputMaxFramesQueued);
+                    m.inputReader = inputZeroMQReader.get();
+                }
+                break;
+#endif
             case MOD_NORMAL_END:
+            default:
                 fprintf(stderr, "\nModulator stopped.\n");
                 ret = 0;
                 run_again = false;
-                break;
-            case MOD_AGAIN:
-                fprintf(stderr, "\nRestart modulator\n");
-                run_again = true;
-                running = true;
                 break;
         }
 

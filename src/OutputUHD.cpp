@@ -496,7 +496,7 @@ void UHDWorker::process()
             md.time_spec = uhd::time_spec_t(tx_second, pps_offset);
 
             // md is defined, let's do some checks
-            if (md.time_spec.get_real_secs() + 0.2 < usrp_time) {
+            if (md.time_spec.get_real_secs() + timeout < usrp_time) {
                 uwd->logger->level(warn) <<
                     "OutputUHD: Timestamp in the past! offset: " <<
                     md.time_spec.get_real_secs() - usrp_time <<
@@ -507,12 +507,14 @@ void UHDWorker::process()
                 goto loopend; //skip the frame
             }
 
+#if 0 // Let uhd handle this
             if (md.time_spec.get_real_secs() > usrp_time + TIMESTAMP_MARGIN_FUTURE) {
                 uwd->logger->level(warn) <<
                         "OutputUHD: Timestamp too far in the future! offset: " <<
                         md.time_spec.get_real_secs() - usrp_time;
                 usleep(20000); //sleep so as to fill buffers
             }
+#endif
 
             if (md.time_spec.get_real_secs() > usrp_time + TIMESTAMP_ABORT_FUTURE) {
                 uwd->logger->level(error) <<
