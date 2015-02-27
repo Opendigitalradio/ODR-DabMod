@@ -107,7 +107,7 @@ enum run_modulator_state {
     MOD_AGAIN
 };
 
-run_modulator_state run_modulator(modulator_data& m);
+run_modulator_state run_modulator(Logger& logger, modulator_data& m);
 
 int main(int argc, char* argv[])
 {
@@ -776,7 +776,7 @@ int main(int argc, char* argv[])
 
         m.inputReader->PrintInfo();
 
-        run_modulator_state st = run_modulator(m);
+        run_modulator_state st = run_modulator(logger, m);
 
         switch (st) {
             case MOD_FAILURE:
@@ -824,7 +824,7 @@ int main(int argc, char* argv[])
     return ret;
 }
 
-run_modulator_state run_modulator(modulator_data& m)
+run_modulator_state run_modulator(Logger& logger, modulator_data& m)
 {
     run_modulator_state ret = MOD_FAILURE;
     try {
@@ -858,24 +858,24 @@ run_modulator_state run_modulator(modulator_data& m)
                 }
             }
             if (framesize == 0) {
-                fprintf(stderr, "End of file reached.\n");
+                logger.level(info) << "End of file reached.";
             }
             else {
-                fprintf(stderr, "Input read error.\n");
+                logger.level(error) << "Input read error.";
             }
             running = 0;
             ret = MOD_NORMAL_END;
         }
     } catch (fct_discontinuity_error& e) {
         // The OutputUHD saw a FCT discontinuity
-        fprintf(stderr, "Stream discontinuity\n");
+        logger.level(warn) << e.what();
         ret = MOD_AGAIN;
-    } catch (std::overflow_error& e) {
+    } catch (zmq_input_overflow& e) {
         // The ZeroMQ input has overflowed its buffer
-        fprintf(stderr, "overflow error: %s\n", e.what());
+        logger.level(warn) << e.what();
         ret = MOD_AGAIN;
     } catch (std::exception& e) {
-        fprintf(stderr, "EXCEPTION: %s\n", e.what());
+        logger.level(error) << "Exception caught: " << e.what();
         ret = MOD_FAILURE;
     }
 

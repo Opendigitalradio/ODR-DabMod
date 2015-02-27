@@ -88,7 +88,7 @@ int InputZeroMQReader::GetNextFrame(void* buffer)
     in_messages_.wait_and_pop(incoming);
 
     if (! workerdata_.running) {
-        throw std::overflow_error("InputZeroMQ worker dead");
+        throw zmq_input_overflow();
     }
 
     memcpy(buffer, incoming, framesize);

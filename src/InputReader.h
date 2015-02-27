@@ -130,6 +130,14 @@ class InputFileReader : public InputReader
                             // after 2**32 * 24ms ~= 3.3 years
 };
 
+struct zmq_input_overflow : public std::exception
+{
+  const char* what () const throw ()
+  {
+    return "InputZMQ buffer overflow";
+  }
+};
+
 #if defined(HAVE_ZEROMQ)
 /* A ZeroMQ input. See www.zeromq.org for more info */
 
