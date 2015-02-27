@@ -230,8 +230,6 @@ OutputUHD::OutputUHD(
     mySyncBarrier = b;
     uwd.sync_barrier = b;
 
-    worker.start(&uwd);
-
     MDEBUG("OutputUHD:UHD ready.\n");
 }
 
@@ -288,6 +286,8 @@ int OutputUHD::process(Buffer* dataIn, Buffer* dataOut)
     if (first_run) {
         myLogger.level(debug) << "OutputUHD: UHD initialising...";
 
+        worker.start(&uwd);
+
         uwd.bufsize = dataIn->getLength();
         uwd.frame0.buf = malloc(uwd.bufsize);
         uwd.frame1.buf = malloc(uwd.bufsize);
@@ -332,6 +332,19 @@ int OutputUHD::process(Buffer* dataIn, Buffer* dataOut)
         }
         mySyncBarrier.get()->wait();
 
+        if (!uwd.running) {
+            worker.stop();
+            first_run = true;
+            if (uwd.failed_due_to_fct) {
+                throw fct_discontinuity_error();
+            }
+            else {
+                myLogger.level(error) <<
+                    "OutputUHD: Error, UHD worker failed";
+                throw std::runtime_error("UHD worker failed");
+            }
+        }
+
         // write into the our buffer while
         // the worker sends the other.
 
@@ -374,6 +387,21 @@ int OutputUHD::process(Buffer* dataIn, Buffer* dataOut)
 
 }
 
+void UHDWorker::process_errhandler()
+{
+    try {
+        process();
+    }
+    catch (fct_discontinuity_error& e) {
+        uwd->logger->level(warn) << e.what();
+        uwd->failed_due_to_fct = true;
+    }
+
+    uwd->running = false;
+    uwd->sync_barrier.get()->wait();
+    uwd->logger->level(warn) << "UHD worker terminated";
+}
+
 void UHDWorker::process()
 {
     int workerbuffer  = 0;
@@ -409,7 +437,7 @@ void UHDWorker::process()
 
     int expected_next_fct = -1;
 
-    while (running) {
+    while (uwd->running) {
         bool fct_discontinuity = false;
         md.has_time_spec = false;
         md.time_spec = uhd::time_spec_t(0.0);
@@ -449,6 +477,7 @@ void UHDWorker::process()
                     "OutputUHD: Incorrect expect fct " << frame->ts.fct;
 
                 fct_discontinuity = true;
+                throw fct_discontinuity_error();
             }
         }
 
@@ -553,7 +582,7 @@ void UHDWorker::process()
         PDEBUG("UHDWorker::process:max_num_samps: %zu.\n",
                 usrp_max_num_samps);
 
-        while (running && !uwd->muting && (num_acc_samps < sizeIn)) {
+        while (uwd->running && !uwd->muting && (num_acc_samps < sizeIn)) {
             size_t samps_to_send = std::min(sizeIn - num_acc_samps, usrp_max_num_samps);
 
             //ensure the the last packet has EOB set if the timestamps has been
@@ -665,8 +694,6 @@ loopend:
         // swap buffers
         workerbuffer = (workerbuffer + 1) % 2;
     }
-
-    uwd->logger->level(warn) << "UHD worker terminated";
 }
 
 

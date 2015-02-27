@@ -83,9 +83,20 @@ struct UHDWorkerFrameData {
     struct frame_timestamp ts;
 };
 
+struct fct_discontinuity_error : public std::exception
+{
+  const char* what () const throw ()
+  {
+    return "FCT discontinuity detected";
+  }
+};
+
 enum refclk_lock_loss_behaviour_t { CRASH, IGNORE };
 
 struct UHDWorkerData {
+    bool running;
+    bool failed_due_to_fct;
+
 #if FAKE_UHD == 0
     uhd::usrp::multi_usrp::sptr myUsrp;
 #endif
@@ -130,28 +141,26 @@ struct UHDWorkerData {
 
 class UHDWorker {
     public:
-        UHDWorker () {
-            running = false;
-        }
-
         void start(struct UHDWorkerData *uhdworkerdata) {
-            running = true;
             uwd = uhdworkerdata;
-            uhd_thread = boost::thread(&UHDWorker::process, this);
+
+            uwd->running = true;
+            uwd->failed_due_to_fct = false;
+            uhd_thread = boost::thread(&UHDWorker::process_errhandler, this);
         }
 
         void stop() {
-            running = false;
+            uwd->running = false;
             uhd_thread.interrupt();
             uhd_thread.join();
         }
 
-        void process();
-
-
     private:
+        void process();
+        void process_errhandler();
+
+
         struct UHDWorkerData *uwd;
-        bool running;
         boost::thread uhd_thread;
 
         uhd::tx_streamer::sptr myTxStream;

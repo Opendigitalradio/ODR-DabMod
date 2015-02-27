@@ -866,6 +866,10 @@ run_modulator_state run_modulator(modulator_data& m)
             running = 0;
             ret = MOD_NORMAL_END;
         }
+    } catch (fct_discontinuity_error& e) {
+        // The OutputUHD saw a FCT discontinuity
+        fprintf(stderr, "Stream discontinuity\n");
+        ret = MOD_AGAIN;
     } catch (std::overflow_error& e) {
         // The ZeroMQ input has overflowed its buffer
         fprintf(stderr, "overflow error: %s\n", e.what());
