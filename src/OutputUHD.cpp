@@ -91,7 +91,6 @@ OutputUHD::OutputUHD(
     RC_ADD_PARAMETER(freq,   "UHD transmission frequency");
     RC_ADD_PARAMETER(muting, "Mute the output by stopping the transmitter");
     RC_ADD_PARAMETER(staticdelay, "Set static delay (uS) between 0 and 96000");
-    RC_ADD_PARAMETER(iqbalance, "Set I/Q balance between 0 and 1.0");
 
     uhd::set_thread_priority_safe();
 
@@ -706,11 +705,6 @@ void OutputUHD::set_parameter(const string& parameter, const string& value)
             else
                 myStaticDelayUs = newStaticDelayUs;
         }
-    }
-    else if (parameter == "iqbalance") {
-        ss >> myConf.frequency;
-        myUsrp->set_tx_freq(myConf.frequency);
-        myConf.frequency = myUsrp->get_tx_freq();
     }
     else {
         stringstream ss;
