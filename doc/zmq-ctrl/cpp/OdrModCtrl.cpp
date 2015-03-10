@@ -51,6 +51,7 @@ COdrModCtrl::COdrModCtrl(zmq::context_t *pContext, std::string odrEndpoint,
 	m_pContext = pContext;
 	m_odrEndpoint = odrEndpoint;
 	m_timeoutMs = (uint32_t) timeoutMs;
+	m_pReqSocket = NULL;
 }
 
 COdrModCtrl::~COdrModCtrl()
