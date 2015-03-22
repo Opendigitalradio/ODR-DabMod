@@ -866,10 +866,12 @@ run_modulator_state run_modulator(Logger& logger, modulator_data& m)
             running = 0;
             ret = MOD_NORMAL_END;
         }
+#if defined(HAVE_OUTPUT_UHD)
     } catch (fct_discontinuity_error& e) {
         // The OutputUHD saw a FCT discontinuity
         logger.level(warn) << e.what();
         ret = MOD_AGAIN;
+#endif
     } catch (zmq_input_overflow& e) {
         // The ZeroMQ input has overflowed its buffer
         logger.level(warn) << e.what();
