@@ -77,7 +77,7 @@ AC_ARG_ENABLE([zeromq],
 
 # UHD support control
 AC_ARG_ENABLE([output_uhd],
-        [AS_HELP_STRING([--enable-output-uhd], [Enable UHD output])],
+        [AS_HELP_STRING([--disable-output-uhd], [Disable UHD output])],
         [], [enable_output_uhd=yes])
 
 AS_IF([test "x$enable_kiss" = "xno"],
