@@ -471,10 +471,16 @@ void UHDWorker::process()
         /* Verify that the FCT value is correct. If we miss one transmission
          * frame we must interrupt UHD and resync to the timestamps
          */
+        if (frame->ts.fct == -1) {
+            uwd->logger->level(info) <<
+                "OutputUHD: dropping one frame with invalid FCT";
+            goto loopend;
+        }
         if (expected_next_fct != -1) {
             if (expected_next_fct != (int)frame->ts.fct) {
                 uwd->logger->level(warn) <<
-                    "OutputUHD: Incorrect expect fct " << frame->ts.fct;
+                    "OutputUHD: Incorrect expect fct " << frame->ts.fct <<
+                    ", expected " << expected_next_fct;
 
                 fct_discontinuity = true;
                 throw fct_discontinuity_error();

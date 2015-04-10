@@ -69,7 +69,7 @@ void TimestampDecoder::calculateTimestamp(struct frame_timestamp& ts)
         ts.timestamp_sec = 0;
         ts.timestamp_pps_offset = 0;
         ts.timestamp_refresh = false;
-        ts.fct = 0;
+        ts.fct = -1;
     }
     else {
         //fprintf(stderr, ". %zu ", queue_timestamps.size());
@@ -191,7 +191,7 @@ void TimestampDecoder::updateTimestampEti(
         int framephase,
         uint16_t mnsc,
         double pps,
-        uint32_t fct)
+        int32_t fct)
 {
     updateTimestampPPS(pps);
     pushMNSCData(framephase, mnsc);
