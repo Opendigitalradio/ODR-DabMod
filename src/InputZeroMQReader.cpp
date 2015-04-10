@@ -199,7 +199,7 @@ void InputZeroMQWorker::RecvProcess(struct InputZeroMQThreadData* workerdata)
             }
 
             if (queue_size < 5) {
-                fprintf(stderr, "ZeroMQ buffer underfull: %zu elements !\n",
+                fprintf(stderr, "ZeroMQ buffer low: %zu elements !\n",
                         queue_size);
             }
         }
