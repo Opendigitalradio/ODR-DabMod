@@ -150,17 +150,15 @@ Flowgraph::~Flowgraph()
 
     if (myProcessTime) {
         fprintf(stderr, "Process time:\n");
-    }
-    std::vector<shared_ptr<Node> >::const_iterator node;
-    for (node = nodes.begin(); node != nodes.end(); ++node) {
-        if (myProcessTime) {
+
+        std::vector<shared_ptr<Node> >::const_iterator node;
+        for (node = nodes.begin(); node != nodes.end(); ++node) {
             fprintf(stderr, "  %30s: %10u us (%2.2f %%)\n",
                     (*node)->plugin()->name(),
                     (unsigned)(*node)->processTime(),
                     (*node)->processTime() * 100.0 / myProcessTime);
         }
-    }
-    if (myProcessTime) {
+
         fprintf(stderr, "  %30s: %10u us (100.00 %%)\n", "total",
                 (unsigned)myProcessTime);
     }
