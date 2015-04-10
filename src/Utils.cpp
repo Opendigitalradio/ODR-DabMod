@@ -79,7 +79,7 @@ void printUsage(char* progName)
     fprintf(out, "-h:            Print this help.\n");
     fprintf(out, "-l:            Loop file when reach end of file.\n");
     fprintf(out, "-m mode:       Set DAB mode: (0: auto, 1-4: force).\n");
-    fprintf(out, "-r rate:       Set output sampling rate (default: 2048000).\n");
+    fprintf(out, "-r rate:       Set output sampling rate (default: 2048000).\n\n");
 }
 
 

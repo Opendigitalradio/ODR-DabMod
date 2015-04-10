@@ -110,7 +110,7 @@ enum run_modulator_state {
 
 run_modulator_state run_modulator(Logger& logger, modulator_data& m);
 
-int main(int argc, char* argv[])
+int launch_modulator(int argc, char* argv[])
 {
     int ret = 0;
     bool loop = false;
@@ -897,5 +897,21 @@ run_modulator_state run_modulator(Logger& logger, modulator_data& m)
     }
 
     return ret;
+}
+
+int main(int argc, char* argv[])
+{
+    try {
+        return launch_modulator(argc, argv);
+    }
+    catch (std::invalid_argument& e) {
+        std::string what(e.what());
+        if (not what.empty()) {
+            std::cerr << "Modulator error: " << what << std::endl;
+        }
+    }
+    catch (std::runtime_error& e) {
+        std::cerr << "Modulator runtime error: " << e.what() << std::endl;
+    }
 }
 
