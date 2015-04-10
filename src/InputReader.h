@@ -91,9 +91,9 @@ class InputFileReader : public InputReader
 
         ~InputFileReader()
         {
-            fprintf(stderr, "\nClosing input file...\n");
-
             if (inputfile_ != NULL) {
+                fprintf(stderr, "\nClosing input file...\n");
+
                 fclose(inputfile_);
             }
         }
