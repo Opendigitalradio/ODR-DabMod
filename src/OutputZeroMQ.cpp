@@ -32,19 +32,31 @@
 
 #if defined(HAVE_ZEROMQ)
 
-OutputZeroMQ::OutputZeroMQ(std::string endpoint, Buffer* dataOut)
+OutputZeroMQ::OutputZeroMQ(std::string endpoint, int type, Buffer* dataOut)
     : ModOutput(ModFormat(1), ModFormat(0)),
+    m_type(type),
     m_zmq_context(1),
-    m_zmq_pub_sock(m_zmq_context, ZMQ_PUB),
+    m_zmq_sock(m_zmq_context, type),
     m_endpoint(endpoint)
 {
     PDEBUG("OutputZeroMQ::OutputZeroMQ(%p) @ %p\n", dataOut, this);
 
     std::stringstream ss;
-    ss << "OutputZeroMQ(" << m_endpoint << ")";
+    ss << "OutputZeroMQ(" << m_endpoint << " ";
+
+    if (type == ZMQ_PUB) {
+        ss << "ZMQ_PUB";
+    }
+    else if (type == ZMQ_REP) {
+        ss << "ZMQ_REP";
+    }
+    else {
+        throw std::invalid_argument("ZMQ socket type unknown");
+    }
+    ss << ")";
     m_name = ss.str();
 
-    m_zmq_pub_sock.bind(m_endpoint.c_str());
+    m_zmq_sock.bind(m_endpoint.c_str());
 }
 
 OutputZeroMQ::~OutputZeroMQ()
@@ -58,7 +70,13 @@ int OutputZeroMQ::process(Buffer* dataIn, Buffer* dataOut)
             "(dataIn: %p, dataOut: %p)\n",
             dataIn, dataOut);
 
-    m_zmq_pub_sock.send(dataIn->getData(), dataIn->getLength());
+    if (m_type == ZMQ_REP) {
+        // A ZMQ_REP socket requires a request first
+        zmq::message_t msg;
+        m_zmq_sock.recv(&msg);
+    }
+
+    m_zmq_sock.send(dataIn->getData(), dataIn->getLength());
 
     return dataIn->getLength();
 }

@@ -39,14 +39,15 @@
 class OutputZeroMQ : public ModOutput
 {
     public:
-        OutputZeroMQ(std::string endpoint, Buffer* dataOut = NULL);
+        OutputZeroMQ(std::string endpoint, int type, Buffer* dataOut = NULL);
         virtual ~OutputZeroMQ();
         virtual int process(Buffer* dataIn, Buffer* dataOut);
         const char* name() { return m_name.c_str(); }
 
     protected:
+        int m_type;                   // zmq socket type
         zmq::context_t m_zmq_context; // handle for the zmq context
-        zmq::socket_t m_zmq_pub_sock; // handle for the zmq publisher socket
+        zmq::socket_t m_zmq_sock;     // handle for the zmq publisher socket
 
         std::string m_endpoint;       // On which port to listen: e.g.
                                       // tcp://*:58300

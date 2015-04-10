@@ -47,6 +47,7 @@
 #include "RemoteControl.h"
 
 #include <boost/shared_ptr.hpp>
+#include <boost/make_shared.hpp>
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/ini_parser.hpp>
 #include <complex>
@@ -119,6 +120,7 @@ int main(int argc, char* argv[])
 
     std::string outputName;
     int useZeroMQOutput = 0;
+    std::string zmqOutputSocketType = "";
     int useFileOutput = 0;
     std::string fileOutputFormat = "complexf";
     int useUHDOutput = 0;
@@ -563,6 +565,7 @@ int main(int argc, char* argv[])
 #if defined(HAVE_ZEROMQ)
         else if (output_selected == "zmq") {
             outputName = pt.get<std::string>("zmqoutput.listen");
+            zmqOutputSocketType = pt.get<std::string>("zmqoutput.socket_type");
             useZeroMQOutput = 1;
         }
 #endif
@@ -676,8 +679,10 @@ int main(int argc, char* argv[])
 #endif
     else if (useZeroMQOutput) {
         fprintf(stderr, " ZeroMQ\n"
-                        "  Listening on: %s\n",
-                        outputName.c_str());
+                        "  Listening on: %s\n"
+                        "  Socket type : %s\n",
+                        outputName.c_str(),
+                        zmqOutputSocketType.c_str());
     }
 
     fprintf(stderr, "  Sampling rate: ");
@@ -744,7 +749,17 @@ int main(int argc, char* argv[])
     else if (useZeroMQOutput) {
         /* We normalise the same way as for the UHD output */
         normalise = 1.0f / normalise_factor;
-        output = shared_ptr<OutputZeroMQ>(new OutputZeroMQ(outputName));
+        if (zmqOutputSocketType == "pub") {
+            output = make_shared<OutputZeroMQ>(outputName, ZMQ_PUB);
+        }
+        else if (zmqOutputSocketType == "rep") {
+            output = make_shared<OutputZeroMQ>(outputName, ZMQ_REP);
+        }
+        else {
+            std::stringstream ss;
+            ss << "ZeroMQ output socket type " << zmqOutputSocketType << " invalid";
+            throw std::invalid_argument(ss.str());
+        }
     }
 #endif
 
