@@ -47,8 +47,8 @@ using namespace std;
 typedef std::complex<float> complexf;
 
 OutputUHD::OutputUHD(
-        OutputUHDConfig& config,
-        Logger& logger) :
+        const OutputUHDConfig& config,
+        Logger *logger) :
     ModOutput(ModFormat(1), ModFormat(0)),
     RemoteControllable("uhd"),
     myLogger(logger),
@@ -152,18 +152,18 @@ OutputUHD::OutputUHD(
             myConf.muteNoTimestamps ? "enabled" : "disabled");
 
     if (myConf.enableSync && (myConf.pps_src == "none")) {
-        myLogger.level(warn) <<
+        myLogger->level(warn) <<
             "OutputUHD: WARNING:"
             " you are using synchronous transmission without PPS input!";
 
         struct timespec now;
         if (clock_gettime(CLOCK_REALTIME, &now)) {
             perror("OutputUHD:Error: could not get time: ");
-            myLogger.level(error) << "OutputUHD: could not get time";
+            myLogger->level(error) << "OutputUHD: could not get time";
         }
         else {
             myUsrp->set_time_now(uhd::time_spec_t(now.tv_sec));
-            myLogger.level(info) << "OutputUHD: Setting USRP time to " <<
+            myLogger->level(info) << "OutputUHD: Setting USRP time to " <<
                     uhd::time_spec_t(now.tv_sec).get_real_secs();
         }
     }
@@ -174,7 +174,7 @@ OutputUHD::OutputUHD(
         struct timespec now;
         time_t seconds;
         if (clock_gettime(CLOCK_REALTIME, &now)) {
-            myLogger.level(error) << "OutputUHD: could not get time :" <<
+            myLogger->level(error) << "OutputUHD: could not get time :" <<
                 strerror(errno);
             throw std::runtime_error("OutputUHD: could not get time.");
         }
@@ -185,7 +185,7 @@ OutputUHD::OutputUHD(
             while (seconds + 1 > now.tv_sec) {
                 usleep(1);
                 if (clock_gettime(CLOCK_REALTIME, &now)) {
-                    myLogger.level(error) << "OutputUHD: could not get time :" <<
+                    myLogger->level(error) << "OutputUHD: could not get time :" <<
                         strerror(errno);
                     throw std::runtime_error("OutputUHD: could not get time.");
                 }
@@ -195,12 +195,12 @@ OutputUHD::OutputUHD(
 
             usleep(200000); // 200ms, we want the PPS to be later
             myUsrp->set_time_unknown_pps(uhd::time_spec_t(seconds + 2));
-            myLogger.level(info) << "OutputUHD: Setting USRP time next pps to " <<
+            myLogger->level(info) << "OutputUHD: Setting USRP time next pps to " <<
                     uhd::time_spec_t(seconds + 2).get_real_secs();
         }
 
         usleep(1e6);
-        myLogger.log(info,  "OutputUHD: USRP time %f\n",
+        myLogger->log(info,  "OutputUHD: USRP time %f\n",
                 myUsrp->get_time_now().get_real_secs());
     }
 
@@ -214,7 +214,7 @@ OutputUHD::OutputUHD(
     uwd.sampleRate = myConf.sampleRate;
     uwd.sourceContainsTimestamp = false;
     uwd.muteNoTimestamps = myConf.muteNoTimestamps;
-    uwd.logger = &myLogger;
+    uwd.logger = myLogger;
     uwd.refclk_lock_loss_behaviour = myConf.refclk_lock_loss_behaviour;
 
     if (myConf.refclk_src == "internal") {
@@ -284,7 +284,7 @@ int OutputUHD::process(Buffer* dataIn, Buffer* dataOut)
     // We will only wait on the barrier on the subsequent calls to
     // OutputUHD::process
     if (first_run) {
-        myLogger.level(debug) << "OutputUHD: UHD initialising...";
+        myLogger->level(debug) << "OutputUHD: UHD initialising...";
 
         worker.start(&uwd);
 
@@ -319,13 +319,13 @@ int OutputUHD::process(Buffer* dataIn, Buffer* dataOut)
 
         lastLen = uwd.bufsize;
         first_run = false;
-        myLogger.level(debug) << "OutputUHD: UHD initialising complete";
+        myLogger->level(debug) << "OutputUHD: UHD initialising complete";
     }
     else {
 
         if (lastLen != dataIn->getLength()) {
             // I expect that this never happens.
-            myLogger.level(emerg) <<
+            myLogger->level(emerg) <<
                 "OutputUHD: Fatal error, input length changed from " << lastLen <<
                 " to " << dataIn->getLength();
             throw std::runtime_error("Non-constant input length!");
@@ -339,7 +339,7 @@ int OutputUHD::process(Buffer* dataIn, Buffer* dataOut)
                 throw fct_discontinuity_error();
             }
             else {
-                myLogger.level(error) <<
+                myLogger->level(error) <<
                     "OutputUHD: Error, UHD worker failed";
                 throw std::runtime_error("UHD worker failed");
             }

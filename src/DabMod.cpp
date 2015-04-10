@@ -726,22 +726,22 @@ int main(int argc, char* argv[])
 
     if (useFileOutput) {
         if (fileOutputFormat == "complexf") {
-            output = shared_ptr<OutputFile>(new OutputFile(outputName));
+            output = make_shared<OutputFile>(outputName);
         }
         else if (fileOutputFormat == "s8") {
             // We must normalise the samples to the interval [-127.0; 127.0]
             normalise = 127.0f / normalise_factor;
 
-            format_converter = shared_ptr<FormatConverter>(new FormatConverter());
+            format_converter = make_shared<FormatConverter>();
 
-            output = shared_ptr<OutputFile>(new OutputFile(outputName));
+            output = make_shared<OutputFile>(outputName);
         }
     }
 #if defined(HAVE_OUTPUT_UHD)
     else if (useUHDOutput) {
         normalise = 1.0f / normalise_factor;
         outputuhd_conf.sampleRate = outputRate;
-        output = shared_ptr<OutputUHD>(new OutputUHD(outputuhd_conf, logger));
+        output = make_shared<OutputUHD>(outputuhd_conf, &logger);
         ((OutputUHD*)output.get())->enrol_at(rcs);
     }
 #endif
@@ -808,8 +808,7 @@ int main(int argc, char* argv[])
                     run_again = true;
 
                     // Create a new input reader
-                    inputZeroMQReader = shared_ptr<InputZeroMQReader>(
-                            new InputZeroMQReader(logger));
+                    inputZeroMQReader = make_shared<InputZeroMQReader>(logger);
                     inputZeroMQReader->Open(inputName, inputMaxFramesQueued);
                     m.inputReader = inputZeroMQReader.get();
                 }

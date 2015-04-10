@@ -200,8 +200,8 @@ class OutputUHD: public ModOutput, public RemoteControllable {
     public:
 
         OutputUHD(
-                OutputUHDConfig& config,
-                Logger& logger);
+                const OutputUHDConfig& config,
+                Logger *logger);
         ~OutputUHD();
 
         int process(Buffer* dataIn, Buffer* dataOut);
@@ -227,7 +227,7 @@ class OutputUHD: public ModOutput, public RemoteControllable {
 
 
     protected:
-        Logger& myLogger;
+        Logger *myLogger;
         EtiReader *myEtiReader;
         OutputUHDConfig myConf;
         uhd::usrp::multi_usrp::sptr myUsrp;
