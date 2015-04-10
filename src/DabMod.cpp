@@ -351,7 +351,8 @@ int main(int argc, char* argv[])
         }
         catch (boost::property_tree::ini_parser::ini_parser_error &e)
         {
-            fprintf(stderr, "Error, cannot read configuration file '%s'\n", configuration_file.c_str());
+            std::cerr << "Error, cannot read configuration file '" << configuration_file.c_str() << "'" << std::endl;
+            std::cerr << "       " << e.what() << std::endl;
             throw std::runtime_error("Cannot read configuration file");
         }
 
