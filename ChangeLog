@@ -1,6 +1,18 @@
 This file contains information about the changes done to
 the ODR-DabMod in this repository
 
+2015-04-10: Matthias P. Braendli <matthias@mpb.li>
+	(v0.5.2)
+	* odr-dabmod:
+		Merge static delay parameter and ZeroMQ remote control.
+		Add max_frames_queued option for ZeroMQ input.
+		Restart modulator on FCT discontinuity or ZeroMQ input
+		buffer overrun.
+		Improve error messages and documentation.
+		Add ZeroMQ output REP socket type for interconnection with
+		GNURadio.
+		Fix license text in usage view.
+
 2015-01-24: Matthias P. Braendli <matthias@mpb.li>
 	(v0.5.1)
 	* odr-dabmod:
