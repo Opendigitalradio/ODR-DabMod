@@ -61,6 +61,7 @@ EtiReader::EtiReader(struct modulator_offset_config& modconf,
     PDEBUG("EtiReader::EtiReader()\n");
 
     myCurrentFrame = 0;
+    eti_fc_valid = false;
 }
 
 EtiReader::~EtiReader()
@@ -81,12 +82,18 @@ FicSource* EtiReader::getFic()
 
 unsigned EtiReader::getMode()
 {
+    if (not eti_fc_valid) {
+        throw std::runtime_error("Trying to access Mode before it is ready!");
+    }
     return eti_fc.MID;
 }
 
 
 unsigned EtiReader::getFp()
 {
+    if (not eti_fc_valid) {
+        throw std::runtime_error("Trying to access FP before it is ready!");
+    }
     return eti_fc.FP;
 }
 
@@ -144,6 +151,7 @@ int EtiReader::process(const Buffer* dataIn)
                 return dataIn->getLength() - input_size;
             }
             memcpy(&eti_fc, in, 4);
+            eti_fc_valid = true;
             input_size -= 4;
             framesize -= 4;
             in += 4;

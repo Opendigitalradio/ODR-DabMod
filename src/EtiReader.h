@@ -91,6 +91,7 @@ private:
     size_t myCurrentFrame;
     bool time_ext_enabled;
     unsigned long timestamp_seconds;
+    bool eti_fc_valid;
 };
 
 
