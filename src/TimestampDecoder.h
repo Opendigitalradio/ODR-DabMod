@@ -55,7 +55,7 @@ struct modulator_offset_config
 struct frame_timestamp
 {
     // Which frame count does this timestamp apply to
-    uint32_t fct;
+    int32_t fct;
 
     uint32_t timestamp_sec;
     double timestamp_pps_offset;
@@ -101,9 +101,10 @@ struct frame_timestamp
     void print(const char* t)
     {
         fprintf(stderr,
-                "%s <struct frame_timestamp(%s, %d, %.9f)>\n", 
+                "%s <struct frame_timestamp(%s, %d, %.9f, %d)>\n",
                 t, this->timestamp_valid ? "valid" : "invalid",
-                 this->timestamp_sec, this->timestamp_pps_offset);
+                 this->timestamp_sec, this->timestamp_pps_offset,
+                 this->fct);
     }
 };
 
@@ -140,7 +141,7 @@ class TimestampDecoder
                 int framephase,
                 uint16_t mnsc,
                 double pps,
-                uint32_t fct);
+                int32_t fct);
 
         /* Update the modulator timestamp offset according to the modconf
          */
@@ -167,7 +168,7 @@ class TimestampDecoder
 
         struct tm temp_time;
         uint32_t time_secs;
-        uint32_t latestFCT;
+        int32_t latestFCT;
         double time_pps;
         double timestamp_offset;
         int inhibit_second_update;

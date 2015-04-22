@@ -1,6 +1,13 @@
 /*
    Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010, 2011 Her Majesty
    the Queen in Right of Canada (Communications Research Center Canada)
+
+   Copyright (C) 2014
+   Matthias P. Braendli, matthias.braendli@mpb.li
+
+    http://opendigitalradio.org
+
+    This flowgraph block converts complexf to signed integer.
  */
 /*
    This file is part of ODR-DabMod.
@@ -19,38 +26,28 @@
    along with ODR-DabMod.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef FRAME_MULTIPLEXER_H
-#define FRAME_MULTIPLEXER_H
+#ifndef FORMAT_CONVERTER_H
+#define FORMAT_CONVERTER_H
 
 #ifdef HAVE_CONFIG_H
 #   include <config.h>
 #endif
 
+#include "porting.h"
+#include "ModCodec.h"
+#include <complex>
+#include <stdint.h>
 
-#include "ModMux.h"
-#include "SubchannelSource.h"
-#include <boost/shared_ptr.hpp>
+typedef std::complex<float> complexf;
 
-#include <sys/types.h>
-
-
-class FrameMultiplexer : public ModMux
+class FormatConverter : public ModCodec
 {
-public:
-    FrameMultiplexer(size_t frameSize,
-            const std::vector<boost::shared_ptr<SubchannelSource> >* subchannels);
-    virtual ~FrameMultiplexer();
-    FrameMultiplexer(const FrameMultiplexer&);
-    FrameMultiplexer& operator=(const FrameMultiplexer&);
+    public:
+        FormatConverter(void);
 
-
-    int process(std::vector<Buffer*> dataIn, Buffer* dataOut);
-    const char* name() { return "FrameMultiplexer"; }
-
-protected:
-    size_t d_frameSize;
-    const std::vector<boost::shared_ptr<SubchannelSource> >* mySubchannels;
+        int process(Buffer* const dataIn, Buffer* dataOut);
+        const char* name();
 };
 
-#endif // FRAME_MULTIPLEXER_H
+#endif // FORMAT_CONVERTER_H
 

@@ -31,7 +31,7 @@
 #   include "config.h"
 #endif
 
-#if defined(HAVE_OUTPUT_ZEROMQ)
+#if defined(HAVE_ZEROMQ)
 
 #include "ModOutput.h"
 #include "zmq.hpp"
@@ -39,14 +39,15 @@
 class OutputZeroMQ : public ModOutput
 {
     public:
-        OutputZeroMQ(std::string endpoint, Buffer* dataOut = NULL);
+        OutputZeroMQ(std::string endpoint, int type, Buffer* dataOut = NULL);
         virtual ~OutputZeroMQ();
         virtual int process(Buffer* dataIn, Buffer* dataOut);
         const char* name() { return m_name.c_str(); }
 
     protected:
+        int m_type;                   // zmq socket type
         zmq::context_t m_zmq_context; // handle for the zmq context
-        zmq::socket_t m_zmq_pub_sock; // handle for the zmq publisher socket
+        zmq::socket_t m_zmq_sock;     // handle for the zmq publisher socket
 
         std::string m_endpoint;       // On which port to listen: e.g.
                                       // tcp://*:58300
@@ -54,7 +55,7 @@ class OutputZeroMQ : public ModOutput
         std::string m_name;
 };
 
-#endif // HAVE_OUTPUT_ZEROMQ_H
+#endif // HAVE_ZEROMQ
 
 #endif // OUTPUT_ZEROMQ_H
 

@@ -1,6 +1,11 @@
 /*
    Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010, 2011 Her Majesty
    the Queen in Right of Canada (Communications Research Center Canada)
+
+   Copyright (C) 2015
+   Matthias P. Braendli, matthias.braendli@mpb.li
+
+    http://opendigitalradio.org
  */
 /*
    This file is part of ODR-DabMod.
@@ -32,20 +37,21 @@
 
 #include <sys/types.h>
 #include <vector>
+#include <boost/shared_ptr.hpp>
 
 
 class Node
 {
 public:
-    Node(ModPlugin* plugin);
+    Node(boost::shared_ptr<ModPlugin> plugin);
     ~Node();
     Node(const Node&);
     Node& operator=(const Node&);
 
-    ModPlugin* plugin() { return myPlugin; }
+    boost::shared_ptr<ModPlugin> plugin() { return myPlugin; }
 
-    std::vector<Buffer*> myInputBuffers;
-    std::vector<Buffer*> myOutputBuffers;
+    std::vector<boost::shared_ptr<Buffer> > myInputBuffers;
+    std::vector<boost::shared_ptr<Buffer> > myOutputBuffers;
 
     int process();
     time_t processTime() { return myProcessTime; }
@@ -54,7 +60,7 @@ public:
     }
 
 protected:
-    ModPlugin* myPlugin;
+    boost::shared_ptr<ModPlugin> myPlugin;
     time_t myProcessTime;
 };
 
@@ -62,15 +68,15 @@ protected:
 class Edge
 {
 public:
-    Edge(Node* src, Node* dst);
+    Edge(boost::shared_ptr<Node>& src, boost::shared_ptr<Node>& dst);
     ~Edge();
     Edge(const Edge&);
     Edge& operator=(const Edge&);
 
 protected:
-    Node* mySrcNode;
-    Node* myDstNode;
-    Buffer* myBuffer;
+    boost::shared_ptr<Node> mySrcNode;
+    boost::shared_ptr<Node> myDstNode;
+    boost::shared_ptr<Buffer> myBuffer;
 };
 
 
@@ -82,14 +88,16 @@ public:
     Flowgraph(const Flowgraph&);
     Flowgraph& operator=(const Flowgraph&);
 
-    void connect(ModPlugin* input, ModPlugin* output);
+    void connect(boost::shared_ptr<ModPlugin> input,
+                 boost::shared_ptr<ModPlugin> output);
     bool run();
 
 protected:
-    std::vector<Node*> nodes;
-    std::vector<Edge*> edges;
+    std::vector<boost::shared_ptr<Node> > nodes;
+    std::vector<boost::shared_ptr<Edge> > edges;
     time_t myProcessTime;
 };
 
 
 #endif // FLOWGRAPH_H
+

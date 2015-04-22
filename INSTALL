@@ -2,8 +2,8 @@ Required dependencies:
 ======================
 
     * Boost 1.41 or later
+    * Optional UHD for USRP
     * Optional ZeroMQ http://www.zeromq.org
-        Use --disable-input-zeromq if you don't have it
     * Optional FFTW 3.x (included KISS FFT is used as fallback)
 
 Simple install procedure:
@@ -11,7 +11,7 @@ Simple install procedure:
 
     % tar xjf odr-dabmod-X.Y.Z.tar.bz2      # Unpack the source
     % cd odr-dabmod-X.Y.Z                   # Change to the source directory
-    % ./configure --disable-debug --with-debug-malloc=yes
+    % ./configure --enable-zeromq --enable-output-uhd
                                             # Run the configure script
     % make                                  # Build ODR-DabMod
     [ as root ]
@@ -21,7 +21,8 @@ Configure options
 =================
 The configure script can be launch with a variety of options:
 
- --enable-input-zeromq  Enable ZeroMQ input (to be used with ODR-DabMux)
+ --enable-zeromq        Enable ZeroMQ input (to be used with ODR-DabMux),
+                        output and remotecontrol.
  --enable-output-uhd    Includes the binding to the UHD driver for USRPs
 
 You have the choice between two FFT libraries: KISS FFT and FFTW. KISS FFT is a

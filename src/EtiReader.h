@@ -2,7 +2,7 @@
    Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010, 2011 Her Majesty
    the Queen in Right of Canada (Communications Research Center Canada)
 
-   Copyright (C) 2014
+   Copyright (C) 2014, 2015
    Matthias P. Braendli, matthias.braendli@mpb.li
 
     http://opendigitalradio.org
@@ -41,6 +41,7 @@
 #include <vector>
 #include <stdint.h>
 #include <sys/types.h>
+#include <boost/shared_ptr.hpp>
 
 
 class EtiReader
@@ -54,8 +55,8 @@ public:
     FicSource* getFic();
     unsigned getMode();
     unsigned getFp();
-    const std::vector<SubchannelSource*>& getSubchannels();
-    int process(Buffer* dataIn);
+    const std::vector<boost::shared_ptr<SubchannelSource> >& getSubchannels();
+    int process(const Buffer* dataIn);
 
     void calculateTimestamp(struct frame_timestamp& ts)
     {
@@ -83,14 +84,16 @@ protected:
     eti_EOF eti_eof;
     eti_TIST eti_tist;
     FicSource* myFicSource;
-    std::vector<SubchannelSource*> mySources;
+    std::vector<boost::shared_ptr<SubchannelSource> > mySources;
     TimestampDecoder myTimestampDecoder;
-    
+
 private:
     size_t myCurrentFrame;
     bool time_ext_enabled;
     unsigned long timestamp_seconds;
+    bool eti_fc_valid;
 };
 
 
 #endif // ETI_READER_H
+

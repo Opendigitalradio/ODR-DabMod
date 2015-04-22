@@ -2,7 +2,7 @@
    Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010, 2011 Her Majesty
    the Queen in Right of Canada (Communications Research Center Canada)
 
-   Copyright (C) 2014
+   Copyright (C) 2014, 2015
    Matthias P. Braendli, matthias.braendli@mpb.li
 
     http://opendigitalradio.org
@@ -34,6 +34,7 @@
 #include <string.h>
 #include <arpa/inet.h>
 
+using namespace boost;
 
 enum ETI_READER_STATE {
     EtiReaderStateNbFrame,
@@ -60,6 +61,7 @@ EtiReader::EtiReader(struct modulator_offset_config& modconf,
     PDEBUG("EtiReader::EtiReader()\n");
 
     myCurrentFrame = 0;
+    eti_fc_valid = false;
 }
 
 EtiReader::~EtiReader()
@@ -68,9 +70,6 @@ EtiReader::~EtiReader()
 
 //    if (myFicSource != NULL) {
 //        delete myFicSource;
-//    }
-//    for (unsigned i = 0; i < mySources.size(); ++i) {
-//        delete mySources[i];
 //    }
 }
 
@@ -83,23 +82,29 @@ FicSource* EtiReader::getFic()
 
 unsigned EtiReader::getMode()
 {
+    if (not eti_fc_valid) {
+        throw std::runtime_error("Trying to access Mode before it is ready!");
+    }
     return eti_fc.MID;
 }
 
 
 unsigned EtiReader::getFp()
 {
+    if (not eti_fc_valid) {
+        throw std::runtime_error("Trying to access FP before it is ready!");
+    }
     return eti_fc.FP;
 }
 
 
-const std::vector<SubchannelSource*>& EtiReader::getSubchannels()
+const std::vector<boost::shared_ptr<SubchannelSource> >& EtiReader::getSubchannels()
 {
     return mySources;
 }
 
 
-int EtiReader::process(Buffer* dataIn)
+int EtiReader::process(const Buffer* dataIn)
 {
     PDEBUG("EtiReader::process(dataIn: %p)\n", dataIn);
     PDEBUG(" state: %u\n", state);
@@ -146,6 +151,7 @@ int EtiReader::process(Buffer* dataIn)
                 return dataIn->getLength() - input_size;
             }
             memcpy(&eti_fc, in, 4);
+            eti_fc_valid = true;
             input_size -= 4;
             framesize -= 4;
             in += 4;
@@ -171,13 +177,12 @@ int EtiReader::process(Buffer* dataIn)
                     (memcmp(&eti_stc[0], in, 4 * eti_fc.NST))) {
                 PDEBUG("New stc!\n");
                 eti_stc.resize(eti_fc.NST);
-                for (unsigned i = 0; i < mySources.size(); ++i) {
-                    delete mySources[i];
-                }
-                mySources.resize(eti_fc.NST);
                 memcpy(&eti_stc[0], in, 4 * eti_fc.NST);
+
+                mySources.clear();
                 for (unsigned i = 0; i < eti_fc.NST; ++i) {
-                    mySources[i] = new SubchannelSource(eti_stc[i]);
+                    mySources.push_back(shared_ptr<SubchannelSource>(
+                                new SubchannelSource(eti_stc[i])));
                     PDEBUG("Sstc %u:\n", i);
                     PDEBUG(" Stc%i.scid: %i\n", i, eti_stc[i].SCID);
                     PDEBUG(" Stc%i.sad: %u\n", i, eti_stc[i].getStartAddress());

@@ -47,6 +47,7 @@ Buffer::Buffer(size_t len, const void *data)
 
 Buffer::~Buffer()
 {
+    PDEBUG("Buffer::~Buffer() len=%zu, data=%p\n", len, data);
     free(data);
 }
 

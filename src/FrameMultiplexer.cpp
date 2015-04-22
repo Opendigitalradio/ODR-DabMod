@@ -30,8 +30,11 @@
 
 typedef std::complex<float> complexf;
 
+using namespace boost;
 
-FrameMultiplexer::FrameMultiplexer(size_t framesize, const std::vector<SubchannelSource*>* subchannels) :
+FrameMultiplexer::FrameMultiplexer(
+        size_t framesize,
+        const std::vector<shared_ptr<SubchannelSource> >* subchannels) :
     ModMux(ModFormat(framesize), ModFormat(framesize)),
     d_frameSize(framesize),
     mySubchannels(subchannels)
@@ -76,7 +79,7 @@ int FrameMultiplexer::process(std::vector<Buffer*> dataIn, Buffer* dataOut)
     ++in;
     // Write subchannel
     assert(mySubchannels->size() == dataIn.size() - 1);
-    std::vector<SubchannelSource*>::const_iterator subchannel =
+    std::vector<shared_ptr<SubchannelSource> >::const_iterator subchannel =
         mySubchannels->begin();
     while (in != dataIn.end()) {
         assert((*subchannel)->framesizeCu() * 8 == (*in)->getLength());
@@ -88,3 +91,4 @@ int FrameMultiplexer::process(std::vector<Buffer*> dataIn, Buffer* dataOut)
 
     return dataOut->getLength();
 }
+

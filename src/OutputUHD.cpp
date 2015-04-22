@@ -47,8 +47,8 @@ using namespace std;
 typedef std::complex<float> complexf;
 
 OutputUHD::OutputUHD(
-        OutputUHDConfig& config,
-        Logger& logger) :
+        const OutputUHDConfig& config,
+        Logger *logger) :
     ModOutput(ModFormat(1), ModFormat(0)),
     RemoteControllable("uhd"),
     myLogger(logger),
@@ -56,10 +56,12 @@ OutputUHD::OutputUHD(
     // Since we don't know the buffer size, we cannot initialise
     // the buffers at object initialisation.
     first_run(true),
-    activebuffer(1)
+    activebuffer(1),
+    myDelayBuf(0)
 
 {
     myMuting = 0; // is remote-controllable
+    myStaticDelayUs = 0; // is remote-controllable
 
 #if FAKE_UHD
     MDEBUG("OutputUHD:Using fake UHD output");
@@ -87,7 +89,8 @@ OutputUHD::OutputUHD(
     /* register the parameters that can be remote controlled */
     RC_ADD_PARAMETER(txgain, "UHD analog daughterboard TX gain");
     RC_ADD_PARAMETER(freq,   "UHD transmission frequency");
-    RC_ADD_PARAMETER(muting, "mute the output by stopping the transmitter");
+    RC_ADD_PARAMETER(muting, "Mute the output by stopping the transmitter");
+    RC_ADD_PARAMETER(staticdelay, "Set static delay (uS) between 0 and 96000");
 
     uhd::set_thread_priority_safe();
 
@@ -149,18 +152,18 @@ OutputUHD::OutputUHD(
             myConf.muteNoTimestamps ? "enabled" : "disabled");
 
     if (myConf.enableSync && (myConf.pps_src == "none")) {
-        myLogger.level(warn) <<
+        myLogger->level(warn) <<
             "OutputUHD: WARNING:"
             " you are using synchronous transmission without PPS input!";
 
         struct timespec now;
         if (clock_gettime(CLOCK_REALTIME, &now)) {
             perror("OutputUHD:Error: could not get time: ");
-            myLogger.level(error) << "OutputUHD: could not get time";
+            myLogger->level(error) << "OutputUHD: could not get time";
         }
         else {
             myUsrp->set_time_now(uhd::time_spec_t(now.tv_sec));
-            myLogger.level(info) << "OutputUHD: Setting USRP time to " <<
+            myLogger->level(info) << "OutputUHD: Setting USRP time to " <<
                     uhd::time_spec_t(now.tv_sec).get_real_secs();
         }
     }
@@ -171,7 +174,7 @@ OutputUHD::OutputUHD(
         struct timespec now;
         time_t seconds;
         if (clock_gettime(CLOCK_REALTIME, &now)) {
-            myLogger.level(error) << "OutputUHD: could not get time :" <<
+            myLogger->level(error) << "OutputUHD: could not get time :" <<
                 strerror(errno);
             throw std::runtime_error("OutputUHD: could not get time.");
         }
@@ -182,7 +185,7 @@ OutputUHD::OutputUHD(
             while (seconds + 1 > now.tv_sec) {
                 usleep(1);
                 if (clock_gettime(CLOCK_REALTIME, &now)) {
-                    myLogger.level(error) << "OutputUHD: could not get time :" <<
+                    myLogger->level(error) << "OutputUHD: could not get time :" <<
                         strerror(errno);
                     throw std::runtime_error("OutputUHD: could not get time.");
                 }
@@ -192,12 +195,12 @@ OutputUHD::OutputUHD(
 
             usleep(200000); // 200ms, we want the PPS to be later
             myUsrp->set_time_unknown_pps(uhd::time_spec_t(seconds + 2));
-            myLogger.level(info) << "OutputUHD: Setting USRP time next pps to " <<
+            myLogger->level(info) << "OutputUHD: Setting USRP time next pps to " <<
                     uhd::time_spec_t(seconds + 2).get_real_secs();
         }
 
         usleep(1e6);
-        myLogger.log(info,  "OutputUHD: USRP time %f\n",
+        myLogger->log(info,  "OutputUHD: USRP time %f\n",
                 myUsrp->get_time_now().get_real_secs());
     }
 
@@ -211,7 +214,7 @@ OutputUHD::OutputUHD(
     uwd.sampleRate = myConf.sampleRate;
     uwd.sourceContainsTimestamp = false;
     uwd.muteNoTimestamps = myConf.muteNoTimestamps;
-    uwd.logger = &myLogger;
+    uwd.logger = myLogger;
     uwd.refclk_lock_loss_behaviour = myConf.refclk_lock_loss_behaviour;
 
     if (myConf.refclk_src == "internal") {
@@ -221,12 +224,11 @@ OutputUHD::OutputUHD(
         uwd.check_refclk_loss = true;
     }
 
+    SetDelayBuffer(config.dabMode);
 
     shared_ptr<barrier> b(new barrier(2));
     mySyncBarrier = b;
     uwd.sync_barrier = b;
-
-    worker.start(&uwd);
 
     MDEBUG("OutputUHD:UHD ready.\n");
 }
@@ -236,6 +238,38 @@ OutputUHD::~OutputUHD()
 {
     MDEBUG("OutputUHD::~OutputUHD() @ %p\n", this);
     worker.stop();
+    if (!first_run) {
+        free(uwd.frame0.buf);
+        free(uwd.frame1.buf);
+    }
+}
+
+void OutputUHD::SetDelayBuffer(unsigned int dabMode)
+{
+    // find out the duration of the transmission frame (Table 2 in ETSI 300 401)
+    switch (dabMode) {
+        case 0: // could happen when called from constructor and we take the mode from ETI
+            myTFDurationMs = 0;
+            break;
+        case 1:
+            myTFDurationMs = 96;
+            break;
+        case 2:
+            myTFDurationMs = 24;
+            break;
+        case 3:
+            myTFDurationMs = 24;
+            break;
+        case 4:
+            myTFDurationMs = 48;
+            break;
+        default:
+            throw std::runtime_error("OutputUHD: invalid DAB mode");
+    }
+    // The buffer size equals the number of samples per transmission frame so
+    // we calculate it by multiplying the duration of the transmission frame
+    // with the samplerate.
+    myDelayBuf.resize(myTFDurationMs * myConf.sampleRate / 1000);
 }
 
 int OutputUHD::process(Buffer* dataIn, Buffer* dataOut)
@@ -250,7 +284,9 @@ int OutputUHD::process(Buffer* dataIn, Buffer* dataOut)
     // We will only wait on the barrier on the subsequent calls to
     // OutputUHD::process
     if (first_run) {
-        myLogger.level(debug) << "OutputUHD: UHD initialising...";
+        myLogger->level(debug) << "OutputUHD: UHD initialising...";
+
+        worker.start(&uwd);
 
         uwd.bufsize = dataIn->getLength();
         uwd.frame0.buf = malloc(uwd.bufsize);
@@ -273,23 +309,41 @@ int OutputUHD::process(Buffer* dataIn, Buffer* dataOut)
             default: break;
         }
 
+        // we only set the delay buffer from the dab mode signaled in ETI if the
+        // dab mode was not set in contructor
+        if (myTFDurationMs == 0) {
+            SetDelayBuffer(myEtiReader->getMode());
+        }
 
         activebuffer = 1;
 
         lastLen = uwd.bufsize;
         first_run = false;
-        myLogger.level(debug) << "OutputUHD: UHD initialising complete";
+        myLogger->level(debug) << "OutputUHD: UHD initialising complete";
     }
     else {
 
         if (lastLen != dataIn->getLength()) {
             // I expect that this never happens.
-            myLogger.level(emerg) <<
+            myLogger->level(emerg) <<
                 "OutputUHD: Fatal error, input length changed from " << lastLen <<
                 " to " << dataIn->getLength();
             throw std::runtime_error("Non-constant input length!");
         }
         mySyncBarrier.get()->wait();
+
+        if (!uwd.running) {
+            worker.stop();
+            first_run = true;
+            if (uwd.failed_due_to_fct) {
+                throw fct_discontinuity_error();
+            }
+            else {
+                myLogger->level(error) <<
+                    "OutputUHD: Error, UHD worker failed";
+                throw std::runtime_error("UHD worker failed");
+            }
+        }
 
         // write into the our buffer while
         // the worker sends the other.
@@ -298,13 +352,30 @@ int OutputUHD::process(Buffer* dataIn, Buffer* dataOut)
         uwd.sourceContainsTimestamp = myConf.enableSync &&
             myEtiReader->sourceContainsTimestamp();
 
+        // calculate delay
+        uint32_t noSampleDelay = (myStaticDelayUs * (myConf.sampleRate / 1000)) / 1000;
+        uint32_t noByteDelay = noSampleDelay * sizeof(complexf);
+
+        uint8_t* pInData = (uint8_t*) dataIn->getData();
         if (activebuffer == 0) {
-            memcpy(uwd.frame0.buf, dataIn->getData(), uwd.bufsize);
+            uint8_t *pTmp = (uint8_t*) uwd.frame0.buf;
+            // copy remain from delaybuf
+            memcpy(pTmp, &myDelayBuf[0], noByteDelay);
+            // copy new data
+            memcpy(&pTmp[noByteDelay], pInData, uwd.bufsize - noByteDelay);
+            // copy remaining data to delay buf
+            memcpy(&myDelayBuf[0], &pInData[uwd.bufsize - noByteDelay], noByteDelay);
 
             uwd.frame0.ts = ts;
         }
         else if (activebuffer == 1) {
-            memcpy(uwd.frame1.buf, dataIn->getData(), uwd.bufsize);
+            uint8_t *pTmp = (uint8_t*) uwd.frame1.buf;
+            // copy remain from delaybuf
+            memcpy(pTmp, &myDelayBuf[0], noByteDelay);
+            // copy new data
+            memcpy(&pTmp[noByteDelay], pInData, uwd.bufsize - noByteDelay);
+            // copy remaining data to delay buf
+            memcpy(&myDelayBuf[0], &pInData[uwd.bufsize - noByteDelay], noByteDelay);
 
             uwd.frame1.ts = ts;
         }
@@ -314,6 +385,21 @@ int OutputUHD::process(Buffer* dataIn, Buffer* dataOut)
 
     return uwd.bufsize;
 
+}
+
+void UHDWorker::process_errhandler()
+{
+    try {
+        process();
+    }
+    catch (fct_discontinuity_error& e) {
+        uwd->logger->level(warn) << e.what();
+        uwd->failed_due_to_fct = true;
+    }
+
+    uwd->running = false;
+    uwd->sync_barrier.get()->wait();
+    uwd->logger->level(warn) << "UHD worker terminated";
 }
 
 void UHDWorker::process()
@@ -351,7 +437,7 @@ void UHDWorker::process()
 
     int expected_next_fct = -1;
 
-    while (running) {
+    while (uwd->running) {
         bool fct_discontinuity = false;
         md.has_time_spec = false;
         md.time_spec = uhd::time_spec_t(0.0);
@@ -385,12 +471,19 @@ void UHDWorker::process()
         /* Verify that the FCT value is correct. If we miss one transmission
          * frame we must interrupt UHD and resync to the timestamps
          */
+        if (frame->ts.fct == -1) {
+            uwd->logger->level(info) <<
+                "OutputUHD: dropping one frame with invalid FCT";
+            goto loopend;
+        }
         if (expected_next_fct != -1) {
             if (expected_next_fct != (int)frame->ts.fct) {
                 uwd->logger->level(warn) <<
-                    "OutputUHD: Incorrect expect fct " << frame->ts.fct;
+                    "OutputUHD: Incorrect expect fct " << frame->ts.fct <<
+                    ", expected " << expected_next_fct;
 
                 fct_discontinuity = true;
+                throw fct_discontinuity_error();
             }
         }
 
@@ -437,7 +530,7 @@ void UHDWorker::process()
             md.time_spec = uhd::time_spec_t(tx_second, pps_offset);
 
             // md is defined, let's do some checks
-            if (md.time_spec.get_real_secs() + 0.2 < usrp_time) {
+            if (md.time_spec.get_real_secs() + timeout < usrp_time) {
                 uwd->logger->level(warn) <<
                     "OutputUHD: Timestamp in the past! offset: " <<
                     md.time_spec.get_real_secs() - usrp_time <<
@@ -448,12 +541,14 @@ void UHDWorker::process()
                 goto loopend; //skip the frame
             }
 
+#if 0 // Let uhd handle this
             if (md.time_spec.get_real_secs() > usrp_time + TIMESTAMP_MARGIN_FUTURE) {
                 uwd->logger->level(warn) <<
                         "OutputUHD: Timestamp too far in the future! offset: " <<
                         md.time_spec.get_real_secs() - usrp_time;
                 usleep(20000); //sleep so as to fill buffers
             }
+#endif
 
             if (md.time_spec.get_real_secs() > usrp_time + TIMESTAMP_ABORT_FUTURE) {
                 uwd->logger->level(error) <<
@@ -493,7 +588,7 @@ void UHDWorker::process()
         PDEBUG("UHDWorker::process:max_num_samps: %zu.\n",
                 usrp_max_num_samps);
 
-        while (running && !uwd->muting && (num_acc_samps < sizeIn)) {
+        while (uwd->running && !uwd->muting && (num_acc_samps < sizeIn)) {
             size_t samps_to_send = std::min(sizeIn - num_acc_samps, usrp_max_num_samps);
 
             //ensure the the last packet has EOB set if the timestamps has been
@@ -605,8 +700,6 @@ loopend:
         // swap buffers
         workerbuffer = (workerbuffer + 1) % 2;
     }
-
-    uwd->logger->level(warn) << "UHD worker terminated";
 }
 
 
@@ -627,6 +720,25 @@ void OutputUHD::set_parameter(const string& parameter, const string& value)
     else if (parameter == "muting") {
         ss >> myMuting;
     }
+    else if (parameter == "staticdelay") {
+        int64_t adjust;
+        ss >> adjust;
+        if (adjust > (myTFDurationMs * 1000))
+        { // reset static delay for values outside range
+            myStaticDelayUs = 0;
+        }
+        else
+        { // the new adjust value is added to the existing delay and the result
+            // is wrapped around at TF duration
+            int newStaticDelayUs = myStaticDelayUs + adjust;
+            if (newStaticDelayUs > (myTFDurationMs * 1000))
+                myStaticDelayUs = newStaticDelayUs - (myTFDurationMs * 1000);
+            else if (newStaticDelayUs < 0)
+                myStaticDelayUs = newStaticDelayUs + (myTFDurationMs * 1000);
+            else
+                myStaticDelayUs = newStaticDelayUs;
+        }
+    }
     else {
         stringstream ss;
         ss << "Parameter '" << parameter
@@ -646,6 +758,9 @@ const string OutputUHD::get_parameter(const string& parameter) const
     }
     else if (parameter == "muting") {
         ss << myMuting;
+    }
+    else if (parameter == "staticdelay") {
+        ss << myStaticDelayUs;
     }
     else {
         ss << "Parameter '" << parameter <<

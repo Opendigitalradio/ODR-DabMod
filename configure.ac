@@ -19,10 +19,11 @@
 # along with ODR-DabMod.  If not, see <http://www.gnu.org/licenses/>.
 
 AC_PREREQ(2.59)
-AC_INIT([ODR-DabMod], [0.5.0], [matthias.braendli@mpb.li])
+AC_INIT([ODR-DabMod], [0.5.2], [matthias.braendli@mpb.li])
 AC_CONFIG_AUX_DIR([build-aux])
+AC_CONFIG_MACRO_DIR([m4])
 AC_CANONICAL_SYSTEM
-AM_INIT_AUTOMAKE([-Wall foreign])
+AM_INIT_AUTOMAKE([-Wall foreign subdir-objects])
 AC_CONFIG_SRCDIR([src/DabMod.cpp])
 AM_CONFIG_HEADER([config.h])
 AM_SILENT_RULES([yes])
@@ -71,16 +72,12 @@ AC_ARG_ENABLE([kiss_fft],
         [], [enable_kiss=no])
 
 # ZeroMQ message queue input
-AC_ARG_ENABLE([input_zeromq],
-        AS_HELP_STRING([--enable-input-zeromq], [Enable ZeroMQ input]))
-
-# ZeroMQ message IQ output
-AC_ARG_ENABLE([output_zeromq],
-        AS_HELP_STRING([--enable-output-zeromq], [Enable ZeroMQ output]))
+AC_ARG_ENABLE([zeromq],
+        AS_HELP_STRING([--enable-zeromq], [Enable ZeroMQ input, output and remote control]))
 
 # UHD support control
 AC_ARG_ENABLE([output_uhd],
-        [AS_HELP_STRING([--enable-output-uhd], [Enable UHD output])],
+        [AS_HELP_STRING([--disable-output-uhd], [Disable UHD output])],
         [], [enable_output_uhd=yes])
 
 AS_IF([test "x$enable_kiss" = "xno"],
@@ -91,13 +88,10 @@ AS_IF([test "x$enable_fftw" = "xyes"],
       AC_MSG_NOTICE([Found FFTW3]),
       AC_MSG_NOTICE([Using Kiss FFT]) )
 
-echo "Checking input zeromq"
+echo "Checking zeromq"
 
-AS_IF([test "x$enable_input_zeromq" = "xyes"],
-        [AC_DEFINE(HAVE_INPUT_ZEROMQ, [1], [Define if ZeroMQ input is enabled]) ,
-         AC_CHECK_LIB(zmq, zmq_init, ZMQ_LIBS="-lzmq" ,[AC_MSG_ERROR([ZeroMQ libzmq is required])])])
-AS_IF([test "x$enable_output_zeromq" = "xyes"],
-        [AC_DEFINE(HAVE_OUTPUT_ZEROMQ, [1], [Define if ZeroMQ output is enabled]) ,
+AS_IF([test "x$enable_zeromq" = "xyes"],
+        [AC_DEFINE(HAVE_ZEROMQ, [1], [Define if ZeroMQ is enabled]) ,
          AC_CHECK_LIB(zmq, zmq_init, ZMQ_LIBS="-lzmq" ,[AC_MSG_ERROR([ZeroMQ libzmq is required])])])
 AS_IF([test "x$enable_debug" = "xno"],
         [OPTIM="-O2" DEBUG="" EXTRA="$EXTRA -DNDEBUG"],
@@ -193,9 +187,7 @@ AM_CONDITIONAL([HAVE_SSE], [test "x$has_sse" = "xyes"])
 AC_TYPE_SIGNAL
 AC_CHECK_FUNCS([bzero floor ftime gettimeofday memset sqrt strchr strerror strtol])
 
-AC_CONFIG_FILES([Makefile
-                 lib/Makefile
-                 src/Makefile])
+AC_CONFIG_FILES([Makefile])
 AC_OUTPUT
 
 echo
@@ -203,7 +195,7 @@ echo "***********************************************"
 echo
 enabled=""
 disabled=""
-for feat in debug prof trace fftw fft_simd output_uhd input_zeromq output_zeromq
+for feat in debug prof trace fftw fft_simd output_uhd zeromq
 do
     eval var=\$enable_$feat
     AS_IF([test "x$var" = "xyes"],

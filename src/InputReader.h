@@ -3,7 +3,7 @@
    Her Majesty the Queen in Right of Canada (Communications Research
    Center Canada)
 
-   Copyrigth (C) 2013
+   Copyrigth (C) 2013, 2015
    Matthias P. Braendli, matthias.braendli@mpb.li
  */
 /*
@@ -31,7 +31,7 @@
 #endif
 
 #include <cstdio>
-#if defined(HAVE_INPUT_ZEROMQ)
+#if defined(HAVE_ZEROMQ)
 #  include "zmq.hpp"
 #  include "ThreadsafeQueue.h"
 #endif
@@ -91,9 +91,9 @@ class InputFileReader : public InputReader
 
         ~InputFileReader()
         {
-            fprintf(stderr, "\nClosing input file...\n");
-
             if (inputfile_ != NULL) {
+                fprintf(stderr, "\nClosing input file...\n");
+
                 fclose(inputfile_);
             }
         }
@@ -130,13 +130,24 @@ class InputFileReader : public InputReader
                             // after 2**32 * 24ms ~= 3.3 years
 };
 
-#if defined(HAVE_INPUT_ZEROMQ)
+struct zmq_input_overflow : public std::exception
+{
+  const char* what () const throw ()
+  {
+    return "InputZMQ buffer overflow";
+  }
+};
+
+#if defined(HAVE_ZEROMQ)
 /* A ZeroMQ input. See www.zeromq.org for more info */
 
 struct InputZeroMQThreadData
 {
     ThreadsafeQueue<uint8_t*> *in_messages;
     std::string uri;
+    unsigned max_queued_frames;
+
+    bool running;
 };
 
 class InputZeroMQWorker
@@ -172,6 +183,7 @@ class InputZeroMQReader : public InputReader
             logger_(logger), in_messages_(10)
         {
             workerdata_.in_messages = &in_messages_;
+            workerdata_.running     = false;
         }
 
         ~InputZeroMQReader()
@@ -179,7 +191,7 @@ class InputZeroMQReader : public InputReader
             worker_.Stop();
         }
 
-        int Open(std::string uri);
+        int Open(const std::string& uri, unsigned max_queued_frames);
 
         int GetNextFrame(void* buffer);
 
@@ -197,3 +209,4 @@ class InputZeroMQReader : public InputReader
 
 #endif
 #endif
+

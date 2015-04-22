@@ -3,8 +3,10 @@
    Her Majesty the Queen in Right of Canada (Communications Research
    Center Canada)
 
-   Includes modifications for which no copyright is claimed
-   2012, Matthias P. Braendli, matthias.braendli@mpb.li
+   Copyright (C) 2015
+   Matthias P. Braendli, matthias.braendli@mpb.li
+
+    http://opendigitalradio.org
  */
 /*
    This file is part of ODR-DabMod.
@@ -32,6 +34,7 @@
 
 #include <sys/types.h>
 #include <string>
+#include <boost/shared_ptr.hpp>
 
 #include "ModCodec.h"
 #include "EtiReader.h"
@@ -47,7 +50,7 @@ class DabModulator : public ModCodec
 public:
     DabModulator(
             struct modulator_offset_config& modconf,
-            BaseRemoteController* rc,
+            RemoteControllers* rcs,
             Logger& logger,
             unsigned outputRate = 2048000, unsigned clockRate = 0,
             unsigned dabMode = 0, GainMode gainMode = GAIN_VAR,
@@ -77,7 +80,7 @@ protected:
     Flowgraph* myFlowgraph;
     OutputMemory* myOutput;
     std::string myFilterTapsFilename;
-    BaseRemoteController* myRC;
+    RemoteControllers* myRCs;
 
     size_t myNbSymbols;
     size_t myNbCarriers;
@@ -88,5 +91,5 @@ protected:
     size_t myFicSizeIn;
 };
 
-
 #endif // DAB_MODULATOR_H
+
