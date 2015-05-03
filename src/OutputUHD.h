@@ -120,7 +120,12 @@ struct UHDWorkerData {
     // If we want to verify loss of refclk
     bool check_refclk_loss;
 
+    // If we want to check for the gps_fixtype sensor
     bool check_gpsfix;
+
+    // After how much time without fix we abort
+    int max_gps_holdover; // seconds
+
 
     // muting set by remote control
     bool muting;
@@ -183,6 +188,7 @@ struct OutputUHDConfig {
     bool enableSync;
     bool muteNoTimestamps;
     unsigned dabMode;
+    unsigned maxGPSHoldoverTime;
 
     /* allowed values : auto, int, sma, mimo */
     std::string refclk_src;

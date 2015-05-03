@@ -559,6 +559,8 @@ int launch_modulator(int argc, char* argv[])
                 throw std::runtime_error("Configuration error");
             }
 
+            outputuhd_conf.maxGPSHoldoverTime = pt.get("uhdoutput.max_gps_holdover_time", 0);
+
             useUHDOutput = 1;
         }
 #endif
@@ -671,10 +673,14 @@ int launch_modulator(int argc, char* argv[])
         fprintf(stderr, " UHD\n"
                         "  Device: %s\n"
                         "  Type: %s\n"
-                        "  master_clock_rate: %ld\n",
+                        "  master_clock_rate: %ld\n"
+                        "  refclk: %s\n"
+                        "  pps source: %s\n",
                 outputuhd_conf.device.c_str(),
                 outputuhd_conf.usrpType.c_str(),
-                outputuhd_conf.masterClockRate);
+                outputuhd_conf.masterClockRate,
+                outputuhd_conf.refclk_src.c_str(),
+                outputuhd_conf.pps_src.c_str());
     }
 #endif
     else if (useZeroMQOutput) {

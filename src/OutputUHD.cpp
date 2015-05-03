@@ -225,12 +225,14 @@ OutputUHD::OutputUHD(
     }
     else if (myConf.refclk_src == "gpsdo") {
         uwd.check_refclk_loss = true;
-        uwd.check_gpsfix = true;
+        uwd.check_gpsfix = (myConf.maxGPSHoldoverTime != 0);
     }
     else {
         uwd.check_refclk_loss = true;
         uwd.check_gpsfix = false;
     }
+
+    uwd.max_gps_holdover = myConf.maxGPSHoldoverTime;
 
     SetDelayBuffer(config.dabMode);
 
@@ -410,14 +412,15 @@ void UHDWorker::process_errhandler()
     uwd->logger->level(warn) << "UHD worker terminated";
 }
 
-bool gps_fix_ok(struct UHDWorkerData *uwd)
+// Check function for GPS fixtype
+bool check_gps_fix_ok(struct UHDWorkerData *uwd)
 {
     try {
         std::string fixtype(
                 uwd->myUsrp->get_mboard_sensor("gps_fixtype", 0).to_pp_string());
 
         if (fixtype.find("3d fix") == std::string::npos) {
-            uwd->logger->level(alert) << "OutputUHD: GPS lost fix : " << fixtype;
+            uwd->logger->level(warn) << "OutputUHD: " << fixtype;
 
             return false;
         }
@@ -425,7 +428,7 @@ bool gps_fix_ok(struct UHDWorkerData *uwd)
         return true;
     }
     catch (uhd::lookup_error &e) {
-        uwd->logger->level(warn) << "no gps_fixtype sensor";
+        uwd->logger->level(warn) << "OutputUHD: no gps_fixtype sensor";
         return false;
     }
 }
@@ -438,8 +441,10 @@ void UHDWorker::process()
     double last_pps   = 2.0;
     double usrp_time;
 
+    // Variables needed for GPS fix check
     double last_gps_fix_check = 0.0;
-    const double gps_fix_check_interval = 5.0; // seconds
+    const double gps_fix_check_interval = 10.0; // seconds
+    int num_checks_without_gps_fix = 0;
     boost::packaged_task<bool> gps_fix_pt;
     boost::unique_future<bool> gps_fix_future;
     boost::thread gps_fix_task;
@@ -547,36 +552,49 @@ void UHDWorker::process()
         usrp_time = uwd->myUsrp->get_time_now().get_real_secs();
 
         if (uwd->check_gpsfix and
-                last_gps_fix_check + gps_fix_check_interval < usrp_time) {
+                // Divide interval by two because we alternate between
+                // launch and check
+                last_gps_fix_check + gps_fix_check_interval/2.0 < usrp_time) {
             last_gps_fix_check = usrp_time;
 
             // Alternate between launching thread and checking the
             // result.
             if (gps_fix_task.joinable()) {
                 if (gps_fix_future.has_value()) {
-                    uwd->logger->level(warn) << "GPSFIX " << usrp_time <<
-                        " Future ready";
 
                     gps_fix_future.wait();
 
                     gps_fix_task.join();
 
                     if (not gps_fix_future.get()) {
-                        throw std::runtime_error("Lost GPS Fix.");
+                        if (not num_checks_without_gps_fix) {
+                            uwd->logger->level(alert) <<
+                                "OutputUHD: GPS Fix lost";
+                        }
+                        num_checks_without_gps_fix++;
+                    }
+                    else {
+                        if (num_checks_without_gps_fix) {
+                            uwd->logger->level(info) <<
+                                "OutputUHD: GPS Fix recovered";
+                        }
+                        num_checks_without_gps_fix = 0;
+                    }
+
+                    if (gps_fix_check_interval * num_checks_without_gps_fix >
+                            uwd->max_gps_holdover) {
+                        std::stringstream ss;
+                        ss << "Lost GPS fix for " << gps_fix_check_interval *
+                            num_checks_without_gps_fix << " seconds";
+                        throw std::runtime_error(ss.str());
                     }
                 }
-                else {
-                    uwd->logger->level(warn) << "GPSFIX " << usrp_time <<
-                        " Future not ready yet";
-                }
-
             }
             else {
-                uwd->logger->level(warn) << "GPSFIX " << usrp_time <<
-                    " Launching task";
-
+                // Checking the sensor here takes too much
+                // time, it has to be done in a separate thread.
                 gps_fix_pt = boost::packaged_task<bool>(
-                        boost::bind(gps_fix_ok, uwd) );
+                        boost::bind(check_gps_fix_ok, uwd) );
 
                 gps_fix_future = gps_fix_pt.get_future();
 
