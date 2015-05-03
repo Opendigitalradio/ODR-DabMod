@@ -34,6 +34,8 @@
 
 #include <boost/thread/future.hpp>
 
+#include <uhd/utils/msg.hpp>
+
 #include <cmath>
 #include <iostream>
 #include <assert.h>
@@ -47,6 +49,16 @@ using namespace boost;
 using namespace std;
 
 typedef std::complex<float> complexf;
+
+void uhd_msg_handler(uhd::msg::type_t type, const std::string &msg)
+{
+    if (type == uhd::msg::warning) {
+        std::cerr << "UHD Warning: " << msg << std::endl;
+    }
+    else if (type == uhd::msg::error) {
+        std::cerr << "UHD Error: " << msg << std::endl;
+    }
+}
 
 OutputUHD::OutputUHD(
         const OutputUHDConfig& config,
@@ -93,6 +105,10 @@ OutputUHD::OutputUHD(
     RC_ADD_PARAMETER(freq,   "UHD transmission frequency");
     RC_ADD_PARAMETER(muting, "Mute the output by stopping the transmitter");
     RC_ADD_PARAMETER(staticdelay, "Set static delay (uS) between 0 and 96000");
+
+    // TODO: find out how to use boost::bind to give the logger to the
+    // uhd_msg_handler
+    uhd::msg::register_handler(uhd_msg_handler);
 
     uhd::set_thread_priority_safe();
 
@@ -449,6 +465,10 @@ void UHDWorker::process()
     boost::unique_future<bool> gps_fix_future;
     boost::thread gps_fix_task;
 
+    // Asynchronous message statistics
+    int num_underflows = 0;
+    int num_late_packets = 0;
+
     //const struct timespec hundred_nano = {0, 100};
 
     size_t sizeIn;
@@ -646,15 +666,6 @@ void UHDWorker::process()
                         md.time_spec.get_real_secs() - usrp_time;
                 throw std::runtime_error("Timestamp error. Aborted.");
             }
-
-            if (last_pps > pps_offset) {
-                uwd->logger->log(info,
-                        "OutputUHD (usrp time: %f): frame %d;"
-                        "  tx_second %zu; pps %.9f\n",
-                        usrp_time,
-                        frame->ts.fct, tx_second, pps_offset);
-            }
-
         }
         else { // !uwd->sourceContainsTimestamp
             if (uwd->muting || uwd->muteNoTimestamps) {
@@ -749,28 +760,33 @@ void UHDWorker::process()
             uhd::async_metadata_t async_md;
             if (uwd->myUsrp->get_device()->recv_async_msg(async_md, 0)) {
                 const char* uhd_async_message = "";
-                bool failure = true;
+                bool failure = false;
                 switch (async_md.event_code) {
                     case uhd::async_metadata_t::EVENT_CODE_BURST_ACK:
-                        failure = false;
                         break;
                     case uhd::async_metadata_t::EVENT_CODE_UNDERFLOW:
                         uhd_async_message = "Underflow";
+                        num_underflows++;
                         break;
                     case uhd::async_metadata_t::EVENT_CODE_SEQ_ERROR:
                         uhd_async_message = "Packet loss between host and device.";
+                        failure = true;
                         break;
                     case uhd::async_metadata_t::EVENT_CODE_TIME_ERROR:
                         uhd_async_message = "Packet had time that was late.";
+                        num_late_packets++;
                         break;
                     case uhd::async_metadata_t::EVENT_CODE_UNDERFLOW_IN_PACKET:
                         uhd_async_message = "Underflow occurred inside a packet.";
+                        failure = true;
                         break;
                     case uhd::async_metadata_t::EVENT_CODE_SEQ_ERROR_IN_BURST:
                         uhd_async_message = "Packet loss within a burst.";
+                        failure = true;
                         break;
                     default:
                         uhd_async_message = "unknown event code";
+                        failure = true;
                         break;
                 }
 
@@ -783,6 +799,19 @@ void UHDWorker::process()
             }
 #endif
         }
+
+        if (last_pps > pps_offset) {
+            if (num_underflows or num_late_packets) {
+                uwd->logger->log(info,
+                        "OutputUHD status (usrp time: %f): "
+                        "%d underruns and %d late packets since last status.\n",
+                        usrp_time,
+                        num_underflows, num_late_packets);
+            }
+            num_underflows = 0;
+            num_late_packets = 0;
+        }
+
 
         last_pps = pps_offset;
 
