@@ -32,6 +32,8 @@
 #include "Log.h"
 #include "RemoteControl.h"
 
+#include <boost/thread/future.hpp>
+
 #include <cmath>
 #include <iostream>
 #include <assert.h>
@@ -219,9 +221,15 @@ OutputUHD::OutputUHD(
 
     if (myConf.refclk_src == "internal") {
         uwd.check_refclk_loss = false;
+        uwd.check_gpsfix = false;
+    }
+    else if (myConf.refclk_src == "gpsdo") {
+        uwd.check_refclk_loss = true;
+        uwd.check_gpsfix = true;
     }
     else {
         uwd.check_refclk_loss = true;
+        uwd.check_gpsfix = false;
     }
 
     SetDelayBuffer(config.dabMode);
@@ -402,6 +410,26 @@ void UHDWorker::process_errhandler()
     uwd->logger->level(warn) << "UHD worker terminated";
 }
 
+bool gps_fix_ok(struct UHDWorkerData *uwd)
+{
+    try {
+        std::string fixtype(
+                uwd->myUsrp->get_mboard_sensor("gps_fixtype", 0).to_pp_string());
+
+        if (fixtype.find("3d fix") == std::string::npos) {
+            uwd->logger->level(alert) << "OutputUHD: GPS lost fix : " << fixtype;
+
+            return false;
+        }
+
+        return true;
+    }
+    catch (uhd::lookup_error &e) {
+        uwd->logger->level(warn) << "no gps_fixtype sensor";
+        return false;
+    }
+}
+
 void UHDWorker::process()
 {
     int workerbuffer  = 0;
@@ -409,6 +437,12 @@ void UHDWorker::process()
     double pps_offset = 0;
     double last_pps   = 2.0;
     double usrp_time;
+
+    double last_gps_fix_check = 0.0;
+    const double gps_fix_check_interval = 5.0; // seconds
+    boost::packaged_task<bool> gps_fix_pt;
+    boost::unique_future<bool> gps_fix_future;
+    boost::thread gps_fix_task;
 
     //const struct timespec hundred_nano = {0, 100};
 
@@ -419,7 +453,7 @@ void UHDWorker::process()
     //int write_fail_count;
 
     // Transmit timeout
-    const double timeout = 0.2;
+    const double timeout = 20.0;
 
 #if FAKE_UHD == 0
     uhd::stream_args_t stream_args("fc32"); //complex floats
@@ -490,8 +524,7 @@ void UHDWorker::process()
         expected_next_fct = (frame->ts.fct + uwd->fct_increment) % 250;
 
         // Check for ref_lock
-        if (uwd->check_refclk_loss)
-        {
+        if (uwd->check_refclk_loss) {
             try {
                 // TODO: Is this check specific to the B100 and USRP2 ?
                 if (! uwd->myUsrp->get_mboard_sensor("ref_locked", 0).to_bool()) {
@@ -512,6 +545,45 @@ void UHDWorker::process()
         }
 
         usrp_time = uwd->myUsrp->get_time_now().get_real_secs();
+
+        if (uwd->check_gpsfix and
+                last_gps_fix_check + gps_fix_check_interval < usrp_time) {
+            last_gps_fix_check = usrp_time;
+
+            // Alternate between launching thread and checking the
+            // result.
+            if (gps_fix_task.joinable()) {
+                if (gps_fix_future.has_value()) {
+                    uwd->logger->level(warn) << "GPSFIX " << usrp_time <<
+                        " Future ready";
+
+                    gps_fix_future.wait();
+
+                    gps_fix_task.join();
+
+                    if (not gps_fix_future.get()) {
+                        throw std::runtime_error("Lost GPS Fix.");
+                    }
+                }
+                else {
+                    uwd->logger->level(warn) << "GPSFIX " << usrp_time <<
+                        " Future not ready yet";
+                }
+
+            }
+            else {
+                uwd->logger->level(warn) << "GPSFIX " << usrp_time <<
+                    " Launching task";
+
+                gps_fix_pt = boost::packaged_task<bool>(
+                        boost::bind(gps_fix_ok, uwd) );
+
+                gps_fix_future = gps_fix_pt.get_future();
+
+                gps_fix_task = boost::thread(boost::move(gps_fix_pt));
+            }
+        }
+
 
         if (uwd->sourceContainsTimestamp) {
             if (!frame->ts.timestamp_valid) {

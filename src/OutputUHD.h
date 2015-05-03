@@ -120,6 +120,8 @@ struct UHDWorkerData {
     // If we want to verify loss of refclk
     bool check_refclk_loss;
 
+    bool check_gpsfix;
+
     // muting set by remote control
     bool muting;
 
