@@ -11,7 +11,7 @@ Simple install procedure:
 
     % tar xjf odr-dabmod-X.Y.Z.tar.bz2      # Unpack the source
     % cd odr-dabmod-X.Y.Z                   # Change to the source directory
-    % ./configure --enable-zeromq --enable-output-uhd
+    % ./configure --enable-zeromq
                                             # Run the configure script
     % make                                  # Build ODR-DabMod
     [ as root ]
@@ -23,7 +23,7 @@ The configure script can be launch with a variety of options:
 
  --enable-zeromq        Enable ZeroMQ input (to be used with ODR-DabMux),
                         output and remotecontrol.
- --enable-output-uhd    Includes the binding to the UHD driver for USRPs
+ --disable-output-uhd   Disable the binding to the UHD driver for USRPs
 
 You have the choice between two FFT libraries: KISS FFT and FFTW. KISS FFT is a
 proven library, but it's performance is worse than with the new FFTW. With KISS
