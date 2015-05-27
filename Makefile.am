@@ -165,6 +165,8 @@ odr_dabmod_SOURCES  = src/DabMod.cpp \
 					  src/FormatConverter.h \
 					  src/Utils.cpp \
 					  src/Utils.h \
+					  src/TII.cpp \
+					  src/TII.h \
 					  src/zmq.hpp
 
 dist_bin_SCRIPTS = src/crc-dwap.py

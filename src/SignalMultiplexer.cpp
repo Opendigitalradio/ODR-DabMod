@@ -46,6 +46,7 @@ SignalMultiplexer::~SignalMultiplexer()
 
 // dataIn[0] -> null symbol
 // dataIn[1] -> MSC symbols
+// dataIn[2] -> (optional) TII symbol
 int SignalMultiplexer::process(std::vector<Buffer*> dataIn, Buffer* dataOut)
 {
 #ifdef DEBUG
@@ -60,10 +61,17 @@ int SignalMultiplexer::process(std::vector<Buffer*> dataIn, Buffer* dataOut)
     fprintf(stderr, ", dataOut: %p, sizeOut: %zu)\n", dataOut, dataOut->getLength());
 #endif
 
-    assert(dataIn.size() == 2);
+    assert(dataIn.size() == 2 or dataIn.size() == 3);
 
-    *dataOut = *dataIn[0];
-    *dataOut += *dataIn[1];
+    if (dataIn.size() == 2) {
+        *dataOut = *dataIn[0];
+        *dataOut += *dataIn[1];
+    }
+    else if (dataIn.size() == 3) {
+        *dataOut = *dataIn[2];
+        *dataOut += *dataIn[1];
+    }
 
     return dataOut->getLength();
 }
+

@@ -46,6 +46,7 @@
 #include "Resampler.h"
 #include "ConvEncoder.h"
 #include "FIRFilter.h"
+#include "TII.h"
 #include "PuncturingEncoder.h"
 #include "TimeInterleaver.h"
 #include "TimestampDecoder.h"
@@ -197,6 +198,8 @@ int DabModulator::process(Buffer* const dataIn, Buffer* dataOut)
                 cic_ratio));
 
 
+        shared_ptr<TII> tii(new TII(myDabMode, 3, 16));
+
         shared_ptr<OfdmGenerator> cifOfdm(
                 new OfdmGenerator((1 + myNbSymbols), myNbCarriers, mySpacing));
 
@@ -346,6 +349,7 @@ int DabModulator::process(Buffer* const dataIn, Buffer* dataOut)
         myFlowgraph->connect(cifFreq, cifDiff);
         myFlowgraph->connect(cifNull, cifSig);
         myFlowgraph->connect(cifDiff, cifSig);
+        myFlowgraph->connect(tii, cifSig);
         if (useCicEq) {
             myFlowgraph->connect(cifSig, cifCicEq);
             myFlowgraph->connect(cifCicEq, cifOfdm);
