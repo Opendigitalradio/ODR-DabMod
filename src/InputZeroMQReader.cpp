@@ -93,7 +93,7 @@ int InputZeroMQReader::GetNextFrame(void* buffer)
 
     memcpy(buffer, incoming, framesize);
 
-    delete incoming;
+    delete[] incoming;
 
     return framesize;
 }
