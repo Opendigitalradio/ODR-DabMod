@@ -37,6 +37,7 @@
 #include <stdint.h>
 #include "zmq.hpp"
 #include <boost/thread/thread.hpp>
+#include <boost/make_shared.hpp>
 #include "porting.h"
 #include "InputReader.h"
 #include "PcDebug.h"
@@ -84,16 +85,14 @@ int InputZeroMQReader::GetNextFrame(void* buffer)
 {
     const size_t framesize = 6144;
 
-    uint8_t* incoming;
+    boost::shared_ptr<std::vector<uint8_t> > incoming;
     in_messages_.wait_and_pop(incoming);
 
     if (! workerdata_.running) {
         throw zmq_input_overflow();
     }
 
-    memcpy(buffer, incoming, framesize);
-
-    delete[] incoming;
+    memcpy(buffer, &incoming->front(), framesize);
 
     return framesize;
 }
@@ -160,17 +159,14 @@ void InputZeroMQWorker::RecvProcess(struct InputZeroMQThreadData* workerdata)
                         // TODO error handling
                     }
                     else {
-                        uint8_t* buf = new uint8_t[6144];
+                        boost::shared_ptr<std::vector<uint8_t> > buf =
+                            boost::make_shared<std::vector<uint8_t> >(6144, 0x55);
 
                         const int framesize = dab_msg->buflen[i];
 
-                        memcpy(buf,
+                        memcpy(&buf->front(),
                                 ((uint8_t*)incoming.data()) + offset,
                                 framesize);
-
-                        // pad to 6144 bytes
-                        memset(&((uint8_t*)buf)[framesize],
-                                0x55, 6144 - framesize);
 
                         offset += framesize;
 

@@ -31,6 +31,8 @@
 #endif
 
 #include <cstdio>
+#include <vector>
+#include <boost/shared_ptr.hpp>
 #if defined(HAVE_ZEROMQ)
 #  include "zmq.hpp"
 #  include "ThreadsafeQueue.h"
@@ -143,7 +145,7 @@ struct zmq_input_overflow : public std::exception
 
 struct InputZeroMQThreadData
 {
-    ThreadsafeQueue<uint8_t*> *in_messages;
+    ThreadsafeQueue<boost::shared_ptr<std::vector<uint8_t> > > *in_messages;
     std::string uri;
     unsigned max_queued_frames;
 
@@ -203,7 +205,7 @@ class InputZeroMQReader : public InputReader
         std::string uri_;
 
         InputZeroMQWorker worker_;
-        ThreadsafeQueue<uint8_t*> in_messages_;
+        ThreadsafeQueue<boost::shared_ptr<std::vector<uint8_t> > > in_messages_;
         struct InputZeroMQThreadData workerdata_;
 };
 
