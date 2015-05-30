@@ -205,7 +205,9 @@ void TII::enable_carrier(int k) {
                 "TII::enable_carrier invalid k!");
     }
 
-    m_dataIn[ix] = 1.0; // TODO power of the carrier ?
+    // TODO power of the carrier ?
+    m_dataIn.at(ix) = 1.0;
+    m_dataIn.at(ix+1) = 1.0; // TODO verify if +1 is really correct
 }
 
 void TII::prepare_pattern() {
@@ -221,7 +223,6 @@ void TII::prepare_pattern() {
                 if (    k == -768 + 2 * comb + 48 * b and
                         pattern_tm1_2_4[m_pattern][b]) {
                     enable_carrier(k);
-                    enable_carrier(k+1);
                 }
             }
         }
@@ -231,7 +232,6 @@ void TII::prepare_pattern() {
                 if (    k == -384 + 2 * comb + 48 * b and
                         pattern_tm1_2_4[m_pattern][b]) {
                     enable_carrier(k);
-                    enable_carrier(k+1);
                 }
             }
         }
@@ -241,7 +241,6 @@ void TII::prepare_pattern() {
                 if (    k == 1 + 2 * comb + 48 * b and
                         pattern_tm1_2_4[m_pattern][b]) {
                     enable_carrier(k);
-                    enable_carrier(k+1);
                 }
             }
         }
@@ -251,7 +250,6 @@ void TII::prepare_pattern() {
                 if (    k == 385 + 2 * comb + 48 * b and
                         pattern_tm1_2_4[m_pattern][b]) {
                     enable_carrier(k);
-                    enable_carrier(k+1);
                 }
             }
         }
@@ -262,7 +260,6 @@ void TII::prepare_pattern() {
                 if (    k == -192 + 2 * comb + 48 * b and
                         pattern_tm1_2_4[m_pattern][b]) {
                     enable_carrier(k);
-                    enable_carrier(k+1);
                 }
             }
 
@@ -270,7 +267,6 @@ void TII::prepare_pattern() {
                 if (    k == -191 + 2 * comb + 48 * b and
                         pattern_tm1_2_4[m_pattern][b]) {
                     enable_carrier(k);
-                    enable_carrier(k+1);
                 }
             }
         }
