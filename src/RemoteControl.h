@@ -289,9 +289,6 @@ class RemoteControllerTelnet : public BaseRemoteController {
         /* This controller commands the controllables in the cohort */
         std::list<RemoteControllable*> m_cohort;
 
-        std::string m_welcome;
-        std::string m_prompt;
-
         int m_port;
 };
 

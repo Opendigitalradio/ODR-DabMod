@@ -58,8 +58,10 @@ void RemoteControllerTelnet::restart_thread(long)
 
 void RemoteControllerTelnet::process(long)
 {
-    m_welcome = "ODR-DabMod Remote Control CLI\nWrite 'help' for help.\n**********\n";
-    m_prompt = "> ";
+    std::string m_welcome = "ODR-DabMod Remote Control CLI\n"
+                            "Write 'help' for help.\n"
+                            "**********\n";
+    std::string m_prompt = "> ";
 
     std::string in_message;
     size_t length;
