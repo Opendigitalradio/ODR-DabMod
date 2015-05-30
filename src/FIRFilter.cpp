@@ -36,6 +36,8 @@
 #include <iostream>
 #include <fstream>
 
+#include <boost/make_shared.hpp>
+
 #ifdef __AVX__
 #   include <immintrin.h>
 #else
@@ -58,11 +60,10 @@ void FIRFilterWorker::process(struct FIRFilterWorkerData *fwd)
     // the incoming buffer
 
     while(running) {
-        Buffer* dataIn;
+        boost::shared_ptr<Buffer> dataIn;
         fwd->input_queue.wait_and_pop(dataIn);
 
-        Buffer* dataOut;
-        dataOut = new Buffer();
+        boost::shared_ptr<Buffer> dataOut = boost::make_shared<Buffer>();
         dataOut->setLength(dataIn->getLength());
 
         PDEBUG("FIRFilterWorker: dataIn->getLength() %zu\n", dataIn->getLength());
@@ -91,7 +92,7 @@ void FIRFilterWorker::process(struct FIRFilterWorkerData *fwd)
             fprintf(stderr, "FIRFilterWorker: out not aligned %p ", out);
             throw std::runtime_error("FIRFilterWorker: out not aligned");
         }
-            
+
         clock_gettime(CLOCK_THREAD_CPUTIME_ID, &time_start);
 
         __m256 AVXout;
@@ -141,7 +142,7 @@ void FIRFilterWorker::process(struct FIRFilterWorkerData *fwd)
             fprintf(stderr, "FIRFilterWorker: out not aligned %p ", out);
             throw std::runtime_error("FIRFilterWorker: out not aligned");
         }
-            
+
         clock_gettime(CLOCK_THREAD_CPUTIME_ID, &time_start);
 
         __m128 SSEout;
@@ -290,11 +291,10 @@ void FIRFilterWorker::process(struct FIRFilterWorkerData *fwd)
             }
         }
 #endif
-        
+
         calculationTime += (time_end.tv_sec - time_start.tv_sec) * 1000000000L +
             time_end.tv_nsec - time_start.tv_nsec;
         fwd->output_queue.push(dataOut);
-        delete dataIn;
     }
 }
 
@@ -393,17 +393,16 @@ int FIRFilter::process(Buffer* const dataIn, Buffer* dataOut)
     // This thread creates the dataIn buffer, and deletes
     // the outgoing buffer
 
-    Buffer* inbuffer = new Buffer(dataIn->getLength(), dataIn->getData());
+    boost::shared_ptr<Buffer> inbuffer =
+        boost::make_shared<Buffer>(dataIn->getLength(), dataIn->getData());
 
     firwd.input_queue.push(inbuffer);
 
     if (number_of_runs > 2) {
-        Buffer* outbuffer;
+        boost::shared_ptr<Buffer> outbuffer;
         firwd.output_queue.wait_and_pop(outbuffer);
 
         dataOut->setData(outbuffer->getData(), outbuffer->getLength());
-
-        delete outbuffer;
     }
     else {
         dataOut->setLength(dataIn->getLength());
