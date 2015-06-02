@@ -51,12 +51,10 @@ enum ETI_READER_STATE {
 };
 
 
-EtiReader::EtiReader(struct modulator_offset_config& modconf,
-        Logger& logger) :
-    myLogger(logger),
+EtiReader::EtiReader(struct modulator_offset_config& modconf) :
     state(EtiReaderStateSync),
     myFicSource(NULL),
-    myTimestampDecoder(modconf, myLogger)
+    myTimestampDecoder(modconf)
 {
     PDEBUG("EtiReader::EtiReader()\n");
 

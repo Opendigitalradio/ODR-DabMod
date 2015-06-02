@@ -49,8 +49,7 @@ int InputFileReader::Open(std::string filename, bool loop)
     loop_ = loop;
     inputfile_ = fopen(filename_.c_str(), "r");
     if (inputfile_ == NULL) {
-        fprintf(stderr, "Unable to open input file!\n");
-        logger_.level(error) << "Unable to open input file!";
+        etiLog.level(error) << "Unable to open input file!";
         perror(filename_.c_str());
         return -1;
     }
@@ -79,8 +78,7 @@ int InputFileReader::IdentifyType()
     char discard_buffer[6144];
 
     if (fread(&sync, sizeof(sync), 1, inputfile_) != 1) {
-        fprintf(stderr, "Unable to read sync in input file!\n");
-        logger_.level(error) << "Unable to read sync in input file!";
+        etiLog.level(error) << "Unable to read sync in input file!";
         perror(filename_.c_str());
         return -1;
     }
@@ -96,8 +94,7 @@ int InputFileReader::IdentifyType()
             // if the seek fails, consume the rest of the frame
             if (fread(discard_buffer, 6144 - sizeof(sync), 1, inputfile_)
                     != 1) {
-                fprintf(stderr, "Unable to read from input file!\n");
-                logger_.level(error) << "Unable to read from input file!";
+                etiLog.level(error) << "Unable to read from input file!";
                 perror(filename_.c_str());
                 return -1;
             }
@@ -108,8 +105,7 @@ int InputFileReader::IdentifyType()
 
     nbFrames = sync;
     if (fread(&frameSize, sizeof(frameSize), 1, inputfile_) != 1) {
-        fprintf(stderr, "Unable to read frame size in input file!\n");
-        logger_.level(error) << "Unable to read frame size in input file!";
+        etiLog.level(error) << "Unable to read frame size in input file!";
         perror(filename_.c_str());
         return -1;
     }
@@ -130,8 +126,7 @@ int InputFileReader::IdentifyType()
             // if the seek fails, consume the rest of the frame
             if (fread(discard_buffer, frameSize - 4, 1, inputfile_)
                     != 1) {
-                fprintf(stderr, "Unable to read from input file!\n");
-                logger_.level(error) << "Unable to read from input file!";
+                etiLog.level(error) << "Unable to read from input file!";
                 perror(filename_.c_str());
                 return -1;
             }
@@ -141,8 +136,7 @@ int InputFileReader::IdentifyType()
     }
 
     if (fread(&sync, sizeof(sync), 1, inputfile_) != 1) {
-        fprintf(stderr, "Unable to read nb frame in input file!\n");
-        logger_.level(error) << "Unable to read nb frame in input file!";
+        etiLog.level(error) << "Unable to read nb frame in input file!";
         perror(filename_.c_str());
         return -1;
     }
@@ -152,8 +146,7 @@ int InputFileReader::IdentifyType()
             // if the seek fails, consume the rest of the frame
             if (fread(discard_buffer, frameSize - 4, 1, inputfile_)
                     != 1) {
-                fprintf(stderr, "Unable to read from input file!\n");
-                logger_.level(error) << "Unable to read from input file!";
+                etiLog.level(error) << "Unable to read from input file!";
                 perror(filename_.c_str());
                 return -1;
             }
@@ -168,8 +161,7 @@ int InputFileReader::IdentifyType()
         sync >>= 8;
         sync &= 0xffffff;
         if (fread((uint8_t*)&sync + 3, 1, 1, inputfile_) != 1) {
-            fprintf(stderr, "Unable to read from input file!\n");
-            logger_.level(error) << "Unable to read from input file!";
+            etiLog.level(error) << "Unable to read from input file!";
             perror(filename_.c_str());
             return -1;
         }
@@ -184,8 +176,7 @@ int InputFileReader::IdentifyType()
             if (fseek(inputfile_, -sizeof(sync), SEEK_CUR) != 0) {
                 if (fread(discard_buffer, 6144 - sizeof(sync), 1, inputfile_)
                         != 1) {
-                    fprintf(stderr, "Unable to read from input file!\n");
-                    logger_.level(error) << "Unable to read from input file!";
+                    etiLog.level(error) << "Unable to read from input file!";
                     perror(filename_.c_str());
                     return -1;
                 }
@@ -195,8 +186,7 @@ int InputFileReader::IdentifyType()
         }
     }
 
-    fprintf(stderr, "Bad input file format!\n");
-    logger_.level(error) << "Bad input file format!";
+    etiLog.level(error) << "Bad input file format!";
     return -1;
 }
 
@@ -236,18 +226,18 @@ int InputFileReader::GetNextFrame(void* buffer)
     }
     else {
         if (fread(&frameSize, sizeof(frameSize), 1, inputfile_) != 1) {
-            logger_.level(error) << "Reached end of file.";
+            etiLog.level(error) << "Reached end of file.";
             if (loop_) {
                 if (Rewind() == 0) {
                     if (fread(&frameSize, sizeof(frameSize), 1, inputfile_) != 1) {
                         PDEBUG("Error after rewinding file!\n");
-                        logger_.level(error) << "Error after rewinding file!";
+                        etiLog.level(error) << "Error after rewinding file!";
                         return -1;
                     }
                 }
                 else {
                     PDEBUG("Impossible to rewind file!\n");
-                    logger_.level(error) << "Impossible to rewind file!";
+                    etiLog.level(error) << "Impossible to rewind file!";
                     return -1;
                 }
             }
@@ -257,8 +247,7 @@ int InputFileReader::GetNextFrame(void* buffer)
         }
     }
     if (frameSize > 6144) { // there might be a better limit
-        logger_.level(error) << "Wrong frame size " << frameSize << " in ETI file!";
-        fprintf(stderr, "Wrong frame size %u in ETI file!\n", frameSize);
+        etiLog.level(error) << "Wrong frame size " << frameSize << " in ETI file!";
         return -1;
     }
 
@@ -275,7 +264,7 @@ int InputFileReader::GetNextFrame(void* buffer)
         }
         else {
             PDEBUG("Impossible to rewind file!\n");
-            logger_.level(error) << "Impossible to rewind file!";
+            etiLog.level(error) << "Impossible to rewind file!";
             return -1;
         }
     }
@@ -285,12 +274,8 @@ int InputFileReader::GetNextFrame(void* buffer)
         // A short read of a frame (i.e. reading an incomplete frame)
         // is not tolerated. Input files must not contain incomplete frames
         if (read_bytes != 0) {
-            fprintf(stderr,
-                    "Unable to read a complete frame of %u data bytes from input file!\n",
-                    frameSize);
-
-            perror(filename_.c_str());
-            logger_.level(error) << "Unable to read from input file!";
+            etiLog.level(error) <<
+                    "Unable to read a complete frame of " << frameSize << " data bytes from input file!";
             return -1;
         }
         else {

@@ -108,7 +108,7 @@ enum run_modulator_state {
     MOD_AGAIN
 };
 
-run_modulator_state run_modulator(Logger& logger, modulator_data& m);
+run_modulator_state run_modulator(modulator_data& m);
 
 int launch_modulator(int argc, char* argv[])
 {
@@ -171,10 +171,9 @@ int launch_modulator(int argc, char* argv[])
 
     bool run_again = true;
 
-    Logger logger;
-    InputFileReader inputFileReader(logger);
+    InputFileReader inputFileReader;
 #if defined(HAVE_ZEROMQ)
-    shared_ptr<InputZeroMQReader> inputZeroMQReader(new InputZeroMQReader(logger));
+    shared_ptr<InputZeroMQReader> inputZeroMQReader(new InputZeroMQReader());
 #endif
 
     struct sigaction sa;
@@ -402,7 +401,7 @@ int launch_modulator(int argc, char* argv[])
         // log parameters:
         if (pt.get("log.syslog", 0) == 1) {
             LogToSyslog* log_syslog = new LogToSyslog();
-            logger.register_backend(log_syslog);
+            etiLog.register_backend(log_syslog);
         }
 
         if (pt.get("log.filelog", 0) == 1) {
@@ -417,7 +416,7 @@ int launch_modulator(int argc, char* argv[])
             }
 
             LogToFile* log_file = new LogToFile(logfilename);
-            logger.register_backend(log_file);
+            etiLog.register_backend(log_file);
         }
 
 
@@ -605,15 +604,15 @@ int launch_modulator(int argc, char* argv[])
     }
 
     if (rcs.get_no_controllers() == 0) {
-        logger.level(warn) << "No Remote-Control started";
+        etiLog.level(warn) << "No Remote-Control started";
         rcs.add_controller(new RemoteControllerDummy());
     }
 
 
-    logger.level(info) << "Starting up";
+    etiLog.level(info) << "Starting up";
 
     if (!(modconf.use_offset_file || modconf.use_offset_fixed)) {
-        logger.level(debug) << "No Modulator offset defined, setting to 0";
+        etiLog.level(debug) << "No Modulator offset defined, setting to 0";
         modconf.use_offset_fixed = true;
         modconf.offset_fixed = 0;
     }
@@ -649,12 +648,12 @@ int launch_modulator(int argc, char* argv[])
         fprintf(stderr, "\n");
         printUsage(argv[0]);
         ret = -1;
-        logger.level(error) << "Received invalid command line arguments";
+        etiLog.level(error) << "Received invalid command line arguments";
         throw std::invalid_argument("Invalid command line options");
     }
 
     if (!useFileOutput && !useUHDOutput && !useZeroMQOutput) {
-        logger.level(error) << "Output not specified";
+        etiLog.level(error) << "Output not specified";
         fprintf(stderr, "Must specify output !");
         throw std::runtime_error("Configuration error");
     }
@@ -706,7 +705,7 @@ int launch_modulator(int argc, char* argv[])
         // Opening ETI input file
         if (inputFileReader.Open(inputName, loop) == -1) {
             fprintf(stderr, "Unable to open input file!\n");
-            logger.level(error) << "Unable to open input file!";
+            etiLog.level(error) << "Unable to open input file!";
             ret = -1;
             throw std::runtime_error("Unable to open input");
         }
@@ -747,7 +746,7 @@ int launch_modulator(int argc, char* argv[])
     else if (useUHDOutput) {
         normalise = 1.0f / normalise_factor;
         outputuhd_conf.sampleRate = outputRate;
-        output = make_shared<OutputUHD>(outputuhd_conf, &logger);
+        output = make_shared<OutputUHD>(outputuhd_conf);
         ((OutputUHD*)output.get())->enrol_at(rcs);
     }
 #endif
@@ -778,7 +777,7 @@ int launch_modulator(int argc, char* argv[])
 
         shared_ptr<InputMemory> input(new InputMemory(&m.data));
         shared_ptr<DabModulator> modulator(
-                new DabModulator(modconf, &rcs, logger, outputRate, clockRate,
+                new DabModulator(modconf, &rcs, outputRate, clockRate,
                     dabMode, gainMode, digitalgain, normalise, filterTapsFilename));
 
         flowgraph.connect(input, modulator);
@@ -798,23 +797,23 @@ int launch_modulator(int argc, char* argv[])
 
         m.inputReader->PrintInfo();
 
-        run_modulator_state st = run_modulator(logger, m);
+        run_modulator_state st = run_modulator(m);
 
         switch (st) {
             case MOD_FAILURE:
-                fprintf(stderr, "\nModulator failure.\n");
+                etiLog.level(error) << "Modulator failure.";
                 run_again = false;
                 ret = 1;
                 break;
 #if defined(HAVE_ZEROMQ)
             case MOD_AGAIN:
-                fprintf(stderr, "\nRestart modulator\n");
+                etiLog.level(warn) << "Restart modulator.";
                 running = true;
                 if (inputTransport == "zeromq") {
                     run_again = true;
 
                     // Create a new input reader
-                    inputZeroMQReader = make_shared<InputZeroMQReader>(logger);
+                    inputZeroMQReader = make_shared<InputZeroMQReader>();
                     inputZeroMQReader->Open(inputName, inputMaxFramesQueued);
                     m.inputReader = inputZeroMQReader.get();
                 }
@@ -822,17 +821,15 @@ int launch_modulator(int argc, char* argv[])
 #endif
             case MOD_NORMAL_END:
             default:
-                fprintf(stderr, "\nModulator stopped.\n");
+                etiLog.level(info) << "modulator stopped.";
                 ret = 0;
                 run_again = false;
                 break;
         }
 
         fprintf(stderr, "\n\n");
-        fprintf(stderr, "%lu DAB frames encoded\n", m.framecount);
-        fprintf(stderr, "%f seconds encoded\n", (float)m.framecount * 0.024f);
-
-        fprintf(stderr, "\nCleaning flowgraph...\n");
+        etiLog.level(info) << m.framecount << " DAB frames encoded";
+        etiLog.level(info) << ((float)m.framecount * 0.024f) << " seconds encoded";
 
         m.data.setLength(0);
     }
@@ -841,11 +838,11 @@ int launch_modulator(int argc, char* argv[])
     // Cleaning things
     ////////////////////////////////////////////////////////////////////////
 
-    logger.level(info) << "Terminating";
+    etiLog.level(info) << "Terminating";
     return ret;
 }
 
-run_modulator_state run_modulator(Logger& logger, modulator_data& m)
+run_modulator_state run_modulator(modulator_data& m)
 {
     run_modulator_state ret = MOD_FAILURE;
     try {
@@ -879,10 +876,10 @@ run_modulator_state run_modulator(Logger& logger, modulator_data& m)
                 }
             }
             if (framesize == 0) {
-                logger.level(info) << "End of file reached.";
+                etiLog.level(info) << "End of file reached.";
             }
             else {
-                logger.level(error) << "Input read error.";
+                etiLog.level(error) << "Input read error.";
             }
             running = 0;
             ret = MOD_NORMAL_END;
@@ -890,15 +887,15 @@ run_modulator_state run_modulator(Logger& logger, modulator_data& m)
 #if defined(HAVE_OUTPUT_UHD)
     } catch (fct_discontinuity_error& e) {
         // The OutputUHD saw a FCT discontinuity
-        logger.level(warn) << e.what();
+        etiLog.level(warn) << e.what();
         ret = MOD_AGAIN;
 #endif
     } catch (zmq_input_overflow& e) {
         // The ZeroMQ input has overflowed its buffer
-        logger.level(warn) << e.what();
+        etiLog.level(warn) << e.what();
         ret = MOD_AGAIN;
     } catch (std::exception& e) {
-        logger.level(error) << "Exception caught: " << e.what();
+        etiLog.level(error) << "Exception caught: " << e.what();
         ret = MOD_FAILURE;
     }
 

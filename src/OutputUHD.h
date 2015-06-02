@@ -136,9 +136,6 @@ struct UHDWorkerData {
     // What to do when the reference clock PLL loses lock
     refclk_lock_loss_behaviour_t refclk_lock_loss_behaviour;
 
-    // The common logger
-    Logger* logger;
-
     // What transmission mode we're using defines by how
     // much the FCT should increment for each
     // transmission frame.
@@ -207,9 +204,7 @@ struct OutputUHDConfig {
 class OutputUHD: public ModOutput, public RemoteControllable {
     public:
 
-        OutputUHD(
-                const OutputUHDConfig& config,
-                Logger *logger);
+        OutputUHD(const OutputUHDConfig& config);
         ~OutputUHD();
 
         int process(Buffer* dataIn, Buffer* dataOut);
@@ -235,7 +230,9 @@ class OutputUHD: public ModOutput, public RemoteControllable {
 
 
     protected:
-        Logger *myLogger;
+        OutputUHD(const OutputUHD& other);
+        OutputUHD& operator=(const OutputUHD& other);
+
         EtiReader *myEtiReader;
         OutputUHDConfig myConf;
         uhd::usrp::multi_usrp::sptr myUsrp;

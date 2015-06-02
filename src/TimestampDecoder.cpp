@@ -96,7 +96,7 @@ void TimestampDecoder::calculateTimestamp(struct frame_timestamp& ts)
             modconfig.delay_calculation_pipeline_stages);
 
     if (queue_timestamps.size() > modconfig.delay_calculation_pipeline_stages) {
-        myLogger.level(error) << "Error: Timestamp queue is too large : size " <<
+        etiLog.level(error) << "Error: Timestamp queue is too large : size " <<
             queue_timestamps.size() << "! This should not happen !";
     }
 
@@ -231,7 +231,7 @@ bool TimestampDecoder::updateModulatorOffset()
                 }
                 catch (bad_lexical_cast& e)
                 {
-                    myLogger.level(error) <<
+                    etiLog.level(error) <<
                         "Error parsing timestamp offset from file '" <<
                         modconfig.offset_filename << "'";
                     r = false;
@@ -239,7 +239,7 @@ bool TimestampDecoder::updateModulatorOffset()
             }
             else
             {
-                myLogger.level(error) <<
+                etiLog.level(error) <<
                     "Error reading from timestamp offset file: eof reached\n";
                 r = false;
             }
@@ -247,7 +247,7 @@ bool TimestampDecoder::updateModulatorOffset()
         }
         catch (exception& e)
         {
-            myLogger.level(error) << "Error opening timestamp offset file\n";
+            etiLog.level(error) << "Error opening timestamp offset file\n";
             r = false;
         }
 
@@ -257,7 +257,7 @@ bool TimestampDecoder::updateModulatorOffset()
             if (timestamp_offset != newoffset)
             {
                 timestamp_offset = newoffset;
-                myLogger.level(info) <<
+                etiLog.level(info) <<
                     "TimestampDecoder::updateTimestampOffset: new offset is " <<
                     timestamp_offset;
                 offset_changed = true;

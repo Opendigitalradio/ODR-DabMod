@@ -50,6 +50,7 @@
 #include <boost/thread.hpp>
 #include <stdexcept>
 
+#include "Log.h"
 
 #define RC_ADD_PARAMETER(p, desc) {   \
   std::vector<std::string> p; \
@@ -114,8 +115,8 @@ class RemoteControllers {
                     it != m_controllers.end(); ++it) {
                 if ((*it)->fault_detected())
                 {
-                    fprintf(stderr,
-                            "Detected Remote Control fault, restarting it\n");
+                    etiLog.level(warn) <<
+                            "Detected Remote Control fault, restarting it";
                     (*it)->restart();
                 }
             }

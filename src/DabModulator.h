@@ -51,7 +51,6 @@ public:
     DabModulator(
             struct modulator_offset_config& modconf,
             RemoteControllers* rcs,
-            Logger& logger,
             unsigned outputRate = 2048000, unsigned clockRate = 0,
             unsigned dabMode = 0, GainMode gainMode = GAIN_VAR,
             float digGain = 1.0, float normalise = 1.0,
@@ -66,8 +65,6 @@ public:
     EtiReader* getEtiReader() { return &myEtiReader; }
 
 protected:
-    Logger& myLogger;
-
     void setMode(unsigned mode);
 
     unsigned myOutputRate;

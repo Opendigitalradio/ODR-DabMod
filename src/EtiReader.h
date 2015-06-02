@@ -47,7 +47,7 @@
 class EtiReader
 {
 public:
-    EtiReader(struct modulator_offset_config& modconf, Logger& logger);
+    EtiReader(struct modulator_offset_config& modconf);
     virtual ~EtiReader();
     EtiReader(const EtiReader&);
     EtiReader& operator=(const EtiReader&);
@@ -67,9 +67,6 @@ public:
     bool sourceContainsTimestamp();
 
 protected:
-    /* Main program logger */
-    Logger& myLogger;
-
     /* Transform the ETI TIST to a PPS offset in ms */
     double getPPSOffset();
 
