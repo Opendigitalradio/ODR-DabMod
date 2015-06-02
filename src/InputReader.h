@@ -115,6 +115,9 @@ class InputFileReader : public InputReader
         }
 
     private:
+        InputFileReader(const InputFileReader& other);
+        InputFileReader& operator=(const InputFileReader& other);
+
         int IdentifyType();
 
         // Rewind the file, and replay anew
@@ -200,8 +203,9 @@ class InputZeroMQReader : public InputReader
         void PrintInfo();
 
     private:
-        InputZeroMQReader(const InputZeroMQReader& other) {}
         Logger logger_;
+        InputZeroMQReader(const InputZeroMQReader& other);
+        InputZeroMQReader& operator=(const InputZeroMQReader& other);
         std::string uri_;
 
         InputZeroMQWorker worker_;
