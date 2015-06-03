@@ -87,9 +87,9 @@ class InputReader
 class InputFileReader : public InputReader
 {
     public:
-        InputFileReader(Logger logger) :
+        InputFileReader() :
             streamtype_(ETI_STREAM_TYPE_NONE),
-            inputfile_(NULL), logger_(logger) {};
+            inputfile_(NULL) { }
 
         ~InputFileReader()
         {
@@ -115,6 +115,9 @@ class InputFileReader : public InputReader
         }
 
     private:
+        InputFileReader(const InputFileReader& other);
+        InputFileReader& operator=(const InputFileReader& other);
+
         int IdentifyType();
 
         // Rewind the file, and replay anew
@@ -125,7 +128,6 @@ class InputFileReader : public InputReader
         std::string filename_;
         EtiStreamType streamtype_;
         FILE* inputfile_;
-        Logger logger_;
 
         size_t inputfilelength_;
         uint64_t nbframes_; // 64-bit because 32-bit overflow is
@@ -181,8 +183,8 @@ class InputZeroMQWorker
 class InputZeroMQReader : public InputReader
 {
     public:
-        InputZeroMQReader(Logger logger) :
-            logger_(logger), in_messages_(10)
+        InputZeroMQReader() :
+            in_messages_(10)
         {
             workerdata_.in_messages = &in_messages_;
             workerdata_.running     = false;
@@ -200,8 +202,8 @@ class InputZeroMQReader : public InputReader
         void PrintInfo();
 
     private:
-        InputZeroMQReader(const InputZeroMQReader& other) {}
-        Logger logger_;
+        InputZeroMQReader(const InputZeroMQReader& other);
+        InputZeroMQReader& operator=(const InputZeroMQReader& other);
         std::string uri_;
 
         InputZeroMQWorker worker_;

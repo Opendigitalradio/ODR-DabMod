@@ -58,21 +58,19 @@ using namespace boost;
 DabModulator::DabModulator(
         struct modulator_offset_config& modconf,
         RemoteControllers* rcs,
-        Logger& logger,
         unsigned outputRate, unsigned clockRate,
         unsigned dabMode, GainMode gainMode,
         float digGain, float normalise,
         std::string filterTapsFilename
         ) :
     ModCodec(ModFormat(1), ModFormat(0)),
-    myLogger(logger),
     myOutputRate(outputRate),
     myClockRate(clockRate),
     myDabMode(dabMode),
     myGainMode(gainMode),
     myDigGain(digGain),
     myNormalise(normalise),
-    myEtiReader(EtiReader(modconf, myLogger)),
+    myEtiReader(EtiReader(modconf)),
     myFlowgraph(NULL),
     myFilterTapsFilename(filterTapsFilename),
     myRCs(rcs)

@@ -113,9 +113,8 @@ class TimestampDecoder
 {
     public:
         TimestampDecoder(
-                struct modulator_offset_config& config,
-                Logger& logger):
-            myLogger(logger), modconfig(config)
+                struct modulator_offset_config& config) :
+            modconfig(config)
         {
             inhibit_second_update = 0;
             time_pps = 0.0;
@@ -126,8 +125,8 @@ class TimestampDecoder
             gmtime_r(0, &temp_time);
             offset_changed = false;
 
-            myLogger.level(info) << "Setting up timestamp decoder with " << 
-                (modconfig.use_offset_fixed ? "fixed" : 
+            etiLog.level(info) << "Setting up timestamp decoder with " <<
+                (modconfig.use_offset_fixed ? "fixed" :
                 (modconfig.use_offset_file ? "dynamic" : "none")) <<
                 " offset";
 
@@ -148,9 +147,6 @@ class TimestampDecoder
         bool updateModulatorOffset();
 
     protected:
-        /* Main program logger */
-        Logger& myLogger;
-
         /* Push a new MNSC field into the decoder */
         void pushMNSCData(int framephase, uint16_t mnsc);
 

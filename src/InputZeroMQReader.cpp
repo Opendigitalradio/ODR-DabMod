@@ -134,16 +134,14 @@ void InputZeroMQWorker::RecvProcess(struct InputZeroMQThreadData* workerdata)
             }
             else if (queue_size < workerdata->max_queued_frames) {
                 if (buffer_full) {
-                    fprintf(stderr, "ZeroMQ buffer recovered: %zu elements\n",
-                            queue_size);
+                    etiLog.level(info) << "ZeroMQ buffer recovered: " << queue_size << " elements";
                     buffer_full = false;
                 }
 
                 zmq_dab_message_t* dab_msg = (zmq_dab_message_t*)incoming.data();
 
                 if (dab_msg->version != 1) {
-                    fprintf(stderr, "ZeroMQ input: wrong packet version %d\n",
-                            dab_msg->version);
+                    etiLog.level(error) << "ZeroMQ wrong packet version " << dab_msg->version;
                 }
 
                 int offset = sizeof(dab_msg->version) +
@@ -154,8 +152,8 @@ void InputZeroMQWorker::RecvProcess(struct InputZeroMQThreadData* workerdata)
                     if (dab_msg->buflen[i] <= 0 ||
                         dab_msg->buflen[i] > 6144)
                     {
-                        fprintf(stderr, "ZeroMQ buffer %d: invalid length %d\n",
-                                i, dab_msg->buflen[i]);
+                        etiLog.level(error) << "ZeroMQ buffer " << i << " has invalid length " <<
+                            dab_msg->buflen[i];
                         // TODO error handling
                     }
                     else {
@@ -178,7 +176,7 @@ void InputZeroMQWorker::RecvProcess(struct InputZeroMQThreadData* workerdata)
                 workerdata->in_messages->notify();
 
                 if (!buffer_full) {
-                    fprintf(stderr, "ZeroMQ buffer overfull !\n");
+                    etiLog.level(warn) << "ZeroMQ buffer overfull !";
 
                     buffer_full = true;
                     throw std::runtime_error("ZMQ input full");
@@ -195,18 +193,17 @@ void InputZeroMQWorker::RecvProcess(struct InputZeroMQThreadData* workerdata)
             }
 
             if (queue_size < 5) {
-                fprintf(stderr, "ZeroMQ buffer low: %zu elements !\n",
-                        queue_size);
+                etiLog.level(warn) << "ZeroMQ buffer low: " << queue_size << "elements !";
             }
         }
     }
     catch (zmq::error_t& err) {
-        fprintf(stderr, "ZeroMQ error in RecvProcess: '%s'\n", err.what());
+        etiLog.level(error) << "ZeroMQ error in RecvProcess: '" << err.what() << "'";
     }
     catch (std::exception& err) {
     }
 
-    fprintf(stderr, "ZeroMQ input worker terminated\n");
+    etiLog.level(info) << "ZeroMQ input worker terminated";
 
     subscriber.close();
 
