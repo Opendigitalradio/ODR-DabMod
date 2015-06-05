@@ -70,7 +70,7 @@
 #   define memalign(a, b)   malloc(b)
 #endif
 
-#define ZMQ_INPUT_MAX_FRAME_QUEUE 50
+#define ZMQ_INPUT_MAX_FRAME_QUEUE 500
 
 
 typedef std::complex<float> complexf;
