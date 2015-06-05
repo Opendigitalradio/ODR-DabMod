@@ -41,7 +41,6 @@
 #include "porting.h"
 #include "InputReader.h"
 #include "PcDebug.h"
-#include "Utils.h"
 
 #define NUM_FRAMES_PER_ZMQ_MESSAGE 4
 /* A concatenation of four ETI frames,
@@ -88,9 +87,6 @@ int InputZeroMQReader::GetNextFrame(void* buffer)
 
     boost::shared_ptr<std::vector<uint8_t> > incoming;
 
-    struct timespec time_before;
-    int time_before_ret = clock_gettime(CLOCK_MONOTONIC, &time_before);
-
     /* Do some prebuffering because reads will happen in bursts
      * (4 ETI frames in TM1) and we should make sure that
      * we can serve the data required for a full transmission frame.
@@ -101,19 +97,6 @@ int InputZeroMQReader::GetNextFrame(void* buffer)
     }
     else {
         in_messages_.wait_and_pop(incoming);
-    }
-
-    struct timespec time_after;
-    int time_after_ret = clock_gettime(CLOCK_MONOTONIC, &time_after);
-
-    if (time_before_ret == 0 and time_after_ret == 0) {
-        etiLog.level(debug) << "ZMQ Time delta : " <<
-            timespecdiff_us(time_before, time_after) << " us, queue " <<
-            in_messages_.size();
-    }
-    else {
-        etiLog.level(error) << "ZMQ Time delta failed " <<
-            time_before_ret << " " << time_after_ret;
     }
 
     if (! workerdata_.running) {

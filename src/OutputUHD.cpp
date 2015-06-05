@@ -31,7 +31,6 @@
 #include "PcDebug.h"
 #include "Log.h"
 #include "RemoteControl.h"
-#include "Utils.h"
 
 #include <boost/thread/future.hpp>
 
@@ -351,22 +350,7 @@ int OutputUHD::process(Buffer* dataIn, Buffer* dataOut)
             throw std::runtime_error("Non-constant input length!");
         }
 
-        struct timespec time_before;
-        int time_before_ret = clock_gettime(CLOCK_MONOTONIC, &time_before);
-
         mySyncBarrier.get()->wait();
-
-        struct timespec time_after;
-        int time_after_ret = clock_gettime(CLOCK_MONOTONIC, &time_after);
-
-        if (time_before_ret == 0 and time_after_ret == 0) {
-            etiLog.level(debug) << "Time delta : " <<
-                timespecdiff_us(time_before, time_after) << " us";
-        }
-        else {
-            etiLog.level(error) << "Time delta failed " <<
-                time_before_ret << " " << time_after_ret;
-        }
 
         if (!uwd.running) {
             worker.stop();
