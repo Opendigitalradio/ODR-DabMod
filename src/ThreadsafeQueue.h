@@ -38,25 +38,14 @@
  * that pushes elements into the queue, and one consumer that
  * retrieves the elements.
  *
- * The queue can make the consumer block until enough elements
- * are available.
+ * The queue can make the consumer block until an element
+ * is available.
  */
 
 template<typename T>
 class ThreadsafeQueue
 {
 public:
-    /* Create a new queue without any minimum required
-     * fill before it is possible to pop an element
-     */
-    ThreadsafeQueue() : the_required_size(1) {}
-
-    /* Create a queue where it has to contain at least
-     * required_size elements before pop is possible
-     */
-    ThreadsafeQueue(size_t required_size) : the_required_size(required_size) {
-    }
-
     /* Push one element into the queue, and notify another thread that
      * might be waiting.
      *
@@ -87,14 +76,14 @@ public:
 
     size_t size() const
     {
+        boost::mutex::scoped_lock lock(the_mutex);
         return the_queue.size();
     }
 
     bool try_pop(T& popped_value)
     {
         boost::mutex::scoped_lock lock(the_mutex);
-        if(the_queue.size() < the_required_size)
-        {
+        if (the_queue.empty()) {
             return false;
         }
 
@@ -103,10 +92,10 @@ public:
         return true;
     }
 
-    void wait_and_pop(T& popped_value)
+    void wait_and_pop(T& popped_value, size_t prebuffering = 1)
     {
         boost::mutex::scoped_lock lock(the_mutex);
-        while(the_queue.size() < the_required_size) {
+        while (the_queue.size() < prebuffering) {
             the_condition_variable.wait(lock);
         }
 
@@ -118,7 +107,6 @@ private:
     std::queue<T> the_queue;
     mutable boost::mutex the_mutex;
     boost::condition_variable the_condition_variable;
-    size_t the_required_size;
 };
 
 #endif

@@ -35,10 +35,28 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <stdio.h>
+#include <time.h>
 
 void printUsage(char* progName);
 
 void printVersion(void);
+
+inline long timespecdiff_us(struct timespec& oldTime, struct timespec& time)
+{
+    long tv_sec;
+    long tv_nsec;
+    if (time.tv_nsec < oldTime.tv_nsec) {
+        tv_sec = time.tv_sec - 1 - oldTime.tv_sec;
+        tv_nsec = 1000000000L + time.tv_nsec - oldTime.tv_nsec;
+    }
+    else {
+        tv_sec = time.tv_sec - oldTime.tv_sec;
+        tv_nsec = time.tv_nsec - oldTime.tv_nsec;
+    }
+
+    return tv_sec * 1000 + tv_nsec / 1000;
+}
+
 
 #endif
 
