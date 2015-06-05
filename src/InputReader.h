@@ -183,8 +183,7 @@ class InputZeroMQWorker
 class InputZeroMQReader : public InputReader
 {
     public:
-        InputZeroMQReader() :
-            in_messages_(10)
+        InputZeroMQReader()
         {
             workerdata_.in_messages = &in_messages_;
             workerdata_.running     = false;

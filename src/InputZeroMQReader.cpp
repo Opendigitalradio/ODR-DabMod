@@ -86,7 +86,18 @@ int InputZeroMQReader::GetNextFrame(void* buffer)
     const size_t framesize = 6144;
 
     boost::shared_ptr<std::vector<uint8_t> > incoming;
-    in_messages_.wait_and_pop(incoming);
+
+    /* Do some prebuffering because reads will happen in bursts
+     * (4 ETI frames in TM1) and we should make sure that
+     * we can serve the data required for a full transmission frame.
+     */
+    if (in_messages_.size() < 4) {
+        const size_t prebuffering = 10;
+        in_messages_.wait_and_pop(incoming, prebuffering);
+    }
+    else {
+        in_messages_.wait_and_pop(incoming);
+    }
 
     if (! workerdata_.running) {
         throw zmq_input_overflow();
@@ -193,7 +204,7 @@ void InputZeroMQWorker::RecvProcess(struct InputZeroMQThreadData* workerdata)
             }
 
             if (queue_size < 5) {
-                etiLog.level(warn) << "ZeroMQ buffer low: " << queue_size << "elements !";
+                etiLog.level(warn) << "ZeroMQ buffer low: " << queue_size << " elements !";
             }
         }
     }

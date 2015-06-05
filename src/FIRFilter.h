@@ -31,7 +31,6 @@
 
 #include <boost/thread.hpp>
 #include <boost/shared_ptr.hpp>
-#include "ThreadsafeQueue.h"
 
 #include "RemoteControl.h"
 #include "ModCodec.h"

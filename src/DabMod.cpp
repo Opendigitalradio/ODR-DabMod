@@ -768,6 +768,15 @@ int launch_modulator(int argc, char* argv[])
     }
 #endif
 
+    // Set thread priority to realtime
+    const int policy = SCHED_RR;
+    sched_param sp;
+    sp.sched_priority = sched_get_priority_min(policy);
+    int thread_prio_ret = pthread_setschedparam(pthread_self(), policy, &sp);
+    if (thread_prio_ret != 0) {
+        etiLog.level(error) << "Could not set priority for Modulator thread:" << thread_prio_ret;
+    }
+
 
     while (run_again) {
         Flowgraph flowgraph;
