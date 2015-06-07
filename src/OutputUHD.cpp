@@ -104,7 +104,11 @@ OutputUHD::OutputUHD(
     RC_ADD_PARAMETER(muting, "Mute the output by stopping the transmitter");
     RC_ADD_PARAMETER(staticdelay, "Set static delay (uS) between 0 and 96000");
 
+    // TODO: find out how to use boost::bind to give the logger to the
+    // uhd_msg_handler
     uhd::msg::register_handler(uhd_msg_handler);
+
+    uhd::set_thread_priority_safe();
 
     //create a usrp device
     MDEBUG("OutputUHD:Creating the usrp device with: %s...\n",
@@ -473,16 +477,6 @@ void UHDWorker::process()
 
     // Transmit timeout
     const double timeout = 20.0;
-
-    // Set thread priority to realtime
-    const int policy = SCHED_RR;
-    sched_param sp;
-    sp.sched_priority = sched_get_priority_min(policy);
-    int ret = pthread_setschedparam(pthread_self(), policy, &sp);
-    if (ret != 0) {
-        etiLog.level(error) << "Could not set priority for UHD thread:" << ret;
-    }
-
 
 #if FAKE_UHD == 0
     uhd::stream_args_t stream_args("fc32"); //complex floats
