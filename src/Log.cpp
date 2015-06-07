@@ -73,6 +73,8 @@ void Logger::logstr(log_level_t level, std::string message)
             ++it) {
         (*it)->log(level, message);
     }
+
+    std::cerr << levels_as_str[level] << " " << message << std::endl;
 }
 
 
