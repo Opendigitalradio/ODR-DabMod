@@ -47,7 +47,9 @@
 class EtiReader
 {
 public:
-    EtiReader(double tist_offset_s, unsigned tist_delay_stages,
+    EtiReader(
+            double tist_offset_s,
+            unsigned tist_delay_stages,
             RemoteControllers* rcs);
     virtual ~EtiReader();
     EtiReader(const EtiReader&);
@@ -87,8 +89,6 @@ protected:
 
 private:
     size_t myCurrentFrame;
-    bool time_ext_enabled;
-    unsigned long timestamp_seconds;
     bool eti_fc_valid;
 };
 

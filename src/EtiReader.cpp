@@ -51,8 +51,10 @@ enum ETI_READER_STATE {
 };
 
 
-EtiReader::EtiReader(double tist_offset_s, unsigned tist_delay_stages,
-            RemoteControllers* rcs) :
+EtiReader::EtiReader(
+        double tist_offset_s,
+        unsigned tist_delay_stages,
+        RemoteControllers* rcs) :
     state(EtiReaderStateSync),
     myFicSource(NULL),
     myTimestampDecoder(tist_offset_s, tist_delay_stages)
