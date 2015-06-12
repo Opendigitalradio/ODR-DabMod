@@ -160,9 +160,35 @@ class UHDWorker {
         }
 
     private:
+        // Asynchronous message statistics
+        int num_underflows;
+        int num_late_packets;
+
+        bool fct_discontinuity;
+        int expected_next_fct;
+        uhd::tx_metadata_t md;
+        time_t tx_second;
+        double pps_offset;
+        double last_pps;
+
+        // GPS Fix check variables
+        double last_gps_fix_check;
+        int num_checks_without_gps_fix;
+        boost::packaged_task<bool> gps_fix_pt;
+        boost::unique_future<bool> gps_fix_future;
+        boost::thread gps_fix_task;
+
+
+        // Transmit timeout
+        static const double tx_timeout = 20.0;
+
         void process();
         void process_errhandler();
 
+        void print_async_metadata(const struct UHDWorkerFrameData *frame);
+
+        void handle_frame(const struct UHDWorkerFrameData *frame);
+        void tx_frame(const struct UHDWorkerFrameData *frame);
 
         struct UHDWorkerData *uwd;
         boost::thread uhd_thread;
