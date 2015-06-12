@@ -172,15 +172,23 @@ class UHDWorker {
         double last_pps;
 
         // GPS Fix check variables
-        double last_gps_fix_check;
         int num_checks_without_gps_fix;
+        struct timespec first_gps_fix_check;
+        struct timespec last_gps_fix_check;
+        struct timespec time_last_frame;
         boost::packaged_task<bool> gps_fix_pt;
         boost::unique_future<bool> gps_fix_future;
         boost::thread gps_fix_task;
 
-
         // Transmit timeout
         static const double tx_timeout = 20.0;
+
+        // Wait time in seconds to get fix
+        static const int initial_gps_fix_wait = 60;
+
+        // Interval for checking the GPS at runtime
+        static const double gps_fix_check_interval = 10.0; // seconds
+
 
         void process();
         void process_errhandler();
@@ -189,6 +197,11 @@ class UHDWorker {
 
         void handle_frame(const struct UHDWorkerFrameData *frame);
         void tx_frame(const struct UHDWorkerFrameData *frame);
+        void check_gps();
+
+        void set_usrp_time_gps();
+
+        void initial_gps_check();
 
         struct UHDWorkerData *uwd;
         boost::thread uhd_thread;

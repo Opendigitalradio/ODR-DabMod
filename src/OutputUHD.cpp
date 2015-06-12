@@ -31,6 +31,7 @@
 #include "PcDebug.h"
 #include "Log.h"
 #include "RemoteControl.h"
+#include "Utils.h"
 
 #include <boost/thread/future.hpp>
 
@@ -247,7 +248,7 @@ OutputUHD::OutputUHD(
 
     uwd.max_gps_holdover = myConf.maxGPSHoldoverTime;
 
-    SetDelayBuffer(config.dabMode);
+    SetDelayBuffer(myConf.dabMode);
 
     shared_ptr<barrier> b(new barrier(2));
     mySyncBarrier = b;
@@ -267,28 +268,26 @@ OutputUHD::~OutputUHD()
     }
 }
 
-void OutputUHD::SetDelayBuffer(unsigned int dabMode)
+int transmission_frame_duration_ms(unsigned int dabMode)
 {
-    // find out the duration of the transmission frame (Table 2 in ETSI 300 401)
     switch (dabMode) {
-        case 0: // could happen when called from constructor and we take the mode from ETI
-            myTFDurationMs = 0;
-            break;
-        case 1:
-            myTFDurationMs = 96;
-            break;
-        case 2:
-            myTFDurationMs = 24;
-            break;
-        case 3:
-            myTFDurationMs = 24;
-            break;
-        case 4:
-            myTFDurationMs = 48;
-            break;
+            // could happen when called from constructor and we take the mode from ETI
+        case 0: return 0;
+
+        case 1: return 96;
+        case 2: return 24;
+        case 3: return 24;
+        case 4: return 48;
         default:
             throw std::runtime_error("OutputUHD: invalid DAB mode");
     }
+}
+
+void OutputUHD::SetDelayBuffer(unsigned int dabMode)
+{
+    // find out the duration of the transmission frame (Table 2 in ETSI 300 401)
+    myTFDurationMs = transmission_frame_duration_ms(dabMode);
+
     // The buffer size equals the number of samples per transmission frame so
     // we calculate it by multiplying the duration of the transmission frame
     // with the samplerate.
@@ -455,8 +454,10 @@ void UHDWorker::process()
     last_pps         = 2.0;
 
     // Variables needed for GPS fix check
-    last_gps_fix_check = 0.0;
-    num_checks_without_gps_fix = 0;
+    num_checks_without_gps_fix = 1;
+    first_gps_fix_check.tv_sec = 0;
+    last_gps_fix_check.tv_sec = 0;
+    time_last_frame.tv_sec = 0;
 
 #if FAKE_UHD == 0
     uhd::stream_args_t stream_args("fc32"); //complex floats
@@ -470,6 +471,8 @@ void UHDWorker::process()
 
     num_underflows   = 0;
     num_late_packets = 0;
+
+    bool wait_for_gps = uwd->check_gpsfix;
 
     while (uwd->running) {
         fct_discontinuity = false;
@@ -494,7 +497,19 @@ void UHDWorker::process()
                     "UHDWorker.process: workerbuffer is neither 0 nor 1 !");
         }
 
-        handle_frame(frame);
+        // Don't start transmitting before we confirm the GPS is locked.
+        if (wait_for_gps) {
+            initial_gps_check();
+
+            if (num_checks_without_gps_fix == 0) {
+                wait_for_gps = false;
+            }
+        }
+        else {
+            handle_frame(frame);
+
+            check_gps();
+        }
 
         // swap buffers
         workerbuffer = (workerbuffer + 1) % 2;
@@ -503,8 +518,6 @@ void UHDWorker::process()
 
 void UHDWorker::handle_frame(const struct UHDWorkerFrameData *frame)
 {
-    const double gps_fix_check_interval = 10.0; // seconds
-
     pps_offset = frame->ts.timestamp_pps_offset;
 
     // Tx second from MNSC
@@ -553,57 +566,6 @@ void UHDWorker::handle_frame(const struct UHDWorkerFrameData *frame)
     }
 
     double usrp_time = uwd->myUsrp->get_time_now().get_real_secs();
-
-    if (uwd->check_gpsfix and
-            // Divide interval by two because we alternate between
-            // launch and check
-            last_gps_fix_check + gps_fix_check_interval/2.0 < usrp_time) {
-        last_gps_fix_check = usrp_time;
-
-        // Alternate between launching thread and checking the
-        // result.
-        if (gps_fix_task.joinable()) {
-            if (gps_fix_future.has_value()) {
-
-                gps_fix_future.wait();
-
-                gps_fix_task.join();
-
-                if (not gps_fix_future.get()) {
-                    if (num_checks_without_gps_fix == 0) {
-                        etiLog.level(alert) <<
-                            "OutputUHD: GPS Fix lost";
-                    }
-                    num_checks_without_gps_fix++;
-                }
-                else {
-                    if (num_checks_without_gps_fix) {
-                        etiLog.level(info) <<
-                            "OutputUHD: GPS Fix recovered";
-                    }
-                    num_checks_without_gps_fix = 0;
-                }
-
-                if (gps_fix_check_interval * num_checks_without_gps_fix >
-                        uwd->max_gps_holdover) {
-                    std::stringstream ss;
-                    ss << "Lost GPS fix for " << gps_fix_check_interval *
-                        num_checks_without_gps_fix << " seconds";
-                    throw std::runtime_error(ss.str());
-                }
-            }
-        }
-        else {
-            // Checking the sensor here takes too much
-            // time, it has to be done in a separate thread.
-            gps_fix_pt = boost::packaged_task<bool>(
-                    boost::bind(check_gps_fix_ok, uwd) );
-
-            gps_fix_future = gps_fix_pt.get_future();
-
-            gps_fix_task = boost::thread(boost::move(gps_fix_pt));
-        }
-    }
 
 
     if (uwd->sourceContainsTimestamp) {
@@ -725,6 +687,117 @@ void UHDWorker::tx_frame(const struct UHDWorkerFrameData *frame)
         }
 
         print_async_metadata(frame);
+    }
+}
+
+void UHDWorker::initial_gps_check()
+{
+    if (first_gps_fix_check.tv_sec == 0) {
+        etiLog.level(info) << "Waiting for GPS fix";
+
+        if (clock_gettime(CLOCK_MONOTONIC, &first_gps_fix_check) != 0) {
+            stringstream ss;
+            ss << "clock_gettime failure: " << strerror(errno);
+            throw std::runtime_error(ss.str());
+        }
+    }
+
+    check_gps();
+
+    if (last_gps_fix_check.tv_sec > first_gps_fix_check.tv_sec + initial_gps_fix_wait) {
+        stringstream ss;
+        ss << "GPS did not fix in " << initial_gps_fix_wait << " seconds";
+        throw std::runtime_error(ss.str());
+    }
+
+    if (time_last_frame.tv_sec == 0) {
+        if (clock_gettime(CLOCK_MONOTONIC, &time_last_frame) != 0) {
+            stringstream ss;
+            ss << "clock_gettime failure: " << strerror(errno);
+            throw std::runtime_error(ss.str());
+        }
+    }
+
+    struct timespec now;
+    if (clock_gettime(CLOCK_MONOTONIC, &now) != 0) {
+        stringstream ss;
+        ss << "clock_gettime failure: " << strerror(errno);
+        throw std::runtime_error(ss.str());
+    }
+
+    long delta_us = timespecdiff_us(time_last_frame, now);
+    long wait_time_us = uwd->fct_increment * 24000L; // TODO ugly
+
+    if (wait_time_us - delta_us > 0) {
+        usleep(wait_time_us - delta_us);
+    }
+
+    time_last_frame.tv_nsec += wait_time_us * 1000;
+    if (time_last_frame.tv_nsec >= 1000000000L) {
+        time_last_frame.tv_nsec -= 1000000000L;
+        time_last_frame.tv_sec++;
+    }
+
+}
+
+void UHDWorker::check_gps()
+{
+    struct timespec time_now;
+    if (clock_gettime(CLOCK_MONOTONIC, &time_now) != 0) {
+        stringstream ss;
+        ss << "clock_gettime failure: " << strerror(errno);
+        throw std::runtime_error(ss.str());
+    }
+
+    // Divide interval by two because we alternate between
+    // launch and check
+    if (uwd->check_gpsfix and
+            last_gps_fix_check.tv_sec + gps_fix_check_interval/2.0 < time_now.tv_sec) {
+        last_gps_fix_check = time_now;
+
+        // Alternate between launching thread and checking the
+        // result.
+        if (gps_fix_task.joinable()) {
+            if (gps_fix_future.has_value()) {
+
+                gps_fix_future.wait();
+
+                gps_fix_task.join();
+
+                if (not gps_fix_future.get()) {
+                    if (num_checks_without_gps_fix == 0) {
+                        etiLog.level(alert) <<
+                            "OutputUHD: GPS Fix lost";
+                    }
+                    num_checks_without_gps_fix++;
+                }
+                else {
+                    if (num_checks_without_gps_fix) {
+                        etiLog.level(info) <<
+                            "OutputUHD: GPS Fix recovered";
+                    }
+                    num_checks_without_gps_fix = 0;
+                }
+
+                if (gps_fix_check_interval * num_checks_without_gps_fix >
+                        uwd->max_gps_holdover) {
+                    std::stringstream ss;
+                    ss << "Lost GPS fix for " << gps_fix_check_interval *
+                        num_checks_without_gps_fix << " seconds";
+                    throw std::runtime_error(ss.str());
+                }
+            }
+        }
+        else {
+            // Checking the sensor here takes too much
+            // time, it has to be done in a separate thread.
+            gps_fix_pt = boost::packaged_task<bool>(
+                    boost::bind(check_gps_fix_ok, uwd) );
+
+            gps_fix_future = gps_fix_pt.get_future();
+
+            gps_fix_task = boost::thread(boost::move(gps_fix_pt));
+        }
     }
 }
 
