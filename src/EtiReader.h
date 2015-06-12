@@ -47,7 +47,8 @@
 class EtiReader
 {
 public:
-    EtiReader(struct modulator_offset_config& modconf);
+    EtiReader(double tist_offset_s, unsigned tist_delay_stages,
+            RemoteControllers* rcs);
     virtual ~EtiReader();
     EtiReader(const EtiReader&);
     EtiReader& operator=(const EtiReader&);

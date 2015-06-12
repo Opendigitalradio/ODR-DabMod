@@ -2,7 +2,7 @@
    Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010 Her Majesty the
    Queen in Right of Canada (Communications Research Center Canada)
 
-   Copyright (C) 2014
+   Copyright (C) 2014, 2015
    Matthias P. Braendli, matthias.braendli@mpb.li
 
     http://opendigitalradio.org
@@ -62,8 +62,8 @@ void TimestampDecoder::calculateTimestamp(struct frame_timestamp& ts)
      *
      * Therefore, use <= and not < for comparison
      */
-    if (queue_timestamps.size() <= modconfig.delay_calculation_pipeline_stages) {
-        //fprintf(stderr, "* %zu %u ", queue_timestamps.size(), modconfig.delay_calculation_pipeline_stages);
+    if (queue_timestamps.size() <= m_tist_delay_stages) {
+        //fprintf(stderr, "* %zu %u ", queue_timestamps.size(), m_tist_delay_stages);
         /* Return invalid timestamp until the queue is full */
         ts.timestamp_valid = false;
         ts.timestamp_sec = 0;
@@ -93,9 +93,9 @@ void TimestampDecoder::calculateTimestamp(struct frame_timestamp& ts)
 
     MDEBUG("Timestamp queue size %zu, delay_calc %u\n",
             queue_timestamps.size(),
-            modconfig.delay_calculation_pipeline_stages);
+            m_tist_delay_stages);
 
-    if (queue_timestamps.size() > modconfig.delay_calculation_pipeline_stages) {
+    if (queue_timestamps.size() > m_tist_delay_stages) {
         etiLog.level(error) << "Error: Timestamp queue is too large : size " <<
             queue_timestamps.size() << "! This should not happen !";
     }
@@ -198,77 +198,41 @@ void TimestampDecoder::updateTimestampEti(
     latestFCT = fct;
 }
 
-
-bool TimestampDecoder::updateModulatorOffset()
+void TimestampDecoder::set_parameter(
+        const std::string& parameter,
+        const std::string& value)
 {
     using namespace std;
-    using boost::lexical_cast;
-    using boost::bad_lexical_cast;
 
-    if (modconfig.use_offset_fixed)
-    {
-        timestamp_offset = modconfig.offset_fixed;
-        return true;
-    }
-    else if (modconfig.use_offset_file)
-    {
-        bool r = false;
-        double newoffset;
+    stringstream ss(value);
+    ss.exceptions ( stringstream::failbit | stringstream::badbit );
 
-        std::string filedata;
-        ifstream filestream;
-
-        try
-        {
-            filestream.open(modconfig.offset_filename.c_str());
-            if (!filestream.eof())
-            {
-                getline(filestream, filedata);
-                try
-                {
-                    newoffset = lexical_cast<double>(filedata);
-                    r = true;
-                }
-                catch (bad_lexical_cast& e)
-                {
-                    etiLog.level(error) <<
-                        "Error parsing timestamp offset from file '" <<
-                        modconfig.offset_filename << "'";
-                    r = false;
-                }
-            }
-            else
-            {
-                etiLog.level(error) <<
-                    "Error reading from timestamp offset file: eof reached\n";
-                r = false;
-            }
-            filestream.close();
-        }
-        catch (exception& e)
-        {
-            etiLog.level(error) << "Error opening timestamp offset file\n";
-            r = false;
-        }
-
-
-        if (r)
-        {
-            if (timestamp_offset != newoffset)
-            {
-                timestamp_offset = newoffset;
-                etiLog.level(info) <<
-                    "TimestampDecoder::updateTimestampOffset: new offset is " <<
-                    timestamp_offset;
-                offset_changed = true;
-            }
-
-        }
-
-        return r;
+    if (parameter == "offset") {
+        ss >> timestamp_offset;
+        offset_changed = true;
     }
     else {
-        return false;
+        stringstream ss;
+        ss << "Parameter '" << parameter
+            << "' is not exported by controllable " << get_rc_name();
+        throw ParameterError(ss.str());
     }
+}
+
+const std::string TimestampDecoder::get_parameter(
+        const std::string& parameter) const
+{
+    using namespace std;
+
+    stringstream ss;
+    if (parameter == "offset") {
+        ss << timestamp_offset;
+    }
+    else {
+        ss << "Parameter '" << parameter <<
+            "' is not exported by controllable " << get_rc_name();
+        throw ParameterError(ss.str());
+    }
+    return ss.str();
 }
 
