@@ -61,6 +61,28 @@ void uhd_msg_handler(uhd::msg::type_t type, const std::string &msg)
     }
 }
 
+// Check function for GPS fixtype
+bool check_gps_fix_ok(uhd::usrp::multi_usrp::sptr usrp)
+{
+    try {
+        std::string fixtype(
+                usrp->get_mboard_sensor("gps_fixtype", 0).to_pp_string());
+
+        if (fixtype.find("3d fix") == std::string::npos) {
+            etiLog.level(warn) << "OutputUHD: " << fixtype;
+
+            return false;
+        }
+
+        return true;
+    }
+    catch (uhd::lookup_error &e) {
+        etiLog.level(warn) << "OutputUHD: no gps_fixtype sensor";
+        return false;
+    }
+}
+
+
 OutputUHD::OutputUHD(
         const OutputUHDConfig& config) :
     ModOutput(ModFormat(1), ModFormat(0)),
@@ -69,12 +91,20 @@ OutputUHD::OutputUHD(
     // Since we don't know the buffer size, we cannot initialise
     // the buffers at object initialisation.
     first_run(true),
+    gps_fix_verified(false),
     activebuffer(1),
     myDelayBuf(0)
 
 {
-    myMuting = 0; // is remote-controllable
+    myMuting = true;     // is remote-controllable, and reset by the GPS fix check
     myStaticDelayUs = 0; // is remote-controllable
+
+    // Variables needed for GPS fix check
+    num_checks_without_gps_fix = 1;
+    first_gps_fix_check.tv_sec = 0;
+    last_gps_fix_check.tv_sec = 0;
+    time_last_frame.tv_sec = 0;
+
 
 #if FAKE_UHD
     MDEBUG("OutputUHD:Using fake UHD output");
@@ -168,59 +198,7 @@ OutputUHD::OutputUHD(
     MDEBUG("OutputUHD:Mute on missing timestamps: %s ...\n",
             myConf.muteNoTimestamps ? "enabled" : "disabled");
 
-    if (myConf.enableSync && (myConf.pps_src == "none")) {
-        etiLog.level(warn) <<
-            "OutputUHD: WARNING:"
-            " you are using synchronous transmission without PPS input!";
-
-        struct timespec now;
-        if (clock_gettime(CLOCK_REALTIME, &now)) {
-            perror("OutputUHD:Error: could not get time: ");
-            etiLog.level(error) << "OutputUHD: could not get time";
-        }
-        else {
-            myUsrp->set_time_now(uhd::time_spec_t(now.tv_sec));
-            etiLog.level(info) << "OutputUHD: Setting USRP time to " <<
-                    uhd::time_spec_t(now.tv_sec).get_real_secs();
-        }
-    }
-
-    if (myConf.pps_src != "none") {
-        /* handling time for synchronisation: wait until the next full
-         * second, and set the USRP time at next PPS */
-        struct timespec now;
-        time_t seconds;
-        if (clock_gettime(CLOCK_REALTIME, &now)) {
-            etiLog.level(error) << "OutputUHD: could not get time :" <<
-                strerror(errno);
-            throw std::runtime_error("OutputUHD: could not get time.");
-        }
-        else {
-            seconds = now.tv_sec;
-
-            MDEBUG("OutputUHD:sec+1: %ld ; now: %ld ...\n", seconds+1, now.tv_sec);
-            while (seconds + 1 > now.tv_sec) {
-                usleep(1);
-                if (clock_gettime(CLOCK_REALTIME, &now)) {
-                    etiLog.level(error) << "OutputUHD: could not get time :" <<
-                        strerror(errno);
-                    throw std::runtime_error("OutputUHD: could not get time.");
-                }
-            }
-            MDEBUG("OutputUHD:sec+1: %ld ; now: %ld ...\n", seconds+1, now.tv_sec);
-            /* We are now shortly after the second change. */
-
-            usleep(200000); // 200ms, we want the PPS to be later
-            myUsrp->set_time_unknown_pps(uhd::time_spec_t(seconds + 2));
-            etiLog.level(info) << "OutputUHD: Setting USRP time next pps to " <<
-                    uhd::time_spec_t(seconds + 2).get_real_secs();
-        }
-
-        usleep(1e6);
-        etiLog.log(info,  "OutputUHD: USRP time %f\n",
-                myUsrp->get_time_now().get_real_secs());
-    }
-
+    set_usrp_time();
 
     // preparing output thread worker data
     uwd.myUsrp = myUsrp;
@@ -246,8 +224,6 @@ OutputUHD::OutputUHD(
         uwd.check_gpsfix = false;
     }
 
-    uwd.max_gps_holdover = myConf.maxGPSHoldoverTime;
-
     SetDelayBuffer(myConf.dabMode);
 
     shared_ptr<barrier> b(new barrier(2));
@@ -271,7 +247,7 @@ OutputUHD::~OutputUHD()
 int transmission_frame_duration_ms(unsigned int dabMode)
 {
     switch (dabMode) {
-            // could happen when called from constructor and we take the mode from ETI
+        // could happen when called from constructor and we take the mode from ETI
         case 0: return 0;
 
         case 1: return 96;
@@ -305,7 +281,22 @@ int OutputUHD::process(Buffer* dataIn, Buffer* dataOut)
     // the first buffer
     // We will only wait on the barrier on the subsequent calls to
     // OutputUHD::process
-    if (first_run) {
+    if (not gps_fix_verified) {
+        if (uwd.check_gpsfix) {
+            initial_gps_check();
+
+            if (num_checks_without_gps_fix == 0) {
+                set_usrp_time();
+                gps_fix_verified = true;
+                myMuting = false;
+            }
+        }
+        else {
+            gps_fix_verified = true;
+            myMuting = false;
+        }
+    }
+    else if (first_run) {
         etiLog.level(debug) << "OutputUHD: UHD initialising...";
 
         worker.start(&uwd);
@@ -351,6 +342,16 @@ int OutputUHD::process(Buffer* dataIn, Buffer* dataOut)
                 "OutputUHD: Fatal error, input length changed from " << lastLen <<
                 " to " << dataIn->getLength();
             throw std::runtime_error("Non-constant input length!");
+        }
+
+        if (uwd.check_gpsfix) {
+            try {
+                check_gps();
+            }
+            catch (std::runtime_error& e) {
+                uwd.running = false;
+                etiLog.level(error) << e.what();
+            }
         }
 
         mySyncBarrier.get()->wait();
@@ -407,8 +408,178 @@ int OutputUHD::process(Buffer* dataIn, Buffer* dataOut)
     }
 
     return uwd.bufsize;
-
 }
+
+
+void OutputUHD::set_usrp_time()
+{
+    if (myConf.enableSync && (myConf.pps_src == "none")) {
+        etiLog.level(warn) <<
+            "OutputUHD: WARNING:"
+            " you are using synchronous transmission without PPS input!";
+
+        struct timespec now;
+        if (clock_gettime(CLOCK_REALTIME, &now)) {
+            perror("OutputUHD:Error: could not get time: ");
+            etiLog.level(error) << "OutputUHD: could not get time";
+        }
+        else {
+            myUsrp->set_time_now(uhd::time_spec_t(now.tv_sec));
+            etiLog.level(info) << "OutputUHD: Setting USRP time to " <<
+                uhd::time_spec_t(now.tv_sec).get_real_secs();
+        }
+    }
+
+    if (myConf.pps_src != "none") {
+        /* handling time for synchronisation: wait until the next full
+         * second, and set the USRP time at next PPS */
+        struct timespec now;
+        time_t seconds;
+        if (clock_gettime(CLOCK_REALTIME, &now)) {
+            etiLog.level(error) << "OutputUHD: could not get time :" <<
+                strerror(errno);
+            throw std::runtime_error("OutputUHD: could not get time.");
+        }
+        else {
+            seconds = now.tv_sec;
+
+            MDEBUG("OutputUHD:sec+1: %ld ; now: %ld ...\n", seconds+1, now.tv_sec);
+            while (seconds + 1 > now.tv_sec) {
+                usleep(1);
+                if (clock_gettime(CLOCK_REALTIME, &now)) {
+                    etiLog.level(error) << "OutputUHD: could not get time :" <<
+                        strerror(errno);
+                    throw std::runtime_error("OutputUHD: could not get time.");
+                }
+            }
+            MDEBUG("OutputUHD:sec+1: %ld ; now: %ld ...\n", seconds+1, now.tv_sec);
+            /* We are now shortly after the second change. */
+
+            usleep(200000); // 200ms, we want the PPS to be later
+            myUsrp->set_time_unknown_pps(uhd::time_spec_t(seconds + 2));
+            etiLog.level(info) << "OutputUHD: Setting USRP time next pps to " <<
+                uhd::time_spec_t(seconds + 2).get_real_secs();
+        }
+
+        usleep(1e6);
+        etiLog.log(info,  "OutputUHD: USRP time %f\n",
+                myUsrp->get_time_now().get_real_secs());
+    }
+}
+
+void OutputUHD::initial_gps_check()
+{
+    if (first_gps_fix_check.tv_sec == 0) {
+        etiLog.level(info) << "Waiting for GPS fix";
+
+        if (clock_gettime(CLOCK_MONOTONIC, &first_gps_fix_check) != 0) {
+            stringstream ss;
+            ss << "clock_gettime failure: " << strerror(errno);
+            throw std::runtime_error(ss.str());
+        }
+    }
+
+    check_gps();
+
+    if (last_gps_fix_check.tv_sec >
+            first_gps_fix_check.tv_sec + initial_gps_fix_wait) {
+        stringstream ss;
+        ss << "GPS did not fix in " << initial_gps_fix_wait << " seconds";
+        throw std::runtime_error(ss.str());
+    }
+
+    if (time_last_frame.tv_sec == 0) {
+        if (clock_gettime(CLOCK_MONOTONIC, &time_last_frame) != 0) {
+            stringstream ss;
+            ss << "clock_gettime failure: " << strerror(errno);
+            throw std::runtime_error(ss.str());
+        }
+    }
+
+    struct timespec now;
+    if (clock_gettime(CLOCK_MONOTONIC, &now) != 0) {
+        stringstream ss;
+        ss << "clock_gettime failure: " << strerror(errno);
+        throw std::runtime_error(ss.str());
+    }
+
+    long delta_us = timespecdiff_us(time_last_frame, now);
+    long wait_time_us = transmission_frame_duration_ms(myConf.dabMode);
+
+    if (wait_time_us - delta_us > 0) {
+        usleep(wait_time_us - delta_us);
+    }
+
+    time_last_frame.tv_nsec += wait_time_us * 1000;
+    if (time_last_frame.tv_nsec >= 1000000000L) {
+        time_last_frame.tv_nsec -= 1000000000L;
+        time_last_frame.tv_sec++;
+    }
+}
+
+void OutputUHD::check_gps()
+{
+    struct timespec time_now;
+    if (clock_gettime(CLOCK_MONOTONIC, &time_now) != 0) {
+        stringstream ss;
+        ss << "clock_gettime failure: " << strerror(errno);
+        throw std::runtime_error(ss.str());
+    }
+
+    // Divide interval by two because we alternate between
+    // launch and check
+    if (uwd.check_gpsfix and
+            last_gps_fix_check.tv_sec + gps_fix_check_interval/2.0 <
+            time_now.tv_sec) {
+        last_gps_fix_check = time_now;
+
+        // Alternate between launching thread and checking the
+        // result.
+        if (gps_fix_task.joinable()) {
+            if (gps_fix_future.has_value()) {
+
+                gps_fix_future.wait();
+
+                gps_fix_task.join();
+
+                if (not gps_fix_future.get()) {
+                    if (num_checks_without_gps_fix == 0) {
+                        etiLog.level(alert) <<
+                            "OutputUHD: GPS Fix lost";
+                    }
+                    num_checks_without_gps_fix++;
+                }
+                else {
+                    if (num_checks_without_gps_fix) {
+                        etiLog.level(info) <<
+                            "OutputUHD: GPS Fix recovered";
+                    }
+                    num_checks_without_gps_fix = 0;
+                }
+
+                if (gps_fix_check_interval * num_checks_without_gps_fix >
+                        myConf.maxGPSHoldoverTime) {
+                    std::stringstream ss;
+                    ss << "Lost GPS fix for " << gps_fix_check_interval *
+                        num_checks_without_gps_fix << " seconds";
+                    throw std::runtime_error(ss.str());
+                }
+            }
+        }
+        else {
+            // Checking the sensor here takes too much
+            // time, it has to be done in a separate thread.
+            gps_fix_pt = boost::packaged_task<bool>(
+                    boost::bind(check_gps_fix_ok, myUsrp) );
+
+            gps_fix_future = gps_fix_pt.get_future();
+
+            gps_fix_task = boost::thread(boost::move(gps_fix_pt));
+        }
+    }
+}
+
+//============================ UHD Worker ========================
 
 void UHDWorker::process_errhandler()
 {
@@ -425,39 +596,12 @@ void UHDWorker::process_errhandler()
     etiLog.level(warn) << "UHD worker terminated";
 }
 
-// Check function for GPS fixtype
-bool check_gps_fix_ok(struct UHDWorkerData *uwd)
-{
-    try {
-        std::string fixtype(
-                uwd->myUsrp->get_mboard_sensor("gps_fixtype", 0).to_pp_string());
-
-        if (fixtype.find("3d fix") == std::string::npos) {
-            etiLog.level(warn) << "OutputUHD: " << fixtype;
-
-            return false;
-        }
-
-        return true;
-    }
-    catch (uhd::lookup_error &e) {
-        etiLog.level(warn) << "OutputUHD: no gps_fixtype sensor";
-        return false;
-    }
-}
-
 void UHDWorker::process()
 {
     int workerbuffer = 0;
     tx_second        = 0;
     pps_offset       = 0.0;
     last_pps         = 2.0;
-
-    // Variables needed for GPS fix check
-    num_checks_without_gps_fix = 1;
-    first_gps_fix_check.tv_sec = 0;
-    last_gps_fix_check.tv_sec = 0;
-    time_last_frame.tv_sec = 0;
 
 #if FAKE_UHD == 0
     uhd::stream_args_t stream_args("fc32"); //complex floats
@@ -471,8 +615,6 @@ void UHDWorker::process()
 
     num_underflows   = 0;
     num_late_packets = 0;
-
-    bool wait_for_gps = uwd->check_gpsfix;
 
     while (uwd->running) {
         fct_discontinuity = false;
@@ -497,19 +639,7 @@ void UHDWorker::process()
                     "UHDWorker.process: workerbuffer is neither 0 nor 1 !");
         }
 
-        // Don't start transmitting before we confirm the GPS is locked.
-        if (wait_for_gps) {
-            initial_gps_check();
-
-            if (num_checks_without_gps_fix == 0) {
-                wait_for_gps = false;
-            }
-        }
-        else {
-            handle_frame(frame);
-
-            check_gps();
-        }
+        handle_frame(frame);
 
         // swap buffers
         workerbuffer = (workerbuffer + 1) % 2;
@@ -518,6 +648,9 @@ void UHDWorker::process()
 
 void UHDWorker::handle_frame(const struct UHDWorkerFrameData *frame)
 {
+    // Transmit timeout
+    static const double tx_timeout = 20.0;
+
     pps_offset = frame->ts.timestamp_pps_offset;
 
     // Tx second from MNSC
@@ -641,6 +774,7 @@ void UHDWorker::handle_frame(const struct UHDWorkerFrameData *frame)
 
 void UHDWorker::tx_frame(const struct UHDWorkerFrameData *frame)
 {
+    const double tx_timeout = 20.0;
     const size_t sizeIn = uwd->bufsize / sizeof(complexf);
     const complexf* in_data = reinterpret_cast<const complexf*>(frame->buf);
 
@@ -690,117 +824,6 @@ void UHDWorker::tx_frame(const struct UHDWorkerFrameData *frame)
     }
 }
 
-void UHDWorker::initial_gps_check()
-{
-    if (first_gps_fix_check.tv_sec == 0) {
-        etiLog.level(info) << "Waiting for GPS fix";
-
-        if (clock_gettime(CLOCK_MONOTONIC, &first_gps_fix_check) != 0) {
-            stringstream ss;
-            ss << "clock_gettime failure: " << strerror(errno);
-            throw std::runtime_error(ss.str());
-        }
-    }
-
-    check_gps();
-
-    if (last_gps_fix_check.tv_sec > first_gps_fix_check.tv_sec + initial_gps_fix_wait) {
-        stringstream ss;
-        ss << "GPS did not fix in " << initial_gps_fix_wait << " seconds";
-        throw std::runtime_error(ss.str());
-    }
-
-    if (time_last_frame.tv_sec == 0) {
-        if (clock_gettime(CLOCK_MONOTONIC, &time_last_frame) != 0) {
-            stringstream ss;
-            ss << "clock_gettime failure: " << strerror(errno);
-            throw std::runtime_error(ss.str());
-        }
-    }
-
-    struct timespec now;
-    if (clock_gettime(CLOCK_MONOTONIC, &now) != 0) {
-        stringstream ss;
-        ss << "clock_gettime failure: " << strerror(errno);
-        throw std::runtime_error(ss.str());
-    }
-
-    long delta_us = timespecdiff_us(time_last_frame, now);
-    long wait_time_us = uwd->fct_increment * 24000L; // TODO ugly
-
-    if (wait_time_us - delta_us > 0) {
-        usleep(wait_time_us - delta_us);
-    }
-
-    time_last_frame.tv_nsec += wait_time_us * 1000;
-    if (time_last_frame.tv_nsec >= 1000000000L) {
-        time_last_frame.tv_nsec -= 1000000000L;
-        time_last_frame.tv_sec++;
-    }
-
-}
-
-void UHDWorker::check_gps()
-{
-    struct timespec time_now;
-    if (clock_gettime(CLOCK_MONOTONIC, &time_now) != 0) {
-        stringstream ss;
-        ss << "clock_gettime failure: " << strerror(errno);
-        throw std::runtime_error(ss.str());
-    }
-
-    // Divide interval by two because we alternate between
-    // launch and check
-    if (uwd->check_gpsfix and
-            last_gps_fix_check.tv_sec + gps_fix_check_interval/2.0 < time_now.tv_sec) {
-        last_gps_fix_check = time_now;
-
-        // Alternate between launching thread and checking the
-        // result.
-        if (gps_fix_task.joinable()) {
-            if (gps_fix_future.has_value()) {
-
-                gps_fix_future.wait();
-
-                gps_fix_task.join();
-
-                if (not gps_fix_future.get()) {
-                    if (num_checks_without_gps_fix == 0) {
-                        etiLog.level(alert) <<
-                            "OutputUHD: GPS Fix lost";
-                    }
-                    num_checks_without_gps_fix++;
-                }
-                else {
-                    if (num_checks_without_gps_fix) {
-                        etiLog.level(info) <<
-                            "OutputUHD: GPS Fix recovered";
-                    }
-                    num_checks_without_gps_fix = 0;
-                }
-
-                if (gps_fix_check_interval * num_checks_without_gps_fix >
-                        uwd->max_gps_holdover) {
-                    std::stringstream ss;
-                    ss << "Lost GPS fix for " << gps_fix_check_interval *
-                        num_checks_without_gps_fix << " seconds";
-                    throw std::runtime_error(ss.str());
-                }
-            }
-        }
-        else {
-            // Checking the sensor here takes too much
-            // time, it has to be done in a separate thread.
-            gps_fix_pt = boost::packaged_task<bool>(
-                    boost::bind(check_gps_fix_ok, uwd) );
-
-            gps_fix_future = gps_fix_pt.get_future();
-
-            gps_fix_task = boost::thread(boost::move(gps_fix_pt));
-        }
-    }
-}
-
 void UHDWorker::print_async_metadata(const struct UHDWorkerFrameData *frame)
 {
 #if FAKE_UHD == 0
@@ -847,6 +870,9 @@ void UHDWorker::print_async_metadata(const struct UHDWorkerFrameData *frame)
 #endif
 }
 
+// =======================================
+// Remote Control for UHD
+// =======================================
 
 void OutputUHD::set_parameter(const string& parameter, const string& value)
 {
