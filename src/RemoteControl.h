@@ -34,7 +34,7 @@
 #endif
 
 #if defined(HAVE_ZEROMQ)
-#include <zmq.hpp>
+#include "zmq.hpp"
 #endif
 
 #include <list>
