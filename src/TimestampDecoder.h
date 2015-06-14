@@ -28,6 +28,7 @@
 #define TIMESTAMP_DECODER_H
 
 #include <queue>
+#include <boost/shared_ptr.hpp>
 #include <string>
 #include <time.h>
 #include <math.h>
@@ -191,7 +192,7 @@ class TimestampDecoder : public RemoteControllable
          * synchronise two modulators if only one uses (for instance) the
          * FIRFilter (1 stage pipeline)
          */
-        std::queue<struct frame_timestamp*> queue_timestamps;
+        std::queue<boost::shared_ptr<struct frame_timestamp> > queue_timestamps;
 
 };
 

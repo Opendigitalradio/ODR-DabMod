@@ -29,6 +29,7 @@
 #include <fstream>
 #include <string>
 #include <boost/lexical_cast.hpp>
+#include <boost/make_shared.hpp>
 #include <sys/types.h>
 #include "PcDebug.h"
 #include "TimestampDecoder.h"
@@ -41,7 +42,8 @@
 
 void TimestampDecoder::calculateTimestamp(struct frame_timestamp& ts)
 {
-    struct frame_timestamp* ts_queued = new struct frame_timestamp;
+    boost::shared_ptr<struct frame_timestamp> ts_queued =
+        boost::make_shared<struct frame_timestamp>();
 
     /* Push new timestamp into queue */
     ts_queued->timestamp_valid = full_timestamp_received_mnsc;
@@ -87,8 +89,6 @@ void TimestampDecoder::calculateTimestamp(struct frame_timestamp& ts)
                 ts.timestamp_sec,
                 ts.timestamp_pps_offset,
                 ts.timestamp_refresh);*/
-
-        delete ts_queued;
     }
 
     MDEBUG("Timestamp queue size %zu, delay_calc %u\n",
