@@ -308,7 +308,7 @@ void RemoteControllerZmq::process()
 {
     // create zmq reply socket for receiving ctrl parameters
     zmq::socket_t repSocket(m_zmqContext, ZMQ_REP);
-    std::cout << "Starting zmq remote control thread" << std::endl;
+    std::cerr << "Starting zmq remote control thread" << std::endl;
     try
     {
         // connect the socket
@@ -342,10 +342,9 @@ void RemoteControllerZmq::process()
                     try
                     {
                         std::string value = get_param_(module, parameter);
-                        zmq::message_t *pMsg = new zmq::message_t(value.size());
-                        memcpy ((void*) pMsg->data(), value.data(), value.size());
-                        repSocket.send(*pMsg, 0);
-                        delete pMsg;
+                        zmq::message_t msg(value.size());
+                        memcpy ((void*) msg.data(), value.data(), value.size());
+                        repSocket.send(&msg, 0);
                     }
                     catch (ParameterError &err)
                     {
