@@ -26,6 +26,7 @@
  */
 
 #include <string>
+#include <boost/make_shared.hpp>
 
 #include "DabModulator.h"
 #include "PcDebug.h"
