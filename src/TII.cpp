@@ -106,19 +106,20 @@ const int pattern_tm1_2_4[][8] = { // {{{
     {1,1,1,0,1,0,0,0},
     {1,1,1,1,0,0,0,0} }; // }}}
 
-
-TII::TII(unsigned int dabmode, unsigned int comb, unsigned int pattern) :
+TII::TII(unsigned int dabmode, const tii_config_t& tii_config) :
     ModCodec(ModFormat(0), ModFormat(0)),
+    RemoteControllable("tii"),
     m_dabmode(dabmode),
-    m_comb(comb),
-    m_pattern(pattern),
+    m_enable(tii_config.enable),
+    m_comb(tii_config.comb),
+    m_pattern(tii_config.pattern),
     m_insert(true)
 {
     PDEBUG("TII::TII(%u) @ %p\n", dabmode, this);
 
-    std::stringstream ss;
-    ss << "TII(comb:" << m_comb << ", pattern:" << m_pattern << ")";
-    m_name = ss.str();
+    RC_ADD_PARAMETER(enable, "enable TII [0-1]");
+    RC_ADD_PARAMETER(comb, "TII comb number [0-23]");
+    RC_ADD_PARAMETER(pattern, "TII pattern number [0-69]");
 
     switch (m_dabmode) {
         case 1:
@@ -152,7 +153,7 @@ TII::TII(unsigned int dabmode, unsigned int comb, unsigned int pattern) :
             throw std::runtime_error(ss_exception.str());
     }
 
-    if (not(0 < m_comb and m_comb <= 23) ) {
+    if (not(0 <= m_comb and m_comb <= 23) ) {
         throw std::runtime_error(
                 "TII::TII comb not valid!");
     }
@@ -170,6 +171,17 @@ TII::~TII()
     PDEBUG("TII::~TII() @ %p\n", this);
 }
 
+const char* TII::name()
+{
+    // Calculate name on demand because comb and pattern are
+    // modifiable through RC
+    std::stringstream ss;
+    ss << "TII(comb:" << m_comb << ", pattern:" << m_pattern << ")";
+    m_name = ss.str();
+
+    return m_name.c_str();
+}
+
 
 int TII::process(Buffer* const dataIn, Buffer* dataOut)
 {
@@ -181,7 +193,8 @@ int TII::process(Buffer* const dataIn, Buffer* dataOut)
                 "TII::process input size not valid!");
     }
 
-    if (m_insert) {
+    if (m_enable and m_insert) {
+        boost::mutex::scoped_lock lock(m_dataIn_mutex);
         dataOut->setData(&m_dataIn[0], m_carriers * sizeof(complexf));
     }
     else {
@@ -210,6 +223,13 @@ void TII::enable_carrier(int k) {
 
 void TII::prepare_pattern() {
     int comb = m_comb; // Convert from unsigned to signed
+
+    boost::mutex::scoped_lock lock(m_dataIn_mutex);
+
+    // Clear previous pattern
+    for (size_t i = 0; i < m_dataIn.size(); i++) {
+        m_dataIn[i] = 0.0;
+    }
 
     // This could be written more efficiently, but since it is
     // not performance-critial, it makes sense to write it
@@ -273,9 +293,65 @@ void TII::prepare_pattern() {
         throw std::runtime_error(
                 "TII::TII DAB mode not valid!");
     }
-
-
 }
+
+void TII::set_parameter(const std::string& parameter, const std::string& value)
+{
+    using namespace std;
+    stringstream ss(value);
+    ss.exceptions ( stringstream::failbit | stringstream::badbit );
+
+    if (parameter == "enable") {
+        ss >> m_enable;
+    }
+    else if (parameter == "pattern") {
+        int new_pattern;
+        ss >> new_pattern;
+        if (    (m_dabmode == 1 or m_dabmode == 2) and
+                not(0 <= new_pattern and new_pattern <= 69) ) {
+            throw std::runtime_error(
+                    "TII pattern not valid!");
+        }
+        m_pattern = new_pattern;
+        prepare_pattern();
+    }
+    else if (parameter == "comb") {
+        int new_comb;
+        ss >> new_comb;
+        if (not(0 <= new_comb and new_comb <= 23) ) {
+            throw std::runtime_error(
+                    "TII comb not valid!");
+        }
+        m_comb = new_comb;
+        prepare_pattern();
+    }
+    else {
+        stringstream ss;
+        ss << "Parameter '" << parameter << "' is not exported by controllable " << get_rc_name();
+        throw ParameterError(ss.str());
+    }
+}
+
+const std::string TII::get_parameter(const std::string& parameter) const
+{
+    using namespace std;
+    stringstream ss;
+    if (parameter == "enable") {
+        ss << (m_enable ? 1 : 0);
+    }
+    else if (parameter == "pattern") {
+        ss << m_pattern;
+    }
+    else if (parameter == "comb") {
+        ss << m_comb;
+    }
+    else {
+        ss << "Parameter '" << parameter << "' is not exported by controllable " << get_rc_name();
+        throw ParameterError(ss.str());
+    }
+    return ss.str();
+}
+
 
 #ifdef TII_TEST
 int main(int argc, char** argv)

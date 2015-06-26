@@ -132,8 +132,7 @@ int launch_modulator(int argc, char* argv[])
     float normalise = 1.0f;
     GainMode gainMode = GAIN_VAR;
 
-    int tiiPattern = 0;
-    int tiiComb = 0;
+    tii_config_t tiiConfig;
 
     /* UHD requires the input I and Q samples to be in the interval
      * [-1.0,1.0], otherwise they get truncated, which creates very
@@ -582,8 +581,9 @@ int launch_modulator(int argc, char* argv[])
 #endif
 
         /* Read TII parameters from config file */
-        tiiComb    = pt.get("tii.comb", 0);
-        tiiPattern = pt.get("tii.pattern", 0);
+        tiiConfig.enable  = pt.get("tii.enable", 0);
+        tiiConfig.comb    = pt.get("tii.comb", 0);
+        tiiConfig.pattern = pt.get("tii.pattern", 0);
     }
 
     if (rcs.get_no_controllers() == 0) {
@@ -755,8 +755,8 @@ int launch_modulator(int argc, char* argv[])
         shared_ptr<InputMemory> input(new InputMemory(&m.data));
         shared_ptr<DabModulator> modulator(
                 new DabModulator(tist_offset_s, tist_delay_stages, &rcs,
-                    outputRate, clockRate, dabMode, gainMode, digitalgain,
-                    normalise, filterTapsFilename, tiiComb, tiiPattern));
+                    tiiConfig, outputRate, clockRate, dabMode, gainMode,
+                    digitalgain, normalise, filterTapsFilename));
 
         flowgraph.connect(input, modulator);
         if (format_converter) {

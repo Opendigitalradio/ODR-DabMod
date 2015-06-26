@@ -6,6 +6,8 @@
    Matthias P. Braendli, matthias.braendli@mpb.li
 
     http://opendigitalradio.org
+
+   TII generation according to ETSI EN 300 401 Clause 14.8
  */
 /*
    This file is part of ODR-DabMod.
@@ -32,36 +34,67 @@
 #endif
 
 #include "ModCodec.h"
+#include "RemoteControl.h"
 
+#include <boost/thread.hpp>
 #include <sys/types.h>
 #include <complex>
 #include <vector>
 #include <string>
 
-class TII : public ModCodec
+struct tii_config_t
+{
+    tii_config_t() : enable(false), comb(0), pattern(0) {}
+
+    bool enable;
+    int comb;
+    int pattern;
+};
+
+class TII : public ModCodec, public RemoteControllable
 {
     public:
-        TII(unsigned int dabmode, unsigned int comb, unsigned int pattern);
+        TII(unsigned int dabmode, const tii_config_t& tii_config);
         virtual ~TII();
 
         int process(Buffer* const dataIn, Buffer* dataOut);
-        const char* name() { return m_name.c_str(); };
+        const char* name();
+
+        /******* REMOTE CONTROL ********/
+        virtual void set_parameter(const std::string& parameter,
+                const std::string& value);
+
+        virtual const std::string get_parameter(
+                const std::string& parameter) const;
+
 
     protected:
+        // Fill m_dataIn with the correct carriers for the pattern/comb
+        // combination
+        void prepare_pattern(void);
+
+        // prerequisites: calling thread must hold m_dataIn mutex
+        void enable_carrier(int k);
+
+        // Configuration settings
         unsigned int m_dabmode;
+
+        // Remote-controllable settings
+        bool         m_enable;
         unsigned int m_comb;
         unsigned int m_pattern;
 
+        // Internal flag when to insert TII
         bool m_insert;
 
         size_t m_carriers;
 
         std::string m_name;
+
+        // m_dataIn is read by modulator thread, and written
+        // to by RC thread.
+        mutable boost::mutex m_dataIn_mutex;
         std::vector<std::complex<float> > m_dataIn;
-
-        void prepare_pattern(void);
-
-        void enable_carrier(int k);
 
     private:
         TII(const TII&);

@@ -58,11 +58,11 @@ using namespace boost;
 DabModulator::DabModulator(
         double tist_offset_s, unsigned tist_delay_stages,
         RemoteControllers* rcs,
+        const tii_config_t& tiiConfig,
         unsigned outputRate, unsigned clockRate,
         unsigned dabMode, GainMode gainMode,
         float digGain, float normalise,
-        std::string filterTapsFilename,
-        int tiiComb, int tiiPattern
+        std::string filterTapsFilename
         ) :
     ModCodec(ModFormat(1), ModFormat(0)),
     myOutputRate(outputRate),
@@ -74,8 +74,7 @@ DabModulator::DabModulator(
     myEtiReader(EtiReader(tist_offset_s, tist_delay_stages, rcs)),
     myFlowgraph(NULL),
     myFilterTapsFilename(filterTapsFilename),
-    myTiiComb(tiiComb),
-    myTiiPattern(tiiPattern),
+    myTiiConfig(tiiConfig),
     myRCs(rcs)
 {
     PDEBUG("DabModulator::DabModulator(%u, %u, %u, %u) @ %p\n",
@@ -198,10 +197,8 @@ int DabModulator::process(Buffer* const dataIn, Buffer* dataOut)
                 (float)mySpacing * (float)myOutputRate / 2048000.0f,
                 cic_ratio));
 
-        shared_ptr<TII> tii;
-        if (myTiiComb != 0) {
-            tii = make_shared<TII>(myDabMode, myTiiPattern, myTiiComb);
-        }
+        shared_ptr<TII> tii = make_shared<TII>(myDabMode, myTiiConfig);
+        tii->enrol_at(*myRCs);
 
         shared_ptr<OfdmGenerator> cifOfdm(
                 new OfdmGenerator((1 + myNbSymbols), myNbCarriers, mySpacing));
