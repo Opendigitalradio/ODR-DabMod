@@ -132,6 +132,8 @@ int launch_modulator(int argc, char* argv[])
     float normalise = 1.0f;
     GainMode gainMode = GAIN_VAR;
 
+    int tiiPattern = 0;
+    int tiiComb = 0;
 
     /* UHD requires the input I and Q samples to be in the interval
      * [-1.0,1.0], otherwise they get truncated, which creates very
@@ -578,6 +580,10 @@ int launch_modulator(int argc, char* argv[])
 
         outputuhd_conf.muteNoTimestamps = (pt.get("delaymanagement.mutenotimestamps", 0) == 1);
 #endif
+
+        /* Read TII parameters from config file */
+        tiiComb    = pt.get("tii.comb", 0);
+        tiiPattern = pt.get("tii.pattern", 0);
     }
 
     if (rcs.get_no_controllers() == 0) {
@@ -750,7 +756,7 @@ int launch_modulator(int argc, char* argv[])
         shared_ptr<DabModulator> modulator(
                 new DabModulator(tist_offset_s, tist_delay_stages, &rcs,
                     outputRate, clockRate, dabMode, gainMode, digitalgain,
-                    normalise, filterTapsFilename));
+                    normalise, filterTapsFilename, tiiComb, tiiPattern));
 
         flowgraph.connect(input, modulator);
         if (format_converter) {

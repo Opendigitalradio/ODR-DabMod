@@ -61,7 +61,8 @@ DabModulator::DabModulator(
         unsigned outputRate, unsigned clockRate,
         unsigned dabMode, GainMode gainMode,
         float digGain, float normalise,
-        std::string filterTapsFilename
+        std::string filterTapsFilename,
+        int tiiComb, int tiiPattern
         ) :
     ModCodec(ModFormat(1), ModFormat(0)),
     myOutputRate(outputRate),
@@ -73,6 +74,8 @@ DabModulator::DabModulator(
     myEtiReader(EtiReader(tist_offset_s, tist_delay_stages, rcs)),
     myFlowgraph(NULL),
     myFilterTapsFilename(filterTapsFilename),
+    myTiiComb(tiiComb),
+    myTiiPattern(tiiPattern),
     myRCs(rcs)
 {
     PDEBUG("DabModulator::DabModulator(%u, %u, %u, %u) @ %p\n",
@@ -195,8 +198,10 @@ int DabModulator::process(Buffer* const dataIn, Buffer* dataOut)
                 (float)mySpacing * (float)myOutputRate / 2048000.0f,
                 cic_ratio));
 
-
-        shared_ptr<TII> tii(new TII(myDabMode, 3, 16));
+        shared_ptr<TII> tii;
+        if (myTiiComb != 0) {
+            tii = make_shared<TII>(myDabMode, myTiiPattern, myTiiComb);
+        }
 
         shared_ptr<OfdmGenerator> cifOfdm(
                 new OfdmGenerator((1 + myNbSymbols), myNbCarriers, mySpacing));
@@ -347,7 +352,10 @@ int DabModulator::process(Buffer* const dataIn, Buffer* dataOut)
         myFlowgraph->connect(cifFreq, cifDiff);
         myFlowgraph->connect(cifNull, cifSig);
         myFlowgraph->connect(cifDiff, cifSig);
-        myFlowgraph->connect(tii, cifSig);
+        if (tii) {
+            myFlowgraph->connect(tii, cifSig);
+        }
+
         if (useCicEq) {
             myFlowgraph->connect(cifSig, cifCicEq);
             myFlowgraph->connect(cifCicEq, cifOfdm);

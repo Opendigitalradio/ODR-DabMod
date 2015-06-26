@@ -54,7 +54,8 @@ public:
             unsigned outputRate = 2048000, unsigned clockRate = 0,
             unsigned dabMode = 0, GainMode gainMode = GAIN_VAR,
             float digGain = 1.0, float normalise = 1.0,
-            std::string filterTapsFilename = "");
+            std::string filterTapsFilename = "",
+            int tiiComb = 0, int tiiPattern = 0);
     DabModulator(const DabModulator& copy);
     virtual ~DabModulator();
 
@@ -77,6 +78,8 @@ protected:
     Flowgraph* myFlowgraph;
     OutputMemory* myOutput;
     std::string myFilterTapsFilename;
+    int myTiiComb;
+    int myTiiPattern;
     RemoteControllers* myRCs;
 
     size_t myNbSymbols;

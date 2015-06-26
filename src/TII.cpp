@@ -196,11 +196,9 @@ int TII::process(Buffer* const dataIn, Buffer* dataOut)
 }
 
 void TII::enable_carrier(int k) {
-    fprintf(stderr, "k = %d\n", k);
-
     int ix = m_carriers/2 + k;
 
-    if (ix < 0 or ix > (ssize_t)m_dataIn.size()) {
+    if (ix < 0 or ix+1 >= (ssize_t)m_dataIn.size()) {
         throw std::runtime_error(
                 "TII::enable_carrier invalid k!");
     }
