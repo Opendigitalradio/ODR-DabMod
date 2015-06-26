@@ -51,12 +51,17 @@ enum ETI_READER_STATE {
 };
 
 
-EtiReader::EtiReader(struct modulator_offset_config& modconf) :
+EtiReader::EtiReader(
+        double tist_offset_s,
+        unsigned tist_delay_stages,
+        RemoteControllers* rcs) :
     state(EtiReaderStateSync),
     myFicSource(NULL),
-    myTimestampDecoder(modconf)
+    myTimestampDecoder(tist_offset_s, tist_delay_stages)
 {
     PDEBUG("EtiReader::EtiReader()\n");
+
+    myTimestampDecoder.enrol_at(*rcs);
 
     myCurrentFrame = 0;
     eti_fc_valid = false;
@@ -283,11 +288,6 @@ int EtiReader::process(const Buffer* dataIn)
     // Update timestamps
     myTimestampDecoder.updateTimestampEti(eti_fc.FP & 0x3,
             eti_eoh.MNSC, getPPSOffset(), eti_fc.FCT);
-
-    if (eti_fc.FCT % 125 == 0) //every 3 seconds is fine enough
-    {
-        myTimestampDecoder.updateModulatorOffset();
-    }
 
     return dataIn->getLength() - input_size;
 }

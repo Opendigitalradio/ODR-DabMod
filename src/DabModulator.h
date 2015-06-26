@@ -49,7 +49,7 @@ class DabModulator : public ModCodec
 {
 public:
     DabModulator(
-            struct modulator_offset_config& modconf,
+            double tist_offset_s, unsigned tist_delay_stages,
             RemoteControllers* rcs,
             unsigned outputRate = 2048000, unsigned clockRate = 0,
             unsigned dabMode = 0, GainMode gainMode = GAIN_VAR,

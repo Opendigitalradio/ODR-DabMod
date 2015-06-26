@@ -56,7 +56,7 @@
 using namespace boost;
 
 DabModulator::DabModulator(
-        struct modulator_offset_config& modconf,
+        double tist_offset_s, unsigned tist_delay_stages,
         RemoteControllers* rcs,
         unsigned outputRate, unsigned clockRate,
         unsigned dabMode, GainMode gainMode,
@@ -70,7 +70,7 @@ DabModulator::DabModulator(
     myGainMode(gainMode),
     myDigGain(digGain),
     myNormalise(normalise),
-    myEtiReader(EtiReader(modconf)),
+    myEtiReader(EtiReader(tist_offset_s, tist_delay_stages, rcs)),
     myFlowgraph(NULL),
     myFilterTapsFilename(filterTapsFilename),
     myRCs(rcs)

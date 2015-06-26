@@ -157,10 +157,8 @@ int launch_modulator(int argc, char* argv[])
     modulator_data m;
 
     // To handle the timestamp offset of the modulator
-    struct modulator_offset_config modconf;
-    modconf.use_offset_file = false;
-    modconf.use_offset_fixed = false;
-    modconf.delay_calculation_pipeline_stages = 0;
+    unsigned tist_delay_stages = 0;
+    double   tist_offset_s = 0.0;
 
     shared_ptr<Flowgraph> flowgraph(new Flowgraph());
     shared_ptr<FormatConverter> format_converter;
@@ -238,25 +236,7 @@ int launch_modulator(int argc, char* argv[])
             loop = true;
             break;
         case 'o':
-            if (modconf.use_offset_file)
-            {
-                fprintf(stderr, "Options -o and -O are mutually exclusive\n");
-                throw std::invalid_argument("Invalid command line options");
-            }
-            modconf.use_offset_fixed = true;
-            modconf.offset_fixed = strtod(optarg, NULL);
-#if defined(HAVE_OUTPUT_UHD)
-            outputuhd_conf.enableSync = true;
-#endif
-            break;
-        case 'O':
-            if (modconf.use_offset_fixed)
-            {
-                fprintf(stderr, "Options -o and -O are mutually exclusive\n");
-                throw std::invalid_argument("Invalid command line options");
-            }
-            modconf.use_offset_file = true;
-            modconf.offset_filename = std::string(optarg);
+            tist_offset_s = strtod(optarg, NULL);
 #if defined(HAVE_OUTPUT_UHD)
             outputuhd_conf.enableSync = true;
 #endif
@@ -578,23 +558,20 @@ int launch_modulator(int argc, char* argv[])
 #if defined(HAVE_OUTPUT_UHD)
         outputuhd_conf.enableSync = (pt.get("delaymanagement.synchronous", 0) == 1);
         if (outputuhd_conf.enableSync) {
+            std::string delay_mgmt = pt.get<std::string>("delaymanagement.management", "");
+            std::string fixedoffset = pt.get<std::string>("delaymanagement.fixedoffset", "");
+            std::string offset_filename = pt.get<std::string>("delaymanagement.dynamicoffsetfile", "");
+
+            if (not(delay_mgmt.empty() and fixedoffset.empty() and offset_filename.empty())) {
+                std::cerr << "Warning: you are using the old config syntax for the offset management.\n";
+                std::cerr << "         Please see the example.ini configuration for the new settings.\n";
+            }
+
             try {
-                std::string delay_mgmt = pt.get<std::string>("delaymanagement.management");
-                if (delay_mgmt == "fixed") {
-                    modconf.offset_fixed = pt.get<double>("delaymanagement.fixedoffset");
-                    modconf.use_offset_fixed = true;
-                }
-                else if (delay_mgmt == "dynamic") {
-                    modconf.offset_filename = pt.get<std::string>("delaymanagement.dynamicoffsetfile");
-                    modconf.use_offset_file = true;
-                }
-                else {
-                    throw std::runtime_error("invalid management value");
-                }
+                tist_offset_s = pt.get<double>("delaymanagement.offset");
             }
             catch (std::exception &e) {
-                std::cerr << "Error: " << e.what() << "\n";
-                std::cerr << "       Synchronised transmission enabled, but delay management specification is incomplete.\n";
+                std::cerr << "Error: delaymanagement: synchronous is enabled, but no offset defined!\n";
                 throw std::runtime_error("Configuration error");
             }
         }
@@ -611,16 +588,10 @@ int launch_modulator(int argc, char* argv[])
 
     etiLog.level(info) << "Starting up";
 
-    if (!(modconf.use_offset_file || modconf.use_offset_fixed)) {
-        etiLog.level(debug) << "No Modulator offset defined, setting to 0";
-        modconf.use_offset_fixed = true;
-        modconf.offset_fixed = 0;
-    }
-
     // When using the FIRFilter, increase the modulator offset pipelining delay
     // by the correct amount
     if (filterTapsFilename != "") {
-        modconf.delay_calculation_pipeline_stages += FIRFILTER_PIPELINE_DELAY;
+        tist_delay_stages += FIRFILTER_PIPELINE_DELAY;
     }
 
     // Setting ETI input filename
@@ -768,15 +739,6 @@ int launch_modulator(int argc, char* argv[])
     }
 #endif
 
-    // Set thread priority to realtime
-    const int policy = SCHED_RR;
-    sched_param sp;
-    sp.sched_priority = sched_get_priority_min(policy);
-    int thread_prio_ret = pthread_setschedparam(pthread_self(), policy, &sp);
-    if (thread_prio_ret != 0) {
-        etiLog.level(error) << "Could not set priority for Modulator thread:" << thread_prio_ret;
-    }
-
 
     while (run_again) {
         Flowgraph flowgraph;
@@ -786,8 +748,9 @@ int launch_modulator(int argc, char* argv[])
 
         shared_ptr<InputMemory> input(new InputMemory(&m.data));
         shared_ptr<DabModulator> modulator(
-                new DabModulator(modconf, &rcs, outputRate, clockRate,
-                    dabMode, gainMode, digitalgain, normalise, filterTapsFilename));
+                new DabModulator(tist_offset_s, tist_delay_stages, &rcs,
+                    outputRate, clockRate, dabMode, gainMode, digitalgain,
+                    normalise, filterTapsFilename));
 
         flowgraph.connect(input, modulator);
         if (format_converter) {

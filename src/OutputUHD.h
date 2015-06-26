@@ -2,7 +2,7 @@
    Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010 Her Majesty the
    Queen in Right of Canada (Communications Research Center Canada)
 
-   Copyright (C) 2014
+   Copyright (C) 2014, 2015
    Matthias P. Braendli, matthias.braendli@mpb.li
 
     http://opendigitalradio.org
@@ -50,6 +50,7 @@ DESCRIPTION:
 #include <boost/thread/thread.hpp>
 #include <boost/thread/barrier.hpp>
 #include <boost/shared_ptr.hpp>
+#include <boost/atomic.hpp>
 #include <list>
 #include <string>
 
@@ -94,7 +95,7 @@ struct fct_discontinuity_error : public std::exception
 enum refclk_lock_loss_behaviour_t { CRASH, IGNORE };
 
 struct UHDWorkerData {
-    bool running;
+    boost::atomic<bool> running;
     bool failed_due_to_fct;
 
 #if FAKE_UHD == 0
@@ -122,10 +123,6 @@ struct UHDWorkerData {
 
     // If we want to check for the gps_fixtype sensor
     bool check_gpsfix;
-
-    // After how much time without fix we abort
-    int max_gps_holdover; // seconds
-
 
     // muting set by remote control
     bool muting;
@@ -160,14 +157,29 @@ class UHDWorker {
         }
 
     private:
-        void process();
-        void process_errhandler();
+        // Asynchronous message statistics
+        int num_underflows;
+        int num_late_packets;
 
+        bool fct_discontinuity;
+        int expected_next_fct;
+        uhd::tx_metadata_t md;
+        time_t tx_second;
+        double pps_offset;
+        double last_pps;
+
+        void print_async_metadata(const struct UHDWorkerFrameData *frame);
+
+        void handle_frame(const struct UHDWorkerFrameData *frame);
+        void tx_frame(const struct UHDWorkerFrameData *frame);
 
         struct UHDWorkerData *uwd;
         boost::thread uhd_thread;
 
         uhd::tx_streamer::sptr myTxStream;
+
+        void process();
+        void process_errhandler();
 };
 
 /* This structure is used as initial configuration for OutputUHD */
@@ -239,6 +251,7 @@ class OutputUHD: public ModOutput, public RemoteControllable {
         boost::shared_ptr<boost::barrier> mySyncBarrier;
         UHDWorker worker;
         bool first_run;
+        bool gps_fix_verified;
         struct UHDWorkerData uwd;
         int activebuffer;
 
@@ -255,6 +268,27 @@ class OutputUHD: public ModOutput, public RemoteControllable {
         int myTFDurationMs; // TF duration in milliseconds
         std::vector<complexf> myDelayBuf;
         size_t lastLen;
+
+        // GPS Fix check variables
+        int num_checks_without_gps_fix;
+        struct timespec first_gps_fix_check;
+        struct timespec last_gps_fix_check;
+        struct timespec time_last_frame;
+        boost::packaged_task<bool> gps_fix_pt;
+        boost::unique_future<bool> gps_fix_future;
+        boost::thread gps_fix_task;
+
+        // Wait time in seconds to get fix
+        static const int initial_gps_fix_wait = 60;
+
+        // Interval for checking the GPS at runtime
+        static const double gps_fix_check_interval = 10.0; // seconds
+
+        void check_gps();
+
+        void set_usrp_time();
+
+        void initial_gps_check();
 };
 
 #endif // HAVE_OUTPUT_UHD
