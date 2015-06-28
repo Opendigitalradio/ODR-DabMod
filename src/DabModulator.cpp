@@ -198,8 +198,14 @@ int DabModulator::process(Buffer* const dataIn, Buffer* dataOut)
                 (float)mySpacing * (float)myOutputRate / 2048000.0f,
                 cic_ratio));
 
-        shared_ptr<TII> tii = make_shared<TII>(myDabMode, myTiiConfig);
-        tii->enrol_at(*myRCs);
+        shared_ptr<TII> tii;
+        try {
+            tii = make_shared<TII>(myDabMode, myTiiConfig);
+            tii->enrol_at(*myRCs);
+        }
+        catch (std::runtime_error& e) {
+            etiLog.level(error) << "Could not initialise TII, skipping!";
+        }
 
         shared_ptr<OfdmGenerator> cifOfdm(
                 new OfdmGenerator((1 + myNbSymbols), myNbCarriers, mySpacing));
