@@ -59,25 +59,27 @@ void uhd_msg_handler(uhd::msg::type_t type, const std::string &msg)
     else if (type == uhd::msg::error) {
         etiLog.level(error) << "UHD Error: " << msg;
     }
+    else {
+        etiLog.level(debug) << "UHD Message: " << msg;
+    }
 }
 
-// Check function for GPS fixtype
-bool check_gps_fix_ok(uhd::usrp::multi_usrp::sptr usrp)
+// Check function for GPS TIMELOCK sensor
+bool check_gps_timelock(uhd::usrp::multi_usrp::sptr usrp)
 {
     try {
-        std::string fixtype(
-                usrp->get_mboard_sensor("gps_fixtype", 0).to_pp_string());
+        std::string sensor_value(
+                usrp->get_mboard_sensor("gps_timelock", 0).to_pp_string());
 
-        if (fixtype.find("3d fix") == std::string::npos) {
-            etiLog.level(warn) << "OutputUHD: " << fixtype;
-
+        if (sensor_value.find("TIME LOCKED") == std::string::npos) {
+            etiLog.level(warn) << "OutputUHD: gps_timelock " << sensor_value;
             return false;
         }
 
         return true;
     }
     catch (uhd::lookup_error &e) {
-        etiLog.level(warn) << "OutputUHD: no gps_fixtype sensor";
+        etiLog.level(warn) << "OutputUHD: no gps_timelock sensor";
         return false;
     }
 }
@@ -197,8 +199,6 @@ OutputUHD::OutputUHD(
 
     MDEBUG("OutputUHD:Mute on missing timestamps: %s ...\n",
             myConf.muteNoTimestamps ? "enabled" : "disabled");
-
-    set_usrp_time();
 
     // preparing output thread worker data
     uwd.myUsrp = myUsrp;
@@ -484,7 +484,7 @@ void OutputUHD::initial_gps_check()
     if (last_gps_fix_check.tv_sec >
             first_gps_fix_check.tv_sec + initial_gps_fix_wait) {
         stringstream ss;
-        ss << "GPS did not fix in " << initial_gps_fix_wait << " seconds";
+        ss << "GPS did not show time lock in " << initial_gps_fix_wait << " seconds";
         throw std::runtime_error(ss.str());
     }
 
@@ -545,14 +545,14 @@ void OutputUHD::check_gps()
                 if (not gps_fix_future.get()) {
                     if (num_checks_without_gps_fix == 0) {
                         etiLog.level(alert) <<
-                            "OutputUHD: GPS Fix lost";
+                            "OutputUHD: GPS Time Lock lost";
                     }
                     num_checks_without_gps_fix++;
                 }
                 else {
                     if (num_checks_without_gps_fix) {
                         etiLog.level(info) <<
-                            "OutputUHD: GPS Fix recovered";
+                            "OutputUHD: GPS Time Lock recovered";
                     }
                     num_checks_without_gps_fix = 0;
                 }
@@ -560,7 +560,7 @@ void OutputUHD::check_gps()
                 if (gps_fix_check_interval * num_checks_without_gps_fix >
                         myConf.maxGPSHoldoverTime) {
                     std::stringstream ss;
-                    ss << "Lost GPS fix for " << gps_fix_check_interval *
+                    ss << "Lost GPS Time Lock for " << gps_fix_check_interval *
                         num_checks_without_gps_fix << " seconds";
                     throw std::runtime_error(ss.str());
                 }
@@ -570,7 +570,7 @@ void OutputUHD::check_gps()
             // Checking the sensor here takes too much
             // time, it has to be done in a separate thread.
             gps_fix_pt = boost::packaged_task<bool>(
-                    boost::bind(check_gps_fix_ok, myUsrp) );
+                    boost::bind(check_gps_timelock, myUsrp) );
 
             gps_fix_future = gps_fix_pt.get_future();
 

@@ -121,7 +121,7 @@ struct UHDWorkerData {
     // If we want to verify loss of refclk
     bool check_refclk_loss;
 
-    // If we want to check for the gps_fixtype sensor
+    // If we want to check for the gps_timelock sensor
     bool check_gpsfix;
 
     // muting set by remote control
@@ -279,7 +279,7 @@ class OutputUHD: public ModOutput, public RemoteControllable {
         boost::thread gps_fix_task;
 
         // Wait time in seconds to get fix
-        static const int initial_gps_fix_wait = 60;
+        static const int initial_gps_fix_wait = 180;
 
         // Interval for checking the GPS at runtime
         static const double gps_fix_check_interval = 10.0; // seconds
