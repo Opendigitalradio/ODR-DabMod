@@ -50,7 +50,6 @@ DESCRIPTION:
 #include <boost/thread/thread.hpp>
 #include <boost/thread/barrier.hpp>
 #include <boost/shared_ptr.hpp>
-#include <boost/atomic.hpp>
 #include <list>
 #include <string>
 
@@ -95,7 +94,7 @@ struct fct_discontinuity_error : public std::exception
 enum refclk_lock_loss_behaviour_t { CRASH, IGNORE };
 
 struct UHDWorkerData {
-    boost::atomic<bool> running;
+    bool running;
     bool failed_due_to_fct;
 
 #if FAKE_UHD == 0
