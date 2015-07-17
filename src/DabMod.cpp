@@ -783,20 +783,28 @@ int launch_modulator(int argc, char* argv[])
                 run_again = false;
                 ret = 1;
                 break;
-#if defined(HAVE_ZEROMQ)
             case MOD_AGAIN:
                 etiLog.level(warn) << "Restart modulator.";
-                running = true;
-                if (inputTransport == "zeromq") {
+                run_again = false;
+                if (inputTransport == "file") {
+                    if (inputFileReader.Open(inputName, loop) == -1) {
+                        etiLog.level(error) << "Unable to open input file!";
+                        ret = 1;
+                    }
+                    else {
+                        run_again = true;
+                    }
+                }
+                else if (inputTransport == "zeromq") {
+#if defined(HAVE_ZEROMQ)
                     run_again = true;
-
                     // Create a new input reader
                     inputZeroMQReader = make_shared<InputZeroMQReader>();
                     inputZeroMQReader->Open(inputName, inputMaxFramesQueued);
                     m.inputReader = inputZeroMQReader.get();
+#endif
                 }
                 break;
-#endif
             case MOD_NORMAL_END:
             default:
                 etiLog.level(info) << "modulator stopped.";
