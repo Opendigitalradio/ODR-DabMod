@@ -31,12 +31,6 @@ else
 GITVERSION_FLAGS =
 endif
 
-if HAVE_SSE
-SIMD_CFLAGS = -msse -msse2
-else
-SIMD_CFLAGS =
-endif
-
 bin_PROGRAMS = odr-dabmod
 
 FFT_DIR=lib/kiss_fft129
@@ -71,7 +65,7 @@ FFT_FLG=
 endif
 
 odr_dabmod_CPPFLAGS = -Wall -Isrc \
-					  $(FFT_INC) $(FFT_FLG) $(SIMD_CFLAGS) $(GITVERSION_FLAGS)
+					  $(FFT_INC) $(FFT_FLG) $(GITVERSION_FLAGS)
 odr_dabmod_LDADD    = $(FFT_LDADD)
 odr_dabmod_SOURCES  = src/DabMod.cpp \
 					  src/PcDebug.h \
