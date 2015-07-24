@@ -592,7 +592,13 @@ int launch_modulator(int argc, char* argv[])
     }
 
 
-    etiLog.level(info) << "Starting up";
+    etiLog.level(info) << "Starting up version " <<
+#if defined(GITVERSION)
+            GITVERSION;
+#else
+            VERSION;
+#endif
+
 
     // When using the FIRFilter, increase the modulator offset pipelining delay
     // by the correct amount
