@@ -1,6 +1,11 @@
 This file contains information about the changes done to
 the ODR-DabMod in this repository
 
+2015-07-24: Matthias P. Braendli <matthias@mpb.li>
+	(v0.5.3)
+	* odr-dabmod:
+		Replace zmq.hpp to support version 4.1.x
+
 2015-04-10: Matthias P. Braendli <matthias@mpb.li>
 	(v0.5.2)
 	* odr-dabmod:
