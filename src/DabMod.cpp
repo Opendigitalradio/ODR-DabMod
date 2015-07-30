@@ -522,8 +522,8 @@ int launch_modulator(int argc, char* argv[])
             }
 
 
-            outputuhd_conf.refclk_src = pt.get("uhdoutput.refclk_source", "int");
-            outputuhd_conf.pps_src = pt.get("uhdoutput.pps_source", "int");
+            outputuhd_conf.refclk_src = pt.get("uhdoutput.refclk_source", "internal");
+            outputuhd_conf.pps_src = pt.get("uhdoutput.pps_source", "none");
             outputuhd_conf.pps_polarity = pt.get("uhdoutput.pps_polarity", "pos");
 
             std::string behave = pt.get("uhdoutput.behaviour_refclk_lock_lost", "ignore");
