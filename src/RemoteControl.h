@@ -306,9 +306,9 @@ class RemoteControllerZmq : public BaseRemoteController {
 
         RemoteControllerZmq(std::string endpoint)
             : m_running(true), m_fault(false),
-            m_child_thread(&RemoteControllerZmq::process, this),
             m_zmqContext(1),
-            m_endpoint(endpoint) { }
+            m_endpoint(endpoint),
+            m_child_thread(&RemoteControllerZmq::process, this) { }
 
         ~RemoteControllerZmq() {
             m_running = false;
@@ -330,9 +330,9 @@ class RemoteControllerZmq : public BaseRemoteController {
     private:
         void restart_thread();
 
-        void recv_all(zmq::socket_t* pSocket, std::vector<std::string> &message);
-        void send_ok_reply(zmq::socket_t *pSocket);
-        void send_fail_reply(zmq::socket_t *pSocket, const std::string &error);
+        void recv_all(zmq::socket_t &pSocket, std::vector<std::string> &message);
+        void send_ok_reply(zmq::socket_t &pSocket);
+        void send_fail_reply(zmq::socket_t &pSocket, const std::string &error);
         void process();
 
 
@@ -360,19 +360,37 @@ class RemoteControllerZmq : public BaseRemoteController {
             return controllable->set_parameter(param, value);
         }
 
+        std::list< std::vector<std::string> >
+            get_param_list_values_(std::string name) {
+            RemoteControllable* controllable = get_controllable_(name);
+
+            std::list< std::vector<std::string> > allparams;
+            std::list<std::string> params = controllable->get_supported_parameters();
+            for (std::list<std::string>::iterator it = params.begin();
+                    it != params.end(); ++it) {
+                std::vector<std::string> item;
+                item.push_back(*it);
+                item.push_back(controllable->get_parameter(*it));
+
+                allparams.push_back(item);
+            }
+            return allparams;
+        }
+
+
         bool m_running;
 
         /* This is set to true if a fault occurred */
         bool m_fault;
         boost::thread m_restarter_thread;
 
-        boost::thread m_child_thread;
+        zmq::context_t m_zmqContext;
 
         /* This controller commands the controllables in the cohort */
         std::list<RemoteControllable*> m_cohort;
 
-        zmq::context_t m_zmqContext;
         std::string m_endpoint;
+        boost::thread m_child_thread;
 };
 #endif
 
