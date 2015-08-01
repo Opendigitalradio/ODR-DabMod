@@ -57,7 +57,6 @@ EtiReader::EtiReader(
         unsigned tist_delay_stages,
         RemoteControllers* rcs) :
     state(EtiReaderStateSync),
-    myFicSource(NULL),
     myTimestampDecoder(tist_offset_s, tist_delay_stages)
 {
     PDEBUG("EtiReader::EtiReader()\n");
@@ -68,17 +67,7 @@ EtiReader::EtiReader(
     eti_fc_valid = false;
 }
 
-EtiReader::~EtiReader()
-{
-    PDEBUG("EtiReader::~EtiReader()\n");
-
-//    if (myFicSource != NULL) {
-//        delete myFicSource;
-//    }
-}
-
-
-FicSource* EtiReader::getFic()
+std::shared_ptr<FicSource>& EtiReader::getFic()
 {
     return myFicSource;
 }
@@ -169,8 +158,8 @@ int EtiReader::process(const Buffer* dataIn)
             if (!eti_fc.FICF) {
                 throw std::runtime_error("FIC must be present to modulate!");
             }
-            if (myFicSource == NULL) {
-                myFicSource = new FicSource(eti_fc);
+            if (not myFicSource) {
+                myFicSource = make_shared<FicSource>(eti_fc);
             }
             break;
         case EtiReaderStateNst:

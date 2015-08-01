@@ -149,16 +149,12 @@ void RemoteControllerTelnet::dispatch_command(tcp::socket& socket, string comman
         stringstream ss;
 
         if (cmd.size() == 1) {
-            for (list<RemoteControllable*>::iterator it = m_cohort.begin();
-                    it != m_cohort.end(); ++it) {
-                ss << (*it)->get_rc_name() << endl;
+            for (auto &controllable : m_cohort) {
+                ss << controllable->get_rc_name() << endl;
 
-                list< vector<string> >::iterator param;
-                list< vector<string> > params = (*it)->get_parameter_descriptions();
-                for (param = params.begin();
-                        param != params.end();
-                        ++param) {
-                    ss << "\t" << (*param)[0] << " : " << (*param)[1] << endl;
+                list< vector<string> > params = controllable->get_parameter_descriptions();
+                for (auto &param : params) {
+                    ss << "\t" << param[0] << " : " << param[1] << endl;
                 }
             }
         }
@@ -173,9 +169,8 @@ void RemoteControllerTelnet::dispatch_command(tcp::socket& socket, string comman
             try {
                 stringstream ss;
                 list< vector<string> > r = get_param_list_values_(cmd[1]);
-                for (list< vector<string> >::iterator it = r.begin();
-                        it != r.end(); ++it) {
-                    ss << (*it)[0] << ": " << (*it)[1] << endl;
+                for (auto &param_val : r) {
+                    ss << param_val[0] << ": " << param_val[1] << endl;
                 }
                 reply(socket, ss.str());
 
@@ -332,10 +327,9 @@ void RemoteControllerZmq::process()
                 }
                 else if (msg.size() == 1 && command == "list") {
                     size_t cohort_size = m_cohort.size();
-                    for (list<RemoteControllable*>::iterator it = m_cohort.begin();
-                            it != m_cohort.end(); ++it) {
+                    for (auto &controllable : m_cohort) {
                         std::stringstream ss;
-                        ss << (*it)->get_rc_name();
+                        ss << controllable->get_rc_name();
 
                         std::string msg_s = ss.str();
 
@@ -351,11 +345,9 @@ void RemoteControllerZmq::process()
                     try {
                         list< vector<string> > r = get_param_list_values_(module);
                         size_t r_size = r.size();
-                        for (list< vector<string> >::iterator it = r.begin();
-                                it != r.end(); ++it) {
-
+                        for (auto &param_val : r) {
                             std::stringstream ss;
-                            ss << (*it)[0] << ": " << (*it)[1] << endl;
+                            ss << param_val[0] << ": " << param_val[1] << endl;
                             zmq::message_t msg(ss.str().size());
                             memcpy(msg.data(), ss.str().data(), ss.str().size());
 

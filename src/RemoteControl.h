@@ -102,20 +102,18 @@ class RemoteControllers {
         }
 
         void add_controllable(RemoteControllable *rc) {
-            for (std::list<BaseRemoteController*>::iterator it = m_controllers.begin();
-                    it != m_controllers.end(); ++it) {
-                (*it)->enrol(rc);
+            for (auto &controller : m_controllers) {
+                controller->enrol(rc);
             }
         }
 
         void check_faults() {
-            for (std::list<BaseRemoteController*>::iterator it = m_controllers.begin();
-                    it != m_controllers.end(); ++it) {
-                if ((*it)->fault_detected())
+            for (auto &controller : m_controllers) {
+                if (controller->fault_detected())
                 {
                     etiLog.level(warn) <<
                             "Detected Remote Control fault, restarting it";
-                    (*it)->restart();
+                    controller->restart();
                 }
             }
         }
@@ -147,9 +145,8 @@ class RemoteControllable {
         /* Return a list of possible parameters that can be set */
         virtual std::list<std::string> get_supported_parameters() const {
             std::list<std::string> parameterlist;
-            for (std::list< std::vector<std::string> >::const_iterator it = m_parameters.begin();
-                    it != m_parameters.end(); ++it) {
-                parameterlist.push_back((*it)[0]);
+            for (const auto& param : m_parameters) {
+                parameterlist.push_back(param[0]);
             }
             return parameterlist;
         }
@@ -255,12 +252,10 @@ class RemoteControllerTelnet : public BaseRemoteController {
             RemoteControllable* controllable = get_controllable_(name);
 
             std::list< std::vector<std::string> > allparams;
-            std::list<std::string> params = controllable->get_supported_parameters();
-            for (std::list<std::string>::iterator it = params.begin();
-                    it != params.end(); ++it) {
+            for (auto &param : controllable->get_supported_parameters()) {
                 std::vector<std::string> item;
-                item.push_back(*it);
-                item.push_back(controllable->get_parameter(*it));
+                item.push_back(param);
+                item.push_back(controllable->get_parameter(param));
 
                 allparams.push_back(item);
             }
@@ -363,15 +358,15 @@ class RemoteControllerZmq : public BaseRemoteController {
             RemoteControllable* controllable = get_controllable_(name);
 
             std::list< std::vector<std::string> > allparams;
-            std::list<std::string> params = controllable->get_supported_parameters();
-            for (std::list<std::string>::iterator it = params.begin();
-                    it != params.end(); ++it) {
+
+            for (auto &param : controllable->get_supported_parameters()) {
                 std::vector<std::string> item;
-                item.push_back(*it);
-                item.push_back(controllable->get_parameter(*it));
+                item.push_back(param);
+                item.push_back(controllable->get_parameter(param));
 
                 allparams.push_back(item);
             }
+
             return allparams;
         }
 

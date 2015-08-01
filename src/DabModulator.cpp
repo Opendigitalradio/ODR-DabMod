@@ -261,13 +261,11 @@ int DabModulator::process(Buffer* const dataIn, Buffer* dataOut)
 
         // Configuring puncturing encoder
         shared_ptr<PuncturingEncoder> ficPunc(new PuncturingEncoder());
-        std::vector<PuncturingRule*> rules = fic->get_rules();
-        std::vector<PuncturingRule*>::const_iterator rule;
-        for (rule = rules.begin(); rule != rules.end(); ++rule) {
+        for (const auto *rule : fic->get_rules()) {
             PDEBUG(" Adding rule:\n");
-            PDEBUG("  Length: %zu\n", (*rule)->length());
-            PDEBUG("  Pattern: 0x%x\n", (*rule)->pattern());
-            ficPunc->append_rule(*(*rule));
+            PDEBUG("  Length: %zu\n", rule->length());
+            PDEBUG("  Pattern: 0x%x\n", rule->pattern());
+            ficPunc->append_rule(*rule);
         }
         PDEBUG(" Adding tail\n");
         ficPunc->append_tail_rule(PuncturingRule(3, 0xcccccc));
@@ -282,16 +280,13 @@ int DabModulator::process(Buffer* const dataIn, Buffer* dataOut)
         ////////////////////////////////////////////////////////////////
         std::vector<shared_ptr<SubchannelSource> > subchannels =
             myEtiReader.getSubchannels();
-        std::vector<shared_ptr<SubchannelSource> >::const_iterator subchannel;
-        for (subchannel = subchannels.begin();
-                subchannel != subchannels.end();
-                ++subchannel) {
+        for (const auto& subchannel : subchannels) {
 
             ////////////////////////////////////////////////////////////
             // Data initialisation
             ////////////////////////////////////////////////////////////
-            size_t subchSizeIn = (*subchannel)->framesize();
-            size_t subchSizeOut = (*subchannel)->framesizeCu() * 8;
+            size_t subchSizeIn = subchannel->framesize();
+            size_t subchSizeOut = subchannel->framesizeCu() * 8;
 
             ////////////////////////////////////////////////////////////
             // Modules configuration
@@ -300,20 +295,20 @@ int DabModulator::process(Buffer* const dataIn, Buffer* dataOut)
             // Configuring subchannel
             PDEBUG("Subchannel:\n");
             PDEBUG(" Start address: %zu\n",
-                    (*subchannel)->startAddress());
+                    subchannel->startAddress());
             PDEBUG(" Framesize: %zu\n",
-                    (*subchannel)->framesize());
-            PDEBUG(" Bitrate: %zu\n", (*subchannel)->bitrate());
+                    subchannel->framesize());
+            PDEBUG(" Bitrate: %zu\n", subchannel->bitrate());
             PDEBUG(" Framesize CU: %zu\n",
-                    (*subchannel)->framesizeCu());
+                    subchannel->framesizeCu());
             PDEBUG(" Protection: %zu\n",
-                    (*subchannel)->protection());
+                    subchannel->protection());
             PDEBUG("  Form: %zu\n",
-                    (*subchannel)->protectionForm());
+                    subchannel->protectionForm());
             PDEBUG("  Level: %zu\n",
-                    (*subchannel)->protectionLevel());
+                    subchannel->protectionLevel());
             PDEBUG("  Option: %zu\n",
-                    (*subchannel)->protectionOption());
+                    subchannel->protectionOption());
 
             // Configuring prbs genrerator
             shared_ptr<PrbsGenerator> subchPrbs(
@@ -327,13 +322,11 @@ int DabModulator::process(Buffer* const dataIn, Buffer* dataOut)
             shared_ptr<PuncturingEncoder> subchPunc(
                     new PuncturingEncoder());
 
-            std::vector<PuncturingRule*> rules = (*subchannel)->get_rules();
-            std::vector<PuncturingRule*>::const_iterator rule;
-            for (rule = rules.begin(); rule != rules.end(); ++rule) {
+            for (const auto& rule : subchannel->get_rules()) {
                 PDEBUG(" Adding rule:\n");
-                PDEBUG("  Length: %zu\n", (*rule)->length());
-                PDEBUG("  Pattern: 0x%x\n", (*rule)->pattern());
-                subchPunc->append_rule(*(*rule));
+                PDEBUG("  Length: %zu\n", rule->length());
+                PDEBUG("  Pattern: 0x%x\n", rule->pattern());
+                subchPunc->append_rule(*rule);
             }
             PDEBUG(" Adding tail\n");
             subchPunc->append_tail_rule(PuncturingRule(3, 0xcccccc));
@@ -342,7 +335,7 @@ int DabModulator::process(Buffer* const dataIn, Buffer* dataOut)
             shared_ptr<TimeInterleaver> subchInterleaver(
                     new TimeInterleaver(subchSizeOut));
 
-            myFlowgraph->connect(*subchannel, subchPrbs);
+            myFlowgraph->connect(subchannel, subchPrbs);
             myFlowgraph->connect(subchPrbs, subchConv);
             myFlowgraph->connect(subchConv, subchPunc);
             myFlowgraph->connect(subchPunc, subchInterleaver);

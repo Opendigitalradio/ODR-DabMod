@@ -151,12 +151,11 @@ Flowgraph::~Flowgraph()
     if (myProcessTime) {
         fprintf(stderr, "Process time:\n");
 
-        std::vector<shared_ptr<Node> >::const_iterator node;
-        for (node = nodes.begin(); node != nodes.end(); ++node) {
+        for (const auto &node : nodes) {
             fprintf(stderr, "  %30s: %10u us (%2.2f %%)\n",
-                    (*node)->plugin()->name(),
-                    (unsigned)(*node)->processTime(),
-                    (*node)->processTime() * 100.0 / myProcessTime);
+                    node->plugin()->name(),
+                    (unsigned)node->processTime(),
+                    node->processTime() * 100.0 / myProcessTime);
         }
 
         fprintf(stderr, "  %30s: %10u us (100.00 %%)\n", "total",
@@ -215,19 +214,18 @@ bool Flowgraph::run()
 {
     PDEBUG("Flowgraph::run()\n");
 
-    std::vector<shared_ptr<Node> >::const_iterator node;
     timeval start, stop;
     time_t diff;
 
     gettimeofday(&start, NULL);
-    for (node = nodes.begin(); node != nodes.end(); ++node) {
-        int ret = (*node)->process();
+    for (const auto &node : nodes) {
+        int ret = node->process();
         PDEBUG(" ret: %i\n", ret);
         gettimeofday(&stop, NULL);
         diff = (stop.tv_sec - start.tv_sec) * 1000000 +
             stop.tv_usec - start.tv_usec;
         myProcessTime += diff;
-        (*node)->addProcessTime(diff);
+        node->addProcessTime(diff);
         start = stop;
         if (!ret) {
             return false;

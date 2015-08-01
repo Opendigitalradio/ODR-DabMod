@@ -51,11 +51,8 @@ public:
             double tist_offset_s,
             unsigned tist_delay_stages,
             RemoteControllers* rcs);
-    virtual ~EtiReader();
-    EtiReader(const EtiReader&);
-    EtiReader& operator=(const EtiReader&);
 
-    FicSource* getFic();
+    std::shared_ptr<FicSource>& getFic();
     unsigned getMode();
     unsigned getFp();
     const std::vector<std::shared_ptr<SubchannelSource> >& getSubchannels();
@@ -83,7 +80,7 @@ protected:
     eti_EOH eti_eoh;
     eti_EOF eti_eof;
     eti_TIST eti_tist;
-    FicSource* myFicSource;
+    std::shared_ptr<FicSource> myFicSource;
     std::vector<std::shared_ptr<SubchannelSource> > mySources;
     TimestampDecoder myTimestampDecoder;
 
