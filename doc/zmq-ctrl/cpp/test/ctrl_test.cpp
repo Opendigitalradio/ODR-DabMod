@@ -2,7 +2,7 @@
  * This is a test program for the zmq ctrl API of the odr-dabmod.
  *
  * Copyright (c) 2015 by Jörgen Scott (jorgen.scott@paneda.se)
- 
+ *
  * This file is part of CtrlTest.
  *
  * ODR-DabMod is free software: you can redistribute it and/or modify
@@ -18,7 +18,7 @@
  * You should have received a copy of the GNU General Public License
  * along with ODR-DabMod.  If not, see <http://www.gnu.org/licenses/>.
  **/
-#define BOOST_TEST_MODULE "C++ unit tests for odr-mod zmq ctrl"
+#define BOOST_TEST_MODULE "C++ unit tests for ODR-DabMod ZMQ Remote Control"
 #include <boost/test/unit_test.hpp>
 #include "OdrModCtrl.hpp"
 
@@ -30,13 +30,13 @@ struct TemplateVars
 	zmq::context_t context;
 	COdrModCtrl modCtrl;
 
-	// NOTE: Make sure the odr-dabmod is started before running the test and
+	// NOTE: Make sure odr-dabmod is started before running the test and
 	// that the zmq endpoint matches.
 	TemplateVars() : context(1), modCtrl(&context, "tcp://127.0.0.1:9400", 1000) {}
 	~TemplateVars() {}
 };
 
-// Note. The odr-mod do not validate parameters therefore there are no tests
+// Note. ODR-DabMod does not validate parameters therefore there are no tests
 // made for setting invalid parameters.
 BOOST_FIXTURE_TEST_SUITE(test_template1, TemplateVars)
 
