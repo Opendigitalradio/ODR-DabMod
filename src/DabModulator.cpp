@@ -26,7 +26,7 @@
  */
 
 #include <string>
-#include <boost/make_shared.hpp>
+#include <memory>
 
 #include "DabModulator.h"
 #include "PcDebug.h"
@@ -53,8 +53,6 @@
 #include "TimestampDecoder.h"
 #include "RemoteControl.h"
 #include "Log.h"
-
-using namespace boost;
 
 DabModulator::DabModulator(
         double tist_offset_s, unsigned tist_delay_stages,
@@ -143,6 +141,8 @@ void DabModulator::setMode(unsigned mode)
 
 int DabModulator::process(Buffer* const dataIn, Buffer* dataOut)
 {
+    using namespace std;
+
     PDEBUG("DabModulator::process(dataIn: %p, dataOut: %p)\n",
             dataIn, dataOut);
 

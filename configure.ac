@@ -47,6 +47,8 @@ AC_PROG_INSTALL
 AC_PROG_CPP
 AC_PROG_MKDIR_P
 
+AX_CXX_COMPILE_STDCXX_11(noext,mandatory)
+
 EXTRA=""
 AC_ARG_ENABLE([debug],
         [AS_HELP_STRING([--enable-debug], [Enable debugger symbols])],
@@ -94,8 +96,8 @@ AS_IF([test "x$enable_zeromq" = "xyes"],
         [AC_DEFINE(HAVE_ZEROMQ, [1], [Define if ZeroMQ is enabled]) ,
          AC_CHECK_LIB(zmq, zmq_init, ZMQ_LIBS="-lzmq" ,[AC_MSG_ERROR([ZeroMQ libzmq is required])])])
 AS_IF([test "x$enable_debug" = "xno"],
-        [OPTIM="-O2" DEBUG="" EXTRA="$EXTRA -DNDEBUG"],
-        [OPTIM="-O0" DEBUG="-ggdb" EXTRA="$EXTRA"])
+        [EXTRA="$EXTRA -DNDEBUG"],
+        [EXTRA="$EXTRA"])
 AS_IF([test "x$enable_prof" != "xno"],
         [EXTRA="$EXTRA -pg"])
 
@@ -114,8 +116,8 @@ AS_IF([test "x$enable_fftw" = "xyes"],
 
 AX_PTHREAD([], AC_MSG_ERROR([requires pthread]))
 
-AC_SUBST([CFLAGS], ["$OPTIM $DEBUG $EXTRA $FFTW_CFLAGS $PTHREAD_CFLAGS"])
-AC_SUBST([CXXFLAGS], ["$OPTIM $DEBUG $EXTRA $FFTW_CFLAGS $PTHREAD_CFLAGS"])
+AC_SUBST([CFLAGS], ["$EXTRA $FFTW_CFLAGS $PTHREAD_CFLAGS"])
+AC_SUBST([CXXFLAGS], ["$CXXFLAGS $EXTRA $FFTW_CFLAGS $PTHREAD_CFLAGS"])
 AC_SUBST([LIBS], ["$FFTW_LIBS $PTHREAD_LIBS $ZMQ_LIBS"])
 
 # Checks for UHD.

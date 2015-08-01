@@ -46,8 +46,7 @@
 #include "FIRFilter.h"
 #include "RemoteControl.h"
 
-#include <boost/shared_ptr.hpp>
-#include <boost/make_shared.hpp>
+#include <memory>
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/ini_parser.hpp>
 #include <complex>
@@ -75,7 +74,7 @@
 
 typedef std::complex<float> complexf;
 
-using namespace boost;
+using namespace std;
 
 volatile sig_atomic_t running = 1;
 

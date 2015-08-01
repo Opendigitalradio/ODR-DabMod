@@ -26,7 +26,7 @@
 
 #include "Flowgraph.h"
 #include "PcDebug.h"
-
+#include <memory>
 
 #if HAVE_DECL__MM_MALLOC
 #   include <mm_malloc.h>
@@ -43,7 +43,7 @@
 #include <sys/time.h>
 #endif
 
-using namespace boost;
+using namespace std;
 
 typedef std::vector<shared_ptr<Node> >::iterator NodeIterator;
 typedef std::vector<shared_ptr<Edge> >::iterator EdgeIterator;

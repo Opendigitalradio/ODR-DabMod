@@ -49,8 +49,8 @@ DESCRIPTION:
 #include <uhd/usrp/multi_usrp.hpp>
 #include <boost/thread/thread.hpp>
 #include <boost/thread/barrier.hpp>
-#include <boost/shared_ptr.hpp>
 #include <list>
+#include <memory>
 #include <string>
 
 #include "Log.h"
@@ -127,7 +127,7 @@ struct UHDWorkerData {
     bool muting;
 
     // A barrier to synchronise the two threads
-    boost::shared_ptr<boost::barrier> sync_barrier;
+    std::shared_ptr<boost::barrier> sync_barrier;
 
     // What to do when the reference clock PLL loses lock
     refclk_lock_loss_behaviour_t refclk_lock_loss_behaviour;
@@ -247,7 +247,7 @@ class OutputUHD: public ModOutput, public RemoteControllable {
         EtiReader *myEtiReader;
         OutputUHDConfig myConf;
         uhd::usrp::multi_usrp::sptr myUsrp;
-        boost::shared_ptr<boost::barrier> mySyncBarrier;
+        std::shared_ptr<boost::barrier> mySyncBarrier;
         UHDWorker worker;
         bool first_run;
         bool gps_fix_verified;
@@ -281,7 +281,7 @@ class OutputUHD: public ModOutput, public RemoteControllable {
         static const int initial_gps_fix_wait = 180;
 
         // Interval for checking the GPS at runtime
-        static const double gps_fix_check_interval = 10.0; // seconds
+        static constexpr double gps_fix_check_interval = 10.0; // seconds
 
         void check_gps();
 

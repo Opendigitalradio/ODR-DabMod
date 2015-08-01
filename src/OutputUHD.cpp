@@ -46,7 +46,6 @@
 #include <errno.h>
 #include <unistd.h>
 
-using namespace boost;
 using namespace std;
 
 typedef std::complex<float> complexf;
@@ -226,7 +225,7 @@ OutputUHD::OutputUHD(
 
     SetDelayBuffer(myConf.dabMode);
 
-    shared_ptr<barrier> b(new barrier(2));
+    auto b = std::make_shared<boost::barrier>(2);
     mySyncBarrier = b;
     uwd.sync_barrier = b;
 

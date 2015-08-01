@@ -35,8 +35,7 @@
 
 #include <iostream>
 #include <fstream>
-
-#include <boost/make_shared.hpp>
+#include <memory>
 
 #ifdef __AVX__
 #   include <immintrin.h>
@@ -60,10 +59,10 @@ void FIRFilterWorker::process(struct FIRFilterWorkerData *fwd)
     // the incoming buffer
 
     while(running) {
-        boost::shared_ptr<Buffer> dataIn;
+        std::shared_ptr<Buffer> dataIn;
         fwd->input_queue.wait_and_pop(dataIn);
 
-        boost::shared_ptr<Buffer> dataOut = boost::make_shared<Buffer>();
+        std::shared_ptr<Buffer> dataOut = make_shared<Buffer>();
         dataOut->setLength(dataIn->getLength());
 
         PDEBUG("FIRFilterWorker: dataIn->getLength() %zu\n", dataIn->getLength());
@@ -393,13 +392,13 @@ int FIRFilter::process(Buffer* const dataIn, Buffer* dataOut)
     // This thread creates the dataIn buffer, and deletes
     // the outgoing buffer
 
-    boost::shared_ptr<Buffer> inbuffer =
-        boost::make_shared<Buffer>(dataIn->getLength(), dataIn->getData());
+    std::shared_ptr<Buffer> inbuffer =
+        make_shared<Buffer>(dataIn->getLength(), dataIn->getData());
 
     firwd.input_queue.push(inbuffer);
 
     if (number_of_runs > 2) {
-        boost::shared_ptr<Buffer> outbuffer;
+        std::shared_ptr<Buffer> outbuffer;
         firwd.output_queue.wait_and_pop(outbuffer);
 
         dataOut->setData(outbuffer->getData(), outbuffer->getLength());

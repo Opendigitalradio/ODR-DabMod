@@ -39,9 +39,9 @@
 #include "TimestampDecoder.h"
 
 #include <vector>
+#include <memory>
 #include <stdint.h>
 #include <sys/types.h>
-#include <boost/shared_ptr.hpp>
 
 
 class EtiReader
@@ -58,7 +58,7 @@ public:
     FicSource* getFic();
     unsigned getMode();
     unsigned getFp();
-    const std::vector<boost::shared_ptr<SubchannelSource> >& getSubchannels();
+    const std::vector<std::shared_ptr<SubchannelSource> >& getSubchannels();
     int process(const Buffer* dataIn);
 
     void calculateTimestamp(struct frame_timestamp& ts)
@@ -84,7 +84,7 @@ protected:
     eti_EOF eti_eof;
     eti_TIST eti_tist;
     FicSource* myFicSource;
-    std::vector<boost::shared_ptr<SubchannelSource> > mySources;
+    std::vector<std::shared_ptr<SubchannelSource> > mySources;
     TimestampDecoder myTimestampDecoder;
 
 private:

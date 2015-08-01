@@ -34,7 +34,7 @@
 
 #include <sys/types.h>
 #include <string>
-#include <boost/shared_ptr.hpp>
+#include <memory>
 
 #include "ModCodec.h"
 #include "EtiReader.h"

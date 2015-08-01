@@ -37,7 +37,6 @@
 #include <stdint.h>
 #include "zmq.hpp"
 #include <boost/thread/thread.hpp>
-#include <boost/make_shared.hpp>
 #include "porting.h"
 #include "InputReader.h"
 #include "PcDebug.h"
@@ -85,7 +84,7 @@ int InputZeroMQReader::GetNextFrame(void* buffer)
 {
     const size_t framesize = 6144;
 
-    boost::shared_ptr<std::vector<uint8_t> > incoming;
+    std::shared_ptr<std::vector<uint8_t> > incoming;
 
     /* Do some prebuffering because reads will happen in bursts
      * (4 ETI frames in TM1) and we should make sure that
@@ -168,8 +167,8 @@ void InputZeroMQWorker::RecvProcess(struct InputZeroMQThreadData* workerdata)
                         // TODO error handling
                     }
                     else {
-                        boost::shared_ptr<std::vector<uint8_t> > buf =
-                            boost::make_shared<std::vector<uint8_t> >(6144, 0x55);
+                        std::shared_ptr<std::vector<uint8_t> > buf =
+                            std::make_shared<std::vector<uint8_t> >(6144, 0x55);
 
                         const int framesize = dab_msg->buflen[i];
 

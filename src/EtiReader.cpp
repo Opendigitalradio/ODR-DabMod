@@ -30,11 +30,12 @@
 #include "TimestampDecoder.h"
 
 #include <stdexcept>
+#include <memory>
 #include <sys/types.h>
 #include <string.h>
 #include <arpa/inet.h>
 
-using namespace boost;
+using namespace std;
 
 enum ETI_READER_STATE {
     EtiReaderStateNbFrame,
@@ -101,7 +102,7 @@ unsigned EtiReader::getFp()
 }
 
 
-const std::vector<boost::shared_ptr<SubchannelSource> >& EtiReader::getSubchannels()
+const std::vector<std::shared_ptr<SubchannelSource> >& EtiReader::getSubchannels()
 {
     return mySources;
 }

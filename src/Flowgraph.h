@@ -34,24 +34,23 @@
 #include "porting.h"
 #include "ModPlugin.h"
 
-
+#include <memory>
 #include <sys/types.h>
 #include <vector>
-#include <boost/shared_ptr.hpp>
 
 
 class Node
 {
 public:
-    Node(boost::shared_ptr<ModPlugin> plugin);
+    Node(std::shared_ptr<ModPlugin> plugin);
     ~Node();
     Node(const Node&);
     Node& operator=(const Node&);
 
-    boost::shared_ptr<ModPlugin> plugin() { return myPlugin; }
+    std::shared_ptr<ModPlugin> plugin() { return myPlugin; }
 
-    std::vector<boost::shared_ptr<Buffer> > myInputBuffers;
-    std::vector<boost::shared_ptr<Buffer> > myOutputBuffers;
+    std::vector<std::shared_ptr<Buffer> > myInputBuffers;
+    std::vector<std::shared_ptr<Buffer> > myOutputBuffers;
 
     int process();
     time_t processTime() { return myProcessTime; }
@@ -60,7 +59,7 @@ public:
     }
 
 protected:
-    boost::shared_ptr<ModPlugin> myPlugin;
+    std::shared_ptr<ModPlugin> myPlugin;
     time_t myProcessTime;
 };
 
@@ -68,15 +67,15 @@ protected:
 class Edge
 {
 public:
-    Edge(boost::shared_ptr<Node>& src, boost::shared_ptr<Node>& dst);
+    Edge(std::shared_ptr<Node>& src, std::shared_ptr<Node>& dst);
     ~Edge();
     Edge(const Edge&);
     Edge& operator=(const Edge&);
 
 protected:
-    boost::shared_ptr<Node> mySrcNode;
-    boost::shared_ptr<Node> myDstNode;
-    boost::shared_ptr<Buffer> myBuffer;
+    std::shared_ptr<Node> mySrcNode;
+    std::shared_ptr<Node> myDstNode;
+    std::shared_ptr<Buffer> myBuffer;
 };
 
 
@@ -88,13 +87,13 @@ public:
     Flowgraph(const Flowgraph&);
     Flowgraph& operator=(const Flowgraph&);
 
-    void connect(boost::shared_ptr<ModPlugin> input,
-                 boost::shared_ptr<ModPlugin> output);
+    void connect(std::shared_ptr<ModPlugin> input,
+                 std::shared_ptr<ModPlugin> output);
     bool run();
 
 protected:
-    std::vector<boost::shared_ptr<Node> > nodes;
-    std::vector<boost::shared_ptr<Edge> > edges;
+    std::vector<std::shared_ptr<Node> > nodes;
+    std::vector<std::shared_ptr<Edge> > edges;
     time_t myProcessTime;
 };
 
