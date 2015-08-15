@@ -150,8 +150,6 @@ struct InputZeroMQThreadData
     ThreadsafeQueue<std::shared_ptr<std::vector<uint8_t> > > *in_messages;
     std::string uri;
     unsigned max_queued_frames;
-
-    bool running;
 };
 
 class InputZeroMQWorker
@@ -164,10 +162,13 @@ class InputZeroMQWorker
 
         void Start(struct InputZeroMQThreadData* workerdata);
         void Stop();
+
+        bool is_running(void) { return running; }
     private:
+        bool running;
+
         void RecvProcess(struct InputZeroMQThreadData* workerdata);
 
-        bool running;
         zmq::context_t zmqcontext; // is thread-safe
         boost::thread recv_thread;
 
@@ -186,7 +187,6 @@ class InputZeroMQReader : public InputReader
         InputZeroMQReader()
         {
             workerdata_.in_messages = &in_messages_;
-            workerdata_.running     = false;
         }
 
         ~InputZeroMQReader()

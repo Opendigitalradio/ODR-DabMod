@@ -84,6 +84,10 @@ int InputZeroMQReader::GetNextFrame(void* buffer)
 {
     const size_t framesize = 6144;
 
+    if (not worker_.is_running()) {
+        return 0;
+    }
+
     std::shared_ptr<std::vector<uint8_t> > incoming;
 
     /* Do some prebuffering because reads will happen in bursts
@@ -98,7 +102,7 @@ int InputZeroMQReader::GetNextFrame(void* buffer)
         in_messages_.wait_and_pop(incoming);
     }
 
-    if (! workerdata_.running) {
+    if (not worker_.is_running()) {
         throw zmq_input_overflow();
     }
 
@@ -217,14 +221,13 @@ void InputZeroMQWorker::RecvProcess(struct InputZeroMQThreadData* workerdata)
 
     subscriber.close();
 
-    workerdata->running = false;
+    running = false;
     workerdata->in_messages->notify();
 }
 
 void InputZeroMQWorker::Start(struct InputZeroMQThreadData* workerdata)
 {
     running = true;
-    workerdata->running = true;
     recv_thread = boost::thread(&InputZeroMQWorker::RecvProcess, this, workerdata);
 }
 
