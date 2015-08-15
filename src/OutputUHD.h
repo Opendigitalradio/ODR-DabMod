@@ -123,6 +123,8 @@ struct UHDWorkerData {
     // If we want to check for the gps_timelock sensor
     bool check_gpsfix;
 
+    bool gpsdo_is_ettus; // Set to false in case the ODR LEA-M8F board is used
+
     // muting set by remote control
     bool muting;
 

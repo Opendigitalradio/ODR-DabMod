@@ -63,7 +63,7 @@ void uhd_msg_handler(uhd::msg::type_t type, const std::string &msg)
     }
 }
 
-// Check function for GPS TIMELOCK sensor
+// Check function for GPS TIMELOCK sensor from the ODR LEA-M8F board GPSDO
 bool check_gps_timelock(uhd::usrp::multi_usrp::sptr usrp)
 {
     try {
@@ -79,6 +79,26 @@ bool check_gps_timelock(uhd::usrp::multi_usrp::sptr usrp)
     }
     catch (uhd::lookup_error &e) {
         etiLog.level(warn) << "OutputUHD: no gps_timelock sensor";
+        return false;
+    }
+}
+
+// Check function for GPS LOCKED sensor from the Ettus GPSDO
+bool check_gps_locked(uhd::usrp::multi_usrp::sptr usrp)
+{
+    try {
+        uhd::sensor_value_t sensor_value(
+                usrp->get_mboard_sensor("gps_locked", 0));
+        if (not sensor_value.to_bool()) {
+            etiLog.level(warn) << "OutputUHD: gps_locked " <<
+                sensor_value.to_pp_string();
+            return false;
+        }
+
+        return true;
+    }
+    catch (uhd::lookup_error &e) {
+        etiLog.level(warn) << "OutputUHD: no gps_locked sensor";
         return false;
     }
 }
@@ -162,7 +182,12 @@ OutputUHD::OutputUHD(
 
     MDEBUG("OutputUHD:Setting REFCLK and PPS input...\n");
 
-    myUsrp->set_clock_source(myConf.refclk_src);
+    if (myConf.refclk_src == "gpsdo-ettus") {
+        myUsrp->set_clock_source("gpsdo");
+    }
+    else {
+        myUsrp->set_clock_source(myConf.refclk_src);
+    }
     myUsrp->set_time_source(myConf.pps_src);
 
     if (myConf.subDevice != "") {
@@ -209,6 +234,7 @@ OutputUHD::OutputUHD(
     uwd.sourceContainsTimestamp = false;
     uwd.muteNoTimestamps = myConf.muteNoTimestamps;
     uwd.refclk_lock_loss_behaviour = myConf.refclk_lock_loss_behaviour;
+    uwd.gpsdo_is_ettus = false;
 
     if (myConf.refclk_src == "internal") {
         uwd.check_refclk_loss = false;
@@ -217,6 +243,11 @@ OutputUHD::OutputUHD(
     else if (myConf.refclk_src == "gpsdo") {
         uwd.check_refclk_loss = true;
         uwd.check_gpsfix = (myConf.maxGPSHoldoverTime != 0);
+    }
+    else if (myConf.refclk_src == "gpsdo-ettus") {
+        uwd.check_refclk_loss = true;
+        uwd.check_gpsfix = (myConf.maxGPSHoldoverTime != 0);
+        uwd.gpsdo_is_ettus = true;
     }
     else {
         uwd.check_refclk_loss = true;
@@ -568,9 +599,14 @@ void OutputUHD::check_gps()
         else {
             // Checking the sensor here takes too much
             // time, it has to be done in a separate thread.
-            gps_fix_pt = boost::packaged_task<bool>(
-                    boost::bind(check_gps_timelock, myUsrp) );
-
+            if (uwd.gpsdo_is_ettus) {
+                gps_fix_pt = boost::packaged_task<bool>(
+                        boost::bind(check_gps_locked, myUsrp) );
+            }
+            else {
+                gps_fix_pt = boost::packaged_task<bool>(
+                        boost::bind(check_gps_timelock, myUsrp) );
+            }
             gps_fix_future = gps_fix_pt.get_future();
 
             gps_fix_task = boost::thread(boost::move(gps_fix_pt));
