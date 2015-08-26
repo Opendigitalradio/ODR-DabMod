@@ -322,6 +322,7 @@ int OutputUHD::process(Buffer* dataIn, Buffer* dataOut)
             }
         }
         else {
+            set_usrp_time();
             gps_fix_verified = true;
             myMuting = false;
         }
