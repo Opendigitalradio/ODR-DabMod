@@ -70,7 +70,7 @@ DabModulator::DabModulator(
     myGainMode(gainMode),
     myDigGain(digGain),
     myNormalise(normalise),
-    myEtiReader(EtiReader(tist_offset_s, tist_delay_stages, rcs)),
+    myEtiReader(tist_offset_s, tist_delay_stages, rcs),
     myFlowgraph(NULL),
     myFilterTapsFilename(filterTapsFilename),
     myTiiConfig(tiiConfig),

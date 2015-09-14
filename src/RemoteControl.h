@@ -79,6 +79,9 @@ class BaseRemoteController {
         /* Add a new controllable under this controller's command */
         virtual void enrol(RemoteControllable* controllable) = 0;
 
+        /* Remove a controllable under this controller's command */
+        virtual void disengage(RemoteControllable* controllable) = 0;
+
         /* When this returns one, the remote controller cannot be
          * used anymore, and must be restarted by dabmux
          */
@@ -107,6 +110,12 @@ class RemoteControllers {
             }
         }
 
+        void remove_controllable(RemoteControllable *rc) {
+            for (auto &controller : m_controllers) {
+                controller->disengage(rc);
+            }
+        }
+
         void check_faults() {
             for (auto &controller : m_controllers) {
                 if (controller->fault_detected())
@@ -127,9 +136,15 @@ class RemoteControllers {
 class RemoteControllable {
     public:
 
-        RemoteControllable(std::string name) : m_name(name) {}
+        RemoteControllable(std::string name) :
+            m_rcs_enrolled_at(nullptr),
+            m_name(name) {}
 
-        virtual ~RemoteControllable() {}
+        virtual ~RemoteControllable() {
+            if (m_rcs_enrolled_at) {
+                m_rcs_enrolled_at->remove_controllable(this);
+            }
+        }
 
         /* return a short name used to identify the controllable.
          * It might be used in the commands the user has to type, so keep
@@ -139,6 +154,11 @@ class RemoteControllable {
 
         /* Tell the controllable to enrol at the given controller */
         virtual void enrol_at(RemoteControllers& controllers) {
+            if (m_rcs_enrolled_at) {
+                throw std::runtime_error("This controllable is already enrolled");
+            }
+
+            m_rcs_enrolled_at = &controllers;
             controllers.add_controllable(this);
         }
 
@@ -165,8 +185,12 @@ class RemoteControllable {
         virtual const std::string get_parameter(const std::string& parameter) const = 0;
 
     protected:
+        RemoteControllers* m_rcs_enrolled_at;
         std::string m_name;
         std::list< std::vector<std::string> > m_parameters;
+
+        RemoteControllable(const RemoteControllable& other) = delete;
+        RemoteControllable& operator=(const RemoteControllable& other) = delete;
 };
 
 /* Implements a Remote controller based on a simple telnet CLI
@@ -195,6 +219,10 @@ class RemoteControllerTelnet : public BaseRemoteController {
 
         void enrol(RemoteControllable* controllable) {
             m_cohort.push_back(controllable);
+        }
+
+        void disengage(RemoteControllable* controllable) {
+            m_cohort.remove(controllable);
         }
 
         virtual bool fault_detected() { return m_fault; }
@@ -316,6 +344,10 @@ class RemoteControllerZmq : public BaseRemoteController {
             m_cohort.push_back(controllable);
         }
 
+        void disengage(RemoteControllable* controllable) {
+            m_cohort.remove(controllable);
+        }
+
         virtual bool fault_detected() { return m_fault; }
 
         virtual void restart();
@@ -392,6 +424,7 @@ class RemoteControllerZmq : public BaseRemoteController {
 class RemoteControllerDummy : public BaseRemoteController {
     public:
         void enrol(RemoteControllable*) {}
+        void disengage(RemoteControllable*) {}
 
         bool fault_detected() { return false; }
 
