@@ -1,11 +1,15 @@
 OVERVIEW
 ========
-ODR-DabMod is a DAB (Digital Audio Broadcasting) modulator compliant
-to ETSI EN 300 401.
+ODR-DabMod is a *DAB (Digital Audio Broadcasting)* modulator compliant
+to ETSI EN 300 401. It is the continuation of the work started by which was
+developed by the Communications Research Center Canada on CRC-DabMux, and
+is now pursued in the
+[Opendigitalradio project](http://opendigitalradio.org).
 
-ODR-DabMod is a fork of CRC-DabMod, which was developed by the
-Communications Research Center Canada and whose development has ceased.
-The Opendigitalradio association now continues this project.
+
+ODR-DabMux is part of the ODR-mmbTools tool set. More information about the
+ODR-mmbTools is available in the *guide*, available on the
+[Opendigitalradio mmbTools page](http://www.opendigitalradio.org/mmbtools).
 
 Short list of features:
 
@@ -18,8 +22,9 @@ Short list of features:
   - Tested for B200, B100, USRP2, USRP1
   - With WBX daughterboard (where appropriate)
 - Timestamping support required for SFN
+- GPSDO monitoring (both Ettus and ODR LEA-M8F board)
 - A FIR filter for improved spectrum mask
-- Improvements in logging (log to file, to syslog)
+- Logging: log to file, to syslog
 - ETI sources: file (Raw, Framed and Streamed) and ZeroMQ
 - A Telnet and ZeroMQ remote-control that can be used to change
   some parameters during runtime
@@ -44,8 +49,9 @@ See the files LICENCE and COPYING
 
 CONTACT
 =======
-Matthias P. Braendli <matthias [at] mpb [dot] li>
-Pascal Charest <pascal [dot] charest [at] crc [dot] ca>
+Matthias P. Braendli *matthias [at] mpb [dot] li*
+
+Pascal Charest *pascal [dot] charest [at] crc [dot] ca*
 
 With thanks to other contributors listed in AUTHORS
 

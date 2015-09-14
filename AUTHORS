@@ -13,6 +13,8 @@ Matthias P. Braendli <matthias [at] mpb [dot] li>
     - ZeroMQ I/Q output
     - I/Q conversion to signed 8-bit
     - ARM support
+    - GPSDO monitoring on USRPs
+    - TII
 
 Jörgen Scott
     - ZeroMQ remote control
