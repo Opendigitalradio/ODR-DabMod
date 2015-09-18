@@ -152,7 +152,9 @@ class UHDWorker {
         }
 
         void stop() {
-            uwd->running = false;
+            if (uwd) {
+                uwd->running = false;
+            }
             uhd_thread.interrupt();
             uhd_thread.join();
         }
