@@ -76,6 +76,10 @@ typedef std::complex<float> complexf;
 
 using namespace std;
 
+// We need global lifetime for the RemoteControllers because
+// some destructors of long lived objects use it.
+RemoteControllers rcs;
+
 volatile sig_atomic_t running = 1;
 
 void signalHandler(int signalNb)
@@ -164,7 +168,6 @@ int launch_modulator(int argc, char* argv[])
     shared_ptr<FormatConverter> format_converter;
     shared_ptr<ModOutput> output;
 
-    RemoteControllers rcs;
     m.rcs = &rcs;
 
     bool run_again = true;
