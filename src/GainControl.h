@@ -45,7 +45,7 @@
 
 typedef std::complex<float> complexf;
 
-enum GainMode { GAIN_FIX, GAIN_MAX, GAIN_VAR };
+enum class GainMode { GAIN_FIX = 0, GAIN_MAX = 1, GAIN_VAR = 2 };
 
 class GainControl : public ModCodec, public RemoteControllable
 {
@@ -71,9 +71,9 @@ class GainControl : public ModCodec, public RemoteControllable
         virtual const std::string get_parameter(const std::string& parameter) const;
 
     protected:
-        size_t d_frameSize;
-        float& d_digGain;
-        float d_normalise;
+        size_t m_frameSize;
+        float& m_digGain;
+        float  m_normalise;
 #ifdef __SSE__
         __m128 (*computeGain)(const __m128* in, size_t sizeIn);
         __m128 static computeGainFix(const __m128* in, size_t sizeIn);

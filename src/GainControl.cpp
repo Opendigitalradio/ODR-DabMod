@@ -52,12 +52,12 @@ GainControl::GainControl(size_t framesize,
              ModFormat(framesize * sizeof(complexf))),
     RemoteControllable("gain"),
 #ifdef __SSE__
-    d_frameSize(framesize * sizeof(complexf) / sizeof(__m128)),
+    m_frameSize(framesize * sizeof(complexf) / sizeof(__m128)),
 #else // !__SSE__
-    d_frameSize(framesize),
+    m_frameSize(framesize),
 #endif
-    d_digGain(digGain),
-    d_normalise(normalise)
+    m_digGain(digGain),
+    m_normalise(normalise)
 {
     PDEBUG("GainControl::GainControl(%zu, %u) @ %p\n", framesize, mode, this);
 
@@ -65,15 +65,15 @@ GainControl::GainControl(size_t framesize,
     RC_ADD_PARAMETER(digital, "Digital Gain");
 
     switch(mode) {
-        case GAIN_FIX:
+        case GainMode::GAIN_FIX:
             PDEBUG("Gain mode: fix\n");
             computeGain = computeGainFix;
             break;
-        case GAIN_MAX:
+        case GainMode::GAIN_MAX:
             PDEBUG("Gain mode: max\n");
             computeGain = computeGainMax;
             break;
-        case GAIN_VAR:
+        case GainMode::GAIN_VAR:
             PDEBUG("Gain mode: var\n");
             computeGain = computeGainVar;
             break;
@@ -105,27 +105,27 @@ int GainControl::process(Buffer* const dataIn, Buffer* dataOut)
     size_t  sizeOut   = dataOut->getLength() / sizeof(__m128);
     __u128  gain128;
 
-    if ((sizeIn % d_frameSize) != 0) {
-        PDEBUG("%zu != %zu\n", sizeIn, d_frameSize);
+    if ((sizeIn % m_frameSize) != 0) {
+        PDEBUG("%zu != %zu\n", sizeIn, m_frameSize);
         throw std::runtime_error(
                 "GainControl::process input size not valid!");
     }
 
-    for (size_t i = 0; i < sizeIn; i += d_frameSize) {
-        gain128.m = computeGain(in, d_frameSize);
-        gain128.m = _mm_mul_ps(gain128.m, _mm_set1_ps(d_normalise * d_digGain));
+    for (size_t i = 0; i < sizeIn; i += m_frameSize) {
+        gain128.m = computeGain(in, m_frameSize);
+        gain128.m = _mm_mul_ps(gain128.m, _mm_set1_ps(m_normalise * m_digGain));
 
         PDEBUG("********** Gain: %10f **********\n", gain128.f[0]);
 
         ////////////////////////////////////////////////////////////////////////
         // Applying gain to output data
         ////////////////////////////////////////////////////////////////////////
-        for (size_t sample = 0; sample < d_frameSize; ++sample) {
+        for (size_t sample = 0; sample < m_frameSize; ++sample) {
             out[sample] = _mm_mul_ps(in[sample], gain128.m);
         }
 
-        in  += d_frameSize;
-        out += d_frameSize;
+        in  += m_frameSize;
+        out += m_frameSize;
     }
 #else // !__SSE__
     const complexf* in = reinterpret_cast<const complexf*>(dataIn->getData());
@@ -134,26 +134,26 @@ int GainControl::process(Buffer* const dataIn, Buffer* dataOut)
     size_t sizeOut = dataOut->getLength() / sizeof(complexf);
     float  gain;
 
-    if ((sizeIn % d_frameSize) != 0) {
-        PDEBUG("%zu != %zu\n", sizeIn, d_frameSize);
+    if ((sizeIn % m_frameSize) != 0) {
+        PDEBUG("%zu != %zu\n", sizeIn, m_frameSize);
         throw std::runtime_error(
                 "GainControl::process input size not valid!");
     }
 
-    for (size_t i = 0; i < sizeIn; i += d_frameSize) {
-        gain = d_normalise * d_digGain * computeGain(in, d_frameSize);
+    for (size_t i = 0; i < sizeIn; i += m_frameSize) {
+        gain = m_normalise * m_digGain * computeGain(in, m_frameSize);
 
         PDEBUG("********** Gain: %10f **********\n", gain);
 
         ////////////////////////////////////////////////////////////////////////
         // Applying gain to output data
         ////////////////////////////////////////////////////////////////////////
-        for (size_t sample = 0; sample < d_frameSize; ++sample) {
+        for (size_t sample = 0; sample < m_frameSize; ++sample) {
             out[sample] = in[sample] * gain;
         }
 
-        in  += d_frameSize;
-        out += d_frameSize;
+        in  += m_frameSize;
+        out += m_frameSize;
     }
 #endif // __SSE__
 
@@ -478,7 +478,7 @@ void GainControl::set_parameter(const string& parameter, const string& value)
     if (parameter == "digital") {
         float new_factor;
         ss >> new_factor;
-        d_digGain = new_factor;
+        m_digGain = new_factor;
     }
     else {
         stringstream ss;
@@ -492,7 +492,7 @@ const string GainControl::get_parameter(const string& parameter) const
 {
     stringstream ss;
     if (parameter == "digital") {
-        ss << std::fixed << d_digGain;
+        ss << std::fixed << m_digGain;
     }
     else {
         ss << "Parameter '" << parameter <<

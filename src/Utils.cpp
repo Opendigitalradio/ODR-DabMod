@@ -72,7 +72,10 @@ void printUsage(char* progName)
     fprintf(out, "-a gain:       Apply digital amplitude gain.\n");
     fprintf(out, "-c rate:       Set the DAC clock rate and enable Cic Equalisation.\n");
     fprintf(out, "-g:            Set computation gain mode: "
-            "%u FIX, %u MAX, %u VAR\n", GAIN_FIX, GAIN_MAX, GAIN_VAR);
+            "%u FIX, %u MAX, %u VAR\n",
+            (unsigned int)GainMode::GAIN_FIX,
+            (unsigned int)GainMode::GAIN_MAX,
+            (unsigned int)GainMode::GAIN_VAR);
     fprintf(out, "-h:            Print this help.\n");
     fprintf(out, "-l:            Loop file when reach end of file.\n");
     fprintf(out, "-m mode:       Set DAB mode: (0: auto, 1-4: force).\n");

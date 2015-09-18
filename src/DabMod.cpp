@@ -133,7 +133,7 @@ int launch_modulator(int argc, char* argv[])
     unsigned dabMode = 0;
     float digitalgain = 1.0f;
     float normalise = 1.0f;
-    GainMode gainMode = GAIN_VAR;
+    GainMode gainMode = GainMode::GAIN_VAR;
 
     tii_config_t tiiConfig;
 
