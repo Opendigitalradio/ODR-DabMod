@@ -57,7 +57,7 @@
 DabModulator::DabModulator(
         double& tist_offset_s, unsigned tist_delay_stages,
         RemoteControllers* rcs,
-        const tii_config_t& tiiConfig,
+        tii_config_t& tiiConfig,
         unsigned outputRate, unsigned clockRate,
         unsigned dabMode, GainMode gainMode,
         float& digGain, float normalise,
@@ -203,8 +203,8 @@ int DabModulator::process(Buffer* const dataIn, Buffer* dataOut)
             tii = make_shared<TII>(myDabMode, myTiiConfig);
             tii->enrol_at(*myRCs);
         }
-        catch (std::runtime_error& e) {
-            etiLog.level(error) << "Could not initialise TII, skipping!";
+        catch (TIIError& e) {
+            etiLog.level(error) << "Could not initialise TII: " << e.what();
         }
 
         shared_ptr<OfdmGenerator> cifOfdm(

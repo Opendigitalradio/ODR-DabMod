@@ -51,10 +51,18 @@ struct tii_config_t
     int pattern;
 };
 
+class TIIError : public std::runtime_error {
+    public:
+        TIIError(const char* msg) :
+            std::runtime_error(msg) {}
+        TIIError(const std::string& msg) :
+            std::runtime_error(msg) {}
+};
+
 class TII : public ModCodec, public RemoteControllable
 {
     public:
-        TII(unsigned int dabmode, const tii_config_t& tii_config);
+        TII(unsigned int dabmode, tii_config_t& tii_config);
         virtual ~TII();
 
         int process(Buffer* const dataIn, Buffer* dataOut);
@@ -80,9 +88,7 @@ class TII : public ModCodec, public RemoteControllable
         unsigned int m_dabmode;
 
         // Remote-controllable settings
-        bool         m_enable;
-        unsigned int m_comb;
-        unsigned int m_pattern;
+        tii_config_t& m_conf;
 
         // Internal flag when to insert TII
         bool m_insert;

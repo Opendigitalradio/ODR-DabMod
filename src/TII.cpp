@@ -106,13 +106,11 @@ const int pattern_tm1_2_4[][8] = { // {{{
     {1,1,1,0,1,0,0,0},
     {1,1,1,1,0,0,0,0} }; // }}}
 
-TII::TII(unsigned int dabmode, const tii_config_t& tii_config) :
+TII::TII(unsigned int dabmode, tii_config_t& tii_config) :
     ModCodec(ModFormat(0), ModFormat(0)),
     RemoteControllable("tii"),
     m_dabmode(dabmode),
-    m_enable(tii_config.enable),
-    m_comb(tii_config.comb),
-    m_pattern(tii_config.pattern),
+    m_conf(tii_config),
     m_insert(true)
 {
     PDEBUG("TII::TII(%u) @ %p\n", dabmode, this);
@@ -125,17 +123,15 @@ TII::TII(unsigned int dabmode, const tii_config_t& tii_config) :
         case 1:
             m_carriers = 1536;
 
-            if (not(0 <= m_pattern and m_pattern <= 69) ) {
-                throw std::runtime_error(
-                        "TII::TII pattern not valid!");
+            if (not(0 <= m_conf.pattern and m_conf.pattern <= 69) ) {
+                throw TIIError("TII::TII pattern not valid!");
             }
             break;
         case 2:
             m_carriers = 384;
 
-            if (not(0 <= m_pattern and m_pattern <= 69) ) {
-                throw std::runtime_error(
-                        "TII::TII pattern not valid!");
+            if (not(0 <= m_conf.pattern and m_conf.pattern <= 69) ) {
+                throw TIIError("TII::TII pattern not valid!");
             }
             break;
         /* unsupported
@@ -150,12 +146,11 @@ TII::TII(unsigned int dabmode, const tii_config_t& tii_config) :
             std::stringstream ss_exception;
             ss_exception <<
                     "TII::TII DAB mode " << m_dabmode << " not valid!";
-            throw std::runtime_error(ss_exception.str());
+            throw TIIError(ss_exception.str());
     }
 
-    if (not(0 <= m_comb and m_comb <= 23) ) {
-        throw std::runtime_error(
-                "TII::TII comb not valid!");
+    if (not(0 <= m_conf.comb and m_conf.comb <= 23) ) {
+        throw TIIError("TII::TII comb not valid!");
     }
 
     m_dataIn.clear();
@@ -176,7 +171,7 @@ const char* TII::name()
     // Calculate name on demand because comb and pattern are
     // modifiable through RC
     std::stringstream ss;
-    ss << "TII(comb:" << m_comb << ", pattern:" << m_pattern << ")";
+    ss << "TII(comb:" << m_conf.comb << ", pattern:" << m_conf.pattern << ")";
     m_name = ss.str();
 
     return m_name.c_str();
@@ -189,11 +184,10 @@ int TII::process(Buffer* const dataIn, Buffer* dataOut)
             dataIn, dataOut);
 
     if ((dataIn != NULL) && (dataIn->getLength() != 0)) {
-        throw std::runtime_error(
-                "TII::process input size not valid!");
+        throw TIIError("TII::process input size not valid!");
     }
 
-    if (m_enable and m_insert) {
+    if (m_conf.enable and m_insert) {
         boost::mutex::scoped_lock lock(m_dataIn_mutex);
         dataOut->setData(&m_dataIn[0], m_carriers * sizeof(complexf));
     }
@@ -212,8 +206,7 @@ void TII::enable_carrier(int k) {
     int ix = m_carriers/2 + k;
 
     if (ix < 0 or ix+1 >= (ssize_t)m_dataIn.size()) {
-        throw std::runtime_error(
-                "TII::enable_carrier invalid k!");
+        throw TIIError("TII::enable_carrier invalid k!");
     }
 
     // TODO power of the carrier ?
@@ -222,7 +215,7 @@ void TII::enable_carrier(int k) {
 }
 
 void TII::prepare_pattern() {
-    int comb = m_comb; // Convert from unsigned to signed
+    int comb = m_conf.comb; // Convert from unsigned to signed
 
     boost::mutex::scoped_lock lock(m_dataIn_mutex);
 
@@ -239,7 +232,7 @@ void TII::prepare_pattern() {
         for (int k = -768; k < -384; k++) {
             for (int b = 0; b < 8; b++) {
                 if (    k == -768 + 2 * comb + 48 * b and
-                        pattern_tm1_2_4[m_pattern][b]) {
+                        pattern_tm1_2_4[m_conf.pattern][b]) {
                     enable_carrier(k);
                 }
             }
@@ -248,7 +241,7 @@ void TII::prepare_pattern() {
         for (int k = -384; k < -0; k++) {
             for (int b = 0; b < 8; b++) {
                 if (    k == -384 + 2 * comb + 48 * b and
-                        pattern_tm1_2_4[m_pattern][b]) {
+                        pattern_tm1_2_4[m_conf.pattern][b]) {
                     enable_carrier(k);
                 }
             }
@@ -257,7 +250,7 @@ void TII::prepare_pattern() {
         for (int k = 1; k <= 384; k++) {
             for (int b = 0; b < 8; b++) {
                 if (    k == 1 + 2 * comb + 48 * b and
-                        pattern_tm1_2_4[m_pattern][b]) {
+                        pattern_tm1_2_4[m_conf.pattern][b]) {
                     enable_carrier(k);
                 }
             }
@@ -266,7 +259,7 @@ void TII::prepare_pattern() {
         for (int k = 384; k <= 768; k++) {
             for (int b = 0; b < 8; b++) {
                 if (    k == 385 + 2 * comb + 48 * b and
-                        pattern_tm1_2_4[m_pattern][b]) {
+                        pattern_tm1_2_4[m_conf.pattern][b]) {
                     enable_carrier(k);
                 }
             }
@@ -276,22 +269,21 @@ void TII::prepare_pattern() {
         for (int k = -192; k <= 192; k++) {
             for (int b = 0; b < 4; b++) {
                 if (    k == -192 + 2 * comb + 48 * b and
-                        pattern_tm1_2_4[m_pattern][b]) {
+                        pattern_tm1_2_4[m_conf.pattern][b]) {
                     enable_carrier(k);
                 }
             }
 
             for (int b = 4; b < 8; b++) {
                 if (    k == -191 + 2 * comb + 48 * b and
-                        pattern_tm1_2_4[m_pattern][b]) {
+                        pattern_tm1_2_4[m_conf.pattern][b]) {
                     enable_carrier(k);
                 }
             }
         }
     }
     else {
-        throw std::runtime_error(
-                "TII::TII DAB mode not valid!");
+        throw TIIError("TII::TII DAB mode not valid!");
     }
 }
 
@@ -302,32 +294,31 @@ void TII::set_parameter(const std::string& parameter, const std::string& value)
     ss.exceptions ( stringstream::failbit | stringstream::badbit );
 
     if (parameter == "enable") {
-        ss >> m_enable;
+        ss >> m_conf.enable;
     }
     else if (parameter == "pattern") {
         int new_pattern;
         ss >> new_pattern;
         if (    (m_dabmode == 1 or m_dabmode == 2) and
                 not(0 <= new_pattern and new_pattern <= 69) ) {
-            throw std::runtime_error(
-                    "TII pattern not valid!");
+            throw TIIError("TII pattern not valid!");
         }
-        m_pattern = new_pattern;
+        m_conf.pattern = new_pattern;
         prepare_pattern();
     }
     else if (parameter == "comb") {
         int new_comb;
         ss >> new_comb;
         if (not(0 <= new_comb and new_comb <= 23) ) {
-            throw std::runtime_error(
-                    "TII comb not valid!");
+            throw TIIError("TII comb not valid!");
         }
-        m_comb = new_comb;
+        m_conf.comb = new_comb;
         prepare_pattern();
     }
     else {
         stringstream ss;
-        ss << "Parameter '" << parameter << "' is not exported by controllable " << get_rc_name();
+        ss << "Parameter '" << parameter <<
+            "' is not exported by controllable " << get_rc_name();
         throw ParameterError(ss.str());
     }
 }
@@ -337,31 +328,19 @@ const std::string TII::get_parameter(const std::string& parameter) const
     using namespace std;
     stringstream ss;
     if (parameter == "enable") {
-        ss << (m_enable ? 1 : 0);
+        ss << (m_conf.enable ? 1 : 0);
     }
     else if (parameter == "pattern") {
-        ss << m_pattern;
+        ss << m_conf.pattern;
     }
     else if (parameter == "comb") {
-        ss << m_comb;
+        ss << m_conf.comb;
     }
     else {
-        ss << "Parameter '" << parameter << "' is not exported by controllable " << get_rc_name();
+        ss << "Parameter '" << parameter <<
+            "' is not exported by controllable " << get_rc_name();
         throw ParameterError(ss.str());
     }
     return ss.str();
 }
-
-
-#ifdef TII_TEST
-int main(int argc, char** argv)
-{
-    const unsigned int mode = 2;
-    const unsigned int comb = 4;
-    const unsigned int pattern = 16;
-    TII tii(mode, comb, pattern);
-
-    return 0;
-}
-#endif
 
