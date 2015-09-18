@@ -105,7 +105,7 @@ bool check_gps_locked(uhd::usrp::multi_usrp::sptr usrp)
 
 
 OutputUHD::OutputUHD(
-        const OutputUHDConfig& config) :
+        OutputUHDConfig& config) :
     ModOutput(ModFormat(1), ModFormat(0)),
     RemoteControllable("uhd"),
     myConf(config),
@@ -117,8 +117,8 @@ OutputUHD::OutputUHD(
     myDelayBuf(0)
 
 {
-    myMuting = true;     // is remote-controllable, and reset by the GPS fix check
-    myStaticDelayUs = 0; // is remote-controllable
+    myConf.muting = true;     // is remote-controllable, and reset by the GPS fix check
+    myConf.staticDelayUs = 0; // is remote-controllable
 
     // Variables needed for GPS fix check
     num_checks_without_gps_fix = 1;
@@ -304,7 +304,7 @@ int OutputUHD::process(Buffer* dataIn, Buffer* dataOut)
 {
     struct frame_timestamp ts;
 
-    uwd.muting = myMuting;
+    uwd.muting = myConf.muting;
 
 
     // On the first call, we must do some allocation and we must fill
@@ -318,13 +318,13 @@ int OutputUHD::process(Buffer* dataIn, Buffer* dataOut)
             if (num_checks_without_gps_fix == 0) {
                 set_usrp_time();
                 gps_fix_verified = true;
-                myMuting = false;
+                myConf.muting = false;
             }
         }
         else {
             set_usrp_time();
             gps_fix_verified = true;
-            myMuting = false;
+            myConf.muting = false;
         }
     }
     else if (first_run) {
@@ -408,7 +408,7 @@ int OutputUHD::process(Buffer* dataIn, Buffer* dataOut)
             myEtiReader->sourceContainsTimestamp();
 
         // calculate delay
-        uint32_t noSampleDelay = (myStaticDelayUs * (myConf.sampleRate / 1000)) / 1000;
+        uint32_t noSampleDelay = (myConf.staticDelayUs * (myConf.sampleRate / 1000)) / 1000;
         uint32_t noByteDelay = noSampleDelay * sizeof(complexf);
 
         uint8_t* pInData = (uint8_t*) dataIn->getData();
@@ -925,25 +925,25 @@ void OutputUHD::set_parameter(const string& parameter, const string& value)
         myConf.frequency = myUsrp->get_tx_freq();
     }
     else if (parameter == "muting") {
-        ss >> myMuting;
+        ss >> myConf.muting;
     }
     else if (parameter == "staticdelay") {
         int64_t adjust;
         ss >> adjust;
         if (adjust > (myTFDurationMs * 1000))
         { // reset static delay for values outside range
-            myStaticDelayUs = 0;
+            myConf.staticDelayUs = 0;
         }
         else
         { // the new adjust value is added to the existing delay and the result
             // is wrapped around at TF duration
-            int newStaticDelayUs = myStaticDelayUs + adjust;
+            int newStaticDelayUs = myConf.staticDelayUs + adjust;
             if (newStaticDelayUs > (myTFDurationMs * 1000))
-                myStaticDelayUs = newStaticDelayUs - (myTFDurationMs * 1000);
+                myConf.staticDelayUs = newStaticDelayUs - (myTFDurationMs * 1000);
             else if (newStaticDelayUs < 0)
-                myStaticDelayUs = newStaticDelayUs + (myTFDurationMs * 1000);
+                myConf.staticDelayUs = newStaticDelayUs + (myTFDurationMs * 1000);
             else
-                myStaticDelayUs = newStaticDelayUs;
+                myConf.staticDelayUs = newStaticDelayUs;
         }
     }
     else {
@@ -964,10 +964,10 @@ const string OutputUHD::get_parameter(const string& parameter) const
         ss << myConf.frequency;
     }
     else if (parameter == "muting") {
-        ss << myMuting;
+        ss << myConf.muting;
     }
     else if (parameter == "staticdelay") {
-        ss << myStaticDelayUs;
+        ss << myConf.staticDelayUs;
     }
     else {
         ss << "Parameter '" << parameter <<

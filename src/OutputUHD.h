@@ -185,7 +185,9 @@ class UHDWorker {
         void process_errhandler();
 };
 
-/* This structure is used as initial configuration for OutputUHD */
+/* This structure is used as initial configuration for OutputUHD.
+ * It must also contain all remote-controllable settings, otherwise
+ * they will get lost on a modulator restart. */
 struct OutputUHDConfig {
     std::string device;
     std::string usrpType; // e.g. b100, b200, usrp2
@@ -213,13 +215,19 @@ struct OutputUHDConfig {
 
     /* What to do when the reference clock PLL loses lock */
     refclk_lock_loss_behaviour_t refclk_lock_loss_behaviour;
+
+    // muting can only be changed using the remote control
+    bool muting;
+
+    // static delay in microseconds
+    int staticDelayUs;
 };
 
 
 class OutputUHD: public ModOutput, public RemoteControllable {
     public:
 
-        OutputUHD(const OutputUHDConfig& config);
+        OutputUHD(OutputUHDConfig& config);
         ~OutputUHD();
 
         int process(Buffer* dataIn, Buffer* dataOut);
@@ -249,7 +257,7 @@ class OutputUHD: public ModOutput, public RemoteControllable {
         OutputUHD& operator=(const OutputUHD& other);
 
         EtiReader *myEtiReader;
-        OutputUHDConfig myConf;
+        OutputUHDConfig& myConf;
         uhd::usrp::multi_usrp::sptr myUsrp;
         std::shared_ptr<boost::barrier> mySyncBarrier;
         UHDWorker worker;
@@ -258,16 +266,13 @@ class OutputUHD: public ModOutput, public RemoteControllable {
         struct UHDWorkerData uwd;
         int activebuffer;
 
-        // muting can only be changed using the remote control
-        bool myMuting;
-
     private:
         // Resize the internal delay buffer according to the dabMode and
         // the sample rate.
         void SetDelayBuffer(unsigned int dabMode);
 
         // data
-        int myStaticDelayUs; // static delay in microseconds
+        // The remote-controllable static delay is in the OutputUHDConfig
         int myTFDurationMs; // TF duration in milliseconds
         std::vector<complexf> myDelayBuf;
         size_t lastLen;
