@@ -60,7 +60,7 @@ DabModulator::DabModulator(
         const tii_config_t& tiiConfig,
         unsigned outputRate, unsigned clockRate,
         unsigned dabMode, GainMode gainMode,
-        float digGain, float normalise,
+        float& digGain, float normalise,
         std::string filterTapsFilename
         ) :
     ModCodec(ModFormat(1), ModFormat(0)),

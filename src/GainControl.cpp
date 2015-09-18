@@ -45,9 +45,9 @@ using namespace std;
 
 
 GainControl::GainControl(size_t framesize,
-                GainMode mode,
-                float digGain,
-                float normalise) :
+                         GainMode mode,
+                         float& digGain,
+                         float normalise) :
     ModCodec(ModFormat(framesize * sizeof(complexf)),
              ModFormat(framesize * sizeof(complexf))),
     RemoteControllable("gain"),

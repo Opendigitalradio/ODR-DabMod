@@ -53,10 +53,10 @@ public:
             double& tist_offset_s, unsigned tist_delay_stages,
             RemoteControllers* rcs,
             const tii_config_t& tiiConfig,
-            unsigned outputRate = 2048000, unsigned clockRate = 0,
-            unsigned dabMode = 0, GainMode gainMode = GAIN_VAR,
-            float digGain = 1.0, float normalise = 1.0,
-            std::string filterTapsFilename = "");
+            unsigned outputRate, unsigned clockRate,
+            unsigned dabMode, GainMode gainMode,
+            float& digGain, float normalise,
+            std::string filterTapsFilename);
     DabModulator(const DabModulator& other) = delete;
     DabModulator& operator=(const DabModulator& other) = delete;
     virtual ~DabModulator();
@@ -74,7 +74,7 @@ protected:
     unsigned myClockRate;
     unsigned myDabMode;
     GainMode myGainMode;
-    float myDigGain;
+    float& myDigGain;
     float myNormalise;
     EtiReader myEtiReader;
     Flowgraph* myFlowgraph;

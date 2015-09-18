@@ -51,9 +51,9 @@ class GainControl : public ModCodec, public RemoteControllable
 {
     public:
         GainControl(size_t framesize,
-                GainMode mode = GAIN_VAR,
-                float digGain = 1.0f,
-                float normalise = 1.0f);
+                    GainMode mode,
+                    float& digGain,
+                    float normalise);
 
         virtual ~GainControl();
         GainControl(const GainControl&);
@@ -72,7 +72,7 @@ class GainControl : public ModCodec, public RemoteControllable
 
     protected:
         size_t d_frameSize;
-        float d_digGain;
+        float& d_digGain;
         float d_normalise;
 #ifdef __SSE__
         __m128 (*computeGain)(const __m128* in, size_t sizeIn);
