@@ -56,7 +56,7 @@ public:
             unsigned outputRate, unsigned clockRate,
             unsigned dabMode, GainMode gainMode,
             float& digGain, float normalise,
-            std::string filterTapsFilename);
+            std::string& filterTapsFilename);
     DabModulator(const DabModulator& other) = delete;
     DabModulator& operator=(const DabModulator& other) = delete;
     virtual ~DabModulator();
@@ -79,7 +79,7 @@ protected:
     EtiReader myEtiReader;
     Flowgraph* myFlowgraph;
     OutputMemory* myOutput;
-    std::string myFilterTapsFilename;
+    std::string& myFilterTapsFilename;
     tii_config_t myTiiConfig;
     RemoteControllers* myRCs;
 

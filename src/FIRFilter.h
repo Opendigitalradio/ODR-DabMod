@@ -99,7 +99,7 @@ class FIRFilterWorker {
 class FIRFilter : public ModCodec, public RemoteControllable
 {
 public:
-    FIRFilter(std::string taps_file);
+    FIRFilter(std::string& taps_file);
     virtual ~FIRFilter();
     FIRFilter(const FIRFilter&);
     FIRFilter& operator=(const FIRFilter&);
@@ -116,9 +116,9 @@ public:
 
 
 protected:
-    void load_filter_taps();
+    void load_filter_taps(std::string tapsFile);
 
-    std::string myTapsFile;
+    std::string& myTapsFile;
     int myNtaps;
     float* myFilter;
 

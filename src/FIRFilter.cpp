@@ -298,7 +298,7 @@ void FIRFilterWorker::process(struct FIRFilterWorkerData *fwd)
 }
 
 
-FIRFilter::FIRFilter(std::string taps_file) :
+FIRFilter::FIRFilter(std::string& taps_file) :
     ModCodec(ModFormat(sizeof(complexf)), ModFormat(sizeof(complexf))),
     RemoteControllable("firfilter"),
     myTapsFile(taps_file)
@@ -313,7 +313,7 @@ FIRFilter::FIRFilter(std::string taps_file) :
 
     firwd.taps = new float[0];
 
-    load_filter_taps();
+    load_filter_taps(myTapsFile);
 
 #if __AVX__
     fprintf(stderr, "FIRFilter: WARNING: using experimental AVX code !\n");
@@ -323,12 +323,11 @@ FIRFilter::FIRFilter(std::string taps_file) :
     worker.start(&firwd);
 }
 
-void
-FIRFilter::load_filter_taps()
+void FIRFilter::load_filter_taps(std::string tapsFile)
 {
-    std::ifstream taps_fstream(myTapsFile.c_str());
+    std::ifstream taps_fstream(tapsFile.c_str());
     if(!taps_fstream) { 
-        fprintf(stderr, "FIRFilter: file %s could not be opened !\n", myTapsFile.c_str());
+        fprintf(stderr, "FIRFilter: file %s could not be opened !\n", tapsFile.c_str());
         throw std::runtime_error("FIRFilter: Could not open file with taps! ");
     }
     int n_taps;
@@ -355,7 +354,7 @@ FIRFilter::load_filter_taps()
         PDEBUG("FIRFilter: tap: %f\n",  myFilter[n] );
         if (taps_fstream.eof()) {
             fprintf(stderr, "FIRFilter: file %s should contains %d taps, but EOF reached "\
-                    "after %d taps !\n", myTapsFile.c_str(), n_taps, n);
+                    "after %d taps !\n", tapsFile.c_str(), n_taps, n);
             delete[] myFilter;
             throw std::runtime_error("FIRFilter: filtertaps file invalid ! ");
         }
@@ -422,9 +421,9 @@ void FIRFilter::set_parameter(const string& parameter, const string& value)
         throw ParameterError("Parameter 'ntaps' is read-only");
     }
     else if (parameter == "tapsfile") {
-        myTapsFile = value;
         try {
-            load_filter_taps();
+            load_filter_taps(value);
+            myTapsFile = value;
         }
         catch (std::runtime_error &e) {
             throw ParameterError(e.what());

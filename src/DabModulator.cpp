@@ -61,7 +61,7 @@ DabModulator::DabModulator(
         unsigned outputRate, unsigned clockRate,
         unsigned dabMode, GainMode gainMode,
         float& digGain, float normalise,
-        std::string filterTapsFilename
+        std::string& filterTapsFilename
         ) :
     ModCodec(ModFormat(1), ModFormat(0)),
     myOutputRate(outputRate),
@@ -219,9 +219,9 @@ int DabModulator::process(Buffer* const dataIn, Buffer* dataOut)
                 new GuardIntervalInserter(myNbSymbols, mySpacing,
                 myNullSize, mySymSize));
 
-        FIRFilter* cifFilter = NULL;
+        shared_ptr<FIRFilter> cifFilter;
         if (myFilterTapsFilename != "") {
-            cifFilter = new FIRFilter(myFilterTapsFilename);
+            cifFilter = make_shared<FIRFilter>(myFilterTapsFilename);
             cifFilter->enrol_at(*myRCs);
         }
         shared_ptr<OutputMemory> myOutput(new OutputMemory(dataOut));
@@ -362,15 +362,14 @@ int DabModulator::process(Buffer* const dataIn, Buffer* dataOut)
         myFlowgraph->connect(cifOfdm, cifGain);
         myFlowgraph->connect(cifGain, cifGuard);
 
-        if (myFilterTapsFilename != "") {
-            shared_ptr<FIRFilter> cifFilterptr(cifFilter);
-            myFlowgraph->connect(cifGuard, cifFilterptr);
+        if (cifFilter) {
+            myFlowgraph->connect(cifGuard, cifFilter);
             if (cifRes != NULL) {
                 shared_ptr<Resampler> res(cifRes);
-                myFlowgraph->connect(cifFilterptr, res);
+                myFlowgraph->connect(cifFilter, res);
                 myFlowgraph->connect(res, myOutput);
             } else {
-                myFlowgraph->connect(cifFilterptr, myOutput);
+                myFlowgraph->connect(cifFilter, myOutput);
             }
         }
         else { //no filtering
