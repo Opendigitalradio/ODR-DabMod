@@ -48,7 +48,7 @@ class EtiReader
 {
 public:
     EtiReader(
-            double tist_offset_s,
+            double& tist_offset_s,
             unsigned tist_delay_stages,
             RemoteControllers* rcs);
 

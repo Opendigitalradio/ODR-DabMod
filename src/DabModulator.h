@@ -50,14 +50,15 @@ class DabModulator : public ModCodec
 {
 public:
     DabModulator(
-            double tist_offset_s, unsigned tist_delay_stages,
+            double& tist_offset_s, unsigned tist_delay_stages,
             RemoteControllers* rcs,
             const tii_config_t& tiiConfig,
             unsigned outputRate = 2048000, unsigned clockRate = 0,
             unsigned dabMode = 0, GainMode gainMode = GAIN_VAR,
             float digGain = 1.0, float normalise = 1.0,
             std::string filterTapsFilename = "");
-    DabModulator(const DabModulator& copy);
+    DabModulator(const DabModulator& other) = delete;
+    DabModulator& operator=(const DabModulator& other) = delete;
     virtual ~DabModulator();
 
     int process(Buffer* const dataIn, Buffer* dataOut);

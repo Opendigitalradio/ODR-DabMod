@@ -101,16 +101,16 @@ class TimestampDecoder : public RemoteControllable
                 /* The modulator adds this offset to the TIST to define time of
                  * frame transmission
                  */
-                double offset_s,
+                double& offset_s,
 
                 /* Specifies by how many stages the timestamp must be delayed.
                  * (e.g. The FIRFilter is pipelined, therefore we must increase
                  * tist_delay_stages by one if the filter is used
                  */
                 unsigned tist_delay_stages) :
-                RemoteControllable("tist")
+            RemoteControllable("tist"),
+            timestamp_offset(offset_s)
         {
-            timestamp_offset = offset_s;
             m_tist_delay_stages = tist_delay_stages;
             inhibit_second_update = 0;
             time_pps = 0.0;
@@ -174,7 +174,7 @@ class TimestampDecoder : public RemoteControllable
         uint32_t time_secs;
         int32_t latestFCT;
         double time_pps;
-        double timestamp_offset;
+        double& timestamp_offset;
         unsigned m_tist_delay_stages;
         int inhibit_second_update;
         bool offset_changed;

@@ -55,7 +55,7 @@
 #include "Log.h"
 
 DabModulator::DabModulator(
-        double tist_offset_s, unsigned tist_delay_stages,
+        double& tist_offset_s, unsigned tist_delay_stages,
         RemoteControllers* rcs,
         const tii_config_t& tiiConfig,
         unsigned outputRate, unsigned clockRate,
