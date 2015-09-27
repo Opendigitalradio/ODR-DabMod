@@ -368,7 +368,6 @@ float GainControl::computeGainMax(const complexf* in, size_t sizeIn)
 
 float GainControl::computeGainVar(const complexf* in, size_t sizeIn)
 {
-    float gain;
     complexf mean;
 
     /* The variance calculation is a bit strange, because we
@@ -454,16 +453,18 @@ float GainControl::computeGainVar(const complexf* in, size_t sizeIn)
     ////////////////////////////////////////////////////////////////////////////
     // Computing gain
     ////////////////////////////////////////////////////////////////////////////
+    float gain = var.real();
     // gain = factor128 / max(real, imag)
-    if (var.imag() > var.real()) {
-        var.real() = var.imag();
+    if (var.imag() > gain) {
+        gain = var.imag();
     }
-    // Detect NULL
-    if ((int)var.real() == 0) {
+
+    // Ignore zero variance samples and apply no gain
+    if ((int)gain == 0) {
         gain = 1.0f;
     }
     else {
-        gain = factor / var.real();
+        gain = factor / gain;
     }
 
     return gain;
