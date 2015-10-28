@@ -275,10 +275,10 @@ int Resampler::process(Buffer* const dataIn, Buffer* dataOut)
         for (size_t k = 0; k < 4; ++k) {
             if (j < sizeOut) {
                 for (size_t l = 0; l < myFftSizeOut / 2; ++l) {
-                    cplxOut[j + l].real() = myBufferOut[l].real() + fftDataOut[l].r[k];
-                    cplxOut[j + l].imag() = myBufferOut[l].imag() + fftDataOut[l].i[k];
-                    myBufferOut[l].real() = fftDataOut[myFftSizeOut / 2 + l].r[k];
-                    myBufferOut[l].imag() = fftDataOut[myFftSizeOut / 2 + l].i[k];
+                    cplxOut[j + l] = complexf(myBufferOut[l].real() + fftDataOut[l].r[k],
+                                              myBufferOut[l].imag() + fftDataOut[l].i[k]);
+                    myBufferOut[l] = complexf(fftDataOut[myFftSizeOut / 2 + l].r[k],
+                                              fftDataOut[myFftSizeOut / 2 + l].i[k]);
                 }
             }
             j += myFftSizeOut / 2;

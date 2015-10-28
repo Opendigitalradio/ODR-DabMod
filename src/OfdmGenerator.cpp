@@ -238,8 +238,7 @@ int OfdmGenerator::process(Buffer* const dataIn, Buffer* dataOut)
         for (int k = 0; k < 4; ++k) {
             if (j < sizeOut) {
                 for (size_t l = 0; l < mySpacing; ++l) {
-                    cplxOut[j + l].real() = dataBuffer[l].r[k];
-                    cplxOut[j + l].imag() = dataBuffer[l].i[k];
+                    cplxOut[j + l] = complexf(dataBuffer[l].r[k], dataBuffer[l].i[k]);
                 }
                 j += mySpacing;
             }
@@ -259,6 +258,7 @@ int OfdmGenerator::process(Buffer* const dataIn, Buffer* dataOut)
 
         in += myNbCarriers;
         out += mySpacing;
+
     }
 #  endif
 #endif
