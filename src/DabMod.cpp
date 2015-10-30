@@ -260,6 +260,9 @@ int launch_modulator(int argc, char* argv[])
                 throw std::invalid_argument("Invalid command line options");
             }
             outputuhd_conf.device = optarg;
+            outputuhd_conf.refclk_src = "internal";
+            outputuhd_conf.pps_src = "none";
+            outputuhd_conf.pps_polarity = "pos";
             useUHDOutput = 1;
 #endif
             break;
