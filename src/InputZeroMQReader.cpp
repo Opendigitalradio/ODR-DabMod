@@ -72,7 +72,7 @@ int InputZeroMQReader::Open(const std::string& uri, unsigned max_queued_frames)
         uri_ = uri;
     }
 
-    workerdata_.uri = uri;
+    workerdata_.uri = uri_;
     workerdata_.max_queued_frames = max_queued_frames;
     // launch receiver thread
     worker_.Start(&workerdata_);
