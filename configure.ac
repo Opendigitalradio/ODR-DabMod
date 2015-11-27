@@ -75,7 +75,8 @@ AC_ARG_ENABLE([kiss_fft],
 
 # ZeroMQ message queue input
 AC_ARG_ENABLE([zeromq],
-        AS_HELP_STRING([--enable-zeromq], [Enable ZeroMQ input, output and remote control]))
+        [AS_HELP_STRING([--disable-zeromq], [Disable ZeroMQ input, output and remote control])],
+        [], [enable_zeromq=yes])
 
 # UHD support control
 AC_ARG_ENABLE([output_uhd],

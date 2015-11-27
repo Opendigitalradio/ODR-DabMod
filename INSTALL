@@ -12,7 +12,7 @@ Simple install procedure:
 
     % tar xjf odr-dabmod-X.Y.Z.tar.bz2      # Unpack the source
     % cd odr-dabmod-X.Y.Z                   # Change to the source directory
-    % ./configure --enable-zeromq
+    % ./configure
                                             # Run the configure script
     % make                                  # Build ODR-DabMod
     [ as root ]
@@ -22,7 +22,7 @@ Configure options
 =================
 The configure script can be launch with a variety of options:
 
- --enable-zeromq        Enable ZeroMQ input (to be used with ODR-DabMux),
+ --disable-zeromq       Disable ZeroMQ input (to be used with ODR-DabMux),
                         output and remotecontrol.
  --disable-output-uhd   Disable the binding to the UHD driver for USRPs
 
