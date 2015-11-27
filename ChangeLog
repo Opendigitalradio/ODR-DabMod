@@ -1,6 +1,13 @@
 This file contains information about the changes done to
 the ODR-DabMod in this repository
 
+2015-11-27: Matthias P. Braendli <matthias@mpb.li>
+	(v0.5.5):
+	* odr-dabmod:
+		Fix compile errors with recent C++ standard library.
+		Correct command line options when using UHD and ZMQ input.
+		Enable ZeroMQ be default in ./configure
+
 2015-09-18: Matthias P. Braendli <matthias@mpb.li>
 	(v0.5.4)
 	* odr-dabmod:
