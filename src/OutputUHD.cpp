@@ -857,7 +857,7 @@ void UHDWorker::tx_frame(const struct UHDWorkerFrameData *frame)
         num_acc_samps += num_tx_samps;
 
         md.time_spec = uhd::time_spec_t(tx_second, pps_offset)
-            + uhd::time_spec_t(0, num_acc_samps/uwd->sampleRate);
+            + uhd::time_spec_t(0, num_tx_samps/uwd->sampleRate);
 
         if (num_tx_samps == 0) {
             etiLog.log(warn,
