@@ -115,6 +115,10 @@ AS_IF([test "x$enable_fftw" = "xno"],
 AS_IF([test "x$enable_fftw" = "xyes"],
       [AC_DEFINE(USE_FFTW, [1], [Define to enable FFTW])])
 
+AS_IF([test "x$enable_fftw" = "xno"],
+      AC_MSG_ERROR([KISS FFT is currently broken. Please use FFTW. Any debugging help is appreciated]) )
+
+
 AX_PTHREAD([], AC_MSG_ERROR([requires pthread]))
 
 AC_SUBST([CFLAGS], ["$EXTRA $FFTW_CFLAGS $PTHREAD_CFLAGS"])
