@@ -14,6 +14,8 @@ config.h
 config.status
 src/odr-dabmod
 .clang_complete
+build/
+import/
 
 .*.swp
 *~

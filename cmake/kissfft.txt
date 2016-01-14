@@ -1,0 +1,43 @@
+# download kissfft and add it to project
+
+set(KISSFFT_SRC_DIR ${CMAKE_SOURCE_DIR}/import/kissfft)
+
+include(ExternalProject)
+ExternalProject_Add(project_kissfft
+	GIT_REPOSITORY https://github.com/itdaniher/kissfft.git
+	GIT_TAG master
+	SOURCE_DIR ${KISSFFT_SRC_DIR}
+	CONFIGURE_COMMAND ""
+	BUILD_COMMAND ""
+	INSTALL_COMMAND ""
+)
+
+#include(ExternalProject)
+#ExternalProject_Add(project_kissfft
+#	PREFIX lib/libkissfft
+#	GIT_REPOSITORY https://github.com/benswift/kiss_fft.git
+#	GIT_TAG master
+#	CMAKE_ARGS 
+#		"-DCMAKE_BUILD_TYPE=Release"
+#	BUILD_COMMAND 
+#		cmake 
+#		--build . 
+#		--config ${PROJECT_BUILD_TYPE}
+#	INSTALL_COMMAND ""
+#)
+
+#ExternalProject_Get_Property(project_kissfft BINARY_DIR)
+#
+#SET(kissfft_lib_dir "${BINARY_DIR}/src/.libs")
+#SET(kissfft_inc_dir "${BINARY_DIR}/src")
+#
+set(PROJECT_INCLUDE_DIR 
+	${PROJECT_INCLUDE_DIR} 
+	${KISSFFT_SRC_DIR}
+	)
+#
+#if (WIN32)
+#	SET(KISSFFT "")
+#else()
+#	SET(KISSFFT ${kissfft_lib_dir}/kissfft.a)
+#endif()

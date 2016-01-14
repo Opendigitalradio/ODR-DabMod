@@ -1,0 +1,64 @@
+# Build the ZeroMQ lib with the same config (release/debug, etc.) as the application.
+
+message(" ")
+message("### Zeromq config start ###")
+message(" ")
+
+cmake_policy(SET CMP0053 OLD)
+
+# Default to debug if CMAKE_BUILD_TYPE is not set.
+
+set(PROJECT_BUILD_TYPE ${CMAKE_BUILD_TYPE})
+if(NOT PROJECT_BUILD_TYPE)
+  set(PROJECT_BUILD_TYPE debug)
+endif()
+string(TOLOWER ${PROJECT_BUILD_TYPE} PROJECT_BUILD_TYPE)
+message("PROJECT_BUILD_TYPE: ${PROJECT_BUILD_TYPE}")
+
+# Build lib
+
+include(ExternalProject)
+ExternalProject_Add(zeromq
+  SOURCE_DIR $ENV{ZMQ_ROOT}
+  PREFIX ${CMAKE_CURRENT_BINARY_DIR}/zeromq_lib
+  INSTALL_DIR
+    "zeromq_install_dir_not_used"
+  # Use the same build type for ZMQ as for the application
+  CMAKE_ARGS 
+	"-DCMAKE_BUILD_TYPE=${PROJECT_BUILD_TYPE}"
+	"-DCMAKE_POLICY_DEFAULT_CMP0053=OLD"
+  BUILD_COMMAND 
+	cmake 
+	--build . 
+	--config ${PROJECT_BUILD_TYPE}
+  INSTALL_COMMAND ""
+)
+
+# Find Zeromq version info
+FILE(READ $ENV{ZMQ_ROOT}/include/zmq.h ZEROMQ_LIB_VERSION_FILE)
+STRING(REGEX MATCH "\n#define ZMQ_VERSION_MAJOR.*" ZEROMQ_LIB_MAJOR_LINE ${ZEROMQ_LIB_VERSION_FILE})
+STRING(REGEX MATCH "\n#define ZMQ_VERSION_MINOR.*" ZEROMQ_LIB_MINOR_LINE ${ZEROMQ_LIB_VERSION_FILE})
+STRING(REGEX MATCH "\n#define ZMQ_VERSION_PATCH.*" ZEROMQ_LIB_PATCH_LINE ${ZEROMQ_LIB_VERSION_FILE})
+STRING(REGEX MATCH "[0-9]+" ZEROMQ_VERSION_MAJOR ${ZEROMQ_LIB_MAJOR_LINE})
+STRING(REGEX MATCH "[0-9]+" ZEROMQ_VERSION_MINOR ${ZEROMQ_LIB_MINOR_LINE})
+STRING(REGEX MATCH "[0-9]+" ZEROMQ_VERSION_PATCH ${ZEROMQ_LIB_PATCH_LINE})
+message("Zeromq version: ${ZEROMQ_VERSION_MAJOR}.${ZEROMQ_VERSION_MINOR}.${ZEROMQ_VERSION_PATCH}")
+
+# Show where to find the libs
+
+SET(ZEROMQ_LIBS ${CMAKE_BINARY_DIR}/zeromq_lib/src/zeromq-build/lib)
+if (WIN32)
+	SET(ZEROMQ
+		optimized ${ZEROMQ_LIBS}/Release/libzmq-mt-s-${ZEROMQ_VERSION_MAJOR}_${ZEROMQ_VERSION_MINOR}_${ZEROMQ_VERSION_PATCH}${CMAKE_STATIC_LIBRARY_SUFFIX}
+		debug ${ZEROMQ_LIBS}/Debug/libzmq-mt-sgd-${ZEROMQ_VERSION_MAJOR}_${ZEROMQ_VERSION_MINOR}_${ZEROMQ_VERSION_PATCH}${CMAKE_STATIC_LIBRARY_SUFFIX}
+	)
+else()
+	SET(ZEROMQ
+		optimized ${ZEROMQ_LIBS}/libzmq-static${CMAKE_STATIC_LIBRARY_SUFFIX}
+		debug ${ZEROMQ_LIBS}/libzmq-static${CMAKE_STATIC_LIBRARY_SUFFIX}
+	)
+endif()
+
+message(" ")
+message("### Zeromq config done! ###")
+message(" ")
