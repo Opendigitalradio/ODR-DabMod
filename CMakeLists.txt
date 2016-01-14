@@ -29,25 +29,20 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -I$ENV{ZMQ_ROOT}/include -I$ENV{ZMQ_ROOT
 include(${CMAKE_INCLUDE_DIR}/zeromq.txt)
 include(${CMAKE_INCLUDE_DIR}/kissfft.txt)
 
+
 set(PROJECT_INCLUDE_DIR
 	${PROJECT_INCLUDE_DIR}
 	$ENV{ZMQ_ROOT}
 	$ENV{BOOST_ROOT}
 	)
 
-#list(APPEND CMAKE_MODULE_PATH "${CMAKE_INCLUDE_DIR}/modules/")
-#include(GetGitRevisionDescription)
-#get_git_head_revision(GIT_REFSPEC GIT_SHA1)
-#message(${GIT_SHA1})
-
 exec_program(
     "git"
     ${CMAKE_CURRENT_SOURCE_DIR}
     ARGS "describe"
     OUTPUT_VARIABLE VERSION )
-message(${VERSION})
-#string( REGEX REPLACE "[.]" "_" VERSION_SHA1 ${VERSION} )
-#message("${VERSION_SHA1}")
+
+message(${APP_NAME} " " ${VERSION})
 
 
 add_definitions(

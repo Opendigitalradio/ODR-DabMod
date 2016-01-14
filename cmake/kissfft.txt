@@ -1,43 +1,24 @@
-# download kissfft and add it to project
+# download/extract kissfft and add it to project
 
-set(KISSFFT_SRC_DIR ${CMAKE_SOURCE_DIR}/import/kissfft)
+set(IMPORT_DIR ${CMAKE_SOURCE_DIR}/import)
+set(KISSFFT_SRC_DIR ${CMAKE_SOURCE_DIR}/import/kiss_fft130)
 
-include(ExternalProject)
-ExternalProject_Add(project_kissfft
-	GIT_REPOSITORY https://github.com/itdaniher/kissfft.git
-	GIT_TAG master
-	SOURCE_DIR ${KISSFFT_SRC_DIR}
-	CONFIGURE_COMMAND ""
-	BUILD_COMMAND ""
-	INSTALL_COMMAND ""
-)
+set(ZIP_URL "http://sourceforge.net/projects/kissfft/files/kissfft/v1_3_0/kiss_fft130.zip")
+set(ZIP_FILE ${IMPORT_DIR}/kissfft.zip)
 
-#include(ExternalProject)
-#ExternalProject_Add(project_kissfft
-#	PREFIX lib/libkissfft
-#	GIT_REPOSITORY https://github.com/benswift/kiss_fft.git
-#	GIT_TAG master
-#	CMAKE_ARGS 
-#		"-DCMAKE_BUILD_TYPE=Release"
-#	BUILD_COMMAND 
-#		cmake 
-#		--build . 
-#		--config ${PROJECT_BUILD_TYPE}
-#	INSTALL_COMMAND ""
-#)
+if (NOT EXISTS "${ZIP_FILE}")
+	message("Downloading kissfft..")
+	file(DOWNLOAD ${ZIP_URL} ${ZIP_FILE})
 
-#ExternalProject_Get_Property(project_kissfft BINARY_DIR)
-#
-#SET(kissfft_lib_dir "${BINARY_DIR}/src/.libs")
-#SET(kissfft_inc_dir "${BINARY_DIR}/src")
-#
+	message("Extracting kissfft..")
+	execute_process(
+		COMMAND unzip -q kissfft.zip
+		WORKING_DIRECTORY ${IMPORT_DIR}
+	)
+
+endif()
+
 set(PROJECT_INCLUDE_DIR 
 	${PROJECT_INCLUDE_DIR} 
 	${KISSFFT_SRC_DIR}
 	)
-#
-#if (WIN32)
-#	SET(KISSFFT "")
-#else()
-#	SET(KISSFFT ${kissfft_lib_dir}/kissfft.a)
-#endif()
