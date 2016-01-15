@@ -15,9 +15,6 @@ set(project_boost_libs
 	system 
 	filesystem 
 	thread
-	chrono
-	program_options
-	test
 )
 include(${CMAKE_INCLUDE_DIR}/boost.txt) 
 ### Boost ###
@@ -28,6 +25,8 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -I$ENV{ZMQ_ROOT}/include -I$ENV{ZMQ_ROOT
 
 include(${CMAKE_INCLUDE_DIR}/zeromq.txt)
 include(${CMAKE_INCLUDE_DIR}/kissfft.txt)
+include(${CMAKE_INCLUDE_DIR}/fftw.txt) 
+include(${CMAKE_INCLUDE_DIR}/uhd.txt) 
 
 
 set(PROJECT_INCLUDE_DIR
@@ -44,7 +43,6 @@ exec_program(
 
 message(${APP_NAME} " " ${VERSION})
 
-
 add_definitions(
 	-D_SCL_SECURE_NO_WARNINGS
 	-DZMQ_STATIC
@@ -57,8 +55,12 @@ add_definitions(
 
 option(FFTW3 "Uses FFTW3 fft library" OFF)
 if (FFTW3)
-	message("Uses FFTW")
-	include(${CMAKE_INCLUDE_DIR}/fftw.txt) 
+	message("Uses FFTW3")
+endif()
+
+option(UHD "Support uhd output" ON)
+if (UHD)
+	message("Supports uhd output")
 endif()
 
 include_directories("${PROJECT_INCLUDE_DIR}")

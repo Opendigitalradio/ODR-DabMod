@@ -1,7 +1,7 @@
 General:
 ======================
 	The CMake build of the odr-dabmod provides an alternative to the auto make tools build system (described in INSTALL) and provides:
-	* Statically link depenencies, avoiding version conflicts in case the system contains other version of dependent libraries
+	* Static linking of boost and zeromq, avoiding version conflicts in case the system contains other version of these libraries
 	* Enables cross platform builds
 
 Required dependencies:
@@ -63,4 +63,5 @@ Configure options
 	Release or debug builds: -DCMAKE_BUILD_TYPE=Release|Debug
 
 	# odr-dabmod options
-	Use FFTW3 library (kiss_fft is used by default): -DFFTW3=on
+	Use FFTW3 library (default=off, kiss_fft is used by default): -DFFTW3=on
+	Support UHD output (defailt=on): -DUHD=off

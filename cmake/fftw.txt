@@ -1,5 +1,4 @@
 # Add defines for FFTW
-# Note FFTW is still dynamically linked
 
 if (FFTW3)
 	ADD_DEFINITIONS(-DUSE_FFTW)

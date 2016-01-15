@@ -42,4 +42,5 @@ target_link_libraries(${PROJECT_NAME}
 	${LIBBOOST_LIBS}
 	${OS_LIBS}
 	${LIBFFTW3}
+	${LIBUHD}
 )
