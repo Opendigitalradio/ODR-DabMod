@@ -34,8 +34,13 @@ if(NOT WIN32)
 	install(TARGETS ${PROJECT_NAME} RUNTIME DESTINATION bin)
 endif()
 
-add_dependencies(${PROJECT_NAME} zeromq)
-add_dependencies(${PROJECT_NAME} boost_libs)
+if (ZMQ_STATIC)
+	add_dependencies(${PROJECT_NAME} zeromq)
+endif()
+
+if (BOOST_STATIC)
+	add_dependencies(${PROJECT_NAME} boost_libs)
+endif()
 
 target_link_libraries(${PROJECT_NAME}
 	${ZEROMQ}

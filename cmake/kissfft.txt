@@ -9,7 +9,9 @@ set(ZIP_FILE ${IMPORT_DIR}/kissfft.zip)
 if (NOT EXISTS "${ZIP_FILE}")
 	message("Downloading kissfft..")
 	file(DOWNLOAD ${ZIP_URL} ${ZIP_FILE})
+endif()
 
+if (NOT EXISTS "${KISSFFT_SRC_DIR}")
 	message("Extracting kissfft..")
 	execute_process(
 		COMMAND unzip -q kissfft.zip
