@@ -100,10 +100,10 @@ void FIRFilterWorker::process(struct FIRFilterWorkerData *fwd)
         {
             boost::mutex::scoped_lock lock(fwd->taps_mutex);
 
-            for (i = 0; i < sizeIn - 2*fwd->n_taps; i += 8) {
+            for (i = 0; i < sizeIn - 2*fwd->taps.size(); i += 8) {
                 AVXout = _mm256_setr_ps(0,0,0,0,0,0,0,0);
 
-                for (int j = 0; j < fwd->n_taps; j++) {
+                for (size_t j = 0; j < fwd->taps.size; j++) {
                     if ((uintptr_t)(&in[i+2*j]) % 32 == 0) {
                         AVXin = _mm256_load_ps(&in[i+2*j]); //faster when aligned
                     }
@@ -150,10 +150,10 @@ void FIRFilterWorker::process(struct FIRFilterWorkerData *fwd)
         {
             boost::mutex::scoped_lock lock(fwd->taps_mutex);
 
-            for (i = 0; i < sizeIn - 2*fwd->n_taps; i += 4) {
+            for (i = 0; i < sizeIn - 2*fwd->taps.size(); i += 4) {
                 SSEout = _mm_setr_ps(0,0,0,0);
 
-                for (int j = 0; j < fwd->n_taps; j++) {
+                for (size_t j = 0; j < fwd->taps.size(); j++) {
                     if ((uintptr_t)(&in[i+2*j]) % 16 == 0) {
                         SSEin = _mm_load_ps(&in[i+2*j]); //faster when aligned
                     }
@@ -189,13 +189,13 @@ void FIRFilterWorker::process(struct FIRFilterWorkerData *fwd)
         {
             boost::mutex::scoped_lock lock(fwd->taps_mutex);
             // Convolve by aligning both frame and taps at zero.
-            for (i = 0; i < sizeIn - 2*fwd->n_taps; i += 4) {
+            for (i = 0; i < sizeIn - 2*fwd->taps.size(); i += 4) {
                 out[i]    = 0.0;
                 out[i+1]  = 0.0;
                 out[i+2]  = 0.0;
                 out[i+3]  = 0.0;
 
-                for (int j = 0; j < fwd->n_taps; j++) {
+                for (size_t j = 0; j < fwd->taps.size(); j++) {
                     out[i]   += in[i   + 2*j] * fwd->taps[j];
                     out[i+1] += in[i+1 + 2*j] * fwd->taps[j];
                     out[i+2] += in[i+2 + 2*j] * fwd->taps[j];
@@ -226,10 +226,10 @@ void FIRFilterWorker::process(struct FIRFilterWorkerData *fwd)
         float* out      = reinterpret_cast<float*>(dataOut->getData());
         size_t sizeIn   = dataIn->getLength() / sizeof(float);
 
-        for (i = 0; i < sizeIn - 2*fwd->n_taps; i += 1) {
+        for (i = 0; i < sizeIn - 2*fwd->taps.size(); i += 1) {
             out[i]  = 0.0;
 
-            for (int j = 0; j < fwd->n_taps; j++) {
+            for (size_t j = 0; j < fwd->taps.size(); j++) {
                 out[i]  += in[i+2*j] * fwd->taps[j];
             }
         }
@@ -248,13 +248,13 @@ void FIRFilterWorker::process(struct FIRFilterWorkerData *fwd)
         complexf* out      = reinterpret_cast<complexf*>(dataOut->getData());
         size_t sizeIn      = dataIn->getLength() / sizeof(complexf);
 
-        for (i = 0; i < sizeIn - fwd->n_taps; i += 4) {
+        for (i = 0; i < sizeIn - fwd->taps.size(); i += 4) {
             out[i]   = 0.0;
             out[i+1] = 0.0;
             out[i+2] = 0.0;
             out[i+3] = 0.0;
 
-            for (int j = 0; j < fwd->n_taps; j++) {
+            for (size_t j = 0; j < fwd->taps.size(); j++) {
                 out[i]   += in[i+j  ] * fwd->taps[j];
                 out[i+1] += in[i+1+j] * fwd->taps[j];
                 out[i+2] += in[i+2+j] * fwd->taps[j];
@@ -275,10 +275,10 @@ void FIRFilterWorker::process(struct FIRFilterWorkerData *fwd)
         complexf* out      = reinterpret_cast<complexf*>(dataOut->getData());
         size_t sizeIn      = dataIn->getLength() / sizeof(complexf);
 
-        for (i = 0; i < sizeIn - fwd->n_taps; i += 1) {
+        for (i = 0; i < sizeIn - fwd->taps.size(); i += 1) {
             out[i]   = 0.0;
 
-            for (int j = 0; j < fwd->n_taps; j++) {
+            for (size_t j = 0; j < fwd->taps.size(); j++) {
                 out[i]  += in[i+j  ] * fwd->taps[j];
             }
         }
@@ -311,8 +311,6 @@ FIRFilter::FIRFilter(std::string& taps_file) :
 
     number_of_runs = 0;
 
-    firwd.taps = new float[0];
-
     load_filter_taps(myTapsFile);
 
 #if __AVX__
@@ -342,20 +340,17 @@ void FIRFilter::load_filter_taps(std::string tapsFile)
         fprintf(stderr, "FIRFilter: warning: taps file has more than 100 taps\n");
     }
 
-    myNtaps = n_taps;
+    fprintf(stderr, "FIRFilter: Reading %d taps...\n", n_taps);
 
-    fprintf(stderr, "FIRFilter: Reading %d taps...\n", myNtaps);
-
-    myFilter = new float[myNtaps];
+    std::vector<float> filter_taps(n_taps);
 
     int n;
     for (n = 0; n < n_taps; n++) {
-        taps_fstream >> myFilter[n];
-        PDEBUG("FIRFilter: tap: %f\n",  myFilter[n] );
+        taps_fstream >> filter_taps[n];
+        PDEBUG("FIRFilter: tap: %f\n",  filter_taps[n] );
         if (taps_fstream.eof()) {
             fprintf(stderr, "FIRFilter: file %s should contains %d taps, but EOF reached "\
                     "after %d taps !\n", tapsFile.c_str(), n_taps, n);
-            delete[] myFilter;
             throw std::runtime_error("FIRFilter: filtertaps file invalid ! ");
         }
     }
@@ -363,10 +358,7 @@ void FIRFilter::load_filter_taps(std::string tapsFile)
     {
         boost::mutex::scoped_lock lock(firwd.taps_mutex);
 
-        delete[] firwd.taps;
-
-        firwd.taps = myFilter;
-        firwd.n_taps = myNtaps;
+        firwd.taps = filter_taps;
     }
 }
 
@@ -376,10 +368,6 @@ FIRFilter::~FIRFilter()
     PDEBUG("FIRFilter::~FIRFilter() @ %p\n", this);
 
     worker.stop();
-
-    if (myFilter != NULL) {
-        delete[] myFilter;
-    }
 }
 
 
@@ -440,7 +428,7 @@ const string FIRFilter::get_parameter(const string& parameter) const
 {
     stringstream ss;
     if (parameter == "ntaps") {
-        ss << myNtaps;
+        ss << firwd.taps.size();
     }
     else if (parameter == "tapsfile") {
         ss << myTapsFile;

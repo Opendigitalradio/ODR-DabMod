@@ -38,7 +38,7 @@
 
 #include <sys/types.h>
 #include <complex>
-
+#include <vector>
 #include <time.h>
 #include <cstdio>
 #include <string>
@@ -60,8 +60,7 @@ struct FIRFilterWorkerData {
      * the taps are being modified
      */
     mutable boost::mutex taps_mutex;
-    float* taps;
-    int n_taps;
+    std::vector<float> taps;
 };
 
 class FIRFilterWorker {
@@ -119,8 +118,6 @@ protected:
     void load_filter_taps(std::string tapsFile);
 
     std::string& myTapsFile;
-    int myNtaps;
-    float* myFilter;
 
     FIRFilterWorker worker;
     int number_of_runs;
