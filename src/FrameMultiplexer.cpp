@@ -77,11 +77,17 @@ int FrameMultiplexer::process(std::vector<Buffer*> dataIn, Buffer* dataOut)
     memcpy(out, (*in)->getData(), (*in)->getLength());
     ++in;
     // Write subchannel
-    assert(mySubchannels->size() == dataIn.size() - 1);
+    if (mySubchannels->size() != dataIn.size() - 1) {
+        throw std::out_of_range(
+                "FrameMultiplexer detected subchannel size change!");
+    }
     std::vector<std::shared_ptr<SubchannelSource> >::const_iterator subchannel =
         mySubchannels->begin();
     while (in != dataIn.end()) {
-        assert((*subchannel)->framesizeCu() * 8 == (*in)->getLength());
+        if ((*subchannel)->framesizeCu() * 8 != (*in)->getLength()) {
+            throw std::out_of_range(
+                    "FrameMultiplexer detected invalid subchannel size!");
+        }
         size_t offset = (*subchannel)->startAddress() * 8;
         memcpy(&out[offset], (*in)->getData(), (*in)->getLength());
         ++in;
