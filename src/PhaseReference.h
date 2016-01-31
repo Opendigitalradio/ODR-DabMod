@@ -26,11 +26,11 @@
 #   include <config.h>
 #endif
 
-
 #include "ModCodec.h"
 
 #include <sys/types.h>
 #include <complex>
+#include <vector>
 
 
 class PhaseReference : public ModCodec
@@ -50,7 +50,7 @@ protected:
     size_t d_carriers;
     size_t d_num;
     const static unsigned char d_h[4][32];
-    std::complex<float>* d_dataIn;
+    std::vector<std::complex<float> > d_dataIn;
 
     void fillData();
 };

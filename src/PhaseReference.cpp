@@ -71,7 +71,7 @@ PhaseReference::PhaseReference(unsigned int dabmode) :
         throw std::runtime_error(
                 "PhaseReference::PhaseReference DAB mode not valid!");
     }
-    d_dataIn = new complexf[d_num];
+    d_dataIn.resize(d_num);
     fillData();
 
     myOutputFormat.size(d_carriers * sizeof(complexf));
@@ -81,8 +81,6 @@ PhaseReference::PhaseReference(unsigned int dabmode) :
 PhaseReference::~PhaseReference()
 {
     PDEBUG("PhaseReference::~PhaseReference() @ %p\n", this);
-
-    delete[] d_dataIn;
 }
 
 
@@ -162,7 +160,8 @@ int PhaseReference::process(Buffer* const dataIn, Buffer* dataOut)
                 "PhaseReference::process input size not valid!");
     }
 
-    dataOut->setData(d_dataIn, d_carriers * sizeof(complexf));
+    dataOut->setData(&d_dataIn[0], d_carriers * sizeof(complexf));
 
     return 1;
 }
+
