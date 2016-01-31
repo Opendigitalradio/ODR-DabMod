@@ -29,17 +29,29 @@
 
 typedef std::complex<float> complexf;
 
-
+/* ETSI EN 300 401 Table 43 (Clause 14.3.2)
+ * Contains h_{i,k} values
+ */
 const unsigned char PhaseReference::d_h[4][32] = {
-    { 0, 2, 0, 0, 0, 0, 1, 1, 2, 0, 0, 0, 2, 2, 1, 1,
+    /* h0 */ { 0, 2, 0, 0, 0, 0, 1, 1, 2, 0, 0, 0, 2, 2, 1, 1,
         0, 2, 0, 0, 0, 0, 1, 1, 2, 0, 0, 0, 2, 2, 1, 1 },
-    { 0, 3, 2, 3, 0, 1, 3, 0, 2, 1, 2, 3, 2, 3, 3, 0, 
+    /* h1 */ { 0, 3, 2, 3, 0, 1, 3, 0, 2, 1, 2, 3, 2, 3, 3, 0,
         0, 3, 2, 3, 0, 1, 3, 0, 2, 1, 2, 3, 2, 3, 3, 0 },
-    { 0, 0, 0, 2, 0, 2, 1, 3, 2, 2, 0, 2, 2, 0, 1, 3,
+    /* h2 */ { 0, 0, 0, 2, 0, 2, 1, 3, 2, 2, 0, 2, 2, 0, 1, 3,
         0, 0, 0, 2, 0, 2, 1, 3, 2, 2, 0, 2, 2, 0, 1, 3 },
-    { 0, 1, 2, 1, 0, 3, 3, 2, 2, 3, 2, 1, 2, 1, 3, 2,
+    /* h3 */  { 0, 1, 2, 1, 0, 3, 3, 2, 2, 3, 2, 1, 2, 1, 3, 2,
         0, 1, 2, 1, 0, 3, 3, 2, 2, 3, 2, 1, 2, 1, 3, 2 }
 };
+
+/* EN 300 401, Clause 14.3.2:
+ * \phi_k = (\pi / 2) * (h_{i,k-k'} + n
+ *
+ * where "The indices i, k' and the parameter n are specified as functions of
+ * the carrier index k for the four transmission modes in tables 44 to 47."
+ *
+ * Tables 44 to 47 describe the frequency interleaving done in
+ * FrequencyInterleaver.
+ */
 
 
 PhaseReference::PhaseReference(unsigned int dabmode) :

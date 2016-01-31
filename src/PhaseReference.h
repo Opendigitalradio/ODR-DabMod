@@ -56,3 +56,4 @@ protected:
 };
 
 #endif // PHASE_REFERENCE_H
+
