@@ -71,7 +71,7 @@ PhaseReference::PhaseReference(unsigned int dabmode) :
         throw std::runtime_error(
                 "PhaseReference::PhaseReference DAB mode not valid!");
     }
-    d_dataIn.resize(d_num);
+    d_dataIn.resize(d_carriers);
     fillData();
 
     myOutputFormat.size(d_carriers * sizeof(complexf));
@@ -141,7 +141,12 @@ void PhaseReference::fillData()
                 "PhaseReference::fillData invalid DAB mode!");
     }
 
-    for (index = 0, offset = 0; index < d_carriers; ++offset) {
+    if (d_dataIn.size() != d_carriers) {
+        throw std::runtime_error(
+                "PhaseReference::fillData d_dataIn has incorrect size!");
+    }
+
+    for (index = 0, offset = 0; index < d_dataIn.size(); ++offset) {
         for (k = 0; k < 32; ++k) {
             d_dataIn[index++] = convert(d_h[table[d_dabmode][offset][0]][k]
                     + table[d_dabmode][offset][1]);
