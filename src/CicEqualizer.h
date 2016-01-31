@@ -29,7 +29,7 @@
 
 #include "ModCodec.h"
 
-
+#include <vector>
 #include <sys/types.h>
 #include <complex>
 #ifdef __SSE__
@@ -54,8 +54,9 @@ public:
 protected:
     size_t myNbCarriers;
     size_t mySpacing;
-    float* myFilter;
+    std::vector<float> myFilter;
 };
 
 
 #endif //CIC_EQUALIZER_H
+
