@@ -77,7 +77,7 @@ Edge::Edge(shared_ptr<Node>& srcNode, shared_ptr<Node>& dstNode) :
             dstNode->plugin()->name(), dstNode.get(),
             this);
 
-    myBuffer = shared_ptr<Buffer>(new Buffer());
+    myBuffer = make_shared<Buffer>();
     srcNode->myOutputBuffers.push_back(myBuffer);
     dstNode->myInputBuffers.push_back(myBuffer);
 }
@@ -177,7 +177,7 @@ void Flowgraph::connect(shared_ptr<ModPlugin> input, shared_ptr<ModPlugin> outpu
         }
     }
     if (inputNode == nodes.end()) {
-        inputNode = nodes.insert(nodes.end(), shared_ptr<Node>(new Node(input)));
+        inputNode = nodes.insert(nodes.end(), make_shared<Node>(input));
     }
 
     for (outputNode = nodes.begin(); outputNode != nodes.end(); ++outputNode) {
@@ -186,7 +186,7 @@ void Flowgraph::connect(shared_ptr<ModPlugin> input, shared_ptr<ModPlugin> outpu
         }
     }
     if (outputNode == nodes.end()) {
-        outputNode = nodes.insert(nodes.end(), shared_ptr<Node>(new Node(output)));
+        outputNode = nodes.insert(nodes.end(), make_shared<Node>(output));
         for (inputNode = nodes.begin(); inputNode != nodes.end(); ++inputNode) {
             if ((*inputNode)->plugin() == input) {
                 break;
@@ -206,7 +206,7 @@ void Flowgraph::connect(shared_ptr<ModPlugin> input, shared_ptr<ModPlugin> outpu
     assert((*inputNode)->plugin() == input);
     assert((*outputNode)->plugin() == output);
 
-    edges.push_back(shared_ptr<Edge>(new Edge(*inputNode, *outputNode)));
+    edges.push_back(make_shared<Edge>(*inputNode, *outputNode));
 }
 
 

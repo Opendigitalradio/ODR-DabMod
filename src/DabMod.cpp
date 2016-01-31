@@ -164,7 +164,7 @@ int launch_modulator(int argc, char* argv[])
     unsigned tist_delay_stages = 0;
     double   tist_offset_s = 0.0;
 
-    shared_ptr<Flowgraph> flowgraph(new Flowgraph());
+    auto flowgraph = make_shared<Flowgraph>();
     shared_ptr<FormatConverter> format_converter;
     shared_ptr<ModOutput> output;
 
@@ -174,7 +174,7 @@ int launch_modulator(int argc, char* argv[])
 
     InputFileReader inputFileReader;
 #if defined(HAVE_ZEROMQ)
-    shared_ptr<InputZeroMQReader> inputZeroMQReader(new InputZeroMQReader());
+    auto inputZeroMQReader = make_shared<InputZeroMQReader>();
 #endif
 
     struct sigaction sa;

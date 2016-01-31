@@ -160,23 +160,20 @@ int DabModulator::process(Buffer* const dataIn, Buffer* dataOut)
         ////////////////////////////////////////////////////////////////
         // CIF data initialisation
         ////////////////////////////////////////////////////////////////
-        shared_ptr<PrbsGenerator> cifPrbs(new PrbsGenerator(864 * 8, 0x110));
-        shared_ptr<FrameMultiplexer> cifMux(
-                new FrameMultiplexer(myFicSizeOut + 864 * 8,
-                &myEtiReader.getSubchannels()));
+        auto cifPrbs = make_shared<PrbsGenerator>(864 * 8, 0x110);
+        auto cifMux = make_shared<FrameMultiplexer>(
+                myFicSizeOut + 864 * 8, &myEtiReader.getSubchannels());
 
-        shared_ptr<BlockPartitioner> cifPart(
-                new BlockPartitioner(mode, myEtiReader.getFp()));
+        auto cifPart = make_shared<BlockPartitioner>(mode, myEtiReader.getFp());
 
-        shared_ptr<QpskSymbolMapper> cifMap(new QpskSymbolMapper(myNbCarriers));
-        shared_ptr<PhaseReference> cifRef(new PhaseReference(mode));
-        shared_ptr<FrequencyInterleaver> cifFreq(new FrequencyInterleaver(mode));
-        shared_ptr<DifferentialModulator> cifDiff(
-                new DifferentialModulator(myNbCarriers));
+        auto cifMap = make_shared<QpskSymbolMapper>(myNbCarriers);
+        auto cifRef = make_shared<PhaseReference>(mode);
+        auto cifFreq = make_shared<FrequencyInterleaver>(mode);
+        auto cifDiff = make_shared<DifferentialModulator>(myNbCarriers);
 
-        shared_ptr<NullSymbol> cifNull(new NullSymbol(myNbCarriers));
-        shared_ptr<SignalMultiplexer> cifSig(new SignalMultiplexer(
-                (1 + myNbSymbols) * myNbCarriers * sizeof(complexf)));
+        auto cifNull = make_shared<NullSymbol>(myNbCarriers);
+        auto cifSig = make_shared<SignalMultiplexer>(
+                (1 + myNbSymbols) * myNbCarriers * sizeof(complexf));
 
         // TODO this needs a review
         bool useCicEq = false;
@@ -194,9 +191,9 @@ int DabModulator::process(Buffer* const dataIn, Buffer* dataOut)
             }
         }
 
-        shared_ptr<CicEqualizer> cifCicEq(new CicEqualizer(myNbCarriers,
-                (float)mySpacing * (float)myOutputRate / 2048000.0f,
-                cic_ratio));
+        auto cifCicEq = make_shared<CicEqualizer>(
+                myNbCarriers,
+                (float)mySpacing * (float)myOutputRate / 2048000.0f, cic_ratio);
 
         shared_ptr<TII> tii;
         try {
@@ -207,28 +204,27 @@ int DabModulator::process(Buffer* const dataIn, Buffer* dataOut)
             etiLog.level(error) << "Could not initialise TII: " << e.what();
         }
 
-        shared_ptr<OfdmGenerator> cifOfdm(
-                new OfdmGenerator((1 + myNbSymbols), myNbCarriers, mySpacing));
+        auto cifOfdm = make_shared<OfdmGenerator>(
+                (1 + myNbSymbols), myNbCarriers, mySpacing);
 
-        shared_ptr<GainControl> cifGain(
-                new GainControl(mySpacing, myGainMode, myDigGain, myNormalise));
+        auto cifGain = make_shared<GainControl>(
+                mySpacing, myGainMode, myDigGain, myNormalise);
 
         cifGain->enrol_at(*myRCs);
 
-        shared_ptr<GuardIntervalInserter> cifGuard(
-                new GuardIntervalInserter(myNbSymbols, mySpacing,
-                myNullSize, mySymSize));
+        auto cifGuard = make_shared<GuardIntervalInserter>(
+                myNbSymbols, mySpacing, myNullSize, mySymSize);
 
         shared_ptr<FIRFilter> cifFilter;
         if (myFilterTapsFilename != "") {
             cifFilter = make_shared<FIRFilter>(myFilterTapsFilename);
             cifFilter->enrol_at(*myRCs);
         }
-        shared_ptr<OutputMemory> myOutput(new OutputMemory(dataOut));
+        auto myOutput = make_shared<OutputMemory>(dataOut);
 
-        Resampler* cifRes = NULL;
+        shared_ptr<Resampler> cifRes;
         if (myOutputRate != 2048000) {
-            cifRes = new Resampler(2048000, myOutputRate, mySpacing);
+            cifRes = make_shared<Resampler>(2048000, myOutputRate, mySpacing);
         } else {
             fprintf(stderr, "No resampler\n");
         }
@@ -254,13 +250,13 @@ int DabModulator::process(Buffer* const dataIn, Buffer* dataOut)
         PDEBUG(" Framesize: %zu\n", fic->getFramesize());
 
         // Configuring prbs generator
-        shared_ptr<PrbsGenerator> ficPrbs(new PrbsGenerator(myFicSizeIn, 0x110));
+        auto ficPrbs = make_shared<PrbsGenerator>(myFicSizeIn, 0x110);
 
         // Configuring convolutionnal encoder
-        shared_ptr<ConvEncoder> ficConv(new ConvEncoder(myFicSizeIn));
+        auto ficConv = make_shared<ConvEncoder>(myFicSizeIn);
 
         // Configuring puncturing encoder
-        shared_ptr<PuncturingEncoder> ficPunc(new PuncturingEncoder());
+        auto ficPunc = make_shared<PuncturingEncoder>();
         for (const auto *rule : fic->get_rules()) {
             PDEBUG(" Adding rule:\n");
             PDEBUG("  Length: %zu\n", rule->length());
@@ -311,16 +307,13 @@ int DabModulator::process(Buffer* const dataIn, Buffer* dataOut)
                     subchannel->protectionOption());
 
             // Configuring prbs genrerator
-            shared_ptr<PrbsGenerator> subchPrbs(
-                    new PrbsGenerator(subchSizeIn, 0x110));
+            auto subchPrbs = make_shared<PrbsGenerator>(subchSizeIn, 0x110);
 
             // Configuring convolutionnal encoder
-            shared_ptr<ConvEncoder> subchConv(
-                    new ConvEncoder(subchSizeIn));
+            auto subchConv = make_shared<ConvEncoder>(subchSizeIn);
 
             // Configuring puncturing encoder
-            shared_ptr<PuncturingEncoder> subchPunc(
-                    new PuncturingEncoder());
+            auto subchPunc = make_shared<PuncturingEncoder>();
 
             for (const auto& rule : subchannel->get_rules()) {
                 PDEBUG(" Adding rule:\n");
@@ -332,8 +325,7 @@ int DabModulator::process(Buffer* const dataIn, Buffer* dataOut)
             subchPunc->append_tail_rule(PuncturingRule(3, 0xcccccc));
 
             // Configuring time interleaver
-            shared_ptr<TimeInterleaver> subchInterleaver(
-                    new TimeInterleaver(subchSizeOut));
+            auto subchInterleaver = make_shared<TimeInterleaver>(subchSizeOut);
 
             myFlowgraph->connect(subchannel, subchPrbs);
             myFlowgraph->connect(subchPrbs, subchConv);
@@ -364,19 +356,17 @@ int DabModulator::process(Buffer* const dataIn, Buffer* dataOut)
 
         if (cifFilter) {
             myFlowgraph->connect(cifGuard, cifFilter);
-            if (cifRes != NULL) {
-                shared_ptr<Resampler> res(cifRes);
-                myFlowgraph->connect(cifFilter, res);
-                myFlowgraph->connect(res, myOutput);
+            if (cifRes) {
+                myFlowgraph->connect(cifFilter, cifRes);
+                myFlowgraph->connect(cifRes, myOutput);
             } else {
                 myFlowgraph->connect(cifFilter, myOutput);
             }
         }
         else { //no filtering
-            if (cifRes != NULL) {
-                shared_ptr<Resampler> res(cifRes);
-                myFlowgraph->connect(cifGuard, res);
-                myFlowgraph->connect(res, myOutput);
+            if (cifRes) {
+                myFlowgraph->connect(cifGuard, cifRes);
+                myFlowgraph->connect(cifRes, myOutput);
             } else {
                 myFlowgraph->connect(cifGuard, myOutput);
             }

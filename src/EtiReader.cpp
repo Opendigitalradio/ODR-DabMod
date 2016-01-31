@@ -174,8 +174,7 @@ int EtiReader::process(const Buffer* dataIn)
 
                 mySources.clear();
                 for (unsigned i = 0; i < eti_fc.NST; ++i) {
-                    mySources.push_back(shared_ptr<SubchannelSource>(
-                                new SubchannelSource(eti_stc[i])));
+                    mySources.push_back(make_shared<SubchannelSource>(eti_stc[i]));
                     PDEBUG("Sstc %u:\n", i);
                     PDEBUG(" Stc%i.scid: %i\n", i, eti_stc[i].SCID);
                     PDEBUG(" Stc%i.sad: %u\n", i, eti_stc[i].getStartAddress());
