@@ -39,13 +39,14 @@
 #include <stdexcept>
 #include <string>
 #include <map>
+#include <mutex>
 
 #define SYSLOG_IDENT "ODR-DabMod"
 #define SYSLOG_FACILITY LOG_LOCAL0
 
 enum log_level_t {debug = 0, info, warn, error, alert, emerg};
 
-const std::string levels_as_str[] =
+static const std::string levels_as_str[] =
     { "     ", "     ", "WARN ", "ERROR", "ALERT", "EMERG"} ;
 
 /** Abstract class all backends must inherit from */
@@ -72,17 +73,19 @@ class LogToSyslog : public LogBackend {
             int syslog_level = LOG_EMERG;
             switch (level) {
                 case debug: syslog_level = LOG_DEBUG; break;
-                case alert: syslog_level = LOG_ALERT; break;
                 case info:  syslog_level = LOG_INFO; break;
+                /* we don't have the notice level */
                 case warn:  syslog_level = LOG_WARNING; break;
                 case error: syslog_level = LOG_ERR; break;
+                default:    syslog_level = LOG_CRIT; break;
+                case alert: syslog_level = LOG_ALERT; break;
                 case emerg: syslog_level = LOG_EMERG; break;
             }
 
             syslog(syslog_level, SYSLOG_IDENT " %s", message.c_str());
         }
 
-        std::string get_name() { return name; };
+        std::string get_name() { return name; }
 
     private:
         std::string name;
@@ -117,7 +120,7 @@ class LogToFile : public LogBackend {
             fflush(log_file);
         }
 
-        std::string get_name() { return name; };
+        std::string get_name() { return name; }
 
     private:
         std::string name;
@@ -128,7 +131,7 @@ class LogLine;
 
 class Logger {
     public:
-        Logger() {};
+        Logger() {}
 
         void register_backend(LogBackend* backend);
 
@@ -143,6 +146,8 @@ class Logger {
 
     private:
         std::list<LogBackend*> backends;
+
+        std::mutex m_cerr_mutex;
 };
 
 extern Logger etiLog;
