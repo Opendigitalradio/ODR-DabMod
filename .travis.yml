@@ -11,6 +11,7 @@ addons: &addons
       - libtool
       - libboost1.55-all-dev
       - libcurl4-openssl-dev
+      - libfftw3-dev
       # libuhd-dev is not allowed
 
 compiler:
