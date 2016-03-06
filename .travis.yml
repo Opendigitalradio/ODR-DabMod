@@ -11,24 +11,18 @@ addons: &addons
       - libtool
       - libboost1.55-all-dev
       - libcurl4-openssl-dev
-      - libuhd-dev
-      - libfftw3-dev
+      # libuhd-dev is not allowed
 
 compiler:
-  - gcc
   - clang
 
 script:
   - |
     ./bootstrap.sh
-    CC=clang CXX=clang++ ./configure --disable-zeromq
+    CC=clang CXX=clang++ ./configure --disable-zeromq --disable-output-uhd
     make
   - |
     ./bootstrap.sh
-    CC=clang CXX=clang++ ./configure
-    make
-  - |
-    ./bootstrap.sh
-    CC=clang CXX=clang++ ./configure --enable-kiss-fft --enable-fft-simd
+    CC=clang CXX=clang++ ./configure --disable-output-uhd
     make
 
