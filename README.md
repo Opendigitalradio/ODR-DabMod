@@ -2,12 +2,12 @@ OVERVIEW
 ========
 ODR-DabMod is a *DAB (Digital Audio Broadcasting)* modulator compliant
 to ETSI EN 300 401. It is the continuation of the work started by which was
-developed by the Communications Research Center Canada on CRC-DabMux, and
+developed by the Communications Research Center Canada on CRC-DabMod, and
 is now pursued in the
 [Opendigitalradio project](http://opendigitalradio.org).
 
 
-ODR-DabMux is part of the ODR-mmbTools tool set. More information about the
+ODR-DabMod is part of the ODR-mmbTools tool set. More information about the
 ODR-mmbTools is available in the *guide*, available on the
 [Opendigitalradio mmbTools page](http://www.opendigitalradio.org/mmbtools).
 
@@ -18,17 +18,17 @@ Short list of features:
   resample to other rates
 - supports all four DAB transmission modes
 - Configuration file support, see doc/example.ini
-- Integrated UHD output for USRP devices
+- Integrated UHD output for [USRP devices](https://www.ettus.com/product)
   - Tested for B200, B100, USRP2, USRP1
   - With WBX daughterboard (where appropriate)
 - Timestamping support required for SFN
-- GPSDO monitoring (both Ettus and ODR LEA-M8F board)
+- GPSDO monitoring (both Ettus and [ODR LEA-M8F board](http://www.opendigitalradio.org/lea-m8f-gpsdo))
 - A FIR filter for improved spectrum mask
 - Logging: log to file, to syslog
 - ETI sources: file (Raw, Framed and Streamed) and ZeroMQ
 - A Telnet and ZeroMQ remote-control that can be used to change
   some parameters during runtime
-- 8-bit signed I/Q output format, useful for the HackRF
+- 8-bit signed I/Q output format, useful for the [HackRF](https://greatscottgadgets.com/hackrf/)
 - ZeroMQ PUB and REP output.
 
 The src/ directory contains the source code of ODR-DabMod.
