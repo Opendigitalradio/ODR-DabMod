@@ -106,6 +106,7 @@ add_definitions(
 	-DHAVE_GETTIMEOFDAY
 	-DPACKAGE="odrdabmod"
 	-DGITVERSION="${VERSION}"
+	-UNDEBUG
 )
 
 include_directories("${PROJECT_INCLUDE_DIR}")
