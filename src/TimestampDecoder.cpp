@@ -46,13 +46,14 @@ void TimestampDecoder::calculateTimestamp(struct frame_timestamp& ts)
     /* Push new timestamp into queue */
     ts_queued->timestamp_valid = full_timestamp_received_mnsc;
     ts_queued->timestamp_sec = time_secs;
-    ts_queued->timestamp_pps_offset = time_pps;
+    ts_queued->timestamp_pps = time_pps;
     ts_queued->fct = latestFCT;
 
     ts_queued->timestamp_refresh = offset_changed;
     offset_changed = false;
 
-    MDEBUG("time_secs=%d, time_pps=%f\n", time_secs, time_pps);
+    MDEBUG("time_secs=%d, time_pps=%f\n", time_secs,
+            (double)time_pps / 16384000.0);
     *ts_queued += timestamp_offset;
 
     queue_timestamps.push(ts_queued);
@@ -67,7 +68,7 @@ void TimestampDecoder::calculateTimestamp(struct frame_timestamp& ts)
         /* Return invalid timestamp until the queue is full */
         ts.timestamp_valid = false;
         ts.timestamp_sec = 0;
-        ts.timestamp_pps_offset = 0;
+        ts.timestamp_pps = 0;
         ts.timestamp_refresh = false;
         ts.fct = -1;
     }
@@ -168,9 +169,9 @@ void TimestampDecoder::updateTimestampSeconds(uint32_t secs)
     }
 }
 
-void TimestampDecoder::updateTimestampPPS(double pps)
+void TimestampDecoder::updateTimestampPPS(uint32_t pps)
 {
-    MDEBUG("TimestampDecoder::updateTimestampPPS(%f)\n", pps);
+    MDEBUG("TimestampDecoder::updateTimestampPPS(%f)\n", (double)pps / 16384000.0);
 
     if (time_pps > pps) // Second boundary crossed
     {
@@ -188,7 +189,7 @@ void TimestampDecoder::updateTimestampPPS(double pps)
 void TimestampDecoder::updateTimestampEti(
         int framephase,
         uint16_t mnsc,
-        double pps,
+        uint32_t pps, // In units of 1/16384000 s
         int32_t fct)
 {
     updateTimestampPPS(pps);

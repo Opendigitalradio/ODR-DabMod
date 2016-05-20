@@ -67,8 +67,8 @@ public:
     bool sourceContainsTimestamp();
 
 protected:
-    /* Transform the ETI TIST to a PPS offset in ms */
-    double getPPSOffset();
+    /* Transform the ETI TIST to a PPS offset in units of 1/16384000 s */
+    uint32_t getPPSOffset();
 
     void sync();
     int state;

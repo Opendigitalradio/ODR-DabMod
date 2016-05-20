@@ -101,7 +101,6 @@ enum refclk_lock_loss_behaviour_t { CRASH, IGNORE };
 
 struct UHDWorkerData {
     bool running;
-    bool failed_due_to_fct;
 
 #if FAKE_UHD == 0
     uhd::usrp::multi_usrp::sptr myUsrp;
@@ -129,11 +128,6 @@ struct UHDWorkerData {
 
     // What to do when the reference clock PLL loses lock
     refclk_lock_loss_behaviour_t refclk_lock_loss_behaviour;
-
-    // What transmission mode we're using defines by how
-    // much the FCT should increment for each
-    // transmission frame.
-    int fct_increment;
 };
 
 
@@ -143,7 +137,6 @@ class UHDWorker {
             uwd = uhdworkerdata;
 
             uwd->running = true;
-            uwd->failed_due_to_fct = false;
             uhd_thread = boost::thread(&UHDWorker::process_errhandler, this);
         }
 
@@ -160,17 +153,18 @@ class UHDWorker {
         int num_underflows;
         int num_late_packets;
 
-        bool fct_discontinuity;
-        int expected_next_fct;
         uhd::tx_metadata_t md;
-        time_t tx_second;
-        double pps_offset;
-        double last_pps;
+        bool     last_tx_time_initialised;
+        uint32_t last_tx_second;
+        uint32_t last_tx_pps;
+
+        // Used to print statistics once a second
+        double   last_usrp_time;
 
         void print_async_metadata(const struct UHDWorkerFrameData *frame);
 
         void handle_frame(const struct UHDWorkerFrameData *frame);
-        void tx_frame(const struct UHDWorkerFrameData *frame);
+        void tx_frame(const struct UHDWorkerFrameData *frame, bool ts_update);
 
         struct UHDWorkerData *uwd;
         boost::thread uhd_thread;
@@ -278,6 +272,13 @@ class OutputUHD: public ModOutput, public RemoteControllable {
         boost::packaged_task<bool> gps_fix_pt;
         boost::unique_future<bool> gps_fix_future;
         boost::thread gps_fix_task;
+
+
+        // What transmission mode we're using defines by how
+        // much the FCT should increment for each
+        // transmission frame.
+        int fct_increment;
+        int last_fct;
 
         // Wait time in seconds to get fix
         static const int initial_gps_fix_wait = 180;

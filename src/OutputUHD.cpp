@@ -328,16 +328,15 @@ int OutputUHD::process(Buffer* dataIn, Buffer* dataOut)
         if (first_run) {
             etiLog.level(debug) << "OutputUHD: UHD initialising...";
 
-            uwd.sourceContainsTimestamp = myConf.enableSync &&
-                myEtiReader->sourceContainsTimestamp();
-
             switch (myEtiReader->getMode()) {
-                case 1: uwd.fct_increment = 4; break;
+                case 1: fct_increment = 4; break;
                 case 2:
-                case 3: uwd.fct_increment = 1; break;
-                case 4: uwd.fct_increment = 2; break;
+                case 3: fct_increment = 1; break;
+                case 4: fct_increment = 2; break;
                 default: break;
             }
+
+            last_fct = -1;
 
             // we only set the delay buffer from the dab mode signaled in ETI if the
             // dab mode was not set in contructor
@@ -352,7 +351,6 @@ int OutputUHD::process(Buffer* dataIn, Buffer* dataOut)
             etiLog.level(debug) << "OutputUHD: UHD initialising complete";
         }
 
-
         if (lastLen != dataIn->getLength()) {
             // I expect that this never happens.
             etiLog.level(emerg) <<
@@ -360,6 +358,10 @@ int OutputUHD::process(Buffer* dataIn, Buffer* dataOut)
                 " to " << dataIn->getLength();
             throw std::runtime_error("Non-constant input length!");
         }
+
+        uwd.sourceContainsTimestamp = myConf.enableSync &&
+            myEtiReader->sourceContainsTimestamp();
+
 
         if (uwd.check_gpsfix) {
             try {
@@ -400,27 +402,34 @@ int OutputUHD::process(Buffer* dataIn, Buffer* dataOut)
         if (!uwd.running) {
             worker.stop();
             first_run = true;
-            if (uwd.failed_due_to_fct) {
-                throw fct_discontinuity_error();
-            }
-            else {
-                etiLog.level(error) <<
-                    "OutputUHD: Error, UHD worker failed";
-                throw std::runtime_error("UHD worker failed");
+
+            etiLog.level(error) <<
+                "OutputUHD: Error, UHD worker failed";
+            throw std::runtime_error("UHD worker failed");
+        }
+
+        if (frame.ts.fct == -1) {
+            etiLog.level(info) <<
+                "OutputUHD: dropping one frame with invalid FCT";
+        }
+        else if (last_fct != -1 and
+                (last_fct + fct_increment) % 250 != frame.ts.fct) {
+            worker.stop();
+            first_run = true;
+            throw fct_discontinuity_error();
+        }
+        else {
+            while (true) {
+                if (uwd.frames.size() > FRAMES_MAX_SIZE) {
+                    usleep(10000); // 10ms
+                }
+
+                uwd.frames.push(frame);
+                break;
             }
         }
 
-        uwd.sourceContainsTimestamp = myConf.enableSync &&
-            myEtiReader->sourceContainsTimestamp();
-
-        while (true) {
-            if (uwd.frames.size() > FRAMES_MAX_SIZE) {
-                usleep(10000); // 10ms
-            }
-
-            uwd.frames.push(frame);
-            break;
-        }
+        //last_fct = frame.ts.fct; // TODO
     }
 
     return dataIn->getLength();
@@ -604,24 +613,14 @@ void OutputUHD::check_gps()
 
 void UHDWorker::process_errhandler()
 {
-    try {
-        process();
-    }
-    catch (fct_discontinuity_error& e) {
-        etiLog.level(warn) << e.what();
-        uwd->failed_due_to_fct = true;
-    }
-
+    process();
     uwd->running = false;
     etiLog.level(warn) << "UHD worker terminated";
 }
 
 void UHDWorker::process()
 {
-    int workerbuffer = 0;
-    tx_second        = 0;
-    pps_offset       = 0.0;
-    last_pps         = 2.0;
+    last_tx_time_initialised = false;
 
 #if FAKE_UHD == 0
     uhd::stream_args_t stream_args("fc32"); //complex floats
@@ -631,13 +630,10 @@ void UHDWorker::process()
     md.start_of_burst = false;
     md.end_of_burst   = false;
 
-    expected_next_fct = -1;
-
     num_underflows   = 0;
     num_late_packets = 0;
 
     while (uwd->running) {
-        fct_discontinuity = false;
         md.has_time_spec  = false;
         md.time_spec      = uhd::time_spec_t(0.0);
 
@@ -645,9 +641,6 @@ void UHDWorker::process()
         uwd->frames.wait_and_pop(frame);
 
         handle_frame(&frame);
-
-        // swap buffers
-        workerbuffer = (workerbuffer + 1) % 2;
     }
 }
 
@@ -655,32 +648,6 @@ void UHDWorker::handle_frame(const struct UHDWorkerFrameData *frame)
 {
     // Transmit timeout
     static const double tx_timeout = 20.0;
-
-    pps_offset = frame->ts.timestamp_pps_offset;
-
-    // Tx second from MNSC
-    tx_second = frame->ts.timestamp_sec;
-
-    /* Verify that the FCT value is correct. If we miss one transmission
-     * frame we must interrupt UHD and resync to the timestamps
-     */
-    if (frame->ts.fct == -1) {
-        etiLog.level(info) <<
-            "OutputUHD: dropping one frame with invalid FCT";
-        return;
-    }
-    if (expected_next_fct != -1) {
-        if (expected_next_fct != (int)frame->ts.fct) {
-            etiLog.level(warn) <<
-                "OutputUHD: Incorrect expect fct " << frame->ts.fct <<
-                ", expected " << expected_next_fct;
-
-            fct_discontinuity = true;
-            throw fct_discontinuity_error();
-        }
-    }
-
-    expected_next_fct = (frame->ts.fct + uwd->fct_increment) % 250;
 
     // Check for ref_lock
     if (uwd->check_refclk_loss) {
@@ -704,9 +671,13 @@ void UHDWorker::handle_frame(const struct UHDWorkerFrameData *frame)
     }
 
     double usrp_time = uwd->myUsrp->get_time_now().get_real_secs();
-
+    bool timestamp_discontinuity = false;
 
     if (uwd->sourceContainsTimestamp) {
+        // Tx time from MNSC and TIST
+        uint32_t tx_second = frame->ts.timestamp_sec;
+        uint32_t tx_pps    = frame->ts.timestamp_pps;
+
         if (!frame->ts.timestamp_valid) {
             /* We have not received a full timestamp through
              * MNSC. We sleep through the frame.
@@ -714,10 +685,42 @@ void UHDWorker::handle_frame(const struct UHDWorkerFrameData *frame)
             etiLog.level(info) <<
                 "OutputUHD: Throwing sample " << frame->ts.fct <<
                 " away: incomplete timestamp " << tx_second <<
-                " + " << pps_offset;
+                " / " << tx_pps;
             usleep(20000); //TODO should this be TM-dependant ?
             return;
         }
+
+        if (last_tx_time_initialised) {
+            const size_t sizeIn = frame->buf.size() / sizeof(complexf);
+            uint64_t increment = (uint64_t)sizeIn * 16384000ul /
+                                 (uint64_t)uwd->sampleRate;
+                                  // samps  * ticks/s  / (samps/s)
+                                  // (samps * ticks * s) / (s * samps)
+                                  // ticks
+
+            uint32_t expected_sec = last_tx_second + increment / 16384000ul;
+            uint32_t expected_pps = last_tx_pps + increment % 16384000ul;
+
+            while (expected_pps > 16384000) {
+                expected_sec++;
+                expected_pps -= 16384000;
+            }
+
+            if (expected_sec != tx_second or
+                    expected_pps != tx_pps) {
+                etiLog.level(warn) << "OutputUHD: tx time unexpected!" <<
+                " exp " << expected_sec << " " << expected_pps <<
+                " got " << tx_second << " " << tx_pps;
+
+                timestamp_discontinuity = true;
+            }
+        }
+
+        last_tx_second = tx_second;
+        last_tx_pps    = tx_pps;
+        last_tx_time_initialised = true;
+
+        double pps_offset = tx_pps / 16384000.0;
 
         md.has_time_spec = true;
         md.time_spec = uhd::time_spec_t(tx_second, pps_offset);
@@ -760,9 +763,9 @@ void UHDWorker::handle_frame(const struct UHDWorkerFrameData *frame)
         }
     }
 
-    tx_frame(frame);
+    tx_frame(frame, timestamp_discontinuity);
 
-    if (last_pps > pps_offset) {
+    if (last_usrp_time + 1.0 < usrp_time) {
         if (num_underflows or num_late_packets) {
             etiLog.log(info,
                     "OutputUHD status (usrp time: %f): "
@@ -774,10 +777,10 @@ void UHDWorker::handle_frame(const struct UHDWorkerFrameData *frame)
         num_late_packets = 0;
     }
 
-    last_pps = pps_offset;
+    last_usrp_time = usrp_time;
 }
 
-void UHDWorker::tx_frame(const struct UHDWorkerFrameData *frame)
+void UHDWorker::tx_frame(const struct UHDWorkerFrameData *frame, bool ts_update)
 {
     const double tx_timeout = 20.0;
     const size_t sizeIn = frame->buf.size() / sizeof(complexf);
@@ -793,13 +796,13 @@ void UHDWorker::tx_frame(const struct UHDWorkerFrameData *frame)
     while (uwd->running && !uwd->muting && (num_acc_samps < sizeIn)) {
         size_t samps_to_send = std::min(sizeIn - num_acc_samps, usrp_max_num_samps);
 
+        uhd::tx_metadata_t md_tx = md;
+
         //ensure the the last packet has EOB set if the timestamps has been
         //refreshed and need to be reconsidered.
-        //Also, if we saw that the FCT did not increment as expected, which
-        //could be due to a lost incoming packet.
-        md.end_of_burst = (
+        md_tx.end_of_burst = (
                 uwd->sourceContainsTimestamp &&
-                (frame->ts.timestamp_refresh || fct_discontinuity) &&
+                (frame->ts.timestamp_refresh or ts_update) &&
                 samps_to_send <= usrp_max_num_samps );
 
 
@@ -811,13 +814,13 @@ void UHDWorker::tx_frame(const struct UHDWorkerFrameData *frame)
         //send a single packet
         size_t num_tx_samps = myTxStream->send(
                 &in_data[num_acc_samps],
-                samps_to_send, md, tx_timeout);
+                samps_to_send, md_tx, tx_timeout);
 #endif
 
         num_acc_samps += num_tx_samps;
 
-        md.time_spec = uhd::time_spec_t(tx_second, pps_offset)
-            + uhd::time_spec_t(0, num_tx_samps/uwd->sampleRate);
+        md_tx.time_spec = md.time_spec +
+            uhd::time_spec_t(0, num_tx_samps/uwd->sampleRate);
 
         if (num_tx_samps == 0) {
             etiLog.log(warn,

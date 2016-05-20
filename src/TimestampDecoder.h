@@ -43,7 +43,7 @@ struct frame_timestamp
     int32_t fct;
 
     uint32_t timestamp_sec;
-    double timestamp_pps_offset;
+    uint32_t timestamp_pps; // In units of 1/16384000 s
     bool timestamp_valid;
     bool timestamp_refresh;
 
@@ -51,7 +51,7 @@ struct frame_timestamp
     {
         if (this != &rhs) {
             this->timestamp_sec = rhs.timestamp_sec;
-            this->timestamp_pps_offset = rhs.timestamp_pps_offset;
+            this->timestamp_pps = rhs.timestamp_pps;
             this->timestamp_valid = rhs.timestamp_valid;
             this->timestamp_refresh = rhs.timestamp_refresh;
             this->fct = rhs.fct;
@@ -66,11 +66,11 @@ struct frame_timestamp
         offset_pps = modf(diff, &offset_secs);
 
         this->timestamp_sec += lrintf(offset_secs);
-        this->timestamp_pps_offset += offset_pps;
+        this->timestamp_pps += lrintf(offset_pps / 16384000.0);
 
-        while (this->timestamp_pps_offset > 1)
+        while (this->timestamp_pps > 16384000)
         {
-            this->timestamp_pps_offset -= 1.0;
+            this->timestamp_pps -= 16384000;
             this->timestamp_sec += 1;
         };
         return *this;
@@ -83,12 +83,16 @@ struct frame_timestamp
         return ts;
     }
 
+    double pps_offset() const {
+        return timestamp_pps / 16384000.0;
+    }
+
     void print(const char* t)
     {
         fprintf(stderr,
                 "%s <struct frame_timestamp(%s, %d, %.9f, %d)>\n",
                 t, this->timestamp_valid ? "valid" : "invalid",
-                 this->timestamp_sec, this->timestamp_pps_offset,
+                 this->timestamp_sec, pps_offset(),
                  this->fct);
     }
 };
@@ -135,7 +139,7 @@ class TimestampDecoder : public RemoteControllable
         void updateTimestampEti(
                 int framephase,
                 uint16_t mnsc,
-                double pps,
+                uint32_t pps, // In units of 1/16384000 s
                 int32_t fct);
 
         /*********** REMOTE CONTROL ***************/
@@ -160,9 +164,11 @@ class TimestampDecoder : public RemoteControllable
 
         /* Each frame contains the TIST field with the PPS offset.
          * For each frame, this function must be called to update
-         * the timestamp
+         * the timestamp.
+         *
+         * pps is in units of 1/16384000 s
          */
-        void updateTimestampPPS(double pps);
+        void updateTimestampPPS(uint32_t pps);
 
         /* Update the timestamp when a full set of MNSC data is
          * known. This function can be called at most every four
@@ -173,7 +179,7 @@ class TimestampDecoder : public RemoteControllable
         struct tm temp_time;
         uint32_t time_secs;
         int32_t latestFCT;
-        double time_pps;
+        uint32_t time_pps;
         double& timestamp_offset;
         unsigned m_tist_delay_stages;
         int inhibit_second_update;
