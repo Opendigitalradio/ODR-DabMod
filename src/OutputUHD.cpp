@@ -690,9 +690,11 @@ void UHDWorker::handle_frame(const struct UHDWorkerFrameData *frame)
 
             if (expected_sec != tx_second or
                     expected_pps != tx_pps) {
-                etiLog.level(warn) << "OutputUHD: tx time unexpected!" <<
-                " exp " << expected_sec << " " << expected_pps <<
-                " got " << tx_second << " " << tx_pps;
+                etiLog.level(warn) << "OutputUHD: timestamp irregularity!" <<
+                " Expected " << expected_sec << "+" <<
+                    (double)expected_pps/16384000.0 <<
+                " Got " << tx_second << "+" <<
+                    (double)tx_pps/16384000.0;
 
                 timestamp_discontinuity = true;
             }
