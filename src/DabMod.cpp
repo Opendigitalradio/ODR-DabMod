@@ -108,7 +108,7 @@ struct modulator_data
 enum class run_modulator_state_t {
     failure,    // Corresponds to all failures
     normal_end, // Number of frames to modulate was reached
-    again,      // FCT discontinuity or ZeroMQ overrun
+    again,      // ZeroMQ overrun
     reconfigure // Some sort of change of configuration we cannot handle happened
 };
 
@@ -887,12 +887,6 @@ run_modulator_state_t run_modulator(modulator_data& m)
             running = 0;
             ret = run_modulator_state_t::normal_end;
         }
-#if defined(HAVE_OUTPUT_UHD)
-    } catch (fct_discontinuity_error& e) {
-        // The OutputUHD saw a FCT discontinuity
-        etiLog.level(warn) << e.what();
-        ret = run_modulator_state_t::again;
-#endif
     } catch (zmq_input_overflow& e) {
         // The ZeroMQ input has overflowed its buffer
         etiLog.level(warn) << e.what();

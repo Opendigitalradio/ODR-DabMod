@@ -328,16 +328,6 @@ int OutputUHD::process(Buffer* dataIn, Buffer* dataOut)
         if (first_run) {
             etiLog.level(debug) << "OutputUHD: UHD initialising...";
 
-            switch (myEtiReader->getMode()) {
-                case 1: fct_increment = 4; break;
-                case 2:
-                case 3: fct_increment = 1; break;
-                case 4: fct_increment = 2; break;
-                default: break;
-            }
-
-            last_fct = -1;
-
             // we only set the delay buffer from the dab mode signaled in ETI if the
             // dab mode was not set in contructor
             if (myTFDurationMs == 0) {
@@ -412,12 +402,6 @@ int OutputUHD::process(Buffer* dataIn, Buffer* dataOut)
             etiLog.level(info) <<
                 "OutputUHD: dropping one frame with invalid FCT";
         }
-        else if (last_fct != -1 and
-                (last_fct + fct_increment) % 250 != frame.ts.fct) {
-            worker.stop();
-            first_run = true;
-            throw fct_discontinuity_error();
-        }
         else {
             while (true) {
                 if (uwd.frames.size() > FRAMES_MAX_SIZE) {
@@ -428,8 +412,6 @@ int OutputUHD::process(Buffer* dataIn, Buffer* dataOut)
                 break;
             }
         }
-
-        //last_fct = frame.ts.fct; // TODO
     }
 
     return dataIn->getLength();

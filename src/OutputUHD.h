@@ -89,14 +89,6 @@ struct UHDWorkerFrameData {
     struct frame_timestamp ts;
 };
 
-struct fct_discontinuity_error : public std::exception
-{
-  const char* what () const throw ()
-  {
-    return "FCT discontinuity detected";
-  }
-};
-
 enum refclk_lock_loss_behaviour_t { CRASH, IGNORE };
 
 struct UHDWorkerData {
@@ -272,13 +264,6 @@ class OutputUHD: public ModOutput, public RemoteControllable {
         boost::packaged_task<bool> gps_fix_pt;
         boost::unique_future<bool> gps_fix_future;
         boost::thread gps_fix_task;
-
-
-        // What transmission mode we're using defines by how
-        // much the FCT should increment for each
-        // transmission frame.
-        int fct_increment;
-        int last_fct;
 
         // Wait time in seconds to get fix
         static const int initial_gps_fix_wait = 180;
