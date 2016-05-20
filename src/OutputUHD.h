@@ -47,9 +47,8 @@ DESCRIPTION:
 #include <uhd/utils/thread_priority.hpp>
 #include <uhd/utils/safe_main.hpp>
 #include <uhd/usrp/multi_usrp.hpp>
-#include <boost/thread/thread.hpp>
-#include <boost/thread/barrier.hpp>
-#include <list>
+#include <boost/thread.hpp>
+#include <deque>
 #include <memory>
 #include <string>
 
@@ -58,6 +57,7 @@ DESCRIPTION:
 #include "EtiReader.h"
 #include "TimestampDecoder.h"
 #include "RemoteControl.h"
+#include "ThreadsafeQueue.h"
 
 #include <stdio.h>
 #include <sys/types.h>
@@ -73,13 +73,19 @@ DESCRIPTION:
 // frames are too far in the future
 #define TIMESTAMP_MARGIN_FUTURE 0.5
 
+// Maximum number of frames that can wait in uwd.frames
+#define FRAMES_MAX_SIZE 2
+
 typedef std::complex<float> complexf;
 
+// Each frame contains one OFDM frame, and its
+// associated timestamp
 struct UHDWorkerFrameData {
     // Buffer holding frame data
-    void* buf;
+    std::vector<uint8_t> buf;
 
-    // Full timestamp
+    // A full timestamp contains a TIST according to standard
+    // and time information within MNSC with tx_second.
     struct frame_timestamp ts;
 };
 
@@ -102,20 +108,13 @@ struct UHDWorkerData {
 #endif
     unsigned sampleRate;
 
-    // Double buffering between the two threads
-    // Each buffer contains one OFDM frame, and it's
-    // associated timestamp
-    // A full timestamp contains a TIST according to standard
-    // and time information within MNSC with tx_second.
     bool sourceContainsTimestamp;
 
     // When working with timestamps, mute the frames that
     // do not have a timestamp
     bool muteNoTimestamps;
 
-    struct UHDWorkerFrameData frame0;
-    struct UHDWorkerFrameData frame1;
-    size_t bufsize; // in bytes
+    ThreadsafeQueue<UHDWorkerFrameData> frames;
 
     // If we want to verify loss of refclk
     bool check_refclk_loss;
@@ -127,9 +126,6 @@ struct UHDWorkerData {
 
     // muting set by remote control
     bool muting;
-
-    // A barrier to synchronise the two threads
-    std::shared_ptr<boost::barrier> sync_barrier;
 
     // What to do when the reference clock PLL loses lock
     refclk_lock_loss_behaviour_t refclk_lock_loss_behaviour;
@@ -234,9 +230,7 @@ class OutputUHD: public ModOutput, public RemoteControllable {
 
         const char* name() { return "OutputUHD"; }
 
-        void setETIReader(EtiReader *etiReader) {
-            myEtiReader = etiReader;
-        }
+        void setETIReader(EtiReader *etiReader);
 
         /*********** REMOTE CONTROL ***************/
         /* virtual void enrol_at(BaseRemoteController& controller)
@@ -264,7 +258,6 @@ class OutputUHD: public ModOutput, public RemoteControllable {
         bool first_run;
         bool gps_fix_verified;
         struct UHDWorkerData uwd;
-        int activebuffer;
 
     private:
         // Resize the internal delay buffer according to the dabMode and
