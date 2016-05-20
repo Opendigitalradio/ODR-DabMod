@@ -759,9 +759,9 @@ void UHDWorker::handle_frame(const struct UHDWorkerFrameData *frame)
         }
         num_underflows = 0;
         num_late_packets = 0;
-    }
 
-    last_usrp_time = usrp_time;
+        last_usrp_time = usrp_time;
+    }
 }
 
 void UHDWorker::tx_frame(const struct UHDWorkerFrameData *frame, bool ts_update)
