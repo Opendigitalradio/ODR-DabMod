@@ -49,6 +49,7 @@ DESCRIPTION:
 #include <uhd/usrp/multi_usrp.hpp>
 #include <boost/thread.hpp>
 #include <deque>
+#include <chrono>
 #include <memory>
 #include <string>
 
@@ -151,7 +152,7 @@ class UHDWorker {
         uint32_t last_tx_pps;
 
         // Used to print statistics once a second
-        double   last_usrp_time;
+        std::chrono::steady_clock::time_point last_print_time;
 
         void print_async_metadata(const struct UHDWorkerFrameData *frame);
 

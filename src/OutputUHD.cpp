@@ -749,7 +749,8 @@ void UHDWorker::handle_frame(const struct UHDWorkerFrameData *frame)
 
     tx_frame(frame, timestamp_discontinuity);
 
-    if (last_usrp_time + 1.0 < usrp_time) {
+    auto time_now = std::chrono::steady_clock::now();
+    if (last_print_time + std::chrono::seconds(1) < time_now) {
         if (num_underflows or num_late_packets) {
             etiLog.log(info,
                     "OutputUHD status (usrp time: %f): "
@@ -760,7 +761,7 @@ void UHDWorker::handle_frame(const struct UHDWorkerFrameData *frame)
         num_underflows = 0;
         num_late_packets = 0;
 
-        last_usrp_time = usrp_time;
+        last_print_time = time_now;
     }
 }
 
