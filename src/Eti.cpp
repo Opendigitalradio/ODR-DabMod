@@ -31,9 +31,9 @@
 //definitions des structures des champs du ETI(NI, G703)
 
 
-unsigned short eti_FC::getFrameLength()
+uint16_t eti_FC::getFrameLength()
 {
-    return (unsigned short)((FL_high << 8) | FL_low);
+    return (uint16_t)((FL_high << 8) | FL_low);
 }
 
 

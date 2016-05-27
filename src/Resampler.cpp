@@ -38,7 +38,8 @@
 #  define FFT_IMAG(x) x[1]
 #endif
 
-unsigned gcd(unsigned a, unsigned b)
+template<class T>
+T gcd(T a, T b)
 {
     if (b == 0) {
         return a;
@@ -106,7 +107,7 @@ Resampler::Resampler(size_t inputRate, size_t outputRate, size_t resolution) :
     M = inputRate / divisor;
     PDEBUG(" gcd: %zu, L: %zu, M: %zu\n", divisor, L, M);
     {
-        unsigned factor = resolution * 2 / M;
+        size_t factor = resolution * 2 / M;
         if (factor & 1) {
             ++factor;
         }

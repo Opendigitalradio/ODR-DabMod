@@ -62,7 +62,7 @@ struct zmq_dab_message_t
     uint8_t  buf[NUM_FRAMES_PER_ZMQ_MESSAGE*6144];
 };
 
-int InputZeroMQReader::Open(const std::string& uri, unsigned max_queued_frames)
+int InputZeroMQReader::Open(const std::string& uri, size_t max_queued_frames)
 {
     // The URL might start with zmq+tcp://
     if (uri.substr(0, 4) == "zmq+") {

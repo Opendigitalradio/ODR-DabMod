@@ -58,7 +58,7 @@ int QpskSymbolMapper::process(Buffer* const dataIn, Buffer* dataOut)
 
     dataOut->setLength(dataIn->getLength() * 4 * 2 * sizeof(float));   // 4 output complex symbols per input byte
 #ifdef __SSE__
-    const unsigned char* in = reinterpret_cast<const unsigned char*>(dataIn->getData());
+    const uint8_t* in = reinterpret_cast<const uint8_t*>(dataIn->getData());
     __m128* out = reinterpret_cast<__m128*>(dataOut->getData());
 
     if (dataIn->getLength() % (d_carriers / 4) != 0) {
@@ -88,7 +88,7 @@ int QpskSymbolMapper::process(Buffer* const dataIn, Buffer* dataOut)
     };
     size_t inOffset = 0;
     size_t outOffset = 0;
-    unsigned char tmp = 0;
+    uint8_t tmp = 0;
     for (size_t i = 0; i < dataIn->getLength(); i += d_carriers / 4) {
         for (size_t j = 0; j < d_carriers / 8; ++j) {
             tmp =  (in[inOffset] & 0xc0) >> 4;
@@ -109,7 +109,7 @@ int QpskSymbolMapper::process(Buffer* const dataIn, Buffer* dataOut)
         inOffset += d_carriers / 8;
     }
 #else // !__SSE__
-    const unsigned char* in = reinterpret_cast<const unsigned char*>(dataIn->getData());
+    const uint8_t* in = reinterpret_cast<const uint8_t*>(dataIn->getData());
     float* out = reinterpret_cast<float*>(dataOut->getData());
     if (dataIn->getLength() % (d_carriers / 4) != 0) {
         throw std::runtime_error(
@@ -140,7 +140,7 @@ int QpskSymbolMapper::process(Buffer* const dataIn, Buffer* dataOut)
     };
     size_t inOffset = 0;
     size_t outOffset = 0;
-    unsigned char tmp;
+    uint8_t tmp;
     for (size_t i = 0; i < dataIn->getLength(); i += d_carriers / 4) {
         for (size_t j = 0; j < d_carriers / 8; ++j) {
             tmp =  (in[inOffset] & 0xc0) >> 4;

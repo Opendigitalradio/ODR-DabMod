@@ -91,11 +91,11 @@ int BlockPartitioner::process(std::vector<Buffer*> dataIn, Buffer* dataOut)
 
 #ifdef DEBUG
     fprintf(stderr, "BlockPartitioner::process(dataIn:");
-    for (unsigned i = 0; i < dataIn.size(); ++i) {
+    for (size_t i = 0; i < dataIn.size(); ++i) {
         fprintf(stderr, " %p", dataIn[i]);
     }
     fprintf(stderr, ", sizeIn:");
-    for (unsigned i = 0; i < dataIn.size(); ++i) {
+    for (size_t i = 0; i < dataIn.size(); ++i) {
         fprintf(stderr, " %zu", dataIn[i]->getLength());
     }
     fprintf(stderr, ", dataOut: %p, sizeOut: %zu)\n", dataOut, dataOut->getLength());

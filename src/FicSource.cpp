@@ -66,7 +66,7 @@ FicSource::FicSource(eti_FC &fc) :
 FicSource::~FicSource()
 {
     PDEBUG("FicSource::~FicSource()\n");
-    for (unsigned i = 0; i < d_puncturing_rules.size(); ++i) {
+    for (size_t i = 0; i < d_puncturing_rules.size(); ++i) {
 //        PDEBUG(" Deleting rules @ %p\n", d_puncturing_rules[i]);
         delete d_puncturing_rules[i];
     }

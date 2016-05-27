@@ -32,7 +32,7 @@ typedef std::complex<float> complexf;
 /* ETSI EN 300 401 Table 43 (Clause 14.3.2)
  * Contains h_{i,k} values
  */
-const unsigned char PhaseReference::d_h[4][32] = {
+const uint8_t PhaseReference::d_h[4][32] = {
     /* h0 */ { 0, 2, 0, 0, 0, 0, 1, 1, 2, 0, 0, 0, 2, 2, 1, 1,
         0, 2, 0, 0, 0, 0, 1, 1, 2, 0, 0, 0, 2, 2, 1, 1 },
     /* h1 */ { 0, 3, 2, 3, 0, 1, 3, 0, 2, 1, 2, 3, 2, 3, 3, 0,
@@ -96,7 +96,7 @@ PhaseReference::~PhaseReference()
 }
 
 
-complexf convert(unsigned char data) {
+complexf convert(uint8_t data) {
     const complexf value[] = {
         complexf(1, 0),
         complexf(0, 1),

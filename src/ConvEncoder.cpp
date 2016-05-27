@@ -27,7 +27,7 @@
 #include <stdexcept>
 
 
-const static unsigned char PARITY[] = {
+const static uint8_t PARITY[] = {
     0, 1, 1, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0, 1, 1, 0,
     1, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1, 0, 0, 1,
     1, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1, 0, 0, 1,
@@ -73,8 +73,8 @@ int ConvEncoder::process(Buffer* const dataIn, Buffer* dataOut)
     size_t out_block_size = (d_framesize * 4) + 3;
     size_t in_offset = 0;
     size_t out_offset = 0;
-    unsigned short memory = 0;
-    unsigned char data;
+    uint16_t memory = 0;
+    uint8_t data;
 
     if (dataIn->getLength() != in_block_size) {
         PDEBUG("%zu != %zu != 0\n", dataIn->getLength(), in_block_size);
@@ -82,8 +82,8 @@ int ConvEncoder::process(Buffer* const dataIn, Buffer* dataOut)
                 "ConvEncoder::process input size not valid!\n");
     }
     dataOut->setLength(out_block_size);
-    const unsigned char* in = reinterpret_cast<const unsigned char*>(dataIn->getData());
-    unsigned char* out = reinterpret_cast<unsigned char*>(dataOut->getData());
+    const uint8_t* in = reinterpret_cast<const uint8_t*>(dataIn->getData());
+    uint8_t* out = reinterpret_cast<uint8_t*>(dataOut->getData());
 
     // While there is enought input and ouput items
     while (dataIn->getLength() - in_offset >= in_block_size &&
@@ -100,11 +100,11 @@ int ConvEncoder::process(Buffer* const dataIn, Buffer* dataOut)
                     memory |= (data >> 7) << 6;
                     data <<= 1;
                     //PDEBUG("Memory: 0x%x\n", memory);
-                    unsigned char poly[4] = {
-                        (unsigned char)(memory & 0x5b),
-                        (unsigned char)(memory & 0x79),
-                        (unsigned char)(memory & 0x65),
-                        (unsigned char)(memory & 0x5b)
+                    uint8_t poly[4] = {
+                        (uint8_t)(memory & 0x5b),
+                        (uint8_t)(memory & 0x79),
+                        (uint8_t)(memory & 0x65),
+                        (uint8_t)(memory & 0x5b)
                     };
                     //PDEBUG("Polys: 0x%x, 0x%x, 0x%x, 0x%x\n", poly[0], poly[1], poly[2], poly[3]);
                     // For each poly
@@ -125,11 +125,11 @@ int ConvEncoder::process(Buffer* const dataIn, Buffer* dataOut)
             for (unsigned j = 0; j < 2; ++j) {
                 memory >>= 1;
                 //PDEBUG("Memory: 0x%x\n", memory);
-                unsigned char poly[4] = {
-                    (unsigned char)(memory & 0x5b),
-                    (unsigned char)(memory & 0x79),
-                    (unsigned char)(memory & 0x65),
-                    (unsigned char)(memory & 0x5b)
+                uint8_t poly[4] = {
+                    (uint8_t)(memory & 0x5b),
+                    (uint8_t)(memory & 0x79),
+                    (uint8_t)(memory & 0x65),
+                    (uint8_t)(memory & 0x5b)
                 };
                 //PDEBUG("Polys: 0x%x, 0x%x, 0x%x, 0x%x\n", poly[0], poly[1], poly[2], poly[3]);
                 // For each poly
