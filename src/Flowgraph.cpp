@@ -152,14 +152,14 @@ Flowgraph::~Flowgraph()
         fprintf(stderr, "Process time:\n");
 
         for (const auto &node : nodes) {
-            fprintf(stderr, "  %30s: %10u us (%2.2f %%)\n",
+            fprintf(stderr, "  %30s: %10lu us (%2.2f %%)\n",
                     node->plugin()->name(),
-                    (unsigned)node->processTime(),
+                    node->processTime(),
                     node->processTime() * 100.0 / myProcessTime);
         }
 
-        fprintf(stderr, "  %30s: %10u us (100.00 %%)\n", "total",
-                (unsigned)myProcessTime);
+        fprintf(stderr, "  %30s: %10lu us (100.00 %%)\n", "total",
+                myProcessTime);
     }
 }
 
