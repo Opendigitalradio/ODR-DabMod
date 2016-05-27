@@ -2,7 +2,7 @@
    Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010, 2011 Her Majesty
    the Queen in Right of Canada (Communications Research Center Canada)
 
-   Copyright (C) 2014
+   Copyright (C) 2016
    Matthias P. Braendli, matthias.braendli@mpb.li
 
     http://opendigitalradio.org
@@ -26,12 +26,8 @@
 
 #include "OfdmGenerator.h"
 #include "PcDebug.h"
-#if USE_FFTW
-#  include "fftw3.h"
-#  define FFT_TYPE fftwf_complex
-#else
-#  include "kiss_fftsimd.h"
-#endif
+#include "fftw3.h"
+#define FFT_TYPE fftwf_complex
 
 #include <stdio.h>
 #include <string.h>
@@ -48,11 +44,7 @@ OfdmGenerator::OfdmGenerator(size_t nbSymbols,
     ModCodec(ModFormat(nbSymbols * nbCarriers * sizeof(FFT_TYPE)),
             ModFormat(nbSymbols * spacing * sizeof(FFT_TYPE))),
     myFftPlan(NULL),
-#if USE_FFTW
     myFftIn(NULL), myFftOut(NULL),
-#else
-    myFftBuffer(NULL),
-#endif
     myNbSymbols(nbSymbols),
     myNbCarriers(nbCarriers),
     mySpacing(spacing)
@@ -93,7 +85,6 @@ OfdmGenerator::OfdmGenerator(size_t nbSymbols,
     PDEBUG("  myZeroDst: %u\n", myZeroDst);
     PDEBUG("  myZeroSize: %u\n", myZeroSize);
 
-#if USE_FFTW
     const int N = mySpacing; // The size of the FFT
     myFftIn = (FFT_TYPE*)fftwf_malloc(sizeof(FFT_TYPE) * N);
     myFftOut = (FFT_TYPE*)fftwf_malloc(sizeof(FFT_TYPE) * N);
@@ -107,11 +98,6 @@ OfdmGenerator::OfdmGenerator(size_t nbSymbols,
         throw std::runtime_error(
                 "OfdmGenerator::process complexf size is not FFT_TYPE size!");
     }
-#else
-    myFftPlan = kiss_fft_alloc(mySpacing, 1, NULL, NULL);
-    myFftBuffer = (FFT_TYPE*)memalign(16, mySpacing * sizeof(FFT_TYPE));
-#endif
-
 }
 
 
@@ -119,7 +105,6 @@ OfdmGenerator::~OfdmGenerator()
 {
     PDEBUG("OfdmGenerator::~OfdmGenerator() @ %p\n", this);
 
-#if USE_FFTW
     if (myFftIn) {
          fftwf_free(myFftIn);
     }
@@ -131,18 +116,6 @@ OfdmGenerator::~OfdmGenerator()
     if (myFftPlan) {
         fftwf_destroy_plan(myFftPlan);
     }
-
-#else
-    if (myFftPlan != NULL) {
-        kiss_fft_free(myFftPlan);
-    }
-
-    if (myFftBuffer != NULL) {
-        free(myFftBuffer);
-    }
-
-    kiss_fft_cleanup();
-#endif
 }
 
 int OfdmGenerator::process(Buffer* const dataIn, Buffer* dataOut)
@@ -175,8 +148,6 @@ int OfdmGenerator::process(Buffer* const dataIn, Buffer* dataOut)
                 "OfdmGenerator::process output size not valid!");
     }
 
-#if USE_FFTW
-    // No SIMD/no-SIMD distinction, it's too early to optimize anything
     for (size_t i = 0; i < myNbSymbols; ++i) {
         myFftIn[0][0] = 0;
         myFftIn[0][1] = 0;
@@ -194,75 +165,6 @@ int OfdmGenerator::process(Buffer* const dataIn, Buffer* dataOut)
         in += myNbCarriers;
         out += mySpacing;
     }
-#else
-#  ifdef USE_SIMD
-    for (size_t i = 0, j = 0; i < sizeIn; ) {
-        // Pack 4 fft operations
-        typedef struct {
-            float r[4];
-            float i[4];
-        } fft_data;
-        assert(sizeof(FFT_TYPE) == sizeof(fft_data));
-        complexf *cplxIn = (complexf*)in;
-        complexf *cplxOut = (complexf*)out;
-        fft_data *dataBuffer = (fft_data*)myFftBuffer;
-
-        FFT_REAL(myFftBuffer[0]) = _mm_setzero_ps();
-        FFT_IMAG(myFftBuffer[0]) = _mm_setzero_ps();
-        for (size_t k = 0; k < myZeroSize; ++k) {
-            FFT_REAL(myFftBuffer[myZeroDst + k]) = _mm_setzero_ps();
-            FFT_IMAG(myFftBuffer[myZeroDst + k]) = _mm_setzero_ps();
-        }
-        for (int k = 0; k < 4; ++k) {
-            if (i < sizeIn) {
-                for (size_t l = 0; l < myPosSize; ++l) {
-                    dataBuffer[myPosDst + l].r[k] = cplxIn[i + myPosSrc + l].real();
-                    dataBuffer[myPosDst + l].i[k] = cplxIn[i + myPosSrc + l].imag();
-                }
-                for (size_t l = 0; l < myNegSize; ++l) {
-                    dataBuffer[myNegDst + l].r[k] = cplxIn[i + myNegSrc + l].real();
-                    dataBuffer[myNegDst + l].i[k] = cplxIn[i + myNegSrc + l].imag();
-                }
-                i += myNbCarriers;
-            }
-            else {
-                for (size_t l = 0; l < myNbCarriers; ++l) {
-                    dataBuffer[l].r[k] = 0.0f;
-                    dataBuffer[l].i[k] = 0.0f;
-                }
-            }
-        }
-
-        kiss_fft(myFftPlan, myFftBuffer, myFftBuffer);
-
-        for (int k = 0; k < 4; ++k) {
-            if (j < sizeOut) {
-                for (size_t l = 0; l < mySpacing; ++l) {
-                    cplxOut[j + l] = complexf(dataBuffer[l].r[k], dataBuffer[l].i[k]);
-                }
-                j += mySpacing;
-            }
-        }
-    }
-#  else
-    for (size_t i = 0; i < myNbSymbols; ++i) {
-        FFT_REAL(myFftBuffer[0]) = 0;
-        FFT_IMAG(myFftBuffer[0]) = 0;
-        bzero(&myFftBuffer[myZeroDst], myZeroSize * sizeof(FFT_TYPE));
-        memcpy(&myFftBuffer[myPosDst], &in[myPosSrc],
-                myPosSize * sizeof(FFT_TYPE));
-        memcpy(&myFftBuffer[myNegDst], &in[myNegSrc],
-                myNegSize * sizeof(FFT_TYPE));
-
-        kiss_fft(myFftPlan, myFftBuffer, out);
-
-        in += myNbCarriers;
-        out += mySpacing;
-
-    }
-#  endif
-#endif
-
     return sizeOut;
 }
 

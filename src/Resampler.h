@@ -33,19 +33,12 @@
 
 #include "porting.h"
 #include "ModCodec.h"
-#if USE_FFTW
-#  include <sys/types.h>
-#  include <fftw3.h>
+#include <sys/types.h>
+#include <fftw3.h>
 
-#  define FFT_TYPE fftwf_complex
-#  define FFT_PLAN fftwf_plan
+#define FFT_TYPE fftwf_complex
+#define FFT_PLAN fftwf_plan
 
-#else
-#  include "kiss_fftsimd.h"
-#  include <sys/types.h>
-#  include <kiss_fft.h>
-#  include <tools/kiss_fftr.h>
-#endif
 #include <complex>
 typedef std::complex<float> complexf;
 

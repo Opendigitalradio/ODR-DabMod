@@ -33,39 +33,10 @@ endif
 
 bin_PROGRAMS = odr-dabmod
 
-FFT_DIR=lib/kiss_fft129
 FFT_LDADD=
 
-if USE_KISS_FFT
-FFT_INC=-I$(FFT_DIR) -I$(FFT_DIR)/tools
-FFT_FLG=-ffast-math
-
-.PHONY: lib/kiss_fft129
-
-BUILT_SOURCES=lib/kiss_fft129
-
-lib/kiss_fft129:
-	if [ ! -e lib/kiss_fft129/kiss_fft.c ]; then \
-		tar xzf lib/kiss_fft129.tar.gz -C lib; \
-	fi
-
-nodist_odr_dabmod_SOURCES = lib/kiss_fft129/kiss_fft.c \
-							lib/kiss_fft129/kiss_fft.h \
-							lib/kiss_fft129/tools/kiss_fftr.c \
-							lib/kiss_fft129/tools/kiss_fftr.h \
-							src/kiss_fftsimd.c \
-							src/kiss_fftsimd.h
-
-clean-local:
-	rm -rf $(FFT_DIR)
-
-else
-FFT_INC=
-FFT_FLG=
-endif
-
 odr_dabmod_CPPFLAGS = -Wall -Isrc \
-					  $(FFT_INC) $(FFT_FLG) $(GITVERSION_FLAGS)
+					  $(GITVERSION_FLAGS)
 odr_dabmod_LDADD    = $(FFT_LDADD)
 odr_dabmod_SOURCES  = src/DabMod.cpp \
 					  src/PcDebug.h \
@@ -164,7 +135,4 @@ odr_dabmod_SOURCES  = src/DabMod.cpp \
 					  src/zmq.hpp
 
 dist_bin_SCRIPTS = src/crc-dwap.py
-
-EXTRA_DIST += lib/kiss_fft129.tar.gz
-EXTRA_DIST += src/kiss_fftsimd.c src/kiss_fftsimd.h
 

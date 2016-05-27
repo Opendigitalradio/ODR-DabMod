@@ -3,9 +3,9 @@ Required dependencies:
 
     * A C++11 capable compiler
     * Boost 1.41 or later
+    * FFTW 3.x
     * Optional UHD for USRP
     * Optional ZeroMQ http://www.zeromq.org
-    * Optional FFTW 3.x (included KISS FFT is used as fallback)
 
 Simple install procedure:
 =========================
@@ -25,14 +25,6 @@ The configure script can be launch with a variety of options:
  --disable-zeromq       Disable ZeroMQ input (to be used with ODR-DabMux),
                         output and remotecontrol.
  --disable-output-uhd   Disable the binding to the UHD driver for USRPs
-
-You have the choice between two FFT libraries: KISS FFT and FFTW. KISS FFT is a
-proven library, but it's performance is worse than with the new FFTW. With KISS
-FFT, you have the choice between using the normal version, or the SIMD
-accelerated version, which is a bit faster. The corresponding options are:
-
- --enable-kiss-fft      Prefer KISS FFT over FFTW
- --enable-fft-simd      Enable SIMD instructions for KISS FFT
 
 Debugging options: You should not enable debug if you need good performance.
 By default, debug is disabled.

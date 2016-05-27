@@ -110,10 +110,6 @@ void printVersion(void)
             "    You should have received a copy of the GNU General Public License along\n"
             "    with ODR-DabMod.  If not, see <http://www.gnu.org/licenses/>.\n"
             "\n"
-#if USE_KISS_FFT
-            "ODR-DabMod makes use of the following open source packages:\n"
-            "    Kiss FFT v1.2.9 (Revised BSD) - http://kissfft.sourceforge.net/\n"
-#endif
            );
 
 }

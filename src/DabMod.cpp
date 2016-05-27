@@ -291,18 +291,6 @@ int launch_modulator(int argc, char* argv[])
 #endif
             << std::endl;
 
-    std::cerr << "Using FFT library " <<
-#if defined(USE_FFTW)
-        "FFTW" <<
-#endif
-#if defined(USE_KISS_FFT)
-        "Kiss FFT" <<
-#endif
-#if defined(USE_SIMD)
-        " (with fft_simd)" <<
-#endif
-        "\n";
-
     std::cerr << "Compiled with features: " <<
 #if defined(HAVE_ZEROMQ)
         "zeromq " <<
