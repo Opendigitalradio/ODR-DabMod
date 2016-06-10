@@ -112,8 +112,6 @@ Resampler::~Resampler()
 {
     PDEBUG("Resampler::~Resampler() @ %p\n", this);
 
-    if (myFftPlan1 != NULL) { fftwf_free(myFftPlan1); }
-    if (myFftPlan2 != NULL) { fftwf_free(myFftPlan2); }
     if (myFftIn != NULL) { fftwf_free(myFftIn); }
     if (myFftOut != NULL) { fftwf_free(myFftOut); }
     if (myBufferIn != NULL) { fftwf_free(myBufferIn); }
