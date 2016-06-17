@@ -3,7 +3,7 @@
    Her Majesty the Queen in Right of Canada (Communications Research
    Center Canada)
 
-   Copyright (C), 2014, Matthias P. Braendli, matthias.braendli@mpb.li
+   Copyright (C), 2016, Matthias P. Braendli, matthias.braendli@mpb.li
  */
 /*
    This file is part of ODR-DabMod.
@@ -40,6 +40,8 @@
 #include <string>
 #include <map>
 #include <mutex>
+#include <thread>
+#include <boost/lockfree/spsc_queue.hpp>
 
 #define SYSLOG_IDENT "ODR-DabMod"
 #define SYSLOG_FACILITY LOG_LOCAL0
@@ -148,9 +150,32 @@ class LogTracer : public LogBackend {
 
 class LogLine;
 
+struct log_message_t {
+    log_message_t(log_level_t _level, std::string _message) :
+        level(_level),
+        message(_message) {}
+
+    log_message_t() {}
+
+    log_level_t level;
+    std::string message;
+};
+
 class Logger {
     public:
-        Logger() {}
+        Logger() {
+            m_io_thread = std::thread(&Logger::io_process, this);
+        }
+
+        Logger(const Logger& other) = delete;
+        const Logger& operator=(const Logger& other) = delete;
+        ~Logger() {
+            // Special message to stop the thread
+            log_message_t m(debug, "");
+
+            m_message_queue.push(m);
+            m_io_thread.join();
+        }
 
         void register_backend(LogBackend* backend);
 
@@ -159,6 +184,9 @@ class Logger {
 
         void logstr(log_level_t level, std::string message);
 
+        /* All logging IO is done in another thread */
+        void io_process(void);
+
         /* Return a LogLine for the given level
          * so that you can write etiLog.level(info) << "stuff = " << 21 */
         LogLine level(log_level_t level);
@@ -166,6 +194,10 @@ class Logger {
     private:
         std::list<LogBackend*> backends;
 
+        boost::lockfree::spsc_queue<
+            log_message_t,
+            boost::lockfree::capacity<80> > m_message_queue;
+        std::thread m_io_thread;
         std::mutex m_cerr_mutex;
 };
 
@@ -176,6 +208,7 @@ extern Logger etiLog;
 class LogLine {
     public:
         LogLine(const LogLine& logline);
+        const LogLine& operator=(const LogLine& other) = delete;
         LogLine(Logger* logger, log_level_t level) :
             logger_(logger)
         {

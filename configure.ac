@@ -103,7 +103,7 @@ AS_IF([test "x$enable_output_uhd" = "xyes"],
         [AC_DEFINE(HAVE_OUTPUT_UHD, [1], [Define if UHD output is enabled]) ,
          AC_CHECK_LIB([uhd], [main], [], [AC_MSG_ERROR([library uhd is missing])])])
 
-AX_BOOST_BASE([1.41.0], [], AC_MSG_ERROR([BOOST 1.41 or later is required]))
+AX_BOOST_BASE([1.55.0], [], AC_MSG_ERROR([BOOST 1.55 or later is required]))
 AC_CHECK_LIB([boost_system], [main], [], [AC_MSG_ERROR([library boost_system is missing])])
 AC_CHECK_LIB([boost_thread], [main], [], [AC_MSG_ERROR([library boost_thread is missing])])
 

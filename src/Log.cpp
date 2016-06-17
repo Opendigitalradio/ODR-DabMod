@@ -3,7 +3,7 @@
    Her Majesty the Queen in Right of Canada (Communications Research
    Center Canada)
 
-   Copyright (C), 2014, Matthias P. Braendli, matthias.braendli@mpb.li
+   Copyright (C), 2016, Matthias P. Braendli, matthias.braendli@mpb.li
  */
 /*
    This file is part of ODR-DabMod.
@@ -65,20 +65,44 @@ void Logger::log(log_level_t level, const char* fmt, ...)
 
 void Logger::logstr(log_level_t level, std::string message)
 {
-    /* Remove a potential trailing newline.
-     * It doesn't look good in syslog
-     */
-    if (message[message.length()-1] == '\n') {
-        message.resize(message.length()-1);
-    }
+    log_message_t m;
+    m.level = level;
+    m.message = message;
 
-    for (auto &backend : backends) {
-        backend->log(level, message);
-    }
+    m_message_queue.push(std::move(m));
+}
 
-    if (level != log_level_t::trace) {
-        std::lock_guard<std::mutex> guard(m_cerr_mutex);
-        std::cerr << levels_as_str[level] << " " << message << std::endl;
+void Logger::io_process()
+{
+    set_thread_name("logger");
+    while (1) {
+        log_message_t m;
+        while (m_message_queue.pop(m) == false) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        }
+
+        auto message = m.message;
+
+        if (m.level == debug and m.message.empty()) {
+            // Special message to stop thread
+            break;
+        }
+
+        /* Remove a potential trailing newline.
+         * It doesn't look good in syslog
+         */
+        if (message[message.length()-1] == '\n') {
+            message.resize(message.length()-1);
+        }
+
+        for (auto &backend : backends) {
+            backend->log(m.level, message);
+        }
+
+        if (m.level != log_level_t::trace) {
+            std::lock_guard<std::mutex> guard(m_cerr_mutex);
+            std::cerr << levels_as_str[m.level] << " " << message << std::endl;
+        }
     }
 }
 
