@@ -126,9 +126,11 @@ struct UHDWorkerData {
 
 class UHDWorker {
     public:
-        void start(struct UHDWorkerData *uhdworkerdata) {
+        UHDWorker(struct UHDWorkerData *uhdworkerdata) {
             uwd = uhdworkerdata;
+        }
 
+        void start(struct UHDWorkerData *uhdworkerdata) {
             uwd->running = true;
             uhd_thread = boost::thread(&UHDWorker::process_errhandler, this);
         }
@@ -140,6 +142,13 @@ class UHDWorker {
             uhd_thread.interrupt();
             uhd_thread.join();
         }
+
+        ~UHDWorker() {
+            stop();
+        }
+
+        UHDWorker(const UHDWorker& other) = delete;
+        UHDWorker& operator=(const UHDWorker& other) = delete;
 
     private:
         // Asynchronous message statistics
@@ -234,17 +243,17 @@ class OutputUHD: public ModOutput, public RemoteControllable {
 
 
     protected:
-        OutputUHD(const OutputUHD& other);
-        OutputUHD& operator=(const OutputUHD& other);
+        OutputUHD(const OutputUHD& other) = delete;
+        OutputUHD& operator=(const OutputUHD& other) = delete;
 
         EtiReader *myEtiReader;
         OutputUHDConfig& myConf;
         uhd::usrp::multi_usrp::sptr myUsrp;
         std::shared_ptr<boost::barrier> mySyncBarrier;
-        UHDWorker worker;
         bool first_run;
         bool gps_fix_verified;
         struct UHDWorkerData uwd;
+        UHDWorker worker;
 
     private:
         // Resize the internal delay buffer according to the dabMode and

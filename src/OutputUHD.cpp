@@ -122,8 +122,8 @@ OutputUHD::OutputUHD(
     // the buffers at object initialisation.
     first_run(true),
     gps_fix_verified(false),
+    worker(&uwd),
     myDelayBuf(0)
-
 {
     myConf.muting = true;     // is remote-controllable, and reset by the GPS fix check
     myConf.staticDelayUs = 0; // is remote-controllable
@@ -269,7 +269,6 @@ OutputUHD::OutputUHD(
 OutputUHD::~OutputUHD()
 {
     MDEBUG("OutputUHD::~OutputUHD() @ %p\n", this);
-    worker.stop();
 }
 
 
