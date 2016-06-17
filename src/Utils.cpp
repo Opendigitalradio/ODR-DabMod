@@ -27,6 +27,8 @@
 
 #include "Utils.h"
 #include "GainControl.h"
+#include <sys/prctl.h>
+#include <pthread.h>
 
 void printUsage(char* progName)
 {
@@ -122,5 +124,10 @@ int set_realtime_prio(int prio)
     sp.sched_priority = sched_get_priority_min(policy) + prio;
     int ret = pthread_setschedparam(pthread_self(), policy, &sp);
     return ret;
+}
+
+void set_thread_name(const char *name)
+{
+    prctl(PR_SET_NAME,name,0,0,0);
 }
 

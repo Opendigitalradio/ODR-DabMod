@@ -57,6 +57,7 @@ void FIRFilterWorker::process(struct FIRFilterWorkerData *fwd)
     struct timespec time_end;
 
     set_realtime_prio(1);
+    set_thread_name("firfilter");
 
     // This thread creates the dataOut buffer, and deletes
     // the incoming buffer

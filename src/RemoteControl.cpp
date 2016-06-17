@@ -30,6 +30,7 @@
 #include <boost/thread.hpp>
 
 #include "RemoteControl.h"
+#include "Utils.h"
 
 using boost::asio::ip::tcp;
 using namespace std;
@@ -58,6 +59,7 @@ void RemoteControllerTelnet::restart_thread(long)
 
 void RemoteControllerTelnet::process(long)
 {
+    set_thread_name("telnet_rc");
     std::string m_welcome = "ODR-DabMod Remote Control CLI\n"
                             "Write 'help' for help.\n"
                             "**********\n";
@@ -298,6 +300,7 @@ void RemoteControllerZmq::send_fail_reply(zmq::socket_t &pSocket, const std::str
 
 void RemoteControllerZmq::process()
 {
+    set_thread_name("zmq_rc");
     // create zmq reply socket for receiving ctrl parameters
     etiLog.level(info) << "Starting zmq remote control thread";
     try {

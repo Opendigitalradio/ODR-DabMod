@@ -60,5 +60,7 @@ inline long timespecdiff_us(struct timespec& oldTime, struct timespec& time)
 // Set SCHED_RR with priority prio (0=lowest)
 int set_realtime_prio(int prio);
 
+void set_thread_name(const char *name);
+
 #endif
 

@@ -40,6 +40,7 @@
 #include "porting.h"
 #include "InputReader.h"
 #include "PcDebug.h"
+#include "Utils.h"
 
 #define NUM_FRAMES_PER_ZMQ_MESSAGE 4
 /* A concatenation of four ETI frames,
@@ -124,6 +125,7 @@ void InputZeroMQReader::PrintInfo()
 
 void InputZeroMQWorker::RecvProcess(struct InputZeroMQThreadData* workerdata)
 {
+    set_thread_name("zmqinput");
     size_t queue_size = 0;
 
     bool buffer_full = false;

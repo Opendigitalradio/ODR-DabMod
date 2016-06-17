@@ -601,6 +601,8 @@ void UHDWorker::process_errhandler()
         etiLog.level(error) << "Could not set priority for UHD worker:" << ret;
     }
 
+    set_thread_name("uhdworker");
+
     process();
     uwd->running = false;
     etiLog.level(warn) << "UHD worker terminated";

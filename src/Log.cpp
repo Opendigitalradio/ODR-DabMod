@@ -27,6 +27,7 @@
 #include <chrono>
 
 #include "Log.h"
+#include "Utils.h"
 
 using namespace std;
 
