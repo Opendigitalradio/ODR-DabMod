@@ -29,6 +29,7 @@
 
 #include "FIRFilter.h"
 #include "PcDebug.h"
+#include "Utils.h"
 
 #include <stdio.h>
 #include <stdexcept>
@@ -54,6 +55,8 @@ void FIRFilterWorker::process(struct FIRFilterWorkerData *fwd)
     size_t i;
     struct timespec time_start;
     struct timespec time_end;
+
+    set_realtime_prio(1);
 
     // This thread creates the dataOut buffer, and deletes
     // the incoming buffer

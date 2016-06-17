@@ -57,6 +57,8 @@ inline long timespecdiff_us(struct timespec& oldTime, struct timespec& time)
     return tv_sec * 1000 + tv_nsec / 1000;
 }
 
+// Set SCHED_RR with priority prio (0=lowest)
+int set_realtime_prio(int prio);
 
 #endif
 

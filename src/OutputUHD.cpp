@@ -45,6 +45,7 @@
 #include <time.h>
 #include <errno.h>
 #include <unistd.h>
+#include <pthread.h>
 
 using namespace std;
 
@@ -595,6 +596,11 @@ void OutputUHD::check_gps()
 
 void UHDWorker::process_errhandler()
 {
+    // Set thread priority to realtime
+    if (int ret = set_realtime_prio(1)) {
+        etiLog.level(error) << "Could not set priority for UHD worker:" << ret;
+    }
+
     process();
     uwd->running = false;
     etiLog.level(warn) << "UHD worker terminated";

@@ -114,4 +114,13 @@ void printVersion(void)
 
 }
 
+int set_realtime_prio(int prio)
+{
+    // Set thread priority to realtime
+    const int policy = SCHED_RR;
+    sched_param sp;
+    sp.sched_priority = sched_get_priority_min(policy) + prio;
+    int ret = pthread_setschedparam(pthread_self(), policy, &sp);
+    return ret;
+}
 

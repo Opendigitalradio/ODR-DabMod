@@ -751,6 +751,10 @@ int launch_modulator(int argc, char* argv[])
     }
 #endif
 
+    // Set thread priority to realtime
+    if (int r = set_realtime_prio(1)) {
+        etiLog.level(error) << "Could not set priority for modulator:" << r;
+    }
 
     while (run_again) {
         Flowgraph flowgraph;
