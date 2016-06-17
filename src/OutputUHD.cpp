@@ -407,7 +407,8 @@ int OutputUHD::process(Buffer* dataIn, Buffer* dataOut)
                     usleep(10000); // 10ms
                 }
 
-                uwd.frames.push(frame);
+                size_t num_frames = uwd.frames.push(frame);
+                etiLog.log(trace, "UHD,push %zu", num_frames);
                 break;
             }
         }
@@ -619,7 +620,9 @@ void UHDWorker::process()
         md.time_spec      = uhd::time_spec_t(0.0);
 
         struct UHDWorkerFrameData frame;
+        etiLog.log(trace, "UHD,wait");
         uwd->frames.wait_and_pop(frame);
+        etiLog.log(trace, "UHD,pop");
 
         handle_frame(&frame);
     }
@@ -708,6 +711,7 @@ void UHDWorker::handle_frame(const struct UHDWorkerFrameData *frame)
 
         md.has_time_spec = true;
         md.time_spec = uhd::time_spec_t(tx_second, pps_offset);
+        etiLog.log(trace, "UHD,tist %f", md.time_spec.get_real_secs());
 
         // md is defined, let's do some checks
         if (md.time_spec.get_real_secs() + tx_timeout < usrp_time) {
@@ -801,6 +805,7 @@ void UHDWorker::tx_frame(const struct UHDWorkerFrameData *frame, bool ts_update)
         size_t num_tx_samps = myTxStream->send(
                 &in_data[num_acc_samps],
                 samps_to_send, md_tx, tx_timeout);
+        etiLog.log(trace, "UHD,sent %zu of %zu", num_tx_samps, samps_to_send);
 #endif
 
         num_acc_samps += num_tx_samps;

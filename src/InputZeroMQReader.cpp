@@ -96,11 +96,14 @@ int InputZeroMQReader::GetNextFrame(void* buffer)
      */
     if (in_messages_.size() < 4) {
         const size_t prebuffering = 10;
+        etiLog.log(trace, "ZMQ,wait1");
         in_messages_.wait_and_pop(incoming, prebuffering);
     }
     else {
+        etiLog.log(trace, "ZMQ,wait2");
         in_messages_.wait_and_pop(incoming);
     }
+    etiLog.log(trace, "ZMQ,pop");
 
     if (not worker_.is_running()) {
         throw zmq_input_overflow();
@@ -183,6 +186,7 @@ void InputZeroMQWorker::RecvProcess(struct InputZeroMQThreadData* workerdata)
                         offset += framesize;
 
                         queue_size = workerdata->in_messages->push(buf);
+                        etiLog.log(trace, "ZMQ,push %zu", queue_size);
                     }
                 }
             }

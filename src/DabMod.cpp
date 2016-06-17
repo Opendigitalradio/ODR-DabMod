@@ -394,6 +394,12 @@ int launch_modulator(int argc, char* argv[])
             etiLog.register_backend(log_file);
         }
 
+        auto trace_filename = pt.get<std::string>("log.trace", "");
+        if (not trace_filename.empty()) {
+            LogTracer* tracer = new LogTracer(trace_filename);
+            etiLog.register_backend(tracer);
+        }
+
 
         // modulator parameters:
         gainMode = (GainMode)pt.get("modulator.gainmode", 0);
@@ -776,6 +782,7 @@ int launch_modulator(int argc, char* argv[])
         m.inputReader->PrintInfo();
 
         run_modulator_state_t st = run_modulator(m);
+        etiLog.log(trace, "DABMOD,run_modulator() = %d", st);
 
         switch (st) {
             case run_modulator_state_t::failure:

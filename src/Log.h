@@ -44,10 +44,10 @@
 #define SYSLOG_IDENT "ODR-DabMod"
 #define SYSLOG_FACILITY LOG_LOCAL0
 
-enum log_level_t {debug = 0, info, warn, error, alert, emerg};
+enum log_level_t {debug = 0, info, warn, error, alert, emerg, trace};
 
 static const std::string levels_as_str[] =
-    { "     ", "     ", "WARN ", "ERROR", "ALERT", "EMERG"} ;
+    { "     ", "     ", "WARN ", "ERROR", "ALERT", "EMERG", "TRACE"} ;
 
 /** Abstract class all backends must inherit from */
 class LogBackend {
@@ -72,6 +72,7 @@ class LogToSyslog : public LogBackend {
 
             int syslog_level = LOG_EMERG;
             switch (level) {
+                case trace: break; // Do not handle TRACE in syslog
                 case debug: syslog_level = LOG_DEBUG; break;
                 case info:  syslog_level = LOG_INFO; break;
                 /* we don't have the notice level */
@@ -89,6 +90,9 @@ class LogToSyslog : public LogBackend {
 
     private:
         std::string name;
+
+        LogToSyslog(const LogToSyslog& other) = delete;
+        const LogToSyslog& operator=(const LogToSyslog& other) = delete;
 };
 
 class LogToFile : public LogBackend {
@@ -109,22 +113,37 @@ class LogToFile : public LogBackend {
             }
         }
 
-        void log(log_level_t level, std::string message) {
-
-            const char* log_level_text[] =
-                {"DEBUG", "INFO", "WARN", "ERROR", "ALERT", "EMERG"};
-
-            // fprintf is thread-safe
-            fprintf(log_file, SYSLOG_IDENT ": %s: %s\n",
-                    log_level_text[(size_t)level], message.c_str());
-            fflush(log_file);
-        }
+        void log(log_level_t level, std::string message);
 
         std::string get_name() { return name; }
 
     private:
         std::string name;
         FILE* log_file;
+
+        LogToFile(const LogToFile& other) = delete;
+        const LogToFile& operator=(const LogToFile& other) = delete;
+};
+
+class LogTracer : public LogBackend {
+    public:
+        LogTracer(const std::string& filename);
+
+        ~LogTracer() {
+            if (m_trace_file != NULL) {
+                fclose(m_trace_file);
+            }
+        }
+
+        void log(log_level_t level, std::string message);
+        std::string get_name() { return name; }
+    private:
+        std::string name;
+        uint64_t m_trace_micros_startup;
+        FILE* m_trace_file;
+
+        LogTracer(const LogTracer& other) = delete;
+        const LogTracer& operator=(const LogTracer& other) = delete;
 };
 
 class LogLine;
