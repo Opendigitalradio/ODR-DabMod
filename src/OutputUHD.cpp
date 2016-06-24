@@ -2,7 +2,7 @@
    Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010 Her Majesty the
    Queen in Right of Canada (Communications Research Center Canada)
 
-   Copyright (C) 2014, 2015
+   Copyright (C) 2016
    Matthias P. Braendli, matthias.braendli@mpb.li
 
     http://opendigitalradio.org
@@ -404,11 +404,8 @@ int OutputUHD::process(Buffer* dataIn, Buffer* dataOut)
         }
         else {
             while (true) {
-                if (uwd.frames.size() > FRAMES_MAX_SIZE) {
-                    usleep(10000); // 10ms
-                }
-
-                size_t num_frames = uwd.frames.push(frame);
+                size_t num_frames = uwd.frames.push_wait_if_full(frame,
+                        FRAMES_MAX_SIZE);
                 etiLog.log(trace, "UHD,push %zu", num_frames);
                 break;
             }
