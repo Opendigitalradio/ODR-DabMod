@@ -1,5 +1,43 @@
-* Flowgraph.connect should not take buffer size as argument
-* Node.process should use variable buffer input and output size
-* Flowgraph.run should not return until end of execution
-* Add mode I, III and IV (need Flowgraph.connect and Node.process)
-* Add windowing to resampler process
+This TODO file lists ideas and features for future developments. They are
+more or less ordered according to their benefit, but that is subjective
+to some degree.
+
+Unless written, no activity has been started on the topics.
+
+
+TII implementation incorrect
+----------------------------
+The current TII implementation is wrong. There are two TII variants:
+one according to spec, and the one that was implemented in early modulators
+that ended up being used a lot even if not compatible with the spec.
+
+ODR-DabMod should support both ideally.
+
+
+EDI input
+---------
+Add support for EDI input, so that more multiplexers can be interfaced
+to the modulator. Relevant spec: ETSI TS 102 693
+
+It would be beneficial to write and EDI decoding library that can be re-used in
+ODR-DabMux to add EDI input there too for encoders.
+
+Initial work started in http://git.mpb.li/git/odr-edilib/
+
+
+Review CicEq
+------------
+The CIC Equaliser was used for the USRP1 to compensate for spectrum flatness.
+It is not documented, and its effect poorly explained. Review if still needed,
+and document appropriately.
+
+
+Add metadata to flowgraph
+-------------------------
+The flowgraph does not support metadata. This is why the timestamp has this
+kludge with the delay queue, so that the timestamps are delayed properly
+depending on what is included in the flowgraph.
+
+Without metadata inside the flowgraph, it is more difficult to pipeline the DSP
+processing to make use of many-core systems, because the timestamp cannot be
+carried alongside the data it corresponds to.

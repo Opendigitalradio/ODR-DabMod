@@ -1,5 +1,16 @@
 This file contains information about the changes done to
-the ODR-DabMod in this repository
+ODR-DabMod in this repository
+
+2016-07-30: Matthias P. Braendli <matthias@mpb.li>
+	(v0.6.0):
+	* odr-dabmod:
+		Remove the broken KISS FFT support.
+		Replace FCT discontinuity check by verification of
+		the timestamps.
+		Change DSP thread priorities to realtime.
+		Quite some internal refactoring.
+		Fix segfault on quit due to incorrect teardown of FFTW.
+		Add Travis CI build instructions.
 
 2015-11-27: Matthias P. Braendli <matthias@mpb.li>
 	(v0.5.5):
