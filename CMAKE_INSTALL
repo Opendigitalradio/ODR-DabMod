@@ -1,0 +1,67 @@
+General:
+======================
+	The CMake build of the odr-dabmod provides an alternative to the auto make tools build system (described in INSTALL) and provides:
+	* Static linking of boost and zeromq, avoiding version conflicts in case the system contains other version of these libraries
+	* Enables cross platform builds
+
+Required dependencies:
+======================
+	See INSTALL.
+
+Prerequisites
+======================
+	CMake
+	=====
+	Make sure CMake is installed in your system.
+
+	Boost
+	=====
+	Boost is statically linked into the odr-dabmod, and because of that it needs a little special attention.
+
+	Download desired version of boost from www.boost.org and extract to any directory, e.g. /home/user/thirdpart/boost/
+
+	A one-time build of the tool b2/bjam is also needed. Run bootstrap within the BOOST_ROOT-folder.
+
+	Configure the BOOST_ROOT environment variable to point to the root folder of the Boost file tree.
+
+	E.g. Linux
+	Add the variable in the ~/.bash_profile file.
+
+	TEMPLATE_BOOST_ROOT="/home/user/thirdpart/boost/boost_1_59_0"
+	export TEMPLATE_BOOST_ROOT
+
+	ZeroMQ
+	=====
+	ZeroMQ is statically linked into the odr-dabmod, and because of that it needs a little special attention.
+	Download desired version of ZeroMQ from https://github.com/zeromq (either by git clone or download the zip file).
+	It's recommended that the stable release branch is used e.g. https://github.com/zeromq/zeromq4-x.
+
+	NOTE: The archive files from http://download.zeromq.org/ cannot be used as they do not contain CMake build projects.
+
+	We also need to configure the ZMQ_ROOT environment variable to point to the root folder of the ZeroMQ file tree.
+
+	E.g. Linux
+	Add the variable in the ~/.bash_profile file.
+
+	ZMQ_ROOT="/home/user/thirdpart/zeromq4-x
+	export ZMQ_ROOT
+
+Build procedure:
+=========================
+	Download the odr-dabmod (see INSTALL)
+	Within the odr-dabmod root directory do:
+	$ mkdir build && cd build
+	$ cmake ..
+	$ make
+	$ make install
+
+Configure options
+=================
+	Some options can be given to cmake command:
+	# common options
+	Provide an install directory: -DCMAKE_INSTALL_PREFIX=/my/install/dir
+	Release or debug builds: -DCMAKE_BUILD_TYPE=Release|Debug
+
+	# odr-dabmod options
+	Use FFTW3 library (default=off, kiss_fft is used by default): -DFFTW3=on
+	Support UHD output (defailt=on): -DUHD=off

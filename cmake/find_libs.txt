@@ -1,0 +1,8 @@
+
+### SYSTEM LIBS ###
+if(WIN32)
+	SET(OS_LIBS ws2_32)
+else()
+	SET(OS_LIBS pthread)
+endif()
+##############

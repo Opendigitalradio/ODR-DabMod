@@ -1,0 +1,8 @@
+# Add defines for FFTW
+
+ADD_DEFINITIONS(-DUSE_FFTW)
+if (WIN32)
+	set (LIBFFTW3 libfftw3f-3)
+else()
+	set (LIBFFTW3 fftw3f)
+endif()

@@ -1,0 +1,26 @@
+# download/extract kissfft and add it to project
+
+set(IMPORT_DIR ${CMAKE_SOURCE_DIR}/import)
+set(KISSFFT_SRC_DIR ${CMAKE_SOURCE_DIR}/import/kiss_fft130)
+
+set(ZIP_URL "http://sourceforge.net/projects/kissfft/files/kissfft/v1_3_0/kiss_fft130.zip")
+set(ZIP_FILE ${IMPORT_DIR}/kissfft.zip)
+
+if (NOT EXISTS "${ZIP_FILE}")
+	message("Downloading kissfft..")
+	file(DOWNLOAD ${ZIP_URL} ${ZIP_FILE})
+endif()
+
+if (NOT EXISTS "${KISSFFT_SRC_DIR}")
+	message("Extracting kissfft..")
+	execute_process(
+		COMMAND unzip -q kissfft.zip
+		WORKING_DIRECTORY ${IMPORT_DIR}
+	)
+
+endif()
+
+set(PROJECT_INCLUDE_DIR 
+	${PROJECT_INCLUDE_DIR} 
+	${KISSFFT_SRC_DIR}
+	)

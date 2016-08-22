@@ -1,0 +1,9 @@
+# Add defines for UHD
+
+add_definitions(-DHAVE_OUTPUT_UHD)
+if (WIN32)
+	# TODO
+	#set (LIBUHD libuhd)
+else()
+	set (LIBUHD uhd)
+endif()

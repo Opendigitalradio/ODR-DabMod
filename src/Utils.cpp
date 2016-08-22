@@ -30,7 +30,7 @@
 #include <sys/prctl.h>
 #include <pthread.h>
 
-void printUsage(char* progName)
+void printWelcome()
 {
     FILE* out = stderr;
 
@@ -42,6 +42,12 @@ void printUsage(char* progName)
             VERSION,
 #endif
             __DATE__, __TIME__);
+}
+
+void printUsage(char* progName)
+{
+    FILE* out = stderr;
+	printWelcome();
     fprintf(out, "Usage with configuration file:\n");
     fprintf(out, "\t%s [-C] config_file.ini\n\n", progName);
 
@@ -89,8 +95,7 @@ void printVersion(void)
 {
     FILE *out = stderr;
 
-    fprintf(out, "Welcome to %s %s, compiled at %s, %s\n\n",
-            PACKAGE, VERSION, __DATE__, __TIME__);
+	printWelcome();
     fprintf(out,
             "    ODR-DabMod is copyright (C) Her Majesty the Queen in Right of Canada,\n"
             "    2009, 2010, 2011, 2012 Communications Research Centre (CRC),\n"
