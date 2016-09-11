@@ -178,6 +178,8 @@ int launch_modulator(int argc, char* argv[])
     auto inputZeroMQReader = make_shared<InputZeroMQReader>();
 #endif
 
+    auto inputTcpReader = make_shared<InputTcpReader>();
+
     struct sigaction sa;
     memset(&sa, 0, sizeof(struct sigaction));
     sa.sa_handler = &signalHandler;
@@ -616,6 +618,9 @@ int launch_modulator(int argc, char* argv[])
                 // if the name starts with zmq+XYZ://somewhere:port
                 inputTransport = "zeromq";
             }
+            else if (inputName.substr(0, 6) == "tcp://") {
+                inputTransport = "tcp";
+            }
         }
         else {
             inputName = "/dev/stdin";
@@ -704,6 +709,10 @@ int launch_modulator(int argc, char* argv[])
         inputZeroMQReader->Open(inputName, inputMaxFramesQueued);
         m.inputReader = inputZeroMQReader.get();
 #endif
+    }
+    else if (inputTransport == "tcp") {
+        inputTcpReader->Open(inputName);
+        m.inputReader = inputTcpReader.get();
     }
     else
     {
@@ -815,6 +824,11 @@ int launch_modulator(int argc, char* argv[])
                     inputZeroMQReader->Open(inputName, inputMaxFramesQueued);
                     m.inputReader = inputZeroMQReader.get();
 #endif
+                }
+                else if (inputTransport == "tcp") {
+                    inputTcpReader = make_shared<InputTcpReader>();
+                    inputTcpReader->Open(inputName);
+                    m.inputReader = inputTcpReader.get();
                 }
                 break;
             case run_modulator_state_t::reconfigure:

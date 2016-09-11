@@ -3,8 +3,10 @@
    Her Majesty the Queen in Right of Canada (Communications Research
    Center Canada)
 
-   Copyrigth (C) 2013, 2015
+   Copyright (C) 2016
    Matthias P. Braendli, matthias.braendli@mpb.li
+
+    http://www.opendigitalradio.org
  */
 /*
    This file is part of ODR-DabMod.
@@ -39,6 +41,14 @@
 #endif
 #include "porting.h"
 #include "Log.h"
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <unistd.h>
+#include <netdb.h>
+#include <arpa/inet.h>
+#define SOCKET           int
+#define INVALID_SOCKET   -1
+#define SOCKET_ERROR     -1
 
 /* Known types of input streams. Description taken from the CRC mmbTools forum.
 
@@ -115,8 +125,8 @@ class InputFileReader : public InputReader
         }
 
     private:
-        InputFileReader(const InputFileReader& other);
-        InputFileReader& operator=(const InputFileReader& other);
+        InputFileReader(const InputFileReader& other) = delete;
+        InputFileReader& operator=(const InputFileReader& other) = delete;
 
         int IdentifyType();
 
@@ -132,6 +142,30 @@ class InputFileReader : public InputReader
         size_t inputfilelength_;
         uint64_t nbframes_; // 64-bit because 32-bit overflow is
                             // after 2**32 * 24ms ~= 3.3 years
+};
+
+class InputTcpReader : public InputReader
+{
+    public:
+        InputTcpReader();
+        ~InputTcpReader();
+
+        // Endpoint is either host:port or tcp://host:port
+        void Open(const std::string& endpoint);
+
+        // Put next frame into buffer. This function will never write more than
+        // 6144 bytes into buffer.
+        // returns number of bytes written to buffer, 0 on eof, -1 on error
+        virtual int GetNextFrame(void* buffer);
+
+        // Print some information
+        virtual void PrintInfo();
+
+    private:
+        InputTcpReader(const InputTcpReader& other) = delete;
+        InputTcpReader& operator=(const InputTcpReader& other) = delete;
+        SOCKET m_sock;
+        std::string m_uri;
 };
 
 struct zmq_input_overflow : public std::exception
@@ -201,8 +235,8 @@ class InputZeroMQReader : public InputReader
         void PrintInfo();
 
     private:
-        InputZeroMQReader(const InputZeroMQReader& other);
-        InputZeroMQReader& operator=(const InputZeroMQReader& other);
+        InputZeroMQReader(const InputZeroMQReader& other) = delete;
+        InputZeroMQReader& operator=(const InputZeroMQReader& other) = delete;
         std::string uri_;
 
         InputZeroMQWorker worker_;
