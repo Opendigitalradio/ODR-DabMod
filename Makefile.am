@@ -135,5 +135,3 @@ odr_dabmod_SOURCES  = src/DabMod.cpp \
 					  src/TII.h \
 					  src/zmq.hpp
 
-dist_bin_SCRIPTS = src/crc-dwap.py
-
