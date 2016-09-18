@@ -3,7 +3,10 @@
    Her Majesty the Queen in Right of Canada (Communications Research
    Center Canada)
 
-   Copyright (C), 2016, Matthias P. Braendli, matthias.braendli@mpb.li
+   Copyright (C) 2016
+   Matthias P. Braendli, matthias.braendli@mpb.li
+
+    http://opendigitalradio.org
  */
 /*
    This file is part of ODR-DabMod.
@@ -121,6 +124,26 @@ void LogToFile::log(log_level_t level, std::string message)
         fprintf(log_file, SYSLOG_IDENT ": %s: %s\n",
                 log_level_text[(size_t)level], message.c_str());
         fflush(log_file);
+    }
+}
+
+void LogToSyslog::log(log_level_t level, std::string message)
+{
+    if (level != log_level_t::trace) {
+        int syslog_level = LOG_EMERG;
+        switch (level) {
+            case trace: break; // Do not handle TRACE in syslog
+            case debug: syslog_level = LOG_DEBUG; break;
+            case info:  syslog_level = LOG_INFO; break;
+                        /* we don't have the notice level */
+            case warn:  syslog_level = LOG_WARNING; break;
+            case error: syslog_level = LOG_ERR; break;
+            default:    syslog_level = LOG_CRIT; break;
+            case alert: syslog_level = LOG_ALERT; break;
+            case emerg: syslog_level = LOG_EMERG; break;
+        }
+
+        syslog(syslog_level, SYSLOG_IDENT " %s", message.c_str());
     }
 }
 
