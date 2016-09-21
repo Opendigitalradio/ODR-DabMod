@@ -32,6 +32,9 @@
 #include "InputReader.h"
 #include "PcDebug.h"
 #include "Utils.h"
+#include <sys/socket.h>
+#include <unistd.h>
+#include <errno.h>
 
 InputTcpReader::InputTcpReader()
 {
@@ -85,6 +88,15 @@ void InputTcpReader::Open(const std::string& endpoint)
     else {
         std::stringstream ss;
         ss << "Could not resolve hostname " << hostname << ": " << strerror(errno);
+        throw std::runtime_error(ss.str());
+    }
+
+    /* Set recv timeout of 30s, see socket(7) for details */
+    struct timeval tv = {0};
+    tv.tv_sec = 30;
+    if (setsockopt(m_sock, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(struct timeval)) == -1) {
+        std::stringstream ss;
+        ss << "Could not set socket recv timeout: " << strerror(errno);
         throw std::runtime_error(ss.str());
     }
 
