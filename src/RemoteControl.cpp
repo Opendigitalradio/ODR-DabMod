@@ -3,8 +3,10 @@
    Her Majesty the Queen in Right of Canada (Communications Research
    Center Canada)
 
-   Copyright (C) 2014
+   Copyright (C) 2016
    Matthias P. Braendli, matthias.braendli@mpb.li
+
+    http://www.opendigitalradio.org
  */
 /*
    This file is part of ODR-DabMod.
@@ -30,16 +32,41 @@
 #include <boost/thread.hpp>
 
 #include "RemoteControl.h"
-#include "Utils.h"
 
 using boost::asio::ip::tcp;
 using namespace std;
 
+RemoteControllers rcs;
 
 void RemoteControllerTelnet::restart()
 {
-    m_restarter_thread = boost::thread(&RemoteControllerTelnet::restart_thread,
+    m_restarter_thread = boost::thread(
+            &RemoteControllerTelnet::restart_thread,
             this, 0);
+}
+
+RemoteControllable::~RemoteControllable() {
+    rcs.remove_controllable(this);
+}
+
+std::list<std::string> RemoteControllable::get_supported_parameters() const {
+    std::list<std::string> parameterlist;
+    for (const auto& param : m_parameters) {
+        parameterlist.push_back(param[0]);
+    }
+    return parameterlist;
+}
+
+RemoteControllable* RemoteControllers::get_controllable_(const std::string& name) {
+    auto rc = std::find_if(controllables.begin(), controllables.end(),
+            [&](RemoteControllable* r) { return r->get_rc_name() == name; });
+
+    if (rc == controllables.end()) {
+        throw ParameterError("Module name unknown");
+    }
+    else {
+        return *rc;
+    }
 }
 
 // This runs in a separate thread, because
@@ -59,7 +86,6 @@ void RemoteControllerTelnet::restart_thread(long)
 
 void RemoteControllerTelnet::process(long)
 {
-    set_thread_name("telnet_rc");
     std::string m_welcome = "ODR-DabMod Remote Control CLI\n"
                             "Write 'help' for help.\n"
                             "**********\n";
@@ -96,7 +122,7 @@ void RemoteControllerTelnet::process(long)
                 boost::asio::streambuf buffer;
                 length = boost::asio::read_until( socket, buffer, "\n", ignored_error);
 
-                std::istream str(&buffer); 
+                std::istream str(&buffer);
                 std::getline(str, in_message);
 
                 if (length == 0) {
@@ -104,7 +130,7 @@ void RemoteControllerTelnet::process(long)
                     break;
                 }
 
-                while (in_message.length() > 0 && 
+                while (in_message.length() > 0 &&
                         (in_message[in_message.length()-1] == '\r' ||
                          in_message[in_message.length()-1] == '\n')) {
                     in_message.erase(in_message.length()-1, 1);
@@ -151,7 +177,7 @@ void RemoteControllerTelnet::dispatch_command(tcp::socket& socket, string comman
         stringstream ss;
 
         if (cmd.size() == 1) {
-            for (auto &controllable : m_cohort) {
+            for (auto &controllable : rcs.controllables) {
                 ss << controllable->get_rc_name() << endl;
 
                 list< vector<string> > params = controllable->get_parameter_descriptions();
@@ -170,7 +196,7 @@ void RemoteControllerTelnet::dispatch_command(tcp::socket& socket, string comman
         if (cmd.size() == 2) {
             try {
                 stringstream ss;
-                list< vector<string> > r = get_param_list_values_(cmd[1]);
+                list< vector<string> > r = rcs.get_param_list_values(cmd[1]);
                 for (auto &param_val : r) {
                     ss << param_val[0] << ": " << param_val[1] << endl;
                 }
@@ -188,7 +214,7 @@ void RemoteControllerTelnet::dispatch_command(tcp::socket& socket, string comman
     else if (cmd[0] == "get") {
         if (cmd.size() == 3) {
             try {
-                string r = get_param_(cmd[1], cmd[2]);
+                string r = rcs.get_param(cmd[1], cmd[2]);
                 reply(socket, r);
             }
             catch (ParameterError &e) {
@@ -211,7 +237,7 @@ void RemoteControllerTelnet::dispatch_command(tcp::socket& socket, string comman
                     }
                 }
 
-                set_param_(cmd[1], cmd[2], new_param_value.str());
+                rcs.set_param(cmd[1], cmd[2], new_param_value.str());
                 reply(socket, "ok");
             }
             catch (ParameterError &e) {
@@ -300,7 +326,6 @@ void RemoteControllerZmq::send_fail_reply(zmq::socket_t &pSocket, const std::str
 
 void RemoteControllerZmq::process()
 {
-    set_thread_name("zmq_rc");
     // create zmq reply socket for receiving ctrl parameters
     etiLog.level(info) << "Starting zmq remote control thread";
     try {
@@ -329,8 +354,8 @@ void RemoteControllerZmq::process()
                     send_ok_reply(repSocket);
                 }
                 else if (msg.size() == 1 && command == "list") {
-                    size_t cohort_size = m_cohort.size();
-                    for (auto &controllable : m_cohort) {
+                    size_t cohort_size = rcs.controllables.size();
+                    for (auto &controllable : rcs.controllables) {
                         std::stringstream ss;
                         ss << controllable->get_rc_name();
 
@@ -346,7 +371,7 @@ void RemoteControllerZmq::process()
                 else if (msg.size() == 2 && command == "show") {
                     std::string module((char*) msg[1].data(), msg[1].size());
                     try {
-                        list< vector<string> > r = get_param_list_values_(module);
+                        list< vector<string> > r = rcs.get_param_list_values(module);
                         size_t r_size = r.size();
                         for (auto &param_val : r) {
                             std::stringstream ss;
@@ -367,7 +392,7 @@ void RemoteControllerZmq::process()
                     std::string parameter((char*) msg[2].data(), msg[2].size());
 
                     try {
-                        std::string value = get_param_(module, parameter);
+                        std::string value = rcs.get_param(module, parameter);
                         zmq::message_t msg(value.size());
                         memcpy ((void*) msg.data(), value.data(), value.size());
                         repSocket.send(msg, 0);
@@ -382,7 +407,7 @@ void RemoteControllerZmq::process()
                     std::string value((char*) msg[3].data(), msg[3].size());
 
                     try {
-                        set_param_(module, parameter, value);
+                        rcs.set_param(module, parameter, value);
                         send_ok_reply(repSocket);
                     }
                     catch (ParameterError &err) {

@@ -76,10 +76,6 @@ typedef std::complex<float> complexf;
 
 using namespace std;
 
-// We need global lifetime for the RemoteControllers because
-// some destructors of long lived objects use it.
-RemoteControllers rcs;
-
 volatile sig_atomic_t running = 1;
 
 void signalHandler(int signalNb)
@@ -338,7 +334,7 @@ int launch_modulator(int argc, char* argv[])
         if (pt.get("remotecontrol.telnet", 0) == 1) {
             try {
                 int telnetport = pt.get<int>("remotecontrol.telnetport");
-                RemoteControllerTelnet* telnetrc = new RemoteControllerTelnet(telnetport);
+                auto telnetrc = make_shared<RemoteControllerTelnet>(telnetport);
                 rcs.add_controller(telnetrc);
             }
             catch (std::exception &e) {
@@ -353,7 +349,7 @@ int launch_modulator(int argc, char* argv[])
             try {
                 std::string zmqCtrlEndpoint = pt.get("remotecontrol.zmqctrlendpoint", "");
                 std::cerr << "ZmqCtrlEndpoint: " << zmqCtrlEndpoint << std::endl;
-                RemoteControllerZmq* zmqrc = new RemoteControllerZmq(zmqCtrlEndpoint);
+                auto zmqrc = make_shared<RemoteControllerZmq>(zmqCtrlEndpoint);
                 rcs.add_controller(zmqrc);
             }
             catch (std::exception &e) {
@@ -588,12 +584,6 @@ int launch_modulator(int argc, char* argv[])
         tiiConfig.pattern = pt.get("tii.pattern", 0);
     }
 
-    if (rcs.get_no_controllers() == 0) {
-        etiLog.level(warn) << "No Remote-Control started";
-        rcs.add_controller(new RemoteControllerDummy());
-    }
-
-
     etiLog.level(info) << "Starting up version " <<
 #if defined(GITVERSION)
             GITVERSION;
@@ -739,7 +729,7 @@ int launch_modulator(int argc, char* argv[])
         normalise = 1.0f / normalise_factor;
         outputuhd_conf.sampleRate = outputRate;
         output = make_shared<OutputUHD>(outputuhd_conf);
-        ((OutputUHD*)output.get())->enrol_at(rcs);
+        rcs.enrol((OutputUHD*)output.get());
     }
 #endif
 #if defined(HAVE_ZEROMQ)
@@ -774,7 +764,7 @@ int launch_modulator(int argc, char* argv[])
 
         shared_ptr<InputMemory> input(new InputMemory(&m.data));
         shared_ptr<DabModulator> modulator(
-                new DabModulator(tist_offset_s, tist_delay_stages, &rcs,
+                new DabModulator(tist_offset_s, tist_delay_stages,
                     tiiConfig, outputRate, clockRate, dabMode, gainMode,
                     digitalgain, normalise, filterTapsFilename));
 
@@ -888,8 +878,8 @@ run_modulator_state_t run_modulator(modulator_data& m)
 
                 /* Check every once in a while if the remote control
                  * is still working */
-                if (m.rcs->get_no_controllers() > 0 && (m.framecount % 250) == 0) {
-                    m.rcs->check_faults();
+                if ((m.framecount % 250) == 0) {
+                    rcs.check_faults();
                 }
             }
             if (framesize == 0) {

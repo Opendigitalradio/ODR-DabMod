@@ -54,14 +54,13 @@ enum ETI_READER_STATE {
 
 EtiReader::EtiReader(
         double& tist_offset_s,
-        unsigned tist_delay_stages,
-        RemoteControllers* rcs) :
+        unsigned tist_delay_stages) :
     state(EtiReaderStateSync),
     myTimestampDecoder(tist_offset_s, tist_delay_stages)
 {
     PDEBUG("EtiReader::EtiReader()\n");
 
-    myTimestampDecoder.enrol_at(*rcs);
+    rcs.enrol(&myTimestampDecoder);
 
     myCurrentFrame = 0;
     eti_fc_valid = false;

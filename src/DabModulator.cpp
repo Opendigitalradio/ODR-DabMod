@@ -56,7 +56,6 @@
 
 DabModulator::DabModulator(
         double& tist_offset_s, unsigned tist_delay_stages,
-        RemoteControllers* rcs,
         tii_config_t& tiiConfig,
         unsigned outputRate, unsigned clockRate,
         unsigned dabMode, GainMode gainMode,
@@ -70,11 +69,10 @@ DabModulator::DabModulator(
     myGainMode(gainMode),
     myDigGain(digGain),
     myNormalise(normalise),
-    myEtiReader(tist_offset_s, tist_delay_stages, rcs),
+    myEtiReader(tist_offset_s, tist_delay_stages),
     myFlowgraph(NULL),
     myFilterTapsFilename(filterTapsFilename),
-    myTiiConfig(tiiConfig),
-    myRCs(rcs)
+    myTiiConfig(tiiConfig)
 {
     PDEBUG("DabModulator::DabModulator(%u, %u, %u, %u) @ %p\n",
             outputRate, clockRate, dabMode, gainMode, this);
@@ -198,7 +196,7 @@ int DabModulator::process(Buffer* const dataIn, Buffer* dataOut)
         shared_ptr<TII> tii;
         try {
             tii = make_shared<TII>(myDabMode, myTiiConfig);
-            tii->enrol_at(*myRCs);
+            rcs.enrol(tii.get());
         }
         catch (TIIError& e) {
             etiLog.level(error) << "Could not initialise TII: " << e.what();
@@ -210,7 +208,7 @@ int DabModulator::process(Buffer* const dataIn, Buffer* dataOut)
         auto cifGain = make_shared<GainControl>(
                 mySpacing, myGainMode, myDigGain, myNormalise);
 
-        cifGain->enrol_at(*myRCs);
+        rcs.enrol(cifGain.get());
 
         auto cifGuard = make_shared<GuardIntervalInserter>(
                 myNbSymbols, mySpacing, myNullSize, mySymSize);
@@ -218,7 +216,7 @@ int DabModulator::process(Buffer* const dataIn, Buffer* dataOut)
         shared_ptr<FIRFilter> cifFilter;
         if (myFilterTapsFilename != "") {
             cifFilter = make_shared<FIRFilter>(myFilterTapsFilename);
-            cifFilter->enrol_at(*myRCs);
+            rcs.enrol(cifFilter.get());
         }
         auto myOutput = make_shared<OutputMemory>(dataOut);
 

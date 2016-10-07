@@ -143,9 +143,6 @@ class TimestampDecoder : public RemoteControllable
                 int32_t fct);
 
         /*********** REMOTE CONTROL ***************/
-        /* virtual void enrol_at(BaseRemoteController& controller)
-         * is inherited
-         */
 
         /* Base function to set parameters. */
         virtual void set_parameter(const std::string& parameter,

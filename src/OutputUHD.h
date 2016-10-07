@@ -229,9 +229,6 @@ class OutputUHD: public ModOutput, public RemoteControllable {
         void setETIReader(EtiReader *etiReader);
 
         /*********** REMOTE CONTROL ***************/
-        /* virtual void enrol_at(BaseRemoteController& controller)
-         * is inherited
-         */
 
         /* Base function to set parameters. */
         virtual void set_parameter(const std::string& parameter,

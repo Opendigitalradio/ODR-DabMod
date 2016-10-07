@@ -49,8 +49,7 @@ class EtiReader
 public:
     EtiReader(
             double& tist_offset_s,
-            unsigned tist_delay_stages,
-            RemoteControllers* rcs);
+            unsigned tist_delay_stages);
 
     std::shared_ptr<FicSource>& getFic();
     unsigned getMode();
