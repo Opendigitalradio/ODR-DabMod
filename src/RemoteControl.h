@@ -177,10 +177,10 @@ class RemoteControllers {
             return controllable->get_parameter(param);
         }
 
-        void set_param(const std::string& name, const std::string& param, const std::string& value) {
-            RemoteControllable* controllable = get_controllable_(name);
-            return controllable->set_parameter(param, value);
-        }
+        void set_param(
+                const std::string& name,
+                const std::string& param,
+                const std::string& value);
 
         std::list<RemoteControllable*> controllables;
 
@@ -199,25 +199,25 @@ extern RemoteControllers rcs;
 class RemoteControllerTelnet : public BaseRemoteController {
     public:
         RemoteControllerTelnet()
-            : m_running(false), m_fault(false),
+            : m_active(false),
+            m_io_service(),
+            m_fault(false),
             m_port(0) { }
 
         RemoteControllerTelnet(int port)
-            : m_running(true), m_fault(false),
-            m_child_thread(&RemoteControllerTelnet::process, this, 0),
-            m_port(port) { }
+            : m_active(port > 0),
+            m_io_service(),
+            m_fault(false),
+            m_port(port)
+        {
+            restart();
+        }
+
 
         RemoteControllerTelnet& operator=(const RemoteControllerTelnet& other) = delete;
         RemoteControllerTelnet(const RemoteControllerTelnet& other) = delete;
 
-        ~RemoteControllerTelnet() {
-            m_running = false;
-            m_fault = false;
-            if (m_port) {
-                m_child_thread.interrupt();
-                m_child_thread.join();
-            }
-        }
+        ~RemoteControllerTelnet();
 
         virtual bool fault_detected() { return m_fault; }
 
@@ -233,6 +233,10 @@ class RemoteControllerTelnet : public BaseRemoteController {
 
         void reply(boost::asio::ip::tcp::socket& socket, std::string message);
 
+        void handle_accept(
+                const boost::system::error_code& boost_error,
+                boost::shared_ptr< boost::asio::ip::tcp::socket > socket,
+                boost::asio::ip::tcp::acceptor& acceptor);
         std::vector<std::string> tokenise_(std::string message) {
             std::vector<std::string> all_tokens;
 
@@ -244,7 +248,9 @@ class RemoteControllerTelnet : public BaseRemoteController {
             return all_tokens;
         }
 
-        std::atomic<bool> m_running;
+        std::atomic<bool> m_active;
+
+        boost::asio::io_service m_io_service;
 
         /* This is set to true if a fault occurred */
         std::atomic<bool> m_fault;
@@ -262,12 +268,12 @@ class RemoteControllerTelnet : public BaseRemoteController {
 class RemoteControllerZmq : public BaseRemoteController {
     public:
         RemoteControllerZmq()
-            : m_running(false), m_fault(false),
+            : m_active(false), m_fault(false),
             m_zmqContext(1),
             m_endpoint("") { }
 
         RemoteControllerZmq(const std::string& endpoint)
-            : m_running(true), m_fault(false),
+            : m_active(not endpoint.empty()), m_fault(false),
             m_zmqContext(1),
             m_endpoint(endpoint),
             m_child_thread(&RemoteControllerZmq::process, this) { }
@@ -275,14 +281,7 @@ class RemoteControllerZmq : public BaseRemoteController {
         RemoteControllerZmq& operator=(const RemoteControllerZmq& other) = delete;
         RemoteControllerZmq(const RemoteControllerZmq& other) = delete;
 
-        ~RemoteControllerZmq() {
-            m_running = false;
-            m_fault = false;
-            if (!m_endpoint.empty()) {
-                m_child_thread.interrupt();
-                m_child_thread.join();
-            }
-        }
+        ~RemoteControllerZmq();
 
         virtual bool fault_detected() { return m_fault; }
 
@@ -296,7 +295,7 @@ class RemoteControllerZmq : public BaseRemoteController {
         void send_fail_reply(zmq::socket_t &pSocket, const std::string &error);
         void process();
 
-        std::atomic<bool> m_running;
+        std::atomic<bool> m_active;
 
         /* This is set to true if a fault occurred */
         std::atomic<bool> m_fault;
