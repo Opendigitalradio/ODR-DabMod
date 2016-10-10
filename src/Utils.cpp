@@ -61,7 +61,9 @@ void printUsage(char* progName)
             " [-r samplingRate]"
             "\n", progName);
     fprintf(out, "Where:\n");
-    fprintf(out, "input:         ETI input filename (default: stdin) or zmq+tcp://source:port for ZMQ input.\n");
+    fprintf(out, "input:         ETI input filename (default: stdin), or\n");
+    fprintf(out, "                  tcp://source:port for ETI-over-TCP input, or\n");
+    fprintf(out, "                  zmq+tcp://source:port for ZMQ input.\n");
     fprintf(out, "-f name:       Use file output with given filename. (use /dev/stdout for standard output)\n");
     fprintf(out, "-u device:     Use UHD output with given device string. (use "" for default device)\n");
     fprintf(out, "-F frequency:  Set the transmit frequency when using UHD output. (mandatory option when using UHD)\n");
