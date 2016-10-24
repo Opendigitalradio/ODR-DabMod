@@ -65,7 +65,7 @@ public:
     /* Returns true if we have valid time stamps in the ETI*/
     bool sourceContainsTimestamp();
 
-protected:
+private:
     /* Transform the ETI TIST to a PPS offset in units of 1/16384000 s */
     uint32_t getPPSOffset();
 
@@ -83,7 +83,6 @@ protected:
     std::vector<std::shared_ptr<SubchannelSource> > mySources;
     TimestampDecoder myTimestampDecoder;
 
-private:
     size_t myCurrentFrame;
     bool eti_fc_valid;
 };
