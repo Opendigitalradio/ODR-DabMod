@@ -68,10 +68,7 @@ void Logger::log(log_level_t level, const char* fmt, ...)
 
 void Logger::logstr(log_level_t level, std::string message)
 {
-    log_message_t m;
-    m.level = level;
-    m.message = message;
-
+    log_message_t m(level, message);
     m_message_queue.push(std::move(m));
 }
 
@@ -86,7 +83,7 @@ void Logger::io_process()
 
         auto message = m.message;
 
-        if (m.level == debug and m.message.empty()) {
+        if (m.level == trace and m.message.empty()) {
             // Special message to stop thread
             break;
         }

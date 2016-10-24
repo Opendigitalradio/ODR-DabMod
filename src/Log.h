@@ -138,7 +138,9 @@ struct log_message_t {
         level(_level),
         message(_message) {}
 
-    log_message_t() {}
+    log_message_t() :
+        level(debug),
+        message("") {}
 
     log_level_t level;
     std::string message;
@@ -154,7 +156,7 @@ class Logger {
         const Logger& operator=(const Logger& other) = delete;
         ~Logger() {
             // Special message to stop the thread
-            log_message_t m(debug, "");
+            log_message_t m(trace, "");
 
             m_message_queue.push(m);
             m_io_thread.join();
