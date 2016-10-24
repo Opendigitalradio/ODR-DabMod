@@ -25,8 +25,7 @@
    along with ODR-DabMod.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef _LOG_H
-#define _LOG_H
+#pragma once
 
 #ifdef HAVE_CONFIG_H
 #   include "config.h"
@@ -57,15 +56,14 @@ static const std::string levels_as_str[] =
 /** Abstract class all backends must inherit from */
 class LogBackend {
     public:
-        virtual void log(log_level_t level, std::string message) = 0;
+        virtual void log(log_level_t level, const std::string& message) = 0;
         virtual std::string get_name() = 0;
 };
 
 /** A Logging backend for Syslog */
 class LogToSyslog : public LogBackend {
     public:
-        LogToSyslog() {
-            name = "SYSLOG";
+        LogToSyslog() : name("SYSLOG") {
             openlog(SYSLOG_IDENT, LOG_PID, SYSLOG_FACILITY);
         }
 
@@ -73,12 +71,12 @@ class LogToSyslog : public LogBackend {
             closelog();
         }
 
-        void log(log_level_t level, std::string message);
+        void log(log_level_t level, const std::string& message);
 
         std::string get_name() { return name; }
 
     private:
-        std::string name;
+        const std::string name;
 
         LogToSyslog(const LogToSyslog& other) = delete;
         const LogToSyslog& operator=(const LogToSyslog& other) = delete;
@@ -86,9 +84,7 @@ class LogToSyslog : public LogBackend {
 
 class LogToFile : public LogBackend {
     public:
-        LogToFile(std::string filename) {
-            name = "FILE";
-
+        LogToFile(const std::string& filename) : name("FILE") {
             log_file = fopen(filename.c_str(), "a");
             if (log_file == NULL) {
                 fprintf(stderr, "Cannot open log file !");
@@ -102,12 +98,12 @@ class LogToFile : public LogBackend {
             }
         }
 
-        void log(log_level_t level, std::string message);
+        void log(log_level_t level, const std::string& message);
 
         std::string get_name() { return name; }
 
     private:
-        std::string name;
+        const std::string name;
         FILE* log_file;
 
         LogToFile(const LogToFile& other) = delete;
@@ -124,7 +120,7 @@ class LogTracer : public LogBackend {
             }
         }
 
-        void log(log_level_t level, std::string message);
+        void log(log_level_t level, const std::string& message);
         std::string get_name() { return name; }
     private:
         std::string name;
@@ -219,7 +215,4 @@ class LogLine {
         log_level_t level_;
         Logger* logger_;
 };
-
-
-#endif
 

@@ -114,7 +114,7 @@ LogLine Logger::level(log_level_t level)
     return LogLine(this, level);
 }
 
-void LogToFile::log(log_level_t level, std::string message)
+void LogToFile::log(log_level_t level, const std::string& message)
 {
     if (level != log_level_t::trace) {
         const char* log_level_text[] = {
@@ -127,7 +127,7 @@ void LogToFile::log(log_level_t level, std::string message)
     }
 }
 
-void LogToSyslog::log(log_level_t level, std::string message)
+void LogToSyslog::log(log_level_t level, const std::string& message)
 {
     if (level != log_level_t::trace) {
         int syslog_level = LOG_EMERG;
@@ -165,7 +165,7 @@ LogTracer::LogTracer(const string& trace_filename)
     fprintf(m_trace_file, "0,TRACER,startup at %ld\n", m_trace_micros_startup);
 }
 
-void LogTracer::log(log_level_t level, std::string message)
+void LogTracer::log(log_level_t level, const std::string& message)
 {
     if (level == log_level_t::trace) {
         const auto now = chrono::steady_clock::now().time_since_epoch();
