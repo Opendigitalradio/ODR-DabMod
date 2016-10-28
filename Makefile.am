@@ -35,7 +35,9 @@ bin_PROGRAMS = odr-dabmod
 
 FFT_LDADD=
 
-odr_dabmod_CPPFLAGS = -Wall -Isrc \
+odr_dabmod_CXXFLAGS = -Wall -Isrc -std=c++11 \
+					  $(GITVERSION_FLAGS)
+odr_dabmod_CFLAGS   = -Wall -Isrc \
 					  $(GITVERSION_FLAGS)
 odr_dabmod_LDADD    = $(FFT_LDADD)
 odr_dabmod_SOURCES  = src/DabMod.cpp \
