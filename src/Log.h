@@ -134,7 +134,7 @@ class LogTracer : public LogBackend {
 class LogLine;
 
 struct log_message_t {
-    log_message_t(log_level_t _level, std::string _message) :
+    log_message_t(log_level_t _level, const std::string& _message) :
         level(_level),
         message(_message) {}
 
