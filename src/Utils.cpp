@@ -73,6 +73,7 @@ void printUsage(char* progName)
                  "                  requiring an external REFCLK and PPS signal and frames that do not contain a valid timestamp\n"
                  "                  get muted.\n\n");
     fprintf(out, "-T taps_file:  Enable filtering before the output, using the specified file containing the filter taps.\n");
+    fprintf(out, "               Use 'default' as taps_file to use the internal taps.\n");
     fprintf(out, "-a gain:       Apply digital amplitude gain.\n");
     fprintf(out, "-c rate:       Set the DAC clock rate and enable Cic Equalisation.\n");
     fprintf(out, "-g gainmode:   Set computation gain mode: fix, max or var\n");

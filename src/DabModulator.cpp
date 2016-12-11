@@ -60,7 +60,7 @@ DabModulator::DabModulator(
         unsigned outputRate, unsigned clockRate,
         unsigned dabMode, GainMode gainMode,
         float& digGain, float normalise,
-        std::string& filterTapsFilename
+        const std::string& filterTapsFilename
         ) :
     ModCodec(ModFormat(1), ModFormat(0)),
     myOutputRate(outputRate),
@@ -214,7 +214,7 @@ int DabModulator::process(Buffer* const dataIn, Buffer* dataOut)
                 myNbSymbols, mySpacing, myNullSize, mySymSize);
 
         shared_ptr<FIRFilter> cifFilter;
-        if (myFilterTapsFilename != "") {
+        if (not myFilterTapsFilename.empty()) {
             cifFilter = make_shared<FIRFilter>(myFilterTapsFilename);
             rcs.enrol(cifFilter.get());
         }

@@ -423,14 +423,7 @@ int launch_modulator(int argc, char* argv[])
 
         // FIR Filter parameters:
         if (pt.get("firfilter.enabled", 0) == 1) {
-            try {
-                filterTapsFilename = pt.get<std::string>("firfilter.filtertapsfile");
-            }
-            catch (std::exception &e) {
-                std::cerr << "Error: " << e.what() << "\n";
-                std::cerr << "       Configuration enables firfilter, but does not specify filter taps file\n";
-                throw std::runtime_error("Configuration error");
-            }
+            filterTapsFilename = pt.get<std::string>("firfilter.filtertapsfile", "default");
         }
 
         // Output options
@@ -609,7 +602,7 @@ int launch_modulator(int argc, char* argv[])
 
     // When using the FIRFilter, increase the modulator offset pipelining delay
     // by the correct amount
-    if (filterTapsFilename != "") {
+    if (not filterTapsFilename.empty()) {
         tist_delay_stages += FIRFILTER_PIPELINE_DELAY;
     }
 

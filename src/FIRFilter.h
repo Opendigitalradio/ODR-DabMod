@@ -22,8 +22,7 @@
    along with ODR-DabMod.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef FIRFILTER_H
-#define FIRFILTER_H
+#pragma once
 
 #ifdef HAVE_CONFIG_H
 #   include <config.h>
@@ -98,7 +97,7 @@ class FIRFilterWorker {
 class FIRFilter : public ModCodec, public RemoteControllable
 {
 public:
-    FIRFilter(std::string& taps_file);
+    FIRFilter(const std::string& taps_file);
     virtual ~FIRFilter();
     FIRFilter(const FIRFilter&);
     FIRFilter& operator=(const FIRFilter&);
@@ -115,14 +114,12 @@ public:
 
 
 protected:
-    void load_filter_taps(std::string tapsFile);
+    void load_filter_taps(const std::string &tapsFile);
 
-    std::string& myTapsFile;
+    std::string myTapsFile;
 
     FIRFilterWorker worker;
     int number_of_runs;
     struct FIRFilterWorkerData firwd;
 };
-
-#endif //FIRFILTER_H
 

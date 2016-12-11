@@ -2,8 +2,10 @@
    Copyright (C) 2007, 2008, 2009, 2010, 2011 Her Majesty the Queen in
    Right of Canada (Communications Research Center Canada)
 
-   Written by
-   2012, Matthias P. Braendli, matthias.braendli@mpb.li
+   Copyright (C) 2016
+   Matthias P. Braendli, matthias.braendli@mpb.li
+
+    http://opendigitalradio.org
 
    This block implements a FIR filter. The real filter taps are given
    as floats, and the block can take advantage of SSE.
@@ -34,6 +36,7 @@
 #include <stdio.h>
 #include <stdexcept>
 
+#include <array>
 #include <iostream>
 #include <fstream>
 #include <memory>
@@ -45,6 +48,29 @@
 using namespace std;
 
 #include <sys/time.h>
+
+/* This is the FIR Filter calculated with the doc/fir-filter/generate-filter.py script
+ * with settings
+ *   gain = 1
+ *   sampling_freq = 2.048e6
+ *   cutoff = 810e3
+ *   transition_width = 250e3
+ *
+ * It is a good default filter for the common scenarios.
+ */
+static const std::array<float, 45> default_filter_taps({
+        -0.00110450468492, 0.00120703084394, -0.000840645749122, -0.000187368263141,
+        0.00184351124335, -0.00355578539893, 0.00419321097434, -0.00254214904271,
+        -0.00183473504148, 0.00781436730176, -0.0125957569107, 0.0126200336963,
+        -0.00537294941023, -0.00866683479398, 0.0249746385962, -0.0356550291181,
+        0.0319730602205, -0.00795613788068, -0.0363943465054, 0.0938014090061,
+        -0.151176810265, 0.193567320704, 0.791776955128, 0.193567320704,
+        -0.151176810265, 0.0938014090061, -0.0363943465054, -0.00795613788068,
+        0.0319730602205, -0.0356550291181, 0.0249746385962, -0.00866683479398,
+        -0.00537294941023, 0.0126200336963, -0.0125957569107, 0.00781436730176,
+        -0.00183473504148, -0.00254214904271, 0.00419321097434, -0.00355578539893,
+        0.00184351124335, -0.000187368263141, -0.000840645749122, 0.00120703084394,
+        -0.00110450468492});
 
 void FIRFilterWorker::process(struct FIRFilterWorkerData *fwd)
 {
@@ -238,7 +264,7 @@ void FIRFilterWorker::process(struct FIRFilterWorkerData *fwd)
 }
 
 
-FIRFilter::FIRFilter(std::string& taps_file) :
+FIRFilter::FIRFilter(const std::string& taps_file) :
     ModCodec(ModFormat(sizeof(complexf)), ModFormat(sizeof(complexf))),
     RemoteControllable("firfilter"),
     myTapsFile(taps_file)
@@ -257,37 +283,44 @@ FIRFilter::FIRFilter(std::string& taps_file) :
     worker.start(&firwd);
 }
 
-void FIRFilter::load_filter_taps(std::string tapsFile)
+void FIRFilter::load_filter_taps(const std::string &tapsFile)
 {
-    std::ifstream taps_fstream(tapsFile.c_str());
-    if(!taps_fstream) { 
-        fprintf(stderr, "FIRFilter: file %s could not be opened !\n", tapsFile.c_str());
-        throw std::runtime_error("FIRFilter: Could not open file with taps! ");
+    std::vector<float> filter_taps;
+    if (tapsFile == "default") {
+        std::copy(default_filter_taps.begin(), default_filter_taps.end(),
+                std::back_inserter(filter_taps));
     }
-    int n_taps;
-    taps_fstream >> n_taps;
+    else {
+        std::ifstream taps_fstream(tapsFile.c_str());
+        if(!taps_fstream) {
+            fprintf(stderr, "FIRFilter: file %s could not be opened !\n", tapsFile.c_str());
+            throw std::runtime_error("FIRFilter: Could not open file with taps! ");
+        }
+        int n_taps;
+        taps_fstream >> n_taps;
 
-    if (n_taps <= 0) {
-        fprintf(stderr, "FIRFilter: warning: taps file has invalid format\n");
-        throw std::runtime_error("FIRFilter: taps file has invalid format.");
-    }
+        if (n_taps <= 0) {
+            fprintf(stderr, "FIRFilter: warning: taps file has invalid format\n");
+            throw std::runtime_error("FIRFilter: taps file has invalid format.");
+        }
 
-    if (n_taps > 100) {
-        fprintf(stderr, "FIRFilter: warning: taps file has more than 100 taps\n");
-    }
+        if (n_taps > 100) {
+            fprintf(stderr, "FIRFilter: warning: taps file has more than 100 taps\n");
+        }
 
-    fprintf(stderr, "FIRFilter: Reading %d taps...\n", n_taps);
+        fprintf(stderr, "FIRFilter: Reading %d taps...\n", n_taps);
 
-    std::vector<float> filter_taps(n_taps);
+        filter_taps.resize(n_taps);
 
-    int n;
-    for (n = 0; n < n_taps; n++) {
-        taps_fstream >> filter_taps[n];
-        PDEBUG("FIRFilter: tap: %f\n",  filter_taps[n] );
-        if (taps_fstream.eof()) {
-            fprintf(stderr, "FIRFilter: file %s should contains %d taps, but EOF reached "\
-                    "after %d taps !\n", tapsFile.c_str(), n_taps, n);
-            throw std::runtime_error("FIRFilter: filtertaps file invalid ! ");
+        int n;
+        for (n = 0; n < n_taps; n++) {
+            taps_fstream >> filter_taps[n];
+            PDEBUG("FIRFilter: tap: %f\n",  filter_taps[n] );
+            if (taps_fstream.eof()) {
+                fprintf(stderr, "FIRFilter: file %s should contains %d taps, but EOF reached "\
+                        "after %d taps !\n", tapsFile.c_str(), n_taps, n);
+                throw std::runtime_error("FIRFilter: filtertaps file invalid ! ");
+            }
         }
     }
 
