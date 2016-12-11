@@ -3,7 +3,7 @@
    Her Majesty the Queen in Right of Canada (Communications Research
    Center Canada)
 
-   Copyright (C) 2014, 2015
+   Copyright (C) 2016
    Matthias P. Braendli, matthias.braendli@mpb.li
 
     http://opendigitalradio.org
@@ -109,6 +109,19 @@ enum class run_modulator_state_t {
 };
 
 run_modulator_state_t run_modulator(modulator_data& m);
+
+static GainMode parse_gainmode(const std::string &gainMode_setting)
+{
+    string gainMode_minuscule(gainMode_setting);
+    std::transform(gainMode_minuscule.begin(), gainMode_minuscule.end(), gainMode_minuscule.begin(), ::tolower);
+
+    if (gainMode_minuscule == "0" or gainMode_minuscule == "fix") { return GainMode::GAIN_FIX; }
+    else if (gainMode_minuscule == "1" or gainMode_minuscule == "max") { return GainMode::GAIN_MAX; }
+    else if (gainMode_minuscule == "2" or gainMode_minuscule == "var") { return GainMode::GAIN_VAR; }
+
+    cerr << "Modulator gainmode setting '" << gainMode_setting << "' not recognised." << endl;
+    throw std::runtime_error("Configuration error");
+}
 
 int launch_modulator(int argc, char* argv[])
 {
@@ -227,7 +240,7 @@ int launch_modulator(int argc, char* argv[])
 #endif
             break;
         case 'g':
-            gainMode = (GainMode)strtol(optarg, NULL, 0);
+            gainMode = parse_gainmode(optarg);
             break;
         case 'G':
 #if defined(HAVE_OUTPUT_UHD)
@@ -400,7 +413,9 @@ int launch_modulator(int argc, char* argv[])
 
 
         // modulator parameters:
-        gainMode = (GainMode)pt.get("modulator.gainmode", 0);
+        const string gainMode_setting = pt.get("modulator.gainmode", "var");
+        gainMode = parse_gainmode(gainMode_setting);
+
         dabMode = pt.get("modulator.mode", dabMode);
         clockRate = pt.get("modulator.dac_clk_rate", (size_t)0);
         digitalgain = pt.get("modulator.digital_gain", digitalgain);
