@@ -25,7 +25,7 @@ Short list of features:
 - GPSDO monitoring (both Ettus and [ODR LEA-M8F board](http://www.opendigitalradio.org/lea-m8f-gpsdo))
 - A FIR filter for improved spectrum mask
 - Logging: log to file, to syslog
-- ETI sources: file (Raw, Framed and Streamed) and ZeroMQ
+- ETI sources: ETI-over-TCP, file (Raw, Framed and Streamed) and ZeroMQ
 - A Telnet and ZeroMQ remote-control that can be used to change
   some parameters during runtime
 - 8-bit signed I/Q output format, useful for the [HackRF](https://greatscottgadgets.com/hackrf/)
