@@ -38,12 +38,8 @@
 #include <fstream>
 #include <memory>
 
-#ifdef __AVX__
-#   include <immintrin.h>
-#else
-#    ifdef __SSE__
-#        include <xmmintrin.h>
-#    endif
+#ifdef __SSE__
+#    include <xmmintrin.h>
 #endif
 
 using namespace std;
@@ -71,67 +67,7 @@ void FIRFilterWorker::process(struct FIRFilterWorkerData *fwd)
 
         PDEBUG("FIRFilterWorker: dataIn->getLength() %zu\n", dataIn->getLength());
 
-#if __AVX__
-#define _mm256_load1_ps(x) _mm256_set_ps(x, x, x, x, x, x, x, x)
-#warning FIRFilter uses experimental AVX code
-
-        // The AVX accelerated version cannot work on the complex values,
-        // it is necessary to do the convolution on the real and imaginary
-        // parts separately. Thankfully, the taps are real, simplifying the
-        // procedure.
-        //
-        // The AVX version is not enabled by default, because the performance
-        // on my test machine (sandy bridge i7) is slightly worse with AVX than
-        // with SSE. TODO: Try with Ivy Bridge or newer.
-        //
-        // Interesting links:
-        // http://software.intel.com/en-us/forums/topic/283753
-
-        const float* in = reinterpret_cast<const float*>(dataIn->getData());
-        float* out      = reinterpret_cast<float*>(dataOut->getData());
-        size_t sizeIn   = dataIn->getLength() / sizeof(float);
-
-        if ((uintptr_t)(&out[0]) % 32 != 0) {
-            fprintf(stderr, "FIRFilterWorker: out not aligned %p ", out);
-            throw std::runtime_error("FIRFilterWorker: out not aligned");
-        }
-
-        clock_gettime(CLOCK_THREAD_CPUTIME_ID, &time_start);
-
-        __m256 AVXout;
-        __m256 AVXtaps;
-        __m256 AVXin;
-        {
-            boost::mutex::scoped_lock lock(fwd->taps_mutex);
-
-            for (i = 0; i < sizeIn - 2*fwd->taps.size(); i += 8) {
-                AVXout = _mm256_setr_ps(0,0,0,0,0,0,0,0);
-
-                for (size_t j = 0; j < fwd->taps.size; j++) {
-                    if ((uintptr_t)(&in[i+2*j]) % 32 == 0) {
-                        AVXin = _mm256_load_ps(&in[i+2*j]); //faster when aligned
-                    }
-                    else {
-                        AVXin = _mm256_loadu_ps(&in[i+2*j]);
-                    }
-
-                    AVXtaps = _mm256_load1_ps(fwd->taps[j]);
-
-                    AVXout = _mm256_add_ps(AVXout, _mm256_mul_ps(AVXin, AVXtaps));
-                }
-                _mm256_store_ps(&out[i], AVXout);
-            }
-
-            for (; i < sizeIn; i++) {
-                out[i] = 0.0;
-                for (int j = 0; i+2*j < sizeIn; j++) {
-                    out[i] += in[i+2*j] * fwd->taps[j];
-                }
-            }
-        }
-        clock_gettime(CLOCK_THREAD_CPUTIME_ID, &time_end);
-
-#elif __SSE__
+#if __SSE__
         // The SSE accelerated version cannot work on the complex values,
         // it is necessary to do the convolution on the real and imaginary
         // parts separately. Thankfully, the taps are real, simplifying the
@@ -316,10 +252,6 @@ FIRFilter::FIRFilter(std::string& taps_file) :
     number_of_runs = 0;
 
     load_filter_taps(myTapsFile);
-
-#if __AVX__
-    fprintf(stderr, "FIRFilter: WARNING: using experimental AVX code !\n");
-#endif
 
     PDEBUG("FIRFilter: Starting worker\n" );
     worker.start(&firwd);
