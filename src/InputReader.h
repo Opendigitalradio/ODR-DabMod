@@ -25,8 +25,7 @@
    along with ODR-DabMod.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef INPUTREADER_H
-#define INPUTREADER_H
+#pragma once
 
 #ifdef HAVE_CONFIG_H
 #   include "config.h"
@@ -41,6 +40,8 @@
 #endif
 #include "porting.h"
 #include "Log.h"
+#include "lib/edi/ETIDecoder.hpp"
+#include "lib/UdpSocket.h"
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <unistd.h>
@@ -244,6 +245,28 @@ class InputZeroMQReader : public InputReader
         struct InputZeroMQThreadData workerdata_;
 };
 
-#endif
+class InputEdiReader : public InputReader
+{
+public:
+    InputEdiReader();
+
+    int Open(const std::string& uri);
+
+    int GetNextFrame(void* buffer);
+
+    void PrintInfo(void);
+
+private:
+    void rx_packet(void);
+
+    std::vector<uint8_t> getEtiFrame(void);
+
+    EdiDecoder::ETIWriter m_writer;
+    EdiDecoder::ETIDecoder m_decoder;
+
+    int m_port;
+    UdpSocket m_sock;
+};
+
 #endif
 

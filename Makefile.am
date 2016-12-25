@@ -23,7 +23,9 @@
 
 ACLOCAL_AMFLAGS = -I m4
 
-EXTRA_DIST = COPYING NEWS README.md AUTHORS ChangeLog TODO doc
+EXTRA_DIST = COPYING NEWS README.md AUTHORS ChangeLog TODO doc \
+			 lib/fec/README.md lib/fec/LICENSE \
+			 lib/edi/README.md
 
 if IS_GIT_REPO
 GITVERSION_FLAGS = -DGITVERSION="\"`git describe --dirty`\""
@@ -35,9 +37,9 @@ bin_PROGRAMS = odr-dabmod
 
 FFT_LDADD=
 
-odr_dabmod_CXXFLAGS = -Wall -Isrc -std=c++11 \
+odr_dabmod_CXXFLAGS = -Wall -Isrc -Ilib -std=c++11 \
 					  $(GITVERSION_FLAGS)
-odr_dabmod_CFLAGS   = -Wall -Isrc \
+odr_dabmod_CFLAGS   = -Wall -Isrc -Ilib \
 					  $(GITVERSION_FLAGS)
 odr_dabmod_LDADD    = $(FFT_LDADD)
 odr_dabmod_SOURCES  = src/DabMod.cpp \
@@ -78,6 +80,7 @@ odr_dabmod_SOURCES  = src/DabMod.cpp \
 					  src/OutputUHD.h \
 					  src/InputMemory.cpp \
 					  src/InputMemory.h \
+					  src/InputEdiReader.cpp \
 					  src/InputFileReader.cpp \
 					  src/InputTcpReader.cpp \
 					  src/InputZeroMQReader.cpp \
@@ -125,5 +128,29 @@ odr_dabmod_SOURCES  = src/DabMod.cpp \
 					  src/Utils.h \
 					  src/TII.cpp \
 					  src/TII.h \
-					  src/zmq.hpp
+					  src/zmq.hpp \
+					  lib/crc.h \
+					  lib/crc.c \
+					  lib/InetAddress.h \
+					  lib/InetAddress.cpp \
+					  lib/UdpSocket.h \
+					  lib/UdpSocket.cpp \
+					  lib/edi/buffer_unpack.hpp \
+					  lib/edi/eti.cpp \
+					  lib/edi/ETIDecoder.cpp \
+					  lib/edi/ETIDecoder.hpp \
+					  lib/edi/eti.hpp \
+					  lib/edi/ETIWriter.cpp \
+					  lib/edi/ETIWriter.hpp \
+					  lib/edi/PFT.cpp \
+					  lib/edi/PFT.hpp \
+					  lib/fec/char.h \
+					  lib/fec/decode_rs_char.c \
+					  lib/fec/decode_rs.h \
+					  lib/fec/encode_rs_char.c \
+					  lib/fec/encode_rs.h \
+					  lib/fec/fec.h \
+					  lib/fec/init_rs_char.c \
+					  lib/fec/init_rs.h \
+					  lib/fec/rs-common.h
 

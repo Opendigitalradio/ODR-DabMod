@@ -187,6 +187,7 @@ int launch_modulator(int argc, char* argv[])
     auto inputZeroMQReader = make_shared<InputZeroMQReader>();
 #endif
 
+    auto inputEdiReader = make_shared<InputEdiReader>();
     auto inputTcpReader = make_shared<InputTcpReader>();
 
     struct sigaction sa;
@@ -712,6 +713,10 @@ int launch_modulator(int argc, char* argv[])
         inputTcpReader->Open(inputName);
         m.inputReader = inputTcpReader.get();
     }
+    else if (inputTransport == "edi") {
+        inputEdiReader->Open(inputName);
+        m.inputReader = inputEdiReader.get();
+    }
     else
     {
         fprintf(stderr, "Error, invalid input transport %s selected!\n", inputTransport.c_str());
@@ -770,11 +775,11 @@ int launch_modulator(int argc, char* argv[])
         m.flowgraph = &flowgraph;
         m.data.setLength(6144);
 
-        shared_ptr<InputMemory> input(new InputMemory(&m.data));
-        shared_ptr<DabModulator> modulator(
-                new DabModulator(tist_offset_s, tist_delay_stages,
-                    tiiConfig, outputRate, clockRate, dabMode, gainMode,
-                    digitalgain, normalise, filterTapsFilename));
+        auto input = make_shared<InputMemory>(&m.data);
+        auto modulator = make_shared<DabModulator>(
+                tist_offset_s, tist_delay_stages,
+                tiiConfig, outputRate, clockRate, dabMode, gainMode,
+                digitalgain, normalise, filterTapsFilename);
 
         flowgraph.connect(input, modulator);
         if (format_converter) {
