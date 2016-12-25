@@ -1,6 +1,11 @@
 /*
    Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010, 2011 Her Majesty
    the Queen in Right of Canada (Communications Research Center Canada)
+
+   Copyright (C) 2016
+   Matthias P. Braendli, matthias.braendli@mpb.li
+
+    http://opendigitalradio.org
  */
 /*
    This file is part of ODR-DabMod.
@@ -19,43 +24,33 @@
    along with ODR-DabMod.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef FIC_SOURCE_H
-#define FIC_SOURCE_H
+#pragma once
 
 #ifdef HAVE_CONFIG_H
 #   include <config.h>
 #endif
 
-
 #include "PuncturingRule.h"
 #include "Eti.h"
-#include "ModInput.h"
-
+#include "ModPlugin.h"
 #include <vector>
 #include <sys/types.h>
 
-
 class FicSource : public ModInput
 {
-protected:
-    size_t d_framesize;
-    Buffer d_buffer;
-    std::vector<PuncturingRule*> d_puncturing_rules;
-    
 public:
     FicSource(eti_FC &fc);
-    FicSource(const FicSource&);
-    FicSource& operator=(const FicSource&);
-    virtual ~FicSource();
 
     size_t getFramesize();
-    const std::vector<PuncturingRule*>& get_rules();
-    
-    int process(Buffer* inputData, Buffer* outputData);
+    const std::vector<PuncturingRule>& get_rules();
+
+    void loadFicData(const Buffer& fic);
+    int process(Buffer* outputData);
     const char* name() { return "FicSource"; }
 
-    int read(Buffer* outputData);
+private:
+    size_t d_framesize;
+    Buffer d_buffer;
+    std::vector<PuncturingRule> d_puncturing_rules;
 };
 
-
-#endif // FIC_SOURCE_H

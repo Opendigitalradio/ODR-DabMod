@@ -1,6 +1,11 @@
 /*
    Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010, 2011 Her Majesty
    the Queen in Right of Canada (Communications Research Center Canada)
+
+   Copyright (C) 2016
+   Matthias P. Braendli, matthias.braendli@mpb.li
+
+    http://opendigitalradio.org
  */
 /*
    This file is part of ODR-DabMod.
@@ -19,32 +24,30 @@
    along with ODR-DabMod.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef NULL_SYMBOL_H
-#define NULL_SYMBOL_H
+#pragma once
 
 #ifdef HAVE_CONFIG_H
 #   include "config.h"
 #endif
 
 #include "porting.h"
-#include "ModCodec.h"
+#include "ModPlugin.h"
 
 #include <sys/types.h>
 #include <stdint.h>
 
 
-class NullSymbol : public ModCodec
+class NullSymbol : public ModInput
 {
-protected:
-    size_t myNbCarriers;
-
 public:
     NullSymbol(size_t nbCarriers);
     virtual ~NullSymbol();
 
-    int process(Buffer* const dataIn, Buffer* dataOut);
+    int process(Buffer* dataOut);
     const char* name() { return "NullSymbol"; }
+
+private:
+    size_t myNbCarriers;
+
 };
 
-
-#endif // NULL_SYMBOL_H

@@ -1,6 +1,11 @@
 /*
    Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010 Her Majesty the
    Queen in Right of Canada (Communications Research Center Canada)
+
+   Copyright (C) 2016
+   Matthias P. Braendli, matthias.braendli@mpb.li
+
+    http://opendigitalradio.org
  */
 /*
    This file is part of ODR-DabMod.
@@ -20,4 +25,49 @@
  */
 
 #include "ModPlugin.h"
+#include "PcDebug.h"
+#include <stdexcept>
+#include <string>
+
+#define MODASSERT(cond) \
+    if (not (cond)) { \
+        throw std::runtime_error("Assertion failure: " #cond " for " + \
+                std::string(name())); \
+    }
+
+int ModInput::process(
+            std::vector<Buffer*> dataIn,
+            std::vector<Buffer*> dataOut)
+{
+    MODASSERT(dataIn.empty());
+    MODASSERT(dataOut.size() == 1);
+    return process(dataOut[0]);
+}
+
+int ModCodec::process(
+            std::vector<Buffer*> dataIn,
+            std::vector<Buffer*> dataOut)
+{
+    MODASSERT(dataIn.size() == 1);
+    MODASSERT(dataOut.size() == 1);
+    return process(dataIn[0], dataOut[0]);
+}
+
+int ModMux::process(
+            std::vector<Buffer*> dataIn,
+            std::vector<Buffer*> dataOut)
+{
+    MODASSERT(not dataIn.empty());
+    MODASSERT(dataOut.size() == 1);
+    return process(dataIn, dataOut[0]);
+}
+
+int ModOutput::process(
+            std::vector<Buffer*> dataIn,
+            std::vector<Buffer*> dataOut)
+{
+    MODASSERT(dataIn.size() == 1);
+    MODASSERT(dataOut.empty());
+    return process(dataIn[0]);
+}
 

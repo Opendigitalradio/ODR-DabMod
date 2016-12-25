@@ -19,15 +19,14 @@
    along with ODR-DabMod.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef FREQUENCY_INTERLEAVER_H
-#define FREQUENCY_INTERLEAVER_H
+#pragma once
 
 #ifdef HAVE_CONFIG_H
 #   include <config.h>
 #endif
 
 
-#include "ModCodec.h"
+#include "ModPlugin.h"
 
 #include <sys/types.h>
 
@@ -50,4 +49,3 @@ protected:
     size_t* d_indexes;
 };
 
-#endif // FREQUENCY_INTERLEAVER_H

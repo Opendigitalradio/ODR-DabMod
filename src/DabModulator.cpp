@@ -74,8 +74,8 @@ DabModulator::DabModulator(
     myFilterTapsFilename(filterTapsFilename),
     myTiiConfig(tiiConfig)
 {
-    PDEBUG("DabModulator::DabModulator(%u, %u, %u, %u) @ %p\n",
-            outputRate, clockRate, dabMode, gainMode, this);
+    PDEBUG("DabModulator::DabModulator(%u, %u, %u, %zu) @ %p\n",
+            outputRate, clockRate, dabMode, (size_t)gainMode, this);
 
     if (myDabMode == 0) {
         setMode(2);
@@ -252,11 +252,11 @@ int DabModulator::process(Buffer* const dataIn, Buffer* dataOut)
 
         // Configuring puncturing encoder
         auto ficPunc = make_shared<PuncturingEncoder>();
-        for (const auto *rule : fic->get_rules()) {
+        for (const auto &rule : fic->get_rules()) {
             PDEBUG(" Adding rule:\n");
-            PDEBUG("  Length: %zu\n", rule->length());
-            PDEBUG("  Pattern: 0x%x\n", rule->pattern());
-            ficPunc->append_rule(*rule);
+            PDEBUG("  Length: %zu\n", rule.length());
+            PDEBUG("  Pattern: 0x%x\n", rule.pattern());
+            ficPunc->append_rule(rule);
         }
         PDEBUG(" Adding tail\n");
         ficPunc->append_tail_rule(PuncturingRule(3, 0xcccccc));
@@ -312,9 +312,9 @@ int DabModulator::process(Buffer* const dataIn, Buffer* dataOut)
 
             for (const auto& rule : subchannel->get_rules()) {
                 PDEBUG(" Adding rule:\n");
-                PDEBUG("  Length: %zu\n", rule->length());
-                PDEBUG("  Pattern: 0x%x\n", rule->pattern());
-                subchPunc->append_rule(*rule);
+                PDEBUG("  Length: %zu\n", rule.length());
+                PDEBUG("  Pattern: 0x%x\n", rule.pattern());
+                subchPunc->append_rule(rule);
             }
             PDEBUG(" Adding tail\n");
             subchPunc->append_tail_rule(PuncturingRule(3, 0xcccccc));

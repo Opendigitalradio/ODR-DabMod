@@ -48,11 +48,10 @@ void InputMemory::setInput(Buffer* dataIn)
 }
 
 
-int InputMemory::process(Buffer* dataIn, Buffer* dataOut)
+int InputMemory::process(Buffer* dataOut)
 {
-    PDEBUG("InputMemory::process"
-            "(dataIn: %p, dataOut: %p)\n",
-            dataIn, dataOut);
+    PDEBUG("InputMemory::process (dataOut: %p)\n",
+            dataOut);
 
     *dataOut = *myDataIn;
 

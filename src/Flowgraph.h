@@ -2,7 +2,7 @@
    Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010, 2011 Her Majesty
    the Queen in Right of Canada (Communications Research Center Canada)
 
-   Copyright (C) 2015
+   Copyright (C) 2016
    Matthias P. Braendli, matthias.braendli@mpb.li
 
     http://opendigitalradio.org
@@ -24,8 +24,7 @@
    along with ODR-DabMod.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef FLOWGRAPH_H
-#define FLOWGRAPH_H
+#pragma once
 
 #ifdef HAVE_CONFIG_H
 #   include <config.h>
@@ -37,20 +36,18 @@
 #include <memory>
 #include <sys/types.h>
 #include <vector>
-
+#include <list>
+#include <cstdio>
 
 class Node
 {
 public:
     Node(std::shared_ptr<ModPlugin> plugin);
     ~Node();
-    Node(const Node&);
-    Node& operator=(const Node&);
+    Node(const Node&) = delete;
+    Node& operator=(const Node&) = delete;
 
     std::shared_ptr<ModPlugin> plugin() { return myPlugin; }
-
-    std::vector<std::shared_ptr<Buffer> > myInputBuffers;
-    std::vector<std::shared_ptr<Buffer> > myOutputBuffers;
 
     int process();
     time_t processTime() { return myProcessTime; }
@@ -58,7 +55,19 @@ public:
         myProcessTime += processTime;
     }
 
+    void addOutputBuffer(Buffer::sptr& buffer);
+    void removeOutputBuffer(Buffer::sptr& buffer);
+
+    void addInputBuffer(Buffer::sptr& buffer);
+    void removeInputBuffer(Buffer::sptr& buffer);
+
 protected:
+    std::list<Buffer::sptr> myInputBuffers;
+    std::list<Buffer::sptr> myOutputBuffers;
+#if DEBUG
+    std::list<FILE*> myDebugFiles;
+#endif
+
     std::shared_ptr<ModPlugin> myPlugin;
     time_t myProcessTime;
 };
@@ -69,8 +78,8 @@ class Edge
 public:
     Edge(std::shared_ptr<Node>& src, std::shared_ptr<Node>& dst);
     ~Edge();
-    Edge(const Edge&);
-    Edge& operator=(const Edge&);
+    Edge(const Edge&) = delete;
+    Edge& operator=(const Edge&) = delete;
 
 protected:
     std::shared_ptr<Node> mySrcNode;
@@ -84,8 +93,8 @@ class Flowgraph
 public:
     Flowgraph();
     virtual ~Flowgraph();
-    Flowgraph(const Flowgraph&);
-    Flowgraph& operator=(const Flowgraph&);
+    Flowgraph(const Flowgraph&) = delete;
+    Flowgraph& operator=(const Flowgraph&) = delete;
 
     void connect(std::shared_ptr<ModPlugin> input,
                  std::shared_ptr<ModPlugin> output);
@@ -97,6 +106,4 @@ protected:
     time_t myProcessTime;
 };
 
-
-#endif // FLOWGRAPH_H
 

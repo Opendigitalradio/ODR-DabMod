@@ -304,7 +304,7 @@ void OutputUHD::SetDelayBuffer(unsigned int dabMode)
     myDelayBuf.resize(myTFDurationMs * myConf.sampleRate / 1000);
 }
 
-int OutputUHD::process(Buffer* dataIn, Buffer* dataOut)
+int OutputUHD::process(Buffer* dataIn)
 {
     uwd.muting = myConf.muting;
 

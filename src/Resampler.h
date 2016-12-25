@@ -24,15 +24,14 @@
    along with ODR-DabMod.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef RESAMPLER_H
-#define RESAMPLER_H
+#pragma once
 
 #ifdef HAVE_CONFIG_H
 #   include <config.h>
 #endif
 
 #include "porting.h"
-#include "ModCodec.h"
+#include "ModPlugin.h"
 #include <sys/types.h>
 #include <fftw3.h>
 
@@ -73,5 +72,4 @@ protected:
     float myFactor;
 };
 
-#endif // RESAMPLER_H
 

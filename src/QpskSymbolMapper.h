@@ -19,15 +19,14 @@
    along with ODR-DabMod.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef QPSK_SYMBOL_MAPPER_H
-#define QPSK_SYMBOL_MAPPER_H
+#pragma once
 
 #ifdef HAVE_CONFIG_H
 #   include <config.h>
 #endif
 
 
-#include "ModCodec.h"
+#include "ModPlugin.h"
 
 #include <sys/types.h>
 
@@ -48,4 +47,3 @@ protected:
     size_t d_carriers;
 };
 
-#endif // QPSK_SYMBOL_MAPPER_H

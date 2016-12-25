@@ -26,14 +26,13 @@
    along with ODR-DabMod.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef TII_H
-#define TII_H
+#pragma once
 
 #ifdef HAVE_CONFIG_H
 #   include <config.h>
 #endif
 
-#include "ModCodec.h"
+#include "ModPlugin.h"
 #include "RemoteControl.h"
 
 #include <boost/thread.hpp>
@@ -107,5 +106,4 @@ class TII : public ModCodec, public RemoteControllable
         TII& operator=(const TII&);
 };
 
-#endif // TII_H
 

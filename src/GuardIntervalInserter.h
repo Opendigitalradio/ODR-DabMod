@@ -19,16 +19,14 @@
    along with ODR-DabMod.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef GUARD_INTERVAL_INSERTER_H
-#define GUARD_INTERVAL_INSERTER_H
+#pragma once
 
 #ifdef HAVE_CONFIG_H
 #   include <config.h>
 #endif
 
 
-#include "ModCodec.h"
-
+#include "ModPlugin.h"
 
 #include <sys/types.h>
 
@@ -53,5 +51,3 @@ protected:
     bool myHasNull;
 };
 
-
-#endif // GUARD_INTERVAL_INSERTER_H

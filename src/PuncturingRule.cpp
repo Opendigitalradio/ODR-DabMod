@@ -19,42 +19,24 @@
    along with ODR-DabMod.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifdef HAVE_CONFIG_H
-//#include "config.h"
-#endif
-
 #include "PcDebug.h"
 #include "PuncturingRule.h"
 #include <stdio.h>
-#include <stdexcept>
-
 
 PuncturingRule::PuncturingRule(
         const size_t length,
         const uint32_t pattern) :
     d_length(length),
     d_pattern(pattern)
-{
-    PDEBUG("PuncturingRule::PuncturingRule(%zu, 0x%x) @ %p\n",
-            length, pattern, this);
-}
-
-
-PuncturingRule::~PuncturingRule()
-{
-    PDEBUG("PuncturingRule::~PuncturingRule() @ %p\n", this);
-}
-
+{ }
 
 size_t PuncturingRule::bit_size() const
 {
-//    fprintf(stderr, "Calling bit_size()");
     size_t bits = 0;
     for (uint32_t mask = 0x80000000; mask != 0; mask >>= 1) {
         if (d_pattern & mask) {
             ++bits;
         }
     }
-//    fprintf(stderr, " -> return %i\n", bits);
     return bits;
 }

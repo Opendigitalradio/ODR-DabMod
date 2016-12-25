@@ -25,8 +25,7 @@
    along with ODR-DabMod.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef DAB_MODULATOR_H
-#define DAB_MODULATOR_H
+#pragma once
 
 #ifdef HAVE_CONFIG_H
 #   include "config.h"
@@ -36,7 +35,7 @@
 #include <string>
 #include <memory>
 
-#include "ModCodec.h"
+#include "ModPlugin.h"
 #include "EtiReader.h"
 #include "Flowgraph.h"
 #include "GainControl.h"
@@ -89,6 +88,4 @@ protected:
     size_t myFicSizeOut;
     size_t myFicSizeIn;
 };
-
-#endif // DAB_MODULATOR_H
 

@@ -26,15 +26,14 @@
    along with ODR-DabMod.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef FORMAT_CONVERTER_H
-#define FORMAT_CONVERTER_H
+#pragma once
 
 #ifdef HAVE_CONFIG_H
 #   include <config.h>
 #endif
 
 #include "porting.h"
-#include "ModCodec.h"
+#include "ModPlugin.h"
 #include <complex>
 #include <stdint.h>
 
@@ -49,5 +48,4 @@ class FormatConverter : public ModCodec
         const char* name();
 };
 
-#endif // FORMAT_CONVERTER_H
 

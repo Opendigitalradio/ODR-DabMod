@@ -2,7 +2,7 @@
    Copyright (C) 2007, 2008, 2009, 2010, 2011 Her Majesty the Queen in
    Right of Canada (Communications Research Center Canada)
 
-   Copyright (C) 2014
+   Copyright (C) 2016
    Matthias P. Braendli, matthias.braendli@mpb.li
 
     http://opendigitalradio.org
@@ -24,8 +24,7 @@
    along with ODR-DabMod.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef OUTPUT_ZEROMQ_H
-#define OUTPUT_ZEROMQ_H
+#pragma once
 
 #ifdef HAVE_CONFIG_H
 #   include "config.h"
@@ -33,7 +32,7 @@
 
 #if defined(HAVE_ZEROMQ)
 
-#include "ModOutput.h"
+#include "ModPlugin.h"
 #include "zmq.hpp"
 
 class OutputZeroMQ : public ModOutput
@@ -41,7 +40,7 @@ class OutputZeroMQ : public ModOutput
     public:
         OutputZeroMQ(std::string endpoint, int type, Buffer* dataOut = NULL);
         virtual ~OutputZeroMQ();
-        virtual int process(Buffer* dataIn, Buffer* dataOut);
+        virtual int process(Buffer* dataIn);
         const char* name() { return m_name.c_str(); }
 
     protected:
@@ -56,6 +55,4 @@ class OutputZeroMQ : public ModOutput
 };
 
 #endif // HAVE_ZEROMQ
-
-#endif // OUTPUT_ZEROMQ_H
 

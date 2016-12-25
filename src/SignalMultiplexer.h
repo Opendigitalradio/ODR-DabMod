@@ -19,15 +19,15 @@
    along with ODR-DabMod.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef SIGNAL_MULTIPLEXER_H
-#define SIGNAL_MULTIPLEXER_H
+#pragma once
 
 #ifdef HAVE_CONFIG_H
 #   include <config.h>
 #endif
 
 
-#include "ModMux.h"
+#include "ModPlugin.h"
+#include <vector>
 
 
 #include <sys/types.h>
@@ -49,5 +49,3 @@ protected:
     size_t d_frameSize;
 };
 
-
-#endif // SIGNAL_MULTIPLEXER_H

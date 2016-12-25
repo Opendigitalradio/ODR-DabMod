@@ -1,6 +1,11 @@
 /*
    Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010, 2011 Her Majesty
    the Queen in Right of Canada (Communications Research Center Canada)
+
+   Copyright (C) 2016
+   Matthias P. Braendli, matthias.braendli@mpb.li
+
+    http://opendigitalradio.org
  */
 /*
    This file is part of ODR-DabMod.
@@ -19,30 +24,28 @@
    along with ODR-DabMod.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef PRBS_GENERATOR_H
-#define PRBS_GENERATOR_H
+#pragma once
 
 #ifdef HAVE_CONFIG_H
 #   include <config.h>
 #endif
 
-
-#include "ModCodec.h"
-
+#include "ModPlugin.h"
 #include <sys/types.h>
 #include <stdint.h>
 
-
-class PrbsGenerator : public ModCodec
+/* The PrbsGenerator can work as a ModInput generating a Prbs
+ * sequence from the given parameters only, or as a ModCodec
+ * XORing incoming data with the PRBS
+ */
+class PrbsGenerator : public ModPlugin
 {
 private:
-
-protected:
     uint32_t parity_check(uint32_t prbs_accum);
     void gen_prbs_table();
     uint32_t update_prbs();
     void gen_weight_table();
-    
+
     size_t d_framesize;
     // table of matrix products used to update a 32-bit PRBS generator
     uint32_t d_prbs_table [4][256];
@@ -63,9 +66,7 @@ public:
             size_t init = 0);
     virtual ~PrbsGenerator();
 
-    int process(Buffer* const dataIn, Buffer* dataOut);
+    int process(std::vector<Buffer*> dataIn, std::vector<Buffer*> dataOut);
     const char* name() { return "PrbsGenerator"; }
 };
 
-
-#endif // PRBS_GENERATOR_H

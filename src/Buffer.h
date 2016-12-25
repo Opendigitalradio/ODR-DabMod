@@ -20,14 +20,14 @@
    along with ODR-DabMod.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef BUFFER_H
-#define BUFFER_H
+#pragma once
 
 #ifdef HAVE_CONFIG_H
 #   include <config.h>
 #endif
 
 #include <unistd.h>
+#include <memory>
 
 /* Buffer is a container for a byte array, that is memcpy'ed
  * on assignment and by the copy-constructor.
@@ -48,6 +48,8 @@ class Buffer {
         void *data;
 
     public:
+        using sptr = std::shared_ptr<Buffer>;
+
         Buffer(const Buffer& copy);
         Buffer(size_t len = 0, const void *data = NULL);
         ~Buffer();
@@ -70,6 +72,4 @@ class Buffer {
         size_t getLength() const { return len; }
         void *getData() const { return data; }
 };
-
-#endif // BUFFER_H
 

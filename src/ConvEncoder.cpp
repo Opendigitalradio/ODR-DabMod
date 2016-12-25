@@ -52,14 +52,6 @@ ConvEncoder::ConvEncoder(size_t framesize) :
     d_framesize(framesize)
 {
     PDEBUG("ConvEncoder::ConvEncoder(%zu)\n", framesize);
-
-}
-
-
-ConvEncoder::~ConvEncoder()
-{
-    PDEBUG("ConvEncoder::~ConvEncoder()\n");
-
 }
 
 

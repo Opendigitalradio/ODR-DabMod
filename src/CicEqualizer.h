@@ -19,15 +19,14 @@
    along with ODR-DabMod.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef CIC_EQUALIZER_H
-#define CIC_EQUALIZER_H
+#pragma once
 
 #ifdef HAVE_CONFIG_H
 #   include <config.h>
 #endif
 
 
-#include "ModCodec.h"
+#include "ModPlugin.h"
 
 #include <vector>
 #include <sys/types.h>
@@ -56,7 +55,4 @@ protected:
     size_t mySpacing;
     std::vector<float> myFilter;
 };
-
-
-#endif //CIC_EQUALIZER_H
 

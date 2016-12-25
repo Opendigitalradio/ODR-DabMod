@@ -2,7 +2,7 @@
    Copyright (C) 2007, 2008, 2009, 2010, 2011 Her Majesty the Queen in
    Right of Canada (Communications Research Center Canada)
 
-   Copyright (C) 2014
+   Copyright (C) 2016
    Matthias P. Braendli, matthias.braendli@mpb.li
 
     http://opendigitalradio.org
@@ -24,8 +24,7 @@
    along with ODR-DabMod.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef OUTPUT_MEMORY_H
-#define OUTPUT_MEMORY_H
+#pragma once
 
 #ifdef HAVE_CONFIG_H
 #   include "config.h"
@@ -44,7 +43,7 @@
 #endif
 
 
-#include "ModOutput.h"
+#include "ModPlugin.h"
 
 
 class OutputMemory : public ModOutput
@@ -52,7 +51,7 @@ class OutputMemory : public ModOutput
 public:
     OutputMemory(Buffer* dataOut);
     virtual ~OutputMemory();
-    virtual int process(Buffer* dataIn, Buffer* dataOut);
+    virtual int process(Buffer* dataIn);
     const char* name() { return "OutputMemory"; }
 
     void setOutput(Buffer* dataOut);
@@ -67,6 +66,4 @@ protected:
     long int myHistogram[HIST_BINS];
 #endif
 };
-
-#endif // OUTPUT_MEMORY_H
 

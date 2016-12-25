@@ -2,7 +2,7 @@
    Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010, 2011 Her Majesty
    the Queen in Right of Canada (Communications Research Center Canada)
 
-   Copyright (C) 2014, 2015
+   Copyright (C) 2016
    Matthias P. Braendli, matthias.braendli@mpb.li
 
     http://opendigitalradio.org
@@ -205,7 +205,7 @@ int EtiReader::process(const Buffer* dataIn)
                 }
                 PDEBUG("Writting 128 bytes of FIC channel data\n");
                 Buffer fic = Buffer(128, in);
-                myFicSource->process(&fic, NULL);
+                myFicSource->loadFicData(fic);
                 input_size -= 128;
                 framesize -= 128;
                 in += 128;
@@ -215,7 +215,7 @@ int EtiReader::process(const Buffer* dataIn)
                 }
                 PDEBUG("Writting 96 bytes of FIC channel data\n");
                 Buffer fic = Buffer(96, in);
-                myFicSource->process(&fic, NULL);
+                myFicSource->loadFicData(fic);
                 input_size -= 96;
                 framesize -= 96;
                 in += 96;
@@ -227,7 +227,7 @@ int EtiReader::process(const Buffer* dataIn)
                 unsigned size = mySources[i]->framesize();
                 PDEBUG("Writting %i bytes of subchannel data\n", size);
                 Buffer subch = Buffer(size, in);
-                mySources[i]->process(&subch, NULL);
+                mySources[i]->loadSubchannelData(subch);
                 input_size -= size;
                 framesize -= size;
                 in += size;

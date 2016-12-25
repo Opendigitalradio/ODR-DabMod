@@ -19,32 +19,23 @@
    along with ODR-DabMod.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef CONV_ENCODER_H
-#define CONV_ENCODER_H
+#pragma once
 
 #ifdef HAVE_CONFIG_H
 #   include <config.h>
 #endif
 
-
-#include "ModCodec.h"
-
+#include "ModPlugin.h"
 #include <sys/types.h>
-
 
 class ConvEncoder : public ModCodec
 {
-private:
-    size_t d_framesize;
-
-protected:
-    
 public:
     ConvEncoder(size_t framesize);
-    virtual ~ConvEncoder();
     int process(Buffer* const dataIn, Buffer* dataOut);
     const char* name() { return "ConvEncoder"; }
+
+private:
+    size_t d_framesize;
 };
 
-
-#endif // CONV_ENCODER_H

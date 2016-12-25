@@ -19,15 +19,14 @@
    along with ODR-DabMod.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef INPUT_MEMORY_H
-#define INPUT_MEMORY_H
+#pragma once
 
 #ifdef HAVE_CONFIG_H
 #   include <config.h>
 #endif
 
 
-#include "ModInput.h"
+#include "ModPlugin.h"
 
 
 class InputMemory : public ModInput
@@ -35,7 +34,7 @@ class InputMemory : public ModInput
 public:
     InputMemory(Buffer* dataIn);
     virtual ~InputMemory();
-    virtual int process(Buffer* dataIn, Buffer* dataOut);
+    virtual int process(Buffer* dataOut);
     const char* name() { return "InputMemory"; }
 
     void setInput(Buffer* dataIn);
@@ -44,5 +43,3 @@ protected:
     Buffer *myDataIn;
 };
 
-
-#endif // INPUT_MEMORY_H

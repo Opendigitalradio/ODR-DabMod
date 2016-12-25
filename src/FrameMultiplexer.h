@@ -19,15 +19,14 @@
    along with ODR-DabMod.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef FRAME_MULTIPLEXER_H
-#define FRAME_MULTIPLEXER_H
+#pragma once
 
 #ifdef HAVE_CONFIG_H
 #   include <config.h>
 #endif
 
 
-#include "ModMux.h"
+#include "ModPlugin.h"
 #include "SubchannelSource.h"
 #include <memory>
 
@@ -52,5 +51,4 @@ protected:
     const std::vector<std::shared_ptr<SubchannelSource> >* mySubchannels;
 };
 
-#endif // FRAME_MULTIPLEXER_H
 

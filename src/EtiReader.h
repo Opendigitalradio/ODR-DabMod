@@ -2,7 +2,7 @@
    Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010, 2011 Her Majesty
    the Queen in Right of Canada (Communications Research Center Canada)
 
-   Copyright (C) 2014, 2015
+   Copyright (C) 2016
    Matthias P. Braendli, matthias.braendli@mpb.li
 
     http://opendigitalradio.org
@@ -24,8 +24,7 @@
    along with ODR-DabMod.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef ETI_READER_H
-#define ETI_READER_H
+#pragma once
 
 #ifdef HAVE_CONFIG_H
 #   include <config.h>
@@ -88,5 +87,4 @@ private:
 };
 
 
-#endif // ETI_READER_H
 

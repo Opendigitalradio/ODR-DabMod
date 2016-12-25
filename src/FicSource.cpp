@@ -1,6 +1,11 @@
 /*
    Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010, 2011 Her Majesty
    the Queen in Right of Canada (Communications Research Center Canada)
+
+   Copyright (C) 2016
+   Matthias P. Braendli, matthias.braendli@mpb.li
+
+    http://opendigitalradio.org
  */
 /*
    This file is part of ODR-DabMod.
@@ -28,7 +33,7 @@
 #include <string.h>
 
 
-const std::vector<PuncturingRule*>& FicSource::get_rules()
+const std::vector<PuncturingRule>& FicSource::get_rules()
 {
     return d_puncturing_rules;
 }
@@ -47,67 +52,42 @@ FicSource::FicSource(eti_FC &fc) :
         d_buffer.setLength(0);
         return;
     }
-    
+
     if (fc.MID == 3) {
         d_framesize = 32 * 4;
-        d_puncturing_rules.push_back(new PuncturingRule(29 * 16, 0xeeeeeeee));
-        d_puncturing_rules.push_back(new PuncturingRule(3 * 16, 0xeeeeeeec));
+        d_puncturing_rules.emplace_back(29 * 16, 0xeeeeeeee);
+        d_puncturing_rules.emplace_back(3 * 16, 0xeeeeeeec);
     } else {
         d_framesize = 24 * 4;
-        d_puncturing_rules.push_back(new PuncturingRule(21 * 16, 0xeeeeeeee));
-        d_puncturing_rules.push_back(new PuncturingRule(3 * 16, 0xeeeeeeec));
+        d_puncturing_rules.emplace_back(21 * 16, 0xeeeeeeee);
+        d_puncturing_rules.emplace_back(3 * 16, 0xeeeeeeec);
     }
     d_buffer.setLength(d_framesize);
 }
-
-
-FicSource::~FicSource()
-{
-    PDEBUG("FicSource::~FicSource()\n");
-    for (size_t i = 0; i < d_puncturing_rules.size(); ++i) {
-//        PDEBUG(" Deleting rules @ %p\n", d_puncturing_rules[i]);
-        delete d_puncturing_rules[i];
-    }
-}
-
 
 size_t FicSource::getFramesize()
 {
     return d_framesize;
 }
 
-
-int FicSource::process(Buffer* inputData, Buffer* outputData)
+void FicSource::loadFicData(const Buffer& fic)
 {
-    PDEBUG("FicSource::process"
-            "(inputData: %p, outputData: %p)\n",
-            inputData, outputData);
-
-    if ((inputData != NULL) && inputData->getLength()) {
-        PDEBUG(" Input, storing data\n");
-        if (inputData->getLength() != d_framesize) {
-            PDEBUG("ERROR: FicSource::process.inputSize != d_framesize\n");
-            exit(-1);
-        }
-        d_buffer = *inputData;
-        return inputData->getLength();
-    }
-    PDEBUG(" Output, retriving data\n");
-    
-    return read(outputData);
+    d_buffer = fic;
 }
 
-
-int FicSource::read(Buffer* outputData)
+int FicSource::process(Buffer* outputData)
 {
-    PDEBUG("FicSource::read(outputData: %p, outputSize: %zu)\n",
+    PDEBUG("FicSource::process (outputData: %p, outputSize: %zu)\n",
             outputData, outputData->getLength());
 
     if (d_buffer.getLength() != d_framesize) {
-        PDEBUG("ERROR: FicSource::read.outputSize != d_framesize\n");
-        exit(-1);
+        throw std::runtime_error(
+                "ERROR: FicSource::process.outputSize != d_framesize: " +
+                std::to_string(d_buffer.getLength()) + " != " +
+                std::to_string(d_framesize));
     }
     *outputData = d_buffer;
-    
+
     return outputData->getLength();
 }
+

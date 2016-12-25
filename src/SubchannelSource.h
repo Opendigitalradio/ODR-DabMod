@@ -1,6 +1,11 @@
 /*
    Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010, 2011 Her Majesty
    the Queen in Right of Canada (Communications Research Center Canada)
+
+   Copyright (C) 2016
+   Matthias P. Braendli, matthias.braendli@mpb.li
+
+    http://opendigitalradio.org
  */
 /*
    This file is part of ODR-DabMod.
@@ -19,8 +24,7 @@
    along with ODR-DabMod.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef SUBCHANNEL_SOURCE_H
-#define SUBCHANNEL_SOURCE_H
+#pragma once
 
 #ifdef HAVE_CONFIG_H
 #   include <config.h>
@@ -29,25 +33,15 @@
 
 #include "PuncturingRule.h"
 #include "Eti.h"
-#include "ModInput.h"
+#include "ModPlugin.h"
 
 #include <vector>
 
 
 class SubchannelSource : public ModInput
 {
-protected:
-    size_t d_start_address;
-    size_t d_framesize;
-    size_t d_protection;
-    Buffer d_buffer;
-    std::vector<PuncturingRule*> d_puncturing_rules;
-    
 public:
     SubchannelSource(eti_STC &stc);
-    SubchannelSource(const SubchannelSource&);
-    SubchannelSource& operator=(const SubchannelSource&);
-    virtual ~SubchannelSource();
 
     size_t startAddress();
     size_t framesize();
@@ -57,12 +51,18 @@ public:
     size_t protectionForm();
     size_t protectionLevel();
     size_t protectionOption();
-    const std::vector<PuncturingRule*>& get_rules();
-    
-    int process(Buffer* inputData, Buffer* outputData);
+    const std::vector<PuncturingRule>& get_rules();
+
+    void loadSubchannelData(const Buffer& data);
+    int process(Buffer* outputData);
     const char* name() { return "SubchannelSource"; }
-    int read(Buffer* outputData);
+
+private:
+    size_t d_start_address;
+    size_t d_framesize;
+    size_t d_protection;
+    Buffer d_buffer;
+    std::vector<PuncturingRule> d_puncturing_rules;
 };
 
 
-#endif // SUBCHANNEL_SOURCE_H

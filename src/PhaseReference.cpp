@@ -55,7 +55,7 @@ const uint8_t PhaseReference::d_h[4][32] = {
 
 
 PhaseReference::PhaseReference(unsigned int dabmode) :
-    ModCodec(),
+    ModInput(),
     d_dabmode(dabmode)
 {
     PDEBUG("PhaseReference::PhaseReference(%u) @ %p\n", dabmode, this);
@@ -165,15 +165,9 @@ void PhaseReference::fillData()
 }
 
 
-int PhaseReference::process(Buffer* const dataIn, Buffer* dataOut)
+int PhaseReference::process(Buffer* dataOut)
 {
-    PDEBUG("PhaseReference::process(dataIn: %p, dataOut: %p)\n",
-            dataIn, dataOut);
-
-    if ((dataIn != NULL) && (dataIn->getLength() != 0)) {
-        throw std::runtime_error(
-                "PhaseReference::process input size not valid!");
-    }
+    PDEBUG("PhaseReference::process(dataOut: %p)\n", dataOut);
 
     dataOut->setData(&d_dataIn[0], d_carriers * sizeof(complexf));
 

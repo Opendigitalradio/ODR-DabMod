@@ -33,8 +33,7 @@ DESCRIPTION:
    along with ODR-DabMod.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef OUTPUT_UHD_H
-#define OUTPUT_UHD_H
+#pragma once
 
 #define FAKE_UHD 0
 
@@ -54,7 +53,7 @@ DESCRIPTION:
 #include <string>
 
 #include "Log.h"
-#include "ModOutput.h"
+#include "ModPlugin.h"
 #include "EtiReader.h"
 #include "TimestampDecoder.h"
 #include "RemoteControl.h"
@@ -222,7 +221,7 @@ class OutputUHD: public ModOutput, public RemoteControllable {
         OutputUHD(OutputUHDConfig& config);
         ~OutputUHD();
 
-        int process(Buffer* dataIn, Buffer* dataOut);
+        int process(Buffer* dataIn);
 
         const char* name() { return "OutputUHD"; }
 
@@ -286,6 +285,4 @@ class OutputUHD: public ModOutput, public RemoteControllable {
 };
 
 #endif // HAVE_OUTPUT_UHD
-
-#endif // OUTPUT_UHD_H
 

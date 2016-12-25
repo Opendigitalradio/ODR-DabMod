@@ -1,6 +1,11 @@
 /*
    Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010, 2011 Her Majesty
    the Queen in Right of Canada (Communications Research Center Canada)
+
+   Copyright (C) 2016
+   Matthias P. Braendli, matthias.braendli@mpb.li
+
+    http://opendigitalradio.org
  */
 /*
    This file is part of ODR-DabMod.
@@ -54,7 +59,7 @@
 #define P24 0xffffffff
 
 
-const std::vector<PuncturingRule*>& SubchannelSource::get_rules()
+const std::vector<PuncturingRule>& SubchannelSource::get_rules()
 {
     return d_puncturing_rules;
 }
@@ -67,42 +72,38 @@ SubchannelSource::SubchannelSource(eti_STC &stc) :
     d_protection(stc.TPL)
 {
     PDEBUG("SubchannelSource::SubchannelSource(...) @ %p\n", this);
-//    PDEBUG("  Start address: %i\n", d_start_address);
-//    PDEBUG("  Framesize: %i\n", d_framesize);
-//    PDEBUG("  Protection: %i\n", d_protection);
+    PDEBUG("  Start address: %zu\n", d_start_address);
+    PDEBUG("  Framesize: %zu\n", d_framesize);
+    PDEBUG("  Protection: %zu\n", d_protection);
     if (protectionForm()) {
         if (protectionOption() == 0) {
             switch (protectionLevel()) {
             case 1:
-                d_puncturing_rules.push_back(new PuncturingRule(
-                            ((6 * bitrate() / 8) - 3) * 16, P24));
-                d_puncturing_rules.push_back(new PuncturingRule(
-                            3 * 16, P23));
+                d_puncturing_rules.emplace_back(
+                        ((6 * bitrate() / 8) - 3) * 16, P24);
+                d_puncturing_rules.emplace_back(3 * 16, P23);
                 break;
             case 2:
                 if (bitrate() == 8) {
-                    d_puncturing_rules.push_back(new PuncturingRule(
-                                5 * 16, P13));
-                    d_puncturing_rules.push_back(new PuncturingRule(
-                                1 * 16, P12));
+                    d_puncturing_rules.emplace_back(5 * 16, P13);
+                    d_puncturing_rules.emplace_back(1 * 16, P12);
                 } else {
-                    d_puncturing_rules.push_back(new PuncturingRule(
-                                ((2 * bitrate() / 8) - 3) * 16, P14));
-                    d_puncturing_rules.push_back(new PuncturingRule(
-                                ((4 * bitrate() / 8) + 3) * 16, P13));
+                    d_puncturing_rules.emplace_back(
+                            ((2 * bitrate() / 8) - 3) * 16, P14);
+                    d_puncturing_rules.emplace_back(
+                            ((4 * bitrate() / 8) + 3) * 16, P13);
                 }
                 break;
             case 3:
-                d_puncturing_rules.push_back(new PuncturingRule(
-                            ((6 * bitrate() / 8) - 3) * 16, P8));
-                d_puncturing_rules.push_back(new PuncturingRule(
-                            3 * 16, P7));
+                d_puncturing_rules.emplace_back(
+                        ((6 * bitrate() / 8) - 3) * 16, P8);
+                d_puncturing_rules.emplace_back(3 * 16, P7);
                 break;
             case 4:
-                d_puncturing_rules.push_back(new PuncturingRule(
-                            ((4 * bitrate() / 8) - 3) * 16, P3));
-                d_puncturing_rules.push_back(new PuncturingRule(
-                            ((2 * bitrate() / 8) + 3) * 16, P2));
+                d_puncturing_rules.emplace_back(
+                        ((4 * bitrate() / 8) - 3) * 16, P3);
+                d_puncturing_rules.emplace_back(
+                        ((2 * bitrate() / 8) + 3) * 16, P2);
                 break;
             default:
                 fprintf(stderr,
@@ -115,28 +116,28 @@ SubchannelSource::SubchannelSource(eti_STC &stc) :
         } else if (protectionOption() == 1) {
             switch (protectionLevel()) {
             case 1:
-                d_puncturing_rules.push_back(new PuncturingRule(
-                            ((24 * bitrate() / 32) - 3) * 16, P10));
-                d_puncturing_rules.push_back(new PuncturingRule(
-                            3 * 16, P9));
+                d_puncturing_rules.emplace_back(
+                            ((24 * bitrate() / 32) - 3) * 16, P10);
+                d_puncturing_rules.emplace_back(
+                            3 * 16, P9);
                 break;
             case 2:
-                d_puncturing_rules.push_back(new PuncturingRule(
-                            ((24 * bitrate() / 32) - 3) * 16, P6));
-                d_puncturing_rules.push_back(new PuncturingRule(
-                            3 * 16, P5));
+                d_puncturing_rules.emplace_back(
+                            ((24 * bitrate() / 32) - 3) * 16, P6);
+                d_puncturing_rules.emplace_back(
+                            3 * 16, P5);
                 break;
             case 3:
-                d_puncturing_rules.push_back(new PuncturingRule(
-                            ((24 * bitrate() / 32) - 3) * 16, P4));
-                d_puncturing_rules.push_back(new PuncturingRule(
-                            3 * 16, P3));
+                d_puncturing_rules.emplace_back(
+                            ((24 * bitrate() / 32) - 3) * 16, P4);
+                d_puncturing_rules.emplace_back(
+                            3 * 16, P3);
                 break;
             case 4:
-                d_puncturing_rules.push_back(new PuncturingRule(
-                            ((24 * bitrate() / 32) - 3) * 16, P2));
-                d_puncturing_rules.push_back(new PuncturingRule(
-                            3 * 16, P1));
+                d_puncturing_rules.emplace_back(
+                            ((24 * bitrate() / 32) - 3) * 16, P2);
+                d_puncturing_rules.emplace_back(
+                            3 * 16, P1);
                 break;
             default:
                 fprintf(stderr,
@@ -160,32 +161,32 @@ SubchannelSource::SubchannelSource(eti_STC &stc) :
         case 32:
             switch (protectionLevel()) {
             case 1:
-                d_puncturing_rules.push_back(new PuncturingRule(3  * 16, P24));
-                d_puncturing_rules.push_back(new PuncturingRule(5  * 16, P17));
-                d_puncturing_rules.push_back(new PuncturingRule(13 * 16, P12));
-                d_puncturing_rules.push_back(new PuncturingRule(3  * 16, P17));
+                d_puncturing_rules.emplace_back(3  * 16, P24);
+                d_puncturing_rules.emplace_back(5  * 16, P17);
+                d_puncturing_rules.emplace_back(13 * 16, P12);
+                d_puncturing_rules.emplace_back(3  * 16, P17);
                 break;
             case 2:
-                d_puncturing_rules.push_back(new PuncturingRule(3  * 16, P22));
-                d_puncturing_rules.push_back(new PuncturingRule(4  * 16, P13));
-                d_puncturing_rules.push_back(new PuncturingRule(14 * 16, P8 ));
-                d_puncturing_rules.push_back(new PuncturingRule(3  * 16, P13));
+                d_puncturing_rules.emplace_back(3  * 16, P22);
+                d_puncturing_rules.emplace_back(4  * 16, P13);
+                d_puncturing_rules.emplace_back(14 * 16, P8 );
+                d_puncturing_rules.emplace_back(3  * 16, P13);
                 break;
             case 3:
-                d_puncturing_rules.push_back(new PuncturingRule(3  * 16, P15));
-                d_puncturing_rules.push_back(new PuncturingRule(4  * 16, P9 ));
-                d_puncturing_rules.push_back(new PuncturingRule(14 * 16, P6 ));
-                d_puncturing_rules.push_back(new PuncturingRule(3  * 16, P8 ));
+                d_puncturing_rules.emplace_back(3  * 16, P15);
+                d_puncturing_rules.emplace_back(4  * 16, P9 );
+                d_puncturing_rules.emplace_back(14 * 16, P6 );
+                d_puncturing_rules.emplace_back(3  * 16, P8 );
                 break;
             case 4:
-                d_puncturing_rules.push_back(new PuncturingRule(3  * 16, P11));
-                d_puncturing_rules.push_back(new PuncturingRule(3  * 16, P6 ));
-                d_puncturing_rules.push_back(new PuncturingRule(18 * 16, P5 ));
+                d_puncturing_rules.emplace_back(3  * 16, P11);
+                d_puncturing_rules.emplace_back(3  * 16, P6 );
+                d_puncturing_rules.emplace_back(18 * 16, P5 );
                 break;
             case 5:
-                d_puncturing_rules.push_back(new PuncturingRule(3  * 16, P5 ));
-                d_puncturing_rules.push_back(new PuncturingRule(4  * 16, P3 ));
-                d_puncturing_rules.push_back(new PuncturingRule(17 * 16, P2 ));
+                d_puncturing_rules.emplace_back(3  * 16, P5 );
+                d_puncturing_rules.emplace_back(4  * 16, P3 );
+                d_puncturing_rules.emplace_back(17 * 16, P2 );
                 break;
             default:
                 error = true;
@@ -194,34 +195,34 @@ SubchannelSource::SubchannelSource(eti_STC &stc) :
         case 48:
             switch (protectionLevel()) {
             case 1:
-                d_puncturing_rules.push_back(new PuncturingRule(3  * 16, P24));
-                d_puncturing_rules.push_back(new PuncturingRule(5  * 16, P18));
-                d_puncturing_rules.push_back(new PuncturingRule(25 * 16, P13));
-                d_puncturing_rules.push_back(new PuncturingRule(3  * 16, P18));
+                d_puncturing_rules.emplace_back(3  * 16, P24);
+                d_puncturing_rules.emplace_back(5  * 16, P18);
+                d_puncturing_rules.emplace_back(25 * 16, P13);
+                d_puncturing_rules.emplace_back(3  * 16, P18);
                 break;
             case 2:
-                d_puncturing_rules.push_back(new PuncturingRule(3  * 16, P24));
-                d_puncturing_rules.push_back(new PuncturingRule(4  * 16, P14));
-                d_puncturing_rules.push_back(new PuncturingRule(26 * 16, P8 ));
-                d_puncturing_rules.push_back(new PuncturingRule(3  * 16, P15));
+                d_puncturing_rules.emplace_back(3  * 16, P24);
+                d_puncturing_rules.emplace_back(4  * 16, P14);
+                d_puncturing_rules.emplace_back(26 * 16, P8 );
+                d_puncturing_rules.emplace_back(3  * 16, P15);
                 break;
             case 3:
-                d_puncturing_rules.push_back(new PuncturingRule(3  * 16, P15));
-                d_puncturing_rules.push_back(new PuncturingRule(4  * 16, P10));
-                d_puncturing_rules.push_back(new PuncturingRule(26 * 16, P6 ));
-                d_puncturing_rules.push_back(new PuncturingRule(3  * 16, P9 ));
+                d_puncturing_rules.emplace_back(3  * 16, P15);
+                d_puncturing_rules.emplace_back(4  * 16, P10);
+                d_puncturing_rules.emplace_back(26 * 16, P6 );
+                d_puncturing_rules.emplace_back(3  * 16, P9 );
                 break;
             case 4:
-                d_puncturing_rules.push_back(new PuncturingRule(3  * 16, P9 ));
-                d_puncturing_rules.push_back(new PuncturingRule(4  * 16, P6 ));
-                d_puncturing_rules.push_back(new PuncturingRule(26 * 16, P4 ));
-                d_puncturing_rules.push_back(new PuncturingRule(3  * 16, P6 ));
+                d_puncturing_rules.emplace_back(3  * 16, P9 );
+                d_puncturing_rules.emplace_back(4  * 16, P6 );
+                d_puncturing_rules.emplace_back(26 * 16, P4 );
+                d_puncturing_rules.emplace_back(3  * 16, P6 );
                 break;
             case 5:
-                d_puncturing_rules.push_back(new PuncturingRule(4  * 16, P5 ));
-                d_puncturing_rules.push_back(new PuncturingRule(3  * 16, P4 ));
-                d_puncturing_rules.push_back(new PuncturingRule(26 * 16, P2 ));
-                d_puncturing_rules.push_back(new PuncturingRule(3  * 16, P3 ));
+                d_puncturing_rules.emplace_back(4  * 16, P5 );
+                d_puncturing_rules.emplace_back(3  * 16, P4 );
+                d_puncturing_rules.emplace_back(26 * 16, P2 );
+                d_puncturing_rules.emplace_back(3  * 16, P3 );
                 break;
             default:
                 error = true;
@@ -230,28 +231,28 @@ SubchannelSource::SubchannelSource(eti_STC &stc) :
         case 56:
             switch (protectionLevel()) {
             case 2:
-                d_puncturing_rules.push_back(new PuncturingRule(6  * 16, P23));
-                d_puncturing_rules.push_back(new PuncturingRule(10 * 16, P13));
-                d_puncturing_rules.push_back(new PuncturingRule(23 * 16, P8 ));
-                d_puncturing_rules.push_back(new PuncturingRule(3  * 16, P13));
+                d_puncturing_rules.emplace_back(6  * 16, P23);
+                d_puncturing_rules.emplace_back(10 * 16, P13);
+                d_puncturing_rules.emplace_back(23 * 16, P8 );
+                d_puncturing_rules.emplace_back(3  * 16, P13);
                 break;
             case 3:
-                d_puncturing_rules.push_back(new PuncturingRule(6  * 16, P16));
-                d_puncturing_rules.push_back(new PuncturingRule(12 * 16, P7 ));
-                d_puncturing_rules.push_back(new PuncturingRule(21 * 16, P6 ));
-                d_puncturing_rules.push_back(new PuncturingRule(3  * 16, P9 ));
+                d_puncturing_rules.emplace_back(6  * 16, P16);
+                d_puncturing_rules.emplace_back(12 * 16, P7 );
+                d_puncturing_rules.emplace_back(21 * 16, P6 );
+                d_puncturing_rules.emplace_back(3  * 16, P9 );
                 break;
             case 4:
-                d_puncturing_rules.push_back(new PuncturingRule(6  * 16, P9 ));
-                d_puncturing_rules.push_back(new PuncturingRule(10 * 16, P6 ));
-                d_puncturing_rules.push_back(new PuncturingRule(23 * 16, P4 ));
-                d_puncturing_rules.push_back(new PuncturingRule(3  * 16, P5 ));
+                d_puncturing_rules.emplace_back(6  * 16, P9 );
+                d_puncturing_rules.emplace_back(10 * 16, P6 );
+                d_puncturing_rules.emplace_back(23 * 16, P4 );
+                d_puncturing_rules.emplace_back(3  * 16, P5 );
                 break;
             case 5:
-                d_puncturing_rules.push_back(new PuncturingRule(6  * 16, P5 ));
-                d_puncturing_rules.push_back(new PuncturingRule(10 * 16, P4 ));
-                d_puncturing_rules.push_back(new PuncturingRule(23 * 16, P2 ));
-                d_puncturing_rules.push_back(new PuncturingRule(3  * 16, P3 ));
+                d_puncturing_rules.emplace_back(6  * 16, P5 );
+                d_puncturing_rules.emplace_back(10 * 16, P4 );
+                d_puncturing_rules.emplace_back(23 * 16, P2 );
+                d_puncturing_rules.emplace_back(3  * 16, P3 );
                 break;
             default:
                 error = true;
@@ -260,33 +261,33 @@ SubchannelSource::SubchannelSource(eti_STC &stc) :
         case 64:
             switch (protectionLevel()) {
             case 1:
-                d_puncturing_rules.push_back(new PuncturingRule(6  * 16, P24));
-                d_puncturing_rules.push_back(new PuncturingRule(11 * 16, P18));
-                d_puncturing_rules.push_back(new PuncturingRule(28 * 16, P12));
-                d_puncturing_rules.push_back(new PuncturingRule(3  * 16, P18));
+                d_puncturing_rules.emplace_back(6  * 16, P24);
+                d_puncturing_rules.emplace_back(11 * 16, P18);
+                d_puncturing_rules.emplace_back(28 * 16, P12);
+                d_puncturing_rules.emplace_back(3  * 16, P18);
                 break;
             case 2:
-                d_puncturing_rules.push_back(new PuncturingRule(6  * 16, P23));
-                d_puncturing_rules.push_back(new PuncturingRule(10 * 16, P13));
-                d_puncturing_rules.push_back(new PuncturingRule(29 * 16, P8 ));
-                d_puncturing_rules.push_back(new PuncturingRule(3  * 16, P13));
+                d_puncturing_rules.emplace_back(6  * 16, P23);
+                d_puncturing_rules.emplace_back(10 * 16, P13);
+                d_puncturing_rules.emplace_back(29 * 16, P8 );
+                d_puncturing_rules.emplace_back(3  * 16, P13);
                 break;
             case 3:
-                d_puncturing_rules.push_back(new PuncturingRule(6  * 16, P16));
-                d_puncturing_rules.push_back(new PuncturingRule(12 * 16, P8 ));
-                d_puncturing_rules.push_back(new PuncturingRule(27 * 16, P6 ));
-                d_puncturing_rules.push_back(new PuncturingRule(3  * 16, P9 ));
+                d_puncturing_rules.emplace_back(6  * 16, P16);
+                d_puncturing_rules.emplace_back(12 * 16, P8 );
+                d_puncturing_rules.emplace_back(27 * 16, P6 );
+                d_puncturing_rules.emplace_back(3  * 16, P9 );
                 break;
             case 4:
-                d_puncturing_rules.push_back(new PuncturingRule(6  * 16, P11));
-                d_puncturing_rules.push_back(new PuncturingRule(9  * 16, P6 ));
-                d_puncturing_rules.push_back(new PuncturingRule(33 * 16, P5 ));
+                d_puncturing_rules.emplace_back(6  * 16, P11);
+                d_puncturing_rules.emplace_back(9  * 16, P6 );
+                d_puncturing_rules.emplace_back(33 * 16, P5 );
                 break;
             case 5:
-                d_puncturing_rules.push_back(new PuncturingRule(6  * 16, P5 ));
-                d_puncturing_rules.push_back(new PuncturingRule(9  * 16, P3 ));
-                d_puncturing_rules.push_back(new PuncturingRule(31 * 16, P2 ));
-                d_puncturing_rules.push_back(new PuncturingRule(2  * 16, P3 ));
+                d_puncturing_rules.emplace_back(6  * 16, P5 );
+                d_puncturing_rules.emplace_back(9  * 16, P3 );
+                d_puncturing_rules.emplace_back(31 * 16, P2 );
+                d_puncturing_rules.emplace_back(2  * 16, P3 );
                 break;
             default:
                 error = true;
@@ -295,34 +296,34 @@ SubchannelSource::SubchannelSource(eti_STC &stc) :
         case 80:
             switch (protectionLevel()) {
             case 1:
-                d_puncturing_rules.push_back(new PuncturingRule(6  * 16, P24));
-                d_puncturing_rules.push_back(new PuncturingRule(10 * 16, P17));
-                d_puncturing_rules.push_back(new PuncturingRule(41 * 16, P12));
-                d_puncturing_rules.push_back(new PuncturingRule(3  * 16, P18));
+                d_puncturing_rules.emplace_back(6  * 16, P24);
+                d_puncturing_rules.emplace_back(10 * 16, P17);
+                d_puncturing_rules.emplace_back(41 * 16, P12);
+                d_puncturing_rules.emplace_back(3  * 16, P18);
                 break;
             case 2:
-                d_puncturing_rules.push_back(new PuncturingRule(6  * 16, P23));
-                d_puncturing_rules.push_back(new PuncturingRule(10 * 16, P13));
-                d_puncturing_rules.push_back(new PuncturingRule(41 * 16, P8 ));
-                d_puncturing_rules.push_back(new PuncturingRule(3  * 16, P13));
+                d_puncturing_rules.emplace_back(6  * 16, P23);
+                d_puncturing_rules.emplace_back(10 * 16, P13);
+                d_puncturing_rules.emplace_back(41 * 16, P8 );
+                d_puncturing_rules.emplace_back(3  * 16, P13);
                 break;
             case 3:
-                d_puncturing_rules.push_back(new PuncturingRule(6  * 16, P16));
-                d_puncturing_rules.push_back(new PuncturingRule(11 * 16, P8 ));
-                d_puncturing_rules.push_back(new PuncturingRule(40 * 16, P6 ));
-                d_puncturing_rules.push_back(new PuncturingRule(3  * 16, P7 ));
+                d_puncturing_rules.emplace_back(6  * 16, P16);
+                d_puncturing_rules.emplace_back(11 * 16, P8 );
+                d_puncturing_rules.emplace_back(40 * 16, P6 );
+                d_puncturing_rules.emplace_back(3  * 16, P7 );
                 break;
             case 4:
-                d_puncturing_rules.push_back(new PuncturingRule(6  * 16, P11));
-                d_puncturing_rules.push_back(new PuncturingRule(10 * 16, P6 ));
-                d_puncturing_rules.push_back(new PuncturingRule(41 * 16, P5 ));
-                d_puncturing_rules.push_back(new PuncturingRule(3  * 16, P6 ));
+                d_puncturing_rules.emplace_back(6  * 16, P11);
+                d_puncturing_rules.emplace_back(10 * 16, P6 );
+                d_puncturing_rules.emplace_back(41 * 16, P5 );
+                d_puncturing_rules.emplace_back(3  * 16, P6 );
                 break;
             case 5:
-                d_puncturing_rules.push_back(new PuncturingRule(6  * 16, P6 ));
-                d_puncturing_rules.push_back(new PuncturingRule(10 * 16, P3 ));
-                d_puncturing_rules.push_back(new PuncturingRule(41 * 16, P2 ));
-                d_puncturing_rules.push_back(new PuncturingRule(3  * 16, P3 ));
+                d_puncturing_rules.emplace_back(6  * 16, P6 );
+                d_puncturing_rules.emplace_back(10 * 16, P3 );
+                d_puncturing_rules.emplace_back(41 * 16, P2 );
+                d_puncturing_rules.emplace_back(3  * 16, P3 );
                 break;
             default:
                 error = true;
@@ -331,34 +332,34 @@ SubchannelSource::SubchannelSource(eti_STC &stc) :
         case 96:
             switch (protectionLevel()) {
             case 1:
-                d_puncturing_rules.push_back(new PuncturingRule(6  * 16, P24));
-                d_puncturing_rules.push_back(new PuncturingRule(13 * 16, P18));
-                d_puncturing_rules.push_back(new PuncturingRule(50 * 16, P13));
-                d_puncturing_rules.push_back(new PuncturingRule(3  * 16, P19));
+                d_puncturing_rules.emplace_back(6  * 16, P24);
+                d_puncturing_rules.emplace_back(13 * 16, P18);
+                d_puncturing_rules.emplace_back(50 * 16, P13);
+                d_puncturing_rules.emplace_back(3  * 16, P19);
                 break;
             case 2:
-                d_puncturing_rules.push_back(new PuncturingRule(6  * 16, P22));
-                d_puncturing_rules.push_back(new PuncturingRule(10 * 16, P12));
-                d_puncturing_rules.push_back(new PuncturingRule(53 * 16, P9 ));
-                d_puncturing_rules.push_back(new PuncturingRule(3  * 16, P12));
+                d_puncturing_rules.emplace_back(6  * 16, P22);
+                d_puncturing_rules.emplace_back(10 * 16, P12);
+                d_puncturing_rules.emplace_back(53 * 16, P9 );
+                d_puncturing_rules.emplace_back(3  * 16, P12);
                 break;
             case 3:
-                d_puncturing_rules.push_back(new PuncturingRule(6  * 16, P16));
-                d_puncturing_rules.push_back(new PuncturingRule(12 * 16, P9 ));
-                d_puncturing_rules.push_back(new PuncturingRule(51 * 16, P6 ));
-                d_puncturing_rules.push_back(new PuncturingRule(3  * 16, P10));
+                d_puncturing_rules.emplace_back(6  * 16, P16);
+                d_puncturing_rules.emplace_back(12 * 16, P9 );
+                d_puncturing_rules.emplace_back(51 * 16, P6 );
+                d_puncturing_rules.emplace_back(3  * 16, P10);
                 break;
             case 4:
-                d_puncturing_rules.push_back(new PuncturingRule(7  * 16, P9 ));
-                d_puncturing_rules.push_back(new PuncturingRule(10 * 16, P6 ));
-                d_puncturing_rules.push_back(new PuncturingRule(52 * 16, P4 ));
-                d_puncturing_rules.push_back(new PuncturingRule(3  * 16, P6 ));
+                d_puncturing_rules.emplace_back(7  * 16, P9 );
+                d_puncturing_rules.emplace_back(10 * 16, P6 );
+                d_puncturing_rules.emplace_back(52 * 16, P4 );
+                d_puncturing_rules.emplace_back(3  * 16, P6 );
                 break;
             case 5:
-                d_puncturing_rules.push_back(new PuncturingRule(7  * 16, P5 ));
-                d_puncturing_rules.push_back(new PuncturingRule(9  * 16, P4 ));
-                d_puncturing_rules.push_back(new PuncturingRule(53 * 16, P2 ));
-                d_puncturing_rules.push_back(new PuncturingRule(3  * 16, P4 ));
+                d_puncturing_rules.emplace_back(7  * 16, P5 );
+                d_puncturing_rules.emplace_back(9  * 16, P4 );
+                d_puncturing_rules.emplace_back(53 * 16, P2 );
+                d_puncturing_rules.emplace_back(3  * 16, P4 );
                 break;
             default:
                 error = true;
@@ -367,28 +368,28 @@ SubchannelSource::SubchannelSource(eti_STC &stc) :
         case 112:
             switch (protectionLevel()) {
             case 2:
-                d_puncturing_rules.push_back(new PuncturingRule(11 * 16, P23));
-                d_puncturing_rules.push_back(new PuncturingRule(21 * 16, P12));
-                d_puncturing_rules.push_back(new PuncturingRule(49 * 16, P9 ));
-                d_puncturing_rules.push_back(new PuncturingRule(3  * 16, P14));
+                d_puncturing_rules.emplace_back(11 * 16, P23);
+                d_puncturing_rules.emplace_back(21 * 16, P12);
+                d_puncturing_rules.emplace_back(49 * 16, P9 );
+                d_puncturing_rules.emplace_back(3  * 16, P14);
                 break;
             case 3:
-                d_puncturing_rules.push_back(new PuncturingRule(11 * 16, P16));
-                d_puncturing_rules.push_back(new PuncturingRule(23 * 16, P8 ));
-                d_puncturing_rules.push_back(new PuncturingRule(47 * 16, P6 ));
-                d_puncturing_rules.push_back(new PuncturingRule(3  * 16, P9 ));
+                d_puncturing_rules.emplace_back(11 * 16, P16);
+                d_puncturing_rules.emplace_back(23 * 16, P8 );
+                d_puncturing_rules.emplace_back(47 * 16, P6 );
+                d_puncturing_rules.emplace_back(3  * 16, P9 );
                 break;
             case 4:
-                d_puncturing_rules.push_back(new PuncturingRule(11 * 16, P9 ));
-                d_puncturing_rules.push_back(new PuncturingRule(21 * 16, P6 ));
-                d_puncturing_rules.push_back(new PuncturingRule(49 * 16, P4 ));
-                d_puncturing_rules.push_back(new PuncturingRule(3  * 16, P8 ));
+                d_puncturing_rules.emplace_back(11 * 16, P9 );
+                d_puncturing_rules.emplace_back(21 * 16, P6 );
+                d_puncturing_rules.emplace_back(49 * 16, P4 );
+                d_puncturing_rules.emplace_back(3  * 16, P8 );
                 break;
             case 5:
-                d_puncturing_rules.push_back(new PuncturingRule(14 * 16, P5 ));
-                d_puncturing_rules.push_back(new PuncturingRule(17 * 16, P4 ));
-                d_puncturing_rules.push_back(new PuncturingRule(50 * 16, P2 ));
-                d_puncturing_rules.push_back(new PuncturingRule(3  * 16, P5 ));
+                d_puncturing_rules.emplace_back(14 * 16, P5 );
+                d_puncturing_rules.emplace_back(17 * 16, P4 );
+                d_puncturing_rules.emplace_back(50 * 16, P2 );
+                d_puncturing_rules.emplace_back(3  * 16, P5 );
                 break;
             default:
                 error = true;
@@ -397,34 +398,34 @@ SubchannelSource::SubchannelSource(eti_STC &stc) :
         case 128:
             switch (protectionLevel()) {
             case 1:
-                d_puncturing_rules.push_back(new PuncturingRule(11 * 16, P24));
-                d_puncturing_rules.push_back(new PuncturingRule(20 * 16, P17));
-                d_puncturing_rules.push_back(new PuncturingRule(62 * 16, P13));
-                d_puncturing_rules.push_back(new PuncturingRule(3  * 16, P19));
+                d_puncturing_rules.emplace_back(11 * 16, P24);
+                d_puncturing_rules.emplace_back(20 * 16, P17);
+                d_puncturing_rules.emplace_back(62 * 16, P13);
+                d_puncturing_rules.emplace_back(3  * 16, P19);
                 break;
             case 2:
-                d_puncturing_rules.push_back(new PuncturingRule(11 * 16, P22));
-                d_puncturing_rules.push_back(new PuncturingRule(21 * 16, P12));
-                d_puncturing_rules.push_back(new PuncturingRule(61 * 16, P9 ));
-                d_puncturing_rules.push_back(new PuncturingRule(3  * 16, P14));
+                d_puncturing_rules.emplace_back(11 * 16, P22);
+                d_puncturing_rules.emplace_back(21 * 16, P12);
+                d_puncturing_rules.emplace_back(61 * 16, P9 );
+                d_puncturing_rules.emplace_back(3  * 16, P14);
                 break;
             case 3:
-                d_puncturing_rules.push_back(new PuncturingRule(11 * 16, P16));
-                d_puncturing_rules.push_back(new PuncturingRule(22 * 16, P9 ));
-                d_puncturing_rules.push_back(new PuncturingRule(60 * 16, P6 ));
-                d_puncturing_rules.push_back(new PuncturingRule(3  * 16, P10));
+                d_puncturing_rules.emplace_back(11 * 16, P16);
+                d_puncturing_rules.emplace_back(22 * 16, P9 );
+                d_puncturing_rules.emplace_back(60 * 16, P6 );
+                d_puncturing_rules.emplace_back(3  * 16, P10);
                 break;
             case 4:
-                d_puncturing_rules.push_back(new PuncturingRule(11 * 16, P11));
-                d_puncturing_rules.push_back(new PuncturingRule(21 * 16, P6 ));
-                d_puncturing_rules.push_back(new PuncturingRule(61 * 16, P5 ));
-                d_puncturing_rules.push_back(new PuncturingRule(3  * 16, P7 ));
+                d_puncturing_rules.emplace_back(11 * 16, P11);
+                d_puncturing_rules.emplace_back(21 * 16, P6 );
+                d_puncturing_rules.emplace_back(61 * 16, P5 );
+                d_puncturing_rules.emplace_back(3  * 16, P7 );
                 break;
             case 5:
-                d_puncturing_rules.push_back(new PuncturingRule(12 * 16, P5 ));
-                d_puncturing_rules.push_back(new PuncturingRule(19 * 16, P3 ));
-                d_puncturing_rules.push_back(new PuncturingRule(62 * 16, P2 ));
-                d_puncturing_rules.push_back(new PuncturingRule(3  * 16, P4 ));
+                d_puncturing_rules.emplace_back(12 * 16, P5 );
+                d_puncturing_rules.emplace_back(19 * 16, P3 );
+                d_puncturing_rules.emplace_back(62 * 16, P2 );
+                d_puncturing_rules.emplace_back(3  * 16, P4 );
                 break;
             default:
                 error = true;
@@ -433,34 +434,34 @@ SubchannelSource::SubchannelSource(eti_STC &stc) :
         case 160:
             switch (protectionLevel()) {
             case 1:
-                d_puncturing_rules.push_back(new PuncturingRule(11 * 16, P24));
-                d_puncturing_rules.push_back(new PuncturingRule(22 * 16, P18));
-                d_puncturing_rules.push_back(new PuncturingRule(84 * 16, P12));
-                d_puncturing_rules.push_back(new PuncturingRule(3  * 16, P19));
+                d_puncturing_rules.emplace_back(11 * 16, P24);
+                d_puncturing_rules.emplace_back(22 * 16, P18);
+                d_puncturing_rules.emplace_back(84 * 16, P12);
+                d_puncturing_rules.emplace_back(3  * 16, P19);
                 break;
             case 2:
-                d_puncturing_rules.push_back(new PuncturingRule(11 * 16, P22));
-                d_puncturing_rules.push_back(new PuncturingRule(21 * 16, P11));
-                d_puncturing_rules.push_back(new PuncturingRule(85 * 16, P9 ));
-                d_puncturing_rules.push_back(new PuncturingRule(3  * 16, P13));
+                d_puncturing_rules.emplace_back(11 * 16, P22);
+                d_puncturing_rules.emplace_back(21 * 16, P11);
+                d_puncturing_rules.emplace_back(85 * 16, P9 );
+                d_puncturing_rules.emplace_back(3  * 16, P13);
                 break;
             case 3:
-                d_puncturing_rules.push_back(new PuncturingRule(11 * 16, P16));
-                d_puncturing_rules.push_back(new PuncturingRule(24 * 16, P8 ));
-                d_puncturing_rules.push_back(new PuncturingRule(82 * 16, P6 ));
-                d_puncturing_rules.push_back(new PuncturingRule(3  * 16, P11));
+                d_puncturing_rules.emplace_back(11 * 16, P16);
+                d_puncturing_rules.emplace_back(24 * 16, P8 );
+                d_puncturing_rules.emplace_back(82 * 16, P6 );
+                d_puncturing_rules.emplace_back(3  * 16, P11);
                 break;
             case 4:
-                d_puncturing_rules.push_back(new PuncturingRule(11 * 16, P11));
-                d_puncturing_rules.push_back(new PuncturingRule(23 * 16, P6 ));
-                d_puncturing_rules.push_back(new PuncturingRule(83 * 16, P5 ));
-                d_puncturing_rules.push_back(new PuncturingRule(3  * 16, P9 ));
+                d_puncturing_rules.emplace_back(11 * 16, P11);
+                d_puncturing_rules.emplace_back(23 * 16, P6 );
+                d_puncturing_rules.emplace_back(83 * 16, P5 );
+                d_puncturing_rules.emplace_back(3  * 16, P9 );
                 break;
             case 5:
-                d_puncturing_rules.push_back(new PuncturingRule(11 * 16, P5 ));
-                d_puncturing_rules.push_back(new PuncturingRule(19 * 16, P4 ));
-                d_puncturing_rules.push_back(new PuncturingRule(87 * 16, P2 ));
-                d_puncturing_rules.push_back(new PuncturingRule(3  * 16, P4 ));
+                d_puncturing_rules.emplace_back(11 * 16, P5 );
+                d_puncturing_rules.emplace_back(19 * 16, P4 );
+                d_puncturing_rules.emplace_back(87 * 16, P2 );
+                d_puncturing_rules.emplace_back(3  * 16, P4 );
                 break;
             default:
                 error = true;
@@ -469,34 +470,34 @@ SubchannelSource::SubchannelSource(eti_STC &stc) :
         case 192:
             switch (protectionLevel()) {
             case 1:
-                d_puncturing_rules.push_back(new PuncturingRule(11 * 16, P24));
-                d_puncturing_rules.push_back(new PuncturingRule(21 * 16, P20));
-                d_puncturing_rules.push_back(new PuncturingRule(109 * 16, P13));
-                d_puncturing_rules.push_back(new PuncturingRule(3  * 16, P24));
+                d_puncturing_rules.emplace_back(11 * 16, P24);
+                d_puncturing_rules.emplace_back(21 * 16, P20);
+                d_puncturing_rules.emplace_back(109 * 16, P13);
+                d_puncturing_rules.emplace_back(3  * 16, P24);
                 break;
             case 2:
-                d_puncturing_rules.push_back(new PuncturingRule(11 * 16, P22));
-                d_puncturing_rules.push_back(new PuncturingRule(20 * 16, P13));
-                d_puncturing_rules.push_back(new PuncturingRule(110 * 16, P9));
-                d_puncturing_rules.push_back(new PuncturingRule(3  * 16, P13));
+                d_puncturing_rules.emplace_back(11 * 16, P22);
+                d_puncturing_rules.emplace_back(20 * 16, P13);
+                d_puncturing_rules.emplace_back(110 * 16, P9);
+                d_puncturing_rules.emplace_back(3  * 16, P13);
                 break;
             case 3:
-                d_puncturing_rules.push_back(new PuncturingRule(11 * 16, P16));
-                d_puncturing_rules.push_back(new PuncturingRule(24 * 16, P10));
-                d_puncturing_rules.push_back(new PuncturingRule(106 * 16, P6));
-                d_puncturing_rules.push_back(new PuncturingRule(3  * 16, P11));
+                d_puncturing_rules.emplace_back(11 * 16, P16);
+                d_puncturing_rules.emplace_back(24 * 16, P10);
+                d_puncturing_rules.emplace_back(106 * 16, P6);
+                d_puncturing_rules.emplace_back(3  * 16, P11);
                 break;
             case 4:
-                d_puncturing_rules.push_back(new PuncturingRule(11 * 16, P10));
-                d_puncturing_rules.push_back(new PuncturingRule(22 * 16, P6));
-                d_puncturing_rules.push_back(new PuncturingRule(108 * 16, P4));
-                d_puncturing_rules.push_back(new PuncturingRule(3  * 16, P9));
+                d_puncturing_rules.emplace_back(11 * 16, P10);
+                d_puncturing_rules.emplace_back(22 * 16, P6);
+                d_puncturing_rules.emplace_back(108 * 16, P4);
+                d_puncturing_rules.emplace_back(3  * 16, P9);
                 break;
             case 5:
-                d_puncturing_rules.push_back(new PuncturingRule(11 * 16, P6));
-                d_puncturing_rules.push_back(new PuncturingRule(20 * 16, P4));
-                d_puncturing_rules.push_back(new PuncturingRule(110 * 16, P2));
-                d_puncturing_rules.push_back(new PuncturingRule(3  * 16, P5));
+                d_puncturing_rules.emplace_back(11 * 16, P6);
+                d_puncturing_rules.emplace_back(20 * 16, P4);
+                d_puncturing_rules.emplace_back(110 * 16, P2);
+                d_puncturing_rules.emplace_back(3  * 16, P5);
                 break;
             default:
                 error = true;
@@ -505,34 +506,34 @@ SubchannelSource::SubchannelSource(eti_STC &stc) :
         case 224:
             switch (protectionLevel()) {
             case 1:
-                d_puncturing_rules.push_back(new PuncturingRule(11 * 16, P24));
-                d_puncturing_rules.push_back(new PuncturingRule(24 * 16, P20));
-                d_puncturing_rules.push_back(new PuncturingRule(130 * 16, P12));
-                d_puncturing_rules.push_back(new PuncturingRule(3  * 16, P20));
+                d_puncturing_rules.emplace_back(11 * 16, P24);
+                d_puncturing_rules.emplace_back(24 * 16, P20);
+                d_puncturing_rules.emplace_back(130 * 16, P12);
+                d_puncturing_rules.emplace_back(3  * 16, P20);
                 break;
             case 2:
-                d_puncturing_rules.push_back(new PuncturingRule(11 * 16, P24));
-                d_puncturing_rules.push_back(new PuncturingRule(22 * 16, P16));
-                d_puncturing_rules.push_back(new PuncturingRule(132 * 16, P10));
-                d_puncturing_rules.push_back(new PuncturingRule(3  * 16, P15));
+                d_puncturing_rules.emplace_back(11 * 16, P24);
+                d_puncturing_rules.emplace_back(22 * 16, P16);
+                d_puncturing_rules.emplace_back(132 * 16, P10);
+                d_puncturing_rules.emplace_back(3  * 16, P15);
                 break;
             case 3:
-                d_puncturing_rules.push_back(new PuncturingRule(11 * 16, P16));
-                d_puncturing_rules.push_back(new PuncturingRule(20 * 16, P10));
-                d_puncturing_rules.push_back(new PuncturingRule(134 * 16, P7));
-                d_puncturing_rules.push_back(new PuncturingRule(3  * 16, P9));
+                d_puncturing_rules.emplace_back(11 * 16, P16);
+                d_puncturing_rules.emplace_back(20 * 16, P10);
+                d_puncturing_rules.emplace_back(134 * 16, P7);
+                d_puncturing_rules.emplace_back(3  * 16, P9);
                 break;
             case 4:
-                d_puncturing_rules.push_back(new PuncturingRule(12 * 16, P12));
-                d_puncturing_rules.push_back(new PuncturingRule(26 * 16, P8));
-                d_puncturing_rules.push_back(new PuncturingRule(127 * 16, P4));
-                d_puncturing_rules.push_back(new PuncturingRule(3  * 16, P11));
+                d_puncturing_rules.emplace_back(12 * 16, P12);
+                d_puncturing_rules.emplace_back(26 * 16, P8);
+                d_puncturing_rules.emplace_back(127 * 16, P4);
+                d_puncturing_rules.emplace_back(3  * 16, P11);
                 break;
             case 5:
-                d_puncturing_rules.push_back(new PuncturingRule(12 * 16, P8));
-                d_puncturing_rules.push_back(new PuncturingRule(22 * 16, P6));
-                d_puncturing_rules.push_back(new PuncturingRule(131 * 16, P2));
-                d_puncturing_rules.push_back(new PuncturingRule(3  * 16, P6));
+                d_puncturing_rules.emplace_back(12 * 16, P8);
+                d_puncturing_rules.emplace_back(22 * 16, P6);
+                d_puncturing_rules.emplace_back(131 * 16, P2);
+                d_puncturing_rules.emplace_back(3  * 16, P6);
                 break;
             default:
                 error = true;
@@ -541,34 +542,34 @@ SubchannelSource::SubchannelSource(eti_STC &stc) :
         case 256:
             switch (protectionLevel()) {
             case 1:
-                d_puncturing_rules.push_back(new PuncturingRule(11 * 16, P24));
-                d_puncturing_rules.push_back(new PuncturingRule(26 * 16, P19));
-                d_puncturing_rules.push_back(new PuncturingRule(152 * 16, P14));
-                d_puncturing_rules.push_back(new PuncturingRule(3  * 16, P18));
+                d_puncturing_rules.emplace_back(11 * 16, P24);
+                d_puncturing_rules.emplace_back(26 * 16, P19);
+                d_puncturing_rules.emplace_back(152 * 16, P14);
+                d_puncturing_rules.emplace_back(3  * 16, P18);
                 break;
             case 2:
-                d_puncturing_rules.push_back(new PuncturingRule(11 * 16, P24));
-                d_puncturing_rules.push_back(new PuncturingRule(22 * 16, P14));
-                d_puncturing_rules.push_back(new PuncturingRule(156 * 16, P10));
-                d_puncturing_rules.push_back(new PuncturingRule(3  * 16, P13));
+                d_puncturing_rules.emplace_back(11 * 16, P24);
+                d_puncturing_rules.emplace_back(22 * 16, P14);
+                d_puncturing_rules.emplace_back(156 * 16, P10);
+                d_puncturing_rules.emplace_back(3  * 16, P13);
                 break;
             case 3:
-                d_puncturing_rules.push_back(new PuncturingRule(11 * 16, P16));
-                d_puncturing_rules.push_back(new PuncturingRule(27 * 16, P10));
-                d_puncturing_rules.push_back(new PuncturingRule(151 * 16, P7));
-                d_puncturing_rules.push_back(new PuncturingRule(3  * 16, P10));
+                d_puncturing_rules.emplace_back(11 * 16, P16);
+                d_puncturing_rules.emplace_back(27 * 16, P10);
+                d_puncturing_rules.emplace_back(151 * 16, P7);
+                d_puncturing_rules.emplace_back(3  * 16, P10);
                 break;
             case 4:
-                d_puncturing_rules.push_back(new PuncturingRule(11 * 16, P12));
-                d_puncturing_rules.push_back(new PuncturingRule(24 * 16, P9));
-                d_puncturing_rules.push_back(new PuncturingRule(154 * 16, P5));
-                d_puncturing_rules.push_back(new PuncturingRule(3  * 16, P10));
+                d_puncturing_rules.emplace_back(11 * 16, P12);
+                d_puncturing_rules.emplace_back(24 * 16, P9);
+                d_puncturing_rules.emplace_back(154 * 16, P5);
+                d_puncturing_rules.emplace_back(3  * 16, P10);
                 break;
             case 5:
-                d_puncturing_rules.push_back(new PuncturingRule(11 * 16, P6));
-                d_puncturing_rules.push_back(new PuncturingRule(24 * 16, P5));
-                d_puncturing_rules.push_back(new PuncturingRule(154 * 16, P2));
-                d_puncturing_rules.push_back(new PuncturingRule(3  * 16, P5));
+                d_puncturing_rules.emplace_back(11 * 16, P6);
+                d_puncturing_rules.emplace_back(24 * 16, P5);
+                d_puncturing_rules.emplace_back(154 * 16, P2);
+                d_puncturing_rules.emplace_back(3  * 16, P5);
                 break;
             default:
                 error = true;
@@ -577,22 +578,22 @@ SubchannelSource::SubchannelSource(eti_STC &stc) :
         case 320:
             switch (protectionLevel()) {
             case 2:
-                d_puncturing_rules.push_back(new PuncturingRule(11 * 16, P24));
-                d_puncturing_rules.push_back(new PuncturingRule(26 * 16, P17));
-                d_puncturing_rules.push_back(new PuncturingRule(200 * 16, P9 ));
-                d_puncturing_rules.push_back(new PuncturingRule(3  * 16, P17));
+                d_puncturing_rules.emplace_back(11 * 16, P24);
+                d_puncturing_rules.emplace_back(26 * 16, P17);
+                d_puncturing_rules.emplace_back(200 * 16, P9 );
+                d_puncturing_rules.emplace_back(3  * 16, P17);
                 break;
             case 4:
-                d_puncturing_rules.push_back(new PuncturingRule(11 * 16, P13));
-                d_puncturing_rules.push_back(new PuncturingRule(25 * 16, P9));
-                d_puncturing_rules.push_back(new PuncturingRule(201 * 16, P5));
-                d_puncturing_rules.push_back(new PuncturingRule(3  * 16, P10));
+                d_puncturing_rules.emplace_back(11 * 16, P13);
+                d_puncturing_rules.emplace_back(25 * 16, P9);
+                d_puncturing_rules.emplace_back(201 * 16, P5);
+                d_puncturing_rules.emplace_back(3  * 16, P10);
                 break;
             case 5:
-                d_puncturing_rules.push_back(new PuncturingRule(11 * 16, P8));
-                d_puncturing_rules.push_back(new PuncturingRule(26 * 16, P5));
-                d_puncturing_rules.push_back(new PuncturingRule(200 * 16, P2));
-                d_puncturing_rules.push_back(new PuncturingRule(3  * 16, P6));
+                d_puncturing_rules.emplace_back(11 * 16, P8);
+                d_puncturing_rules.emplace_back(26 * 16, P5);
+                d_puncturing_rules.emplace_back(200 * 16, P2);
+                d_puncturing_rules.emplace_back(3  * 16, P6);
                 break;
             default:
                 error = true;
@@ -601,22 +602,22 @@ SubchannelSource::SubchannelSource(eti_STC &stc) :
         case 384:
             switch (protectionLevel()) {
             case 1:
-                d_puncturing_rules.push_back(new PuncturingRule(12 * 16, P24));
-                d_puncturing_rules.push_back(new PuncturingRule(28 * 16, P20));
-                d_puncturing_rules.push_back(new PuncturingRule(245 * 16, P14));
-                d_puncturing_rules.push_back(new PuncturingRule(3  * 16, P23));
+                d_puncturing_rules.emplace_back(12 * 16, P24);
+                d_puncturing_rules.emplace_back(28 * 16, P20);
+                d_puncturing_rules.emplace_back(245 * 16, P14);
+                d_puncturing_rules.emplace_back(3  * 16, P23);
                 break;
             case 3:
-                d_puncturing_rules.push_back(new PuncturingRule(11 * 16, P16));
-                d_puncturing_rules.push_back(new PuncturingRule(24 * 16, P9));
-                d_puncturing_rules.push_back(new PuncturingRule(250 * 16, P7));
-                d_puncturing_rules.push_back(new PuncturingRule(3  * 16, P10));
+                d_puncturing_rules.emplace_back(11 * 16, P16);
+                d_puncturing_rules.emplace_back(24 * 16, P9);
+                d_puncturing_rules.emplace_back(250 * 16, P7);
+                d_puncturing_rules.emplace_back(3  * 16, P10);
                 break;
             case 5:
-                d_puncturing_rules.push_back(new PuncturingRule(11 * 16, P8));
-                d_puncturing_rules.push_back(new PuncturingRule(27 * 16, P6));
-                d_puncturing_rules.push_back(new PuncturingRule(247 * 16, P2));
-                d_puncturing_rules.push_back(new PuncturingRule(3  * 16, P7));
+                d_puncturing_rules.emplace_back(11 * 16, P8);
+                d_puncturing_rules.emplace_back(27 * 16, P6);
+                d_puncturing_rules.emplace_back(247 * 16, P2);
+                d_puncturing_rules.emplace_back(3  * 16, P7);
                 break;
             default:
                 error = true;
@@ -634,22 +635,10 @@ SubchannelSource::SubchannelSource(eti_STC &stc) :
     }
 }
 
-
-SubchannelSource::~SubchannelSource()
-{
-    PDEBUG("SubchannelSource::~SubchannelSource() @ %p\n", this);
-    for (unsigned i = 0; i < d_puncturing_rules.size(); ++i) {
-//        PDEBUG(" Deleting rules @ %p\n", d_puncturing_rules[i]);
-        delete d_puncturing_rules[i];
-    }
-}
-
-
 size_t SubchannelSource::startAddress()
 {
     return d_start_address;
 }
-
 
 size_t SubchannelSource::framesize()
 {
@@ -1018,8 +1007,8 @@ size_t SubchannelSource::bitrate()
 {
     return d_framesize / 3;
 }
-    
-    
+
+
 size_t SubchannelSource::protection()
 {
     return d_protection;
@@ -1049,38 +1038,23 @@ size_t SubchannelSource::protectionOption()
     return 0;
 }
 
-
-int SubchannelSource::process(Buffer* inputData, Buffer* outputData)
+void SubchannelSource::loadSubchannelData(const Buffer& data)
 {
-    PDEBUG("SubchannelSource::process"
-            "(inputData: %p, outputData: %p)\n",
-            inputData, outputData);
-    
-    if (inputData != NULL && inputData->getLength()) {
-        PDEBUG(" Input, storing data\n");
-        if (inputData->getLength() != d_framesize) {
-            PDEBUG("ERROR: Subchannel::process.inputSize != d_framesize\n");
-            exit(-1);
-        }
-        d_buffer = *inputData;
-        return inputData->getLength();
-    }
-    PDEBUG(" Output, retriving data\n");
-    
-    return read(outputData);
+    d_buffer = data;
 }
 
-
-int SubchannelSource::read(Buffer* outputData)
+int SubchannelSource::process(Buffer* outputData)
 {
-    PDEBUG("SubchannelSource::read(outputData: %p, outputSize: %zu)\n",
+    PDEBUG("SubchannelSource::process(outputData: %p, outputSize: %zu)\n",
             outputData, outputData->getLength());
-    
+
     if (d_buffer.getLength() != d_framesize) {
-        PDEBUG("ERROR: Subchannel::read.outputSize != d_framesize\n");
-        exit(-1);
+        throw std::runtime_error(
+                "ERROR: Subchannel::process: d_buffer != d_framesize: " +
+                std::to_string(d_buffer.getLength()) + " != " +
+                std::to_string(d_framesize));
     }
     *outputData = d_buffer;
-    
+
     return outputData->getLength();
 }

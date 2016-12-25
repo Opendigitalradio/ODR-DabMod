@@ -19,15 +19,15 @@
    along with ODR-DabMod.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef _DIFFERENTIAL_MODULATOR_H
-#define _DIFFERENTIAL_MODULATOR_H
+#pragma once
 
 #ifdef HAVE_CONFIG_H
 #   include <config.h>
 #endif
 
 
-#include "ModMux.h"
+#include "ModPlugin.h"
+#include <vector>
 
 #include <sys/types.h>
 
@@ -48,5 +48,3 @@ protected:
     size_t d_carriers;
 };
 
-
-#endif //_DIFFERENTIAL_MODULATOR_H

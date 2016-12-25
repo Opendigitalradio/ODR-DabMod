@@ -31,14 +31,20 @@ else
 GITVERSION_FLAGS =
 endif
 
+if DEBUG
+DEBUG_FLAGS = -DDEBUG
+else
+DEBUG_FLAGS =
+endif
+
 bin_PROGRAMS = odr-dabmod
 
 FFT_LDADD=
 
 odr_dabmod_CXXFLAGS = -Wall -Isrc -std=c++11 \
-					  $(GITVERSION_FLAGS)
+					  $(GITVERSION_FLAGS) $(DEBUG_FLAGS)
 odr_dabmod_CFLAGS   = -Wall -Isrc \
-					  $(GITVERSION_FLAGS)
+					  $(GITVERSION_FLAGS) $(DEBUG_FLAGS)
 odr_dabmod_LDADD    = $(FFT_LDADD)
 odr_dabmod_SOURCES  = src/DabMod.cpp \
 					  src/PcDebug.h \
@@ -48,8 +54,6 @@ odr_dabmod_SOURCES  = src/DabMod.cpp \
 					  src/DabModulator.h \
 					  src/Buffer.cpp \
 					  src/Buffer.h \
-					  src/ModCodec.cpp \
-					  src/ModCodec.h \
 					  src/ModPlugin.cpp \
 					  src/ModPlugin.h \
 					  src/EtiReader.cpp \
@@ -60,8 +64,6 @@ odr_dabmod_SOURCES  = src/DabMod.cpp \
 					  src/FicSource.h \
 					  src/FIRFilter.cpp \
 					  src/FIRFilter.h \
-					  src/ModInput.cpp \
-					  src/ModInput.h \
 					  src/PuncturingRule.cpp \
 					  src/PuncturingRule.h \
 					  src/PuncturingEncoder.cpp \
@@ -80,8 +82,6 @@ odr_dabmod_SOURCES  = src/DabMod.cpp \
 					  src/TimestampDecoder.cpp \
 					  src/OutputUHD.cpp \
 					  src/OutputUHD.h \
-					  src/ModOutput.cpp \
-					  src/ModOutput.h \
 					  src/InputMemory.cpp \
 					  src/InputMemory.h \
 					  src/InputFileReader.cpp \
@@ -92,8 +92,6 @@ odr_dabmod_SOURCES  = src/DabMod.cpp \
 					  src/OutputFile.h \
 					  src/FrameMultiplexer.cpp \
 					  src/FrameMultiplexer.h \
-					  src/ModMux.cpp \
-					  src/ModMux.h \
 					  src/PrbsGenerator.cpp \
 					  src/PrbsGenerator.h \
 					  src/BlockPartitioner.cpp \

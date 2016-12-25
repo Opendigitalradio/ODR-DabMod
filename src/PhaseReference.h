@@ -1,6 +1,11 @@
 /*
    Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010, 2011 Her Majesty
    the Queen in Right of Canada (Communications Research Center Canada)
+
+   Copyright (C) 2016
+   Matthias P. Braendli, matthias.braendli@mpb.li
+
+    http://opendigitalradio.org
  */
 /*
    This file is part of ODR-DabMod.
@@ -19,21 +24,20 @@
    along with ODR-DabMod.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef PHASE_REFERENCE_H
-#define PHASE_REFERENCE_H
+#pragma once
 
 #ifdef HAVE_CONFIG_H
 #   include <config.h>
 #endif
 
-#include "ModCodec.h"
+#include "ModPlugin.h"
 
 #include <sys/types.h>
 #include <complex>
 #include <vector>
 
 
-class PhaseReference : public ModCodec
+class PhaseReference : public ModInput
 {
 public:
     PhaseReference(unsigned int dabmode);
@@ -41,8 +45,7 @@ public:
     PhaseReference(const PhaseReference&);
     PhaseReference& operator=(const PhaseReference&);
 
-
-    int process(Buffer* const dataIn, Buffer* dataOut);
+    int process(Buffer* dataOut);
     const char* name() { return "PhaseReference"; }
 
 protected:
@@ -54,6 +57,4 @@ protected:
 
     void fillData();
 };
-
-#endif // PHASE_REFERENCE_H
 

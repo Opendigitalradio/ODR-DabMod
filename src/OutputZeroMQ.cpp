@@ -2,7 +2,7 @@
    Copyright (C) 2007, 2008, 2009, 2010, 2011 Her Majesty the Queen in
    Right of Canada (Communications Research Center Canada)
 
-   Copyright (C) 2014
+   Copyright (C) 2016
    Matthias P. Braendli, matthias.braendli@mpb.li
 
     http://opendigitalradio.org
@@ -64,11 +64,11 @@ OutputZeroMQ::~OutputZeroMQ()
     PDEBUG("OutputZeroMQ::~OutputZeroMQ() @ %p\n", this);
 }
 
-int OutputZeroMQ::process(Buffer* dataIn, Buffer* dataOut)
+int OutputZeroMQ::process(Buffer* dataIn)
 {
     PDEBUG("OutputZeroMQ::process"
-            "(dataIn: %p, dataOut: %p)\n",
-            dataIn, dataOut);
+            "(dataIn: %p)\n",
+            dataIn);
 
     if (m_type == ZMQ_REP) {
         // A ZMQ_REP socket requires a request first

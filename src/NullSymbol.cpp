@@ -1,6 +1,11 @@
 /*
    Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010, 2011 Her Majesty
    the Queen in Right of Canada (Communications Research Center Canada)
+
+   Copyright (C) 2016
+   Matthias P. Braendli, matthias.braendli@mpb.li
+
+    http://opendigitalradio.org
  */
 /*
    This file is part of ODR-DabMod.
@@ -29,31 +34,27 @@
 
 typedef std::complex<float> complexf;
 
-
 NullSymbol::NullSymbol(size_t nbCarriers) :
-    ModCodec(),
+    ModInput(),
     myNbCarriers(nbCarriers)
 {
     PDEBUG("NullSymbol::NullSymbol(%zu) @ %p\n", nbCarriers, this);
-
 }
 
 
 NullSymbol::~NullSymbol()
 {
     PDEBUG("NullSymbol::~NullSymbol() @ %p\n", this);
-
 }
 
 
-int NullSymbol::process(Buffer* const dataIn, Buffer* dataOut)
+int NullSymbol::process(Buffer* dataOut)
 {
-    PDEBUG("NullSymbol::process"
-            "(dataIn: %p, dataOut: %p)\n",
-            dataIn, dataOut);
-    
+    PDEBUG("NullSymbol::process(dataOut: %p)\n", dataOut);
+
     dataOut->setLength(myNbCarriers * 2 * sizeof(float));
     bzero(dataOut->getData(), dataOut->getLength());
 
     return dataOut->getLength();
 }
+

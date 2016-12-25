@@ -29,7 +29,7 @@
 
 PrbsGenerator::PrbsGenerator(size_t framesize, uint32_t polynomial,
         uint32_t accum, size_t init) :
-    ModCodec(),
+    ModPlugin(),
     d_framesize(framesize),
     d_polynomial(polynomial),
     d_accum(accum),
@@ -122,17 +122,28 @@ uint32_t PrbsGenerator::update_prbs()
 }
 
 
-int PrbsGenerator::process(Buffer* const dataIn, Buffer* dataOut)
+int PrbsGenerator::process(
+        std::vector<Buffer*> dataIn,
+        std::vector<Buffer*> dataOut)
 {
-    PDEBUG("PrbsGenerator::process(dataIn: %p, dataOut: %p)\n",
-            dataIn, dataOut);
-    dataOut->setLength(d_framesize);
-    unsigned char* out = reinterpret_cast<unsigned char*>(dataOut->getData());
-    
+    PDEBUG("PrbsGenerator::process(dataIn: %zu, dataOut: %zu)\n",
+            dataIn.size(), dataOut.size());
+    if (dataIn.size() > 1) {
+        throw std::runtime_error("Invalid dataIn size for PrbsGenerator " +
+                std::to_string(dataIn.size()));
+    }
+    if (dataOut.size() != 1) {
+        throw std::runtime_error("Invalid dataOut size for PrbsGenerator " +
+                std::to_string(dataOut.size()));
+    }
+    dataOut[0]->setLength(d_framesize);
+    unsigned char* out = reinterpret_cast<unsigned char*>(dataOut[0]->getData());
+
     // Initialization
     if (d_accum_init) {
         d_accum = d_accum_init;
-    } else {
+    }
+    else {
         d_accum = 0;
         while (d_accum < d_polynomial) {
             d_accum <<= 1;
@@ -147,28 +158,30 @@ int PrbsGenerator::process(Buffer* const dataIn, Buffer* dataOut)
     }
 
     for (; i < d_framesize; ++i) {
-        // Writting data
         d_accum = update_prbs();
         if ((d_accum_init == 0xa9) && (i % 188 == 0)) { // DVB energy dispersal
             out[i] = 0;
-        } else {
+        }
+        else {
             out[i] = (unsigned char)(d_accum & 0xff);
         }
         //PDEBUG("accum: 0x%x\n", d_accum);
     }
 
-    if ((dataIn != NULL) && dataIn->getLength()) {
+    if (not dataIn.empty()) {
         PDEBUG(" mixing input\n");
-        const unsigned char* in = reinterpret_cast<const unsigned char*>(dataIn->getData());
-        if (dataIn->getLength() != dataOut->getLength()) {
-            PDEBUG("%zu != %zu\n", dataIn->getLength(), dataOut->getLength());
+        const unsigned char* in =
+            reinterpret_cast<const unsigned char*>(dataIn[0]->getData());
+
+        if (dataIn[0]->getLength() != dataOut[0]->getLength()) {
+            PDEBUG("%zu != %zu\n", dataIn[0]->getLength(), dataOut[0]->getLength());
             throw std::runtime_error("PrbsGenerator::process "
                     "input size is not equal to output size!\n");
         }
-        for (size_t i = 0; i < dataOut->getLength(); ++i) {
+        for (size_t i = 0; i < dataOut[0]->getLength(); ++i) {
             out[i] ^= in[i];
         }
     }
-    
-    return dataOut->getLength();
+
+    return dataOut[0]->getLength();
 }

@@ -19,15 +19,15 @@
    along with ODR-DabMod.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef BLOCK_PARTITIONER_H
-#define BLOCK_PARTITIONER_H
+#pragma once
 
 #ifdef HAVE_CONFIG_H
 #   include <config.h>
 #endif
 
 
-#include "ModMux.h"
+#include "ModPlugin.h"
+#include <vector>
 
 #include <sys/types.h>
 
@@ -54,5 +54,3 @@ protected:
     size_t d_outputFramecount;
 };
 
-
-#endif // BLOCK_PARTITIONER_H

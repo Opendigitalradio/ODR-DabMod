@@ -1,6 +1,11 @@
 /*
    Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010, 2011 Her Majesty
    the Queen in Right of Canada (Communications Research Center Canada)
+
+   Copyright (C) 2016
+   Matthias P. Braendli, matthias.braendli@mpb.li
+
+    http://opendigitalradio.org
  */
 /*
    This file is part of ODR-DabMod.
@@ -30,16 +35,52 @@
 
 #include <sys/types.h>
 #include <vector>
-#ifdef DEBUG
-#   include <stdio.h>
-#endif
-
 
 class ModPlugin
 {
 public:
-    virtual int process(std::vector<Buffer*> dataIn,
+    virtual int process(
+            std::vector<Buffer*> dataIn,
             std::vector<Buffer*> dataOut) = 0;
     virtual const char* name() = 0;
 };
 
+/* Inputs are sources, the output buffers without reading any */
+class ModInput : public ModPlugin
+{
+public:
+    virtual int process(
+            std::vector<Buffer*> dataIn,
+            std::vector<Buffer*> dataOut);
+    virtual int process(Buffer* dataOut) = 0;
+};
+
+/* Codecs are 1-input 1-output flowgraph plugins */
+class ModCodec : public ModPlugin
+{
+public:
+    virtual int process(
+            std::vector<Buffer*> dataIn,
+            std::vector<Buffer*> dataOut);
+    virtual int process(Buffer* const dataIn, Buffer* dataOut) = 0;
+};
+
+/* Muxes are N-input 1-output flowgraph plugins */
+class ModMux : public ModPlugin
+{
+public:
+    virtual int process(
+            std::vector<Buffer*> dataIn,
+            std::vector<Buffer*> dataOut);
+    virtual int process(std::vector<Buffer*> dataIn, Buffer* dataOut) = 0;
+};
+
+/* Outputs do not create any output buffers */
+class ModOutput : public ModPlugin
+{
+public:
+    virtual int process(
+            std::vector<Buffer*> dataIn,
+            std::vector<Buffer*> dataOut);
+    virtual int process(Buffer* dataIn) = 0;
+};

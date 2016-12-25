@@ -1,6 +1,11 @@
 /*
    Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010, 2011 Her Majesty
    the Queen in Right of Canada (Communications Research Center Canada)
+
+   Copyright (C) 2016
+   Matthias P. Braendli, matthias.braendli@mpb.li
+
+    http://opendigitalradio.org
  */
 /*
    This file is part of ODR-DabMod.
@@ -53,9 +58,9 @@ OutputFile::~OutputFile()
 }
 
 
-int OutputFile::process(Buffer* dataIn, Buffer* dataOut)
+int OutputFile::process(Buffer* dataIn)
 {
-    PDEBUG("OutputFile::process(%p, %p)\n", dataIn, dataOut);
+    PDEBUG("OutputFile::process(%p)\n", dataIn);
     assert(dataIn != NULL);
 
     if (fwrite(dataIn->getData(), dataIn->getLength(), 1, myFile) == 0) {

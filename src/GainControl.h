@@ -25,14 +25,13 @@
    along with ODR-DabMod.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef GAIN_CONTROL_H
-#define GAIN_CONTROL_H
+#pragma once
 
 #ifdef HAVE_CONFIG_H
 #   include <config.h>
 #endif
 
-#include "ModCodec.h"
+#include "ModPlugin.h"
 #include "RemoteControl.h"
 
 #include <sys/types.h>
@@ -87,5 +86,4 @@ class GainControl : public ModCodec, public RemoteControllable
 #endif
 };
 
-#endif // GAIN_CONTROL_H
 

@@ -1,6 +1,11 @@
 /*
    Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010, 2011 Her Majesty
    the Queen in Right of Canada (Communications Research Center Canada)
+
+   Copyright (C) 2016
+   Matthias P. Braendli, matthias.braendli@mpb.li
+
+    http://opendigitalradio.org
  */
 /*
    This file is part of ODR-DabMod.
@@ -19,15 +24,14 @@
    along with ODR-DabMod.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef OUTPUT_FILE_H
-#define OUTPUT_FILE_H
+#pragma once
 
 #ifdef HAVE_CONFIG_H
 #   include <config.h>
 #endif
 
 
-#include "ModOutput.h"
+#include "ModPlugin.h"
 
 #include <string>
 #include <stdio.h>
@@ -40,7 +44,7 @@ public:
     OutputFile(std::string filename);
     virtual ~OutputFile();
 
-    virtual int process(Buffer* dataIn, Buffer* dataOut);
+    virtual int process(Buffer* dataIn);
     const char* name() { return "OutputFile"; }
 
 protected:
@@ -48,5 +52,3 @@ protected:
     FILE* myFile;
 };
 
-
-#endif // OUTPUT_FILE_H

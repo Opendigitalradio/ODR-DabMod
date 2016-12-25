@@ -19,38 +19,28 @@
    along with ODR-DabMod.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef PUNCTURING_RULE_H
-#define PUNCTURING_RULE_H
+#pragma once
 
 #ifdef HAVE_CONFIG_H
 #   include <config.h>
 #endif
 
-
 #include <sys/types.h>
 #include <stdint.h>
 
-
 class PuncturingRule
 {
-private:
-    size_t d_length;
-    uint32_t d_pattern;
-
-protected:
-
 public:
     PuncturingRule(
             const size_t length,
             const uint32_t pattern);
-    virtual ~PuncturingRule();
-//    PuncturingRule(const PuncturingRule& rule);
-    PuncturingRule& operator=(const PuncturingRule&);
 
     size_t length() const { return d_length; }
     size_t bit_size() const;
     const uint32_t pattern() const { return d_pattern; }
+
+private:
+    size_t d_length;
+    uint32_t d_pattern;
 };
 
-
-#endif // PUNCTURING_RULE_H

@@ -24,15 +24,14 @@
    along with ODR-DabMod.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef OFDM_GENERATOR_H
-#define OFDM_GENERATOR_H
+#pragma once
 
 #ifdef HAVE_CONFIG_H
 #   include "config.h"
 #endif
 
 #include "porting.h"
-#include "ModCodec.h"
+#include "ModPlugin.h"
 
 #include "fftw3.h"
 
@@ -67,5 +66,4 @@ protected:
     unsigned myZeroSize;
 };
 
-#endif // OFDM_GENERATOR_H
 
