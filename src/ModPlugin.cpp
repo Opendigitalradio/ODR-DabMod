@@ -21,25 +21,3 @@
 
 #include "ModPlugin.h"
 
-ModPlugin::ModPlugin(ModFormat inputFormat, ModFormat outputFormat) :
-    myInputFormat(inputFormat),
-    myOutputFormat(outputFormat)
-{
-}
-
-
-ModPlugin::~ModPlugin()
-{
-}
-
-
-ModFormat ModPlugin::inputFormat()
-{
-    return myInputFormat;
-}
-
-
-ModFormat ModPlugin::outputFormat()
-{
-    return myOutputFormat;
-}

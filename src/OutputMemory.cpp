@@ -33,7 +33,7 @@
 
 
 OutputMemory::OutputMemory(Buffer* dataOut)
-    : ModOutput(ModFormat(1), ModFormat(0))
+    : ModOutput()
 {
     PDEBUG("OutputMemory::OutputMemory(%p) @ %p\n", dataOut, this);
 
@@ -68,7 +68,6 @@ OutputMemory::~OutputMemory()
 void OutputMemory::setOutput(Buffer* dataOut)
 {
     myDataOut = dataOut;
-    myInputFormat.size(dataOut == NULL ? 0 : dataOut->getLength());
 }
 
 

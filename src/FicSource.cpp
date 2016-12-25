@@ -35,7 +35,7 @@ const std::vector<PuncturingRule*>& FicSource::get_rules()
 
 
 FicSource::FicSource(eti_FC &fc) :
-    ModInput(ModFormat(0), ModFormat(0))
+    ModInput()
 {
 //    PDEBUG("FicSource::FicSource(...)\n");
 //    PDEBUG("  Start address: %i\n", d_start_address);
@@ -58,8 +58,6 @@ FicSource::FicSource(eti_FC &fc) :
         d_puncturing_rules.push_back(new PuncturingRule(3 * 16, 0xeeeeeeec));
     }
     d_buffer.setLength(d_framesize);
-
-    myOutputFormat.size(d_framesize);
 }
 
 

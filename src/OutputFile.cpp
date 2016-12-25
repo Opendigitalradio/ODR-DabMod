@@ -28,7 +28,7 @@
 
 
 OutputFile::OutputFile(std::string filename) :
-    ModOutput(ModFormat(1), ModFormat(0)),
+    ModOutput(),
     myFilename(filename)
 {
     PDEBUG("OutputFile::OutputFile(filename: %s) @ %p\n",

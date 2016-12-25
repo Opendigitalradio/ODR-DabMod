@@ -35,7 +35,7 @@ typedef std::complex<float> complexf;
 
 
 QpskSymbolMapper::QpskSymbolMapper(size_t carriers) :
-    ModCodec(ModFormat(carriers / 4), ModFormat(carriers * 8)),
+    ModCodec(),
     d_carriers(carriers)
 {
     PDEBUG("QpskSymbolMapper::QpskSymbolMapper(%zu) @ %p\n", carriers, this);

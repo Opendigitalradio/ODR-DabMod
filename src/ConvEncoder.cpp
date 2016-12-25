@@ -48,7 +48,7 @@ const static uint8_t PARITY[] = {
 
 
 ConvEncoder::ConvEncoder(size_t framesize) :
-    ModCodec(ModFormat(framesize), ModFormat((framesize * 4) + 3)),
+    ModCodec(),
     d_framesize(framesize)
 {
     PDEBUG("ConvEncoder::ConvEncoder(%zu)\n", framesize);

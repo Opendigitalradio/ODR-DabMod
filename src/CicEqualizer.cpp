@@ -27,8 +27,7 @@
 
 
 CicEqualizer::CicEqualizer(size_t nbCarriers, size_t spacing, int R) :
-    ModCodec(ModFormat(nbCarriers * sizeof(complexf)),
-            ModFormat(nbCarriers * sizeof(complexf))),
+    ModCodec(),
     myNbCarriers(nbCarriers),
     mySpacing(spacing),
     myFilter(nbCarriers)

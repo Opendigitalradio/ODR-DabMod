@@ -33,7 +33,7 @@
 #if defined(HAVE_ZEROMQ)
 
 OutputZeroMQ::OutputZeroMQ(std::string endpoint, int type, Buffer* dataOut)
-    : ModOutput(ModFormat(1), ModFormat(0)),
+    : ModOutput(),
     m_type(type),
     m_zmq_context(1),
     m_zmq_sock(m_zmq_context, type),

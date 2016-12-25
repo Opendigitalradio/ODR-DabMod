@@ -19,8 +19,7 @@
    along with ODR-DabMod.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef MOD_CODEC_H
-#define MOD_CODEC_H
+#pragma once
 
 #ifdef HAVE_CONFIG_H
 #   include <config.h>
@@ -36,13 +35,13 @@
 class ModCodec : public ModPlugin
 {
 public:
-    ModCodec(ModFormat inputFormat, ModFormat outputFormat);
+    ModCodec();
     virtual ~ModCodec();
 
     virtual int process(std::vector<Buffer*> dataIn,
             std::vector<Buffer*> dataOut);
     virtual int process(Buffer* const dataIn, Buffer* dataOut) = 0;
-    
+
 protected:
 #ifdef DEBUG
     FILE* myOutputFile;
@@ -51,4 +50,3 @@ protected:
 };
 
 
-#endif // MOD_CODEC_H

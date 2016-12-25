@@ -29,8 +29,8 @@ size_t ModMux::myCount = 0;
 #endif
 
 
-ModMux::ModMux(ModFormat inputFormat, ModFormat outputFormat) :
-    ModPlugin((inputFormat), (outputFormat))
+ModMux::ModMux() :
+    ModPlugin()
 {
 #ifdef DEBUG
     myOutputFile = NULL;

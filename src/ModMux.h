@@ -36,7 +36,7 @@
 class ModMux : public ModPlugin
 {
 public:
-    ModMux(ModFormat inputFormat, ModFormat outputFormat);
+    ModMux();
     virtual ~ModMux();
 
     virtual int process(std::vector<Buffer*> dataIn,

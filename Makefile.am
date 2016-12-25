@@ -52,8 +52,6 @@ odr_dabmod_SOURCES  = src/DabMod.cpp \
 					  src/ModCodec.h \
 					  src/ModPlugin.cpp \
 					  src/ModPlugin.h \
-					  src/ModFormat.cpp \
-					  src/ModFormat.h \
 					  src/EtiReader.cpp \
 					  src/EtiReader.h \
 					  src/Eti.cpp \

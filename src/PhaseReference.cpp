@@ -55,7 +55,7 @@ const uint8_t PhaseReference::d_h[4][32] = {
 
 
 PhaseReference::PhaseReference(unsigned int dabmode) :
-    ModCodec(ModFormat(0), ModFormat(0)),
+    ModCodec(),
     d_dabmode(dabmode)
 {
     PDEBUG("PhaseReference::PhaseReference(%u) @ %p\n", dabmode, this);
@@ -85,8 +85,6 @@ PhaseReference::PhaseReference(unsigned int dabmode) :
     }
     d_dataIn.resize(d_carriers);
     fillData();
-
-    myOutputFormat.size(d_carriers * sizeof(complexf));
 }
 
 

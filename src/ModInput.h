@@ -35,7 +35,7 @@
 class ModInput : public ModPlugin
 {
 public:
-    ModInput(ModFormat inputFormat, ModFormat outputFormat);
+    ModInput();
     virtual ~ModInput();
 
     virtual int process(std::vector<Buffer*> dataIn,

@@ -29,8 +29,8 @@ size_t ModOutput::myCount = 0;
 #endif
 
 
-ModOutput::ModOutput(ModFormat inputFormat, ModFormat outputFormat) :
-    ModPlugin((inputFormat), (outputFormat))
+ModOutput::ModOutput() :
+    ModPlugin()
 {
 #ifdef DEBUG
     myOutputFile = NULL;

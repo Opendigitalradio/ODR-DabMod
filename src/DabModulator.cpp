@@ -62,7 +62,7 @@ DabModulator::DabModulator(
         float& digGain, float normalise,
         const std::string& filterTapsFilename
         ) :
-    ModCodec(ModFormat(1), ModFormat(0)),
+    ModCodec(),
     myOutputRate(outputRate),
     myClockRate(clockRate),
     myDabMode(dabMode),
@@ -131,9 +131,6 @@ void DabModulator::setMode(unsigned mode)
     default:
         throw std::runtime_error("DabModulator::setMode invalid mode size");
     }
-
-    myOutputFormat.size((size_t)((myNullSize + (myNbSymbols * mySymSize))
-                * sizeof(complexf) / 2048000.0 * myOutputRate));
 }
 
 

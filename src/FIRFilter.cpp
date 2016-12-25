@@ -265,7 +265,7 @@ void FIRFilterWorker::process(struct FIRFilterWorkerData *fwd)
 
 
 FIRFilter::FIRFilter(const std::string& taps_file) :
-    ModCodec(ModFormat(sizeof(complexf)), ModFormat(sizeof(complexf))),
+    ModCodec(),
     RemoteControllable("firfilter"),
     myTapsFile(taps_file)
 {

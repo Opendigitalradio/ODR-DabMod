@@ -34,7 +34,7 @@ typedef std::complex<float> complexf;
 FrameMultiplexer::FrameMultiplexer(
         size_t framesize,
         const std::vector<std::shared_ptr<SubchannelSource> >* subchannels) :
-    ModMux(ModFormat(framesize), ModFormat(framesize)),
+    ModMux(),
     d_frameSize(framesize),
     mySubchannels(subchannels)
 {

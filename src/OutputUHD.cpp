@@ -116,7 +116,7 @@ bool check_gps_locked(uhd::usrp::multi_usrp::sptr usrp)
 
 OutputUHD::OutputUHD(
         OutputUHDConfig& config) :
-    ModOutput(ModFormat(1), ModFormat(0)),
+    ModOutput(),
     RemoteControllable("uhd"),
     myConf(config),
     // Since we don't know the buffer size, we cannot initialise

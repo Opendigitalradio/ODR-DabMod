@@ -27,7 +27,7 @@
 
 
 InputMemory::InputMemory(Buffer* dataIn)
-    : ModInput(ModFormat(0), ModFormat(1))
+    : ModInput()
 {
     PDEBUG("InputMemory::InputMemory(%p) @ %p\n",
             dataIn, this);
@@ -45,7 +45,6 @@ InputMemory::~InputMemory()
 void InputMemory::setInput(Buffer* dataIn)
 {
     myDataIn = dataIn;
-    myOutputFormat.size(dataIn->getLength());
 }
 
 

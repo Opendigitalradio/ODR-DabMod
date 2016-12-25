@@ -30,7 +30,7 @@
 
 
 BlockPartitioner::BlockPartitioner(unsigned mode, unsigned phase) :
-    ModMux(ModFormat(0), ModFormat(0)),
+    ModMux(),
     d_mode(mode)
 {
     PDEBUG("BlockPartitioner::BlockPartitioner(%i)\n", mode);
@@ -69,9 +69,6 @@ BlockPartitioner::BlockPartitioner(unsigned mode, unsigned phase) :
     // For Synchronisation purpose, count nb of CIF to drop
     d_cifPhase = phase % d_cifCount;
     d_cifSize = 864 * 8;
-
-    myInputFormat.size(d_cifSize);
-    myOutputFormat.size(d_cifSize * d_cifCount);
 }
 
 

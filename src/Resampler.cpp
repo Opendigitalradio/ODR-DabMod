@@ -48,8 +48,7 @@ T gcd(T a, T b)
 
 
 Resampler::Resampler(size_t inputRate, size_t outputRate, size_t resolution) :
-    ModCodec(ModFormat(inputRate * sizeof(complexf)),
-            ModFormat(outputRate * sizeof(complexf))),
+    ModCodec(),
     myFftPlan1(NULL),
     myFftPlan2(NULL),
     myFftIn(NULL),

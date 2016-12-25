@@ -35,9 +35,7 @@ GuardIntervalInserter::GuardIntervalInserter(size_t nbSymbols,
         size_t spacing,
         size_t nullSize,
         size_t symSize) :
-    ModCodec(ModFormat(nbSymbols * spacing * sizeof(complexf)),
-            ModFormat((nullSize + (nbSymbols * symSize))
-                * sizeof(complexf))),
+    ModCodec(),
     d_nbSymbols(nbSymbols),
     d_spacing(spacing),
     d_nullSize(nullSize),
@@ -48,7 +46,6 @@ GuardIntervalInserter::GuardIntervalInserter(size_t nbSymbols,
 
     if (d_nullSize) {
         myHasNull = true;
-        myInputFormat.size((d_nbSymbols + 1) * d_spacing * sizeof(complexf));
     } else {
         myHasNull = false;
     }

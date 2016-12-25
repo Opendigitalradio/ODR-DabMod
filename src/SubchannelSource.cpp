@@ -61,7 +61,7 @@ const std::vector<PuncturingRule*>& SubchannelSource::get_rules()
 
 
 SubchannelSource::SubchannelSource(eti_STC &stc) :
-    ModInput(ModFormat(0), ModFormat(stc.getSTL() * 8)),
+    ModInput(),
     d_start_address(stc.getStartAddress()),
     d_framesize(stc.getSTL() * 8),
     d_protection(stc.TPL)

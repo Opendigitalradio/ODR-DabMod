@@ -31,7 +31,7 @@ typedef std::complex<float> complexf;
 
 
 NullSymbol::NullSymbol(size_t nbCarriers) :
-    ModCodec(ModFormat(0), ModFormat(nbCarriers * sizeof(complexf))),
+    ModCodec(),
     myNbCarriers(nbCarriers)
 {
     PDEBUG("NullSymbol::NullSymbol(%zu) @ %p\n", nbCarriers, this);

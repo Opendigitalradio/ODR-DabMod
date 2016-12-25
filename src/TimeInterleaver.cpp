@@ -28,7 +28,7 @@
 
 TimeInterleaver::TimeInterleaver(size_t framesize)
     throw (std::invalid_argument) :
-        ModCodec(ModFormat(framesize), ModFormat(framesize)),
+        ModCodec(),
         d_framesize(framesize)
 {
     PDEBUG("TimeInterleaver::TimeInterleaver(%zu) @ %p\n", framesize, this);

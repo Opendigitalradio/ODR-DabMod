@@ -107,7 +107,7 @@ const int pattern_tm1_2_4[][8] = { // {{{
     {1,1,1,1,0,0,0,0} }; // }}}
 
 TII::TII(unsigned int dabmode, tii_config_t& tii_config) :
-    ModCodec(ModFormat(0), ModFormat(0)),
+    ModCodec(),
     RemoteControllable("tii"),
     m_dabmode(dabmode),
     m_conf(tii_config),
@@ -156,8 +156,6 @@ TII::TII(unsigned int dabmode, tii_config_t& tii_config) :
     m_dataIn.clear();
     m_dataIn.resize(m_carriers);
     prepare_pattern();
-
-    myOutputFormat.size(m_carriers * sizeof(complexf));
 }
 
 

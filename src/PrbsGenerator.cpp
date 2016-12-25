@@ -29,7 +29,7 @@
 
 PrbsGenerator::PrbsGenerator(size_t framesize, uint32_t polynomial,
         uint32_t accum, size_t init) :
-    ModCodec(ModFormat(0), ModFormat(framesize)),
+    ModCodec(),
     d_framesize(framesize),
     d_polynomial(polynomial),
     d_accum(accum),

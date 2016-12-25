@@ -40,8 +40,7 @@
 #endif
 
 FormatConverter::FormatConverter(void) :
-    ModCodec(ModFormat(sizeof(complexf)),
-            ModFormat(sizeof(int8_t))) { }
+    ModCodec() { }
 
 /* Expect the input samples to be in the range [-255.0, 255.0] */
 int FormatConverter::process(Buffer* const dataIn, Buffer* dataOut)

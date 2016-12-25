@@ -19,15 +19,13 @@
    along with ODR-DabMod.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef MOD_PLUGIN_H
-#define MOD_PLUGIN_H
+#pragma once
 
 #ifdef HAVE_CONFIG_H
 #   include <config.h>
 #endif
 
 
-#include "ModFormat.h"
 #include "Buffer.h"
 
 #include <sys/types.h>
@@ -40,22 +38,8 @@
 class ModPlugin
 {
 public:
-    ModPlugin(ModFormat inputFormat, ModFormat outputFormat);
-    virtual ~ModPlugin();
-
-    ModFormat inputFormat();
-    ModFormat outputFormat();
     virtual int process(std::vector<Buffer*> dataIn,
             std::vector<Buffer*> dataOut) = 0;
     virtual const char* name() = 0;
-    
-protected:
-    ModFormat myInputFormat;
-    ModFormat myOutputFormat;
-
-    void inputFormat(ModFormat format);
-    void outputFormat(ModFormat format);
 };
 
-
-#endif // MOD_PLUGIN_H

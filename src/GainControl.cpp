@@ -48,8 +48,7 @@ GainControl::GainControl(size_t framesize,
                          GainMode mode,
                          float& digGain,
                          float normalise) :
-    ModCodec(ModFormat(framesize * sizeof(complexf)),
-             ModFormat(framesize * sizeof(complexf))),
+    ModCodec(),
     RemoteControllable("gain"),
 #ifdef __SSE__
     m_frameSize(framesize * sizeof(complexf) / sizeof(__m128)),

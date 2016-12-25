@@ -29,8 +29,8 @@ size_t ModCodec::myCount = 0;
 #endif
 
 
-ModCodec::ModCodec(ModFormat inputFormat, ModFormat outputFormat) :
-    ModPlugin((inputFormat), (outputFormat))
+ModCodec::ModCodec() :
+    ModPlugin()
 {
 #ifdef DEBUG
     myOutputFile = NULL;

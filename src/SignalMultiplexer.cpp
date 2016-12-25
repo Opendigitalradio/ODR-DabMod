@@ -29,7 +29,7 @@
 
 
 SignalMultiplexer::SignalMultiplexer(size_t framesize) :
-    ModMux(ModFormat(framesize), ModFormat(framesize)),
+    ModMux(),
     d_frameSize(framesize)
 {
     PDEBUG("SignalMultiplexer::SignalMultiplexer(%zu) @ %p\n", framesize, this);

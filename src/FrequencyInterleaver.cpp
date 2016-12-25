@@ -31,7 +31,7 @@ typedef std::complex<float> complexf;
 
 
 FrequencyInterleaver::FrequencyInterleaver(size_t mode) :
-    ModCodec(ModFormat(0), ModFormat(0))
+    ModCodec()
 {
     PDEBUG("FrequencyInterleaver::FrequencyInterleaver(%zu) @ %p\n",
             mode, this);

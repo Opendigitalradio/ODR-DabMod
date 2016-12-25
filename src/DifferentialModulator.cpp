@@ -31,7 +31,7 @@ typedef std::complex<float> complexf;
 
 
 DifferentialModulator::DifferentialModulator(size_t carriers) :
-    ModMux(ModFormat(carriers * sizeof(complexf)), ModFormat(carriers * sizeof(complexf))),
+    ModMux(),
     d_carriers(carriers)
 {
     PDEBUG("DifferentialModulator::DifferentialModulator(%zu)\n", carriers);

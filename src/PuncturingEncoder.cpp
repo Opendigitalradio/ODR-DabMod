@@ -29,7 +29,7 @@
 
 
 PuncturingEncoder::PuncturingEncoder() :
-    ModCodec(ModFormat(0), ModFormat(0)),
+    ModCodec(),
     d_in_block_size(0),
     d_out_block_size(0),
     d_tail_rule(NULL)
@@ -77,8 +77,7 @@ void PuncturingEncoder::adjust_item_size()
 
     d_in_block_size = in_size;
     d_out_block_size = (out_size + 7) / 8;
-    myOutputFormat.size(d_out_block_size);
-    
+
     PDEBUG(" Puncturing encoder ratio (out/in): %zu / %zu\n",
             d_out_block_size, d_in_block_size);
 }
