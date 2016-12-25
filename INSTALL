@@ -25,6 +25,8 @@ The configure script can be launch with a variety of options:
  --disable-zeromq       Disable ZeroMQ input (to be used with ODR-DabMux),
                         output and remotecontrol.
  --disable-output-uhd   Disable the binding to the UHD driver for USRPs
+ --enable-fast-math     Compile using the -ffast-math option that gives a substantial
+                        speedup at the cost of correctness.
 
 Debugging options: You should not enable debug if you need good performance.
 By default, debug is disabled.

@@ -28,8 +28,6 @@ AC_CONFIG_SRCDIR([src/DabMod.cpp])
 AM_CONFIG_HEADER([config.h])
 AM_SILENT_RULES([yes])
 
-ACLOCAL_AMFLAGS = -I m4
-
 case $target_cpu in
     x86_64)
 AC_DEFINE([__64BIT__], [], [__16BIT__, __32BIT__])
@@ -56,6 +54,9 @@ AC_ARG_ENABLE([debug],
 AC_ARG_ENABLE([prof],
         [AS_HELP_STRING([--enable-prof], [Enable profiling])],
         [], [enable_prof=no])
+AC_ARG_ENABLE([fast-math],
+        [AS_HELP_STRING([--enable-fast-math], [Set -ffast-math])],
+        [], [enable_fast_math=no])
 AC_ARG_WITH([debug-malloc],
         [AS_HELP_STRING([--with-debug-malloc[=no|yes|duma|efence|...]],
             [Add malloc debugger support])],
@@ -79,16 +80,26 @@ PKG_CHECK_MODULES([FFTW], [fftw3f], enable_fftw=yes, enable_fftw=no)
 echo "Checking zeromq"
 
 AS_IF([test "x$enable_zeromq" = "xyes"],
-        [AC_DEFINE(HAVE_ZEROMQ, [1], [Define if ZeroMQ is enabled]) ,
-         AC_CHECK_LIB(zmq, zmq_init, ZMQ_LIBS="-lzmq" ,[AC_MSG_ERROR([ZeroMQ libzmq is required])])])
+         [AC_CHECK_LIB([zmq], [zmq_init], [ZMQ_LIBS="-lzmq"],
+                       [AC_MSG_ERROR([ZeroMQ libzmq is required])])])
+
+AS_IF([test "x$enable_zeromq" = "xyes"],
+        [AC_DEFINE(HAVE_ZEROMQ, [1], [Define if ZeroMQ is enabled])])
+
 AS_IF([test "x$enable_debug" = "xno"],
         [EXTRA="$EXTRA -DNDEBUG"],
         [EXTRA="$EXTRA"])
+
 AS_IF([test "x$enable_prof" != "xno"],
         [EXTRA="$EXTRA -pg"])
 
+AS_IF([test "x$enable_fast_math" != "xno"],
+        [EXTRA="$EXTRA -ffast-math"])
+
+AS_IF([test "x$enable_trace" != "xno"],
+        [EXTRA="$EXTRA -DDEBUG"])
+
 # Define conditionals for Makefile.am
-AM_CONDITIONAL([DEBUG], [test "x$enable_trace" = "xyes"])
 AM_CONDITIONAL([IS_GIT_REPO], [test -d '.git'])
 
 # Defines for config.h
@@ -100,8 +111,11 @@ AC_SUBST([LIBS], ["$FFTW_LIBS $PTHREAD_LIBS $ZMQ_LIBS"])
 
 # Checks for UHD.
 AS_IF([test "x$enable_output_uhd" = "xyes"],
-        [AC_DEFINE(HAVE_OUTPUT_UHD, [1], [Define if UHD output is enabled]) ,
-         AC_CHECK_LIB([uhd], [main], [], [AC_MSG_ERROR([library uhd is missing])])])
+      [AC_CHECK_LIB([uhd], [main], [],
+                   [AC_MSG_ERROR([library uhd is missing])] )])
+
+AS_IF([test "x$enable_output_uhd" = "xyes"],
+      [AC_DEFINE(HAVE_OUTPUT_UHD, [1], [Define if UHD output is enabled])])
 
 AX_BOOST_BASE([1.55.0], [], AC_MSG_ERROR([BOOST 1.55 or later is required]))
 AC_CHECK_LIB([boost_system], [main], [], [AC_MSG_ERROR([library boost_system is missing])])
@@ -192,7 +206,7 @@ echo
 echo
 enabled=""
 disabled=""
-for feat in with_debug_malloc has_sse
+for feat in with_debug_malloc has_sse enable_fast_math
 do
     eval var=\$$feat
     AS_IF([test "x$var" != "xno"],

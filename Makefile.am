@@ -1,7 +1,7 @@
 # Copyright (C) 2007, 2008, 2009, 2010 Her Majesty the Queen in Right
 # of Canada (Communications Research Center Canada)
 #
-#  Copyright (C) 2014, 2015
+#  Copyright (C) 2016
 #  Matthias P. Braendli, matthias.braendli@mpb.li
 
 #   http://opendigitalradio.org
@@ -31,20 +31,14 @@ else
 GITVERSION_FLAGS =
 endif
 
-if DEBUG
-DEBUG_FLAGS = -DDEBUG
-else
-DEBUG_FLAGS =
-endif
-
 bin_PROGRAMS = odr-dabmod
 
 FFT_LDADD=
 
 odr_dabmod_CXXFLAGS = -Wall -Isrc -std=c++11 \
-					  $(GITVERSION_FLAGS) $(DEBUG_FLAGS)
+					  $(GITVERSION_FLAGS)
 odr_dabmod_CFLAGS   = -Wall -Isrc \
-					  $(GITVERSION_FLAGS) $(DEBUG_FLAGS)
+					  $(GITVERSION_FLAGS)
 odr_dabmod_LDADD    = $(FFT_LDADD)
 odr_dabmod_SOURCES  = src/DabMod.cpp \
 					  src/PcDebug.h \
