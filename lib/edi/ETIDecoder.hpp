@@ -68,6 +68,8 @@ class ETIDecoder {
 
         PFT::PFT m_pft;
 
+        uint16_t m_last_seq;
+
         std::vector<uint8_t> m_input_data;
 };
 

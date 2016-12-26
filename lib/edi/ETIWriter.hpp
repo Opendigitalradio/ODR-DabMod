@@ -79,6 +79,8 @@ class ETIWriter {
 
         void update_mnsc(uint16_t mnsc);
 
+        void update_rfu(uint16_t rfu);
+
         void add_subchannel(const eti_stc_data& stc);
 
         // Tell the ETIWriter that the AFPacket is complete
@@ -109,6 +111,9 @@ class ETIWriter {
         uint32_t m_seconds;
 
         uint16_t m_mnsc = 0xffff;
+
+        // 16 bits: RFU field in EOH
+        uint16_t m_rfu = 0xffff;
 };
 
 }

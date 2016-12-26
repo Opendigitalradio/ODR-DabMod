@@ -117,6 +117,15 @@ void ETIWriter::update_mnsc(uint16_t mnsc)
     m_mnsc = mnsc;
 }
 
+void ETIWriter::update_rfu(uint16_t rfu)
+{
+    if (not m_proto_valid) {
+        throw std::logic_error("Cannot update RFU before protocol");
+    }
+
+    m_rfu = rfu;
+}
+
 void ETIWriter::add_subchannel(const eti_stc_data& stc)
 {
     if (not m_proto_valid) {
@@ -242,8 +251,8 @@ void ETIWriter::assemble()
     eti.push_back(mst_crc & 0xFF);
 
     // RFU
-    eti.push_back(0xff);
-    eti.push_back(0xff);
+    eti.push_back(m_rfu >> 8);
+    eti.push_back(m_rfu);
 
     // TIST
     eti.push_back(m_fc.tsta >> 24);

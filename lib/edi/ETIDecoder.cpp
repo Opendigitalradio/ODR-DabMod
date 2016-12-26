@@ -154,9 +154,18 @@ decode_state_t ETIDecoder::decode_afpacket(
     // read length from packet
     uint32_t taglength = read_32b(input_data.begin() + 2);
     uint16_t seq = read_16b(input_data.begin() + 6);
+    if (m_last_seq + 1 != seq) {
+        etiLog.level(warn) << "EDI AF Packet sequence error";
+    }
+    m_last_seq = seq;
 
     bool has_crc = (input_data[8] & 0x80) ? true : false;
-    uint8_t revision = input_data[8] & 0x7F;
+    uint8_t major_revision = (input_data[8] & 0x70) >> 4;
+    uint8_t minor_revision = input_data[8] & 0x0F;
+    if (major_revision != 1 or minor_revision != 0) {
+        throw invalid_argument("EDI AF Packet has wrong revision " +
+                to_string(major_revision) + "." + to_string(minor_revision));
+    }
     uint8_t pt = input_data[9];
     if (pt != 'T') {
         // only support Tag
@@ -298,9 +307,13 @@ bool ETIDecoder::decode_deti(const vector<uint8_t> &value)
 
     fc.mid = (etiHeader >> 22) & 0x03;
     fc.fp = (etiHeader >> 19) & 0x07;
-    bool rfa = (etiHeader >> 17) & 0x1;
+    uint8_t rfa = (etiHeader >> 17) & 0x3;
+    if (rfa != 0) {
+        etiLog.log(warn, "EDI deti TAG: rfa non-zero");
+    }
+
     bool rfu = (etiHeader >> 16) & 0x1;
-    uint16_t mnsc = etiHeader & 0xFFFF;
+    uint16_t mnsc = rfu ? 0xFFFF : etiHeader & 0xFFFF;
 
     const size_t fic_length_words = (fc.ficf ? (fc.mid == 3 ? 32 : 24) : 0);
     const size_t fic_length = 4 * fic_length_words;
@@ -311,9 +324,10 @@ bool ETIDecoder::decode_deti(const vector<uint8_t> &value)
         (rfudf ? 3 : 0);
 
     if (value.size() != expected_length) {
-        etiLog.log(warn, "     Assertion error: value.size() != expected_length: %zu %zu\n",
-                value.size(), expected_length);
-        assert(false);
+        throw std::logic_error("EDI deti: Assertion error:"
+                "value.size() != expected_length: " +
+               to_string(value.size()) + " " +
+               to_string(expected_length));
     }
 
     m_eti_writer.update_err(stat);
@@ -352,6 +366,13 @@ bool ETIDecoder::decode_deti(const vector<uint8_t> &value)
     if (rfudf) {
         uint32_t rfud = read_24b(value.begin() + i);
 
+        // high 16 bits: RFU in LIDATA EOH
+        // low 8 bits: RFU in TIST (not supported)
+        m_eti_writer.update_rfu(rfud >> 8);
+        if ((rfud & 0xFF) != 0xFF) {
+            etiLog.level(warn) << "EDI: RFU in TIST not supported";
+        }
+
         i += 3;
     }
 
@@ -370,6 +391,9 @@ bool ETIDecoder::decode_estn(const vector<uint8_t> &value, uint8_t n)
     stc.sad = (sstc >> 8) & 0x3FF;
     stc.tpl = (sstc >> 2) & 0x3F;
     uint8_t rfa = sstc & 0x3;
+    if (rfa != 0) {
+        etiLog.level(warn) << "EDI: rfa field in ESTn tag non-null";
+    }
 
     copy(   value.begin() + 3,
             value.end(),
