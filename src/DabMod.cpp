@@ -310,6 +310,9 @@ int launch_modulator(int argc, char* argv[])
 #if defined(HAVE_OUTPUT_UHD)
         "output_uhd " <<
 #endif
+#if defined(__FAST_MATH__)
+        "fast-math" <<
+#endif
         "\n";
 
     if (use_configuration_file && use_configuration_cmdline) {
