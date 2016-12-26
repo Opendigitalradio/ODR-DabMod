@@ -59,7 +59,7 @@
 #define P24 0xffffffff
 
 
-const std::vector<PuncturingRule>& SubchannelSource::get_rules()
+const std::vector<PuncturingRule>& SubchannelSource::get_rules() const
 {
     return d_puncturing_rules;
 }
@@ -635,18 +635,18 @@ SubchannelSource::SubchannelSource(eti_STC &stc) :
     }
 }
 
-size_t SubchannelSource::startAddress()
+size_t SubchannelSource::startAddress() const
 {
     return d_start_address;
 }
 
-size_t SubchannelSource::framesize()
+size_t SubchannelSource::framesize() const
 {
     return d_framesize;
 }
 
 
-size_t SubchannelSource::framesizeCu()
+size_t SubchannelSource::framesizeCu() const
 {
     size_t framesizeCu = 0;
 
@@ -1003,25 +1003,25 @@ size_t SubchannelSource::framesizeCu()
 }
 
 
-size_t SubchannelSource::bitrate()
+size_t SubchannelSource::bitrate() const
 {
     return d_framesize / 3;
 }
 
 
-size_t SubchannelSource::protection()
+size_t SubchannelSource::protection() const
 {
     return d_protection;
 }
 
 
-size_t SubchannelSource::protectionForm()
+size_t SubchannelSource::protectionForm() const
 {
     return (d_protection >> 5) & 1;
 }
 
 
-size_t SubchannelSource::protectionLevel()
+size_t SubchannelSource::protectionLevel() const
 {
     if (protectionForm()) { // Long form
         return (d_protection & 0x3) + 1;
@@ -1030,7 +1030,7 @@ size_t SubchannelSource::protectionLevel()
 }
 
 
-size_t SubchannelSource::protectionOption()
+size_t SubchannelSource::protectionOption() const
 {
     if (protectionForm()) { // Long form
         return (d_protection >> 2) & 0x7;

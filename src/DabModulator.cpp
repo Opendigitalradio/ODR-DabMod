@@ -157,7 +157,7 @@ int DabModulator::process(Buffer* const dataIn, Buffer* dataOut)
         ////////////////////////////////////////////////////////////////
         auto cifPrbs = make_shared<PrbsGenerator>(864 * 8, 0x110);
         auto cifMux = make_shared<FrameMultiplexer>(
-                myFicSizeOut + 864 * 8, &myEtiReader.getSubchannels());
+                myFicSizeOut + 864 * 8, myEtiReader.getSubchannels());
 
         auto cifPart = make_shared<BlockPartitioner>(mode, myEtiReader.getFp());
 
@@ -269,9 +269,7 @@ int DabModulator::process(Buffer* const dataIn, Buffer* dataOut)
         ////////////////////////////////////////////////////////////////
         // Configuring subchannels
         ////////////////////////////////////////////////////////////////
-        std::vector<shared_ptr<SubchannelSource> > subchannels =
-            myEtiReader.getSubchannels();
-        for (const auto& subchannel : subchannels) {
+        for (const auto& subchannel : myEtiReader.getSubchannels()) {
 
             ////////////////////////////////////////////////////////////
             // Data initialisation

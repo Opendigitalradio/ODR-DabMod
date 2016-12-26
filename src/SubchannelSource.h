@@ -43,15 +43,15 @@ class SubchannelSource : public ModInput
 public:
     SubchannelSource(eti_STC &stc);
 
-    size_t startAddress();
-    size_t framesize();
-    size_t framesizeCu();
-    size_t bitrate();
-    size_t protection();
-    size_t protectionForm();
-    size_t protectionLevel();
-    size_t protectionOption();
-    const std::vector<PuncturingRule>& get_rules();
+    size_t startAddress() const;
+    size_t framesize() const;
+    size_t framesizeCu() const;
+    size_t bitrate() const;
+    size_t protection() const;
+    size_t protectionForm() const;
+    size_t protectionLevel() const;
+    size_t protectionOption() const;
+    const std::vector<PuncturingRule>& get_rules() const;
 
     void loadSubchannelData(const Buffer& data);
     int process(Buffer* outputData);

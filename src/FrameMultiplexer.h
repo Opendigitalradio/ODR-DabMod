@@ -1,6 +1,11 @@
 /*
    Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010, 2011 Her Majesty
    the Queen in Right of Canada (Communications Research Center Canada)
+
+   Copyright (C) 2016
+   Matthias P. Braendli, matthias.braendli@mpb.li
+
+    http://opendigitalradio.org
  */
 /*
    This file is part of ODR-DabMod.
@@ -36,11 +41,12 @@
 class FrameMultiplexer : public ModMux
 {
 public:
-    FrameMultiplexer(size_t frameSize,
-            const std::vector<std::shared_ptr<SubchannelSource> >* subchannels);
+    FrameMultiplexer(
+            size_t frameSize,
+            const std::vector<std::shared_ptr<SubchannelSource> >& subchannels);
     virtual ~FrameMultiplexer();
-    FrameMultiplexer(const FrameMultiplexer&);
-    FrameMultiplexer& operator=(const FrameMultiplexer&);
+    FrameMultiplexer(const FrameMultiplexer&) = delete;
+    FrameMultiplexer& operator=(const FrameMultiplexer&) = delete;
 
 
     int process(std::vector<Buffer*> dataIn, Buffer* dataOut);
@@ -48,7 +54,7 @@ public:
 
 protected:
     size_t d_frameSize;
-    const std::vector<std::shared_ptr<SubchannelSource> >* mySubchannels;
+    const std::vector<std::shared_ptr<SubchannelSource> >& mySubchannels;
 };
 
 

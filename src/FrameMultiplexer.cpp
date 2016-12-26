@@ -1,6 +1,11 @@
 /*
    Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010, 2011 Her Majesty
    the Queen in Right of Canada (Communications Research Center Canada)
+
+   Copyright (C) 2016
+   Matthias P. Braendli, matthias.braendli@mpb.li
+
+    http://opendigitalradio.org
  */
 /*
    This file is part of ODR-DabMod.
@@ -33,7 +38,7 @@ typedef std::complex<float> complexf;
 
 FrameMultiplexer::FrameMultiplexer(
         size_t framesize,
-        const std::vector<std::shared_ptr<SubchannelSource> >* subchannels) :
+        const std::vector<std::shared_ptr<SubchannelSource> >& subchannels) :
     ModMux(),
     d_frameSize(framesize),
     mySubchannels(subchannels)
@@ -77,12 +82,11 @@ int FrameMultiplexer::process(std::vector<Buffer*> dataIn, Buffer* dataOut)
     memcpy(out, (*in)->getData(), (*in)->getLength());
     ++in;
     // Write subchannel
-    if (mySubchannels->size() != dataIn.size() - 1) {
+    if (mySubchannels.size() != dataIn.size() - 1) {
         throw std::out_of_range(
                 "FrameMultiplexer detected subchannel size change!");
     }
-    std::vector<std::shared_ptr<SubchannelSource> >::const_iterator subchannel =
-        mySubchannels->begin();
+    auto subchannel = mySubchannels.begin();
     while (in != dataIn.end()) {
         if ((*subchannel)->framesizeCu() * 8 != (*in)->getLength()) {
             throw std::out_of_range(
