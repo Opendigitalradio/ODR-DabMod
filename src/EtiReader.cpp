@@ -34,6 +34,7 @@
 #include <sys/types.h>
 #include <string.h>
 #include <arpa/inet.h>
+#include <regex>
 
 using namespace std;
 
@@ -56,17 +57,14 @@ EtiReader::EtiReader(
         double& tist_offset_s,
         unsigned tist_delay_stages) :
     state(EtiReaderStateSync),
-    myTimestampDecoder(tist_offset_s, tist_delay_stages)
+    myTimestampDecoder(tist_offset_s, tist_delay_stages),
+    myCurrentFrame(0),
+    eti_fc_valid(false)
 {
-    PDEBUG("EtiReader::EtiReader()\n");
-
     rcs.enrol(&myTimestampDecoder);
-
-    myCurrentFrame = 0;
-    eti_fc_valid = false;
 }
 
-std::shared_ptr<FicSource>& EtiReader::getFic()
+std::shared_ptr<FicSource>& EtiSource::getFic()
 {
     return myFicSource;
 }
@@ -90,7 +88,7 @@ unsigned EtiReader::getFp()
 }
 
 
-const std::vector<std::shared_ptr<SubchannelSource> >& EtiReader::getSubchannels()
+const std::vector<std::shared_ptr<SubchannelSource> > EtiReader::getSubchannels() const
 {
     return mySources;
 }
@@ -158,7 +156,9 @@ int EtiReader::process(const Buffer* dataIn)
                 throw std::runtime_error("FIC must be present to modulate!");
             }
             if (not myFicSource) {
-                myFicSource = make_shared<FicSource>(eti_fc);
+                unsigned ficf = eti_fc.FICF;
+                unsigned mid = eti_fc.MID;
+                myFicSource = make_shared<FicSource>(ficf, mid);
             }
             break;
         case EtiReaderStateNst:
@@ -173,8 +173,12 @@ int EtiReader::process(const Buffer* dataIn)
 
                 mySources.clear();
                 for (unsigned i = 0; i < eti_fc.NST; ++i) {
+                    const auto tpl = eti_stc[i].TPL;
                     mySources.push_back(
-                            make_shared<SubchannelSource>(eti_stc[i]));
+                            make_shared<SubchannelSource>(
+                                eti_stc[i].getStartAddress(),
+                                eti_stc[i].getSTL(),
+                                tpl));
                     PDEBUG("Sstc %u:\n", i);
                     PDEBUG(" Stc%i.scid: %i\n", i, eti_stc[i].SCID);
                     PDEBUG(" Stc%i.sad: %u\n", i, eti_stc[i].getStartAddress());
@@ -298,5 +302,249 @@ uint32_t EtiReader::getPPSOffset()
     //fprintf(stderr, "****** TIST 0x%x\n", timestamp);
 
     return timestamp;
+}
+
+
+unsigned EdiReader::getMode()
+{
+    if (not m_fc_valid) {
+        assert(false);
+        throw std::runtime_error("Trying to access Mode before it is ready!");
+    }
+    return m_fc.mid;
+}
+
+
+unsigned EdiReader::getFp()
+{
+    if (not m_fc_valid) {
+        throw std::runtime_error("Trying to access FP before it is ready!");
+    }
+    return m_fc.fp;
+}
+
+const std::vector<std::shared_ptr<SubchannelSource> > EdiReader::getSubchannels() const
+{
+    std::vector<std::shared_ptr<SubchannelSource> > sources;
+
+    sources.resize(m_sources.size());
+    for (const auto s : m_sources) {
+        if (s.first < sources.size()) {
+            sources.at(s.first) = s.second;
+        }
+        else {
+            throw std::runtime_error("Missing subchannel data in EDI source");
+        }
+    }
+
+    return sources;
+}
+
+bool EdiReader::isFrameReady()
+{
+    return m_frameReady;
+}
+
+void EdiReader::clearFrame()
+{
+    m_frameReady = false;
+    m_proto_valid = false;
+    m_fc_valid = false;
+    m_fic.clear();
+}
+
+void EdiReader::update_protocol(
+        const std::string& proto,
+        uint16_t major,
+        uint16_t minor)
+{
+    m_proto_valid = (proto == "DETI" and major == 0 and minor == 0);
+
+    if (not m_proto_valid) {
+        throw std::invalid_argument("Wrong EDI protocol");
+    }
+}
+
+void EdiReader::update_err(uint8_t err)
+{
+    if (not m_proto_valid) {
+        throw std::logic_error("Cannot update ERR before protocol");
+    }
+    m_err = err;
+}
+
+void EdiReader::update_fc_data(const EdiDecoder::eti_fc_data& fc_data)
+{
+    if (not m_proto_valid) {
+        throw std::logic_error("Cannot update FC before protocol");
+    }
+
+    m_fc_valid = false;
+    m_fc = fc_data;
+
+    if (not m_fc.ficf) {
+        throw std::invalid_argument("FIC must be present");
+    }
+
+    if (m_fc.mid > 4) {
+        throw std::invalid_argument("Invalid MID");
+    }
+
+    if (m_fc.fp > 7) {
+        throw std::invalid_argument("Invalid FP");
+    }
+
+    m_fc_valid = true;
+}
+
+void EdiReader::update_fic(const std::vector<uint8_t>& fic)
+{
+    if (not m_proto_valid) {
+        throw std::logic_error("Cannot update FIC before protocol");
+    }
+    m_fic = fic;
+}
+
+void EdiReader::update_edi_time(
+        uint32_t utco,
+        uint32_t seconds)
+{
+    if (not m_proto_valid) {
+        throw std::logic_error("Cannot update time before protocol");
+    }
+
+    m_utco = utco;
+    m_seconds = seconds;
+
+    // TODO check validity
+    m_time_valid = true;
+}
+
+void EdiReader::update_mnsc(uint16_t mnsc)
+{
+    if (not m_proto_valid) {
+        throw std::logic_error("Cannot update MNSC before protocol");
+    }
+
+    m_mnsc = mnsc;
+}
+
+void EdiReader::update_rfu(uint16_t rfu)
+{
+    if (not m_proto_valid) {
+        throw std::logic_error("Cannot update RFU before protocol");
+    }
+
+    m_rfu = rfu;
+}
+
+void EdiReader::add_subchannel(const EdiDecoder::eti_stc_data& stc)
+{
+    if (not m_proto_valid) {
+        throw std::logic_error("Cannot add subchannel before protocol");
+    }
+
+    if (m_sources.count(stc.stream_index) == 0) {
+        m_sources[stc.stream_index] = make_shared<SubchannelSource>(stc.sad, stc.stl(), stc.tpl);
+    }
+
+    auto& source = m_sources[stc.stream_index];
+
+    if (source->framesize() != stc.mst.size()) {
+        throw std::invalid_argument(
+                "EDI: MST data length inconsistent with FIC");
+    }
+    source->loadSubchannelData(stc.mst);
+
+    if (m_sources.size() > 64) {
+        throw std::invalid_argument("Too many subchannels");
+    }
+}
+
+void EdiReader::assemble()
+{
+    etiLog.level(debug) << "Calling assemble";
+    if (not m_proto_valid) {
+        throw std::logic_error("Cannot assemble EDI data before protocol");
+    }
+
+    if (not m_fc_valid) {
+        throw std::logic_error("Cannot assemble EDI data without FC");
+    }
+
+    if (m_fic.empty()) {
+        throw std::logic_error("Cannot assemble EDI data without FIC");
+    }
+
+    // ETS 300 799 Clause 5.3.2, but we don't support not having
+    // a FIC
+    if (    (m_fc.mid == 3 and m_fic.size() != 32 * 4) or
+            (m_fc.mid != 3 and m_fic.size() != 24 * 4) ) {
+        stringstream ss;
+        ss << "Invalid FIC length " << m_fic.size() <<
+            " for MID " << m_fc.mid;
+        throw std::invalid_argument(ss.str());
+    }
+
+    if (not myFicSource) {
+        myFicSource = make_shared<FicSource>(m_fc.ficf, m_fc.mid);
+    }
+
+    myFicSource->loadFicData(m_fic);
+
+    // Accept zero subchannels, because of an edge-case that can happen
+    // during reconfiguration. See ETS 300 799 Clause 5.3.3
+
+    // TODO check time validity
+
+    /* TODO timestamp
+    myTimestampDecoder.updateTimestampEti(
+            eti_fc.FP & 0x3,
+            eti_eoh.MNSC, getPPSOffset(), eti_fc.FCT);
+            */
+    m_frameReady = true;
+}
+
+EdiUdpInput::EdiUdpInput(EdiDecoder::ETIDecoder& decoder) :
+    m_enabled(false),
+    m_port(0),
+    m_decoder(decoder) { }
+
+int EdiUdpInput::Open(const std::string& uri)
+{
+    etiLog.level(info) << "Opening EDI :" << uri;
+
+    int ret = 1;
+
+    const std::regex re_udp("udp://:([0-9]+)");
+    std::smatch m;
+    if (std::regex_match(uri, m, re_udp)) {
+        m_port = std::stoi(m[1].str());
+
+        etiLog.level(info) << "EDI port :" << m_port;
+        ret = m_sock.reinit(m_port, "0.0.0.0");
+        m_enabled = (ret == 0);
+    }
+
+    return ret;
+}
+
+void EdiUdpInput::rxPacket()
+{
+    const size_t packsize = 8192;
+    UdpPacket packet(packsize);
+
+    int ret = m_sock.receive(packet);
+    if (ret == 0) {
+        const auto &buf = packet.getBuffer();
+        if (packet.getSize() == packsize) {
+            fprintf(stderr, "Warning, possible UDP truncation\n");
+        }
+
+        m_decoder.push_packet(buf);
+    }
+    else {
+        fprintf(stderr, "Socket error: %s\n", inetErrMsg);
+    }
 }
 

@@ -3,7 +3,7 @@
    Her Majesty the Queen in Right of Canada (Communications Research
    Center Canada)
 
-   Copyright (C) 2015
+   Copyright (C) 2016
    Matthias P. Braendli, matthias.braendli@mpb.li
 
     http://opendigitalradio.org
@@ -45,11 +45,11 @@
 #include "TII.h"
 
 
-class DabModulator : public ModCodec
+class DabModulator : public ModInput
 {
 public:
     DabModulator(
-            double& tist_offset_s, unsigned tist_delay_stages,
+            EtiSource& etiSource,
             tii_config_t& tiiConfig,
             unsigned outputRate, unsigned clockRate,
             unsigned dabMode, GainMode gainMode,
@@ -59,11 +59,11 @@ public:
     DabModulator& operator=(const DabModulator& other) = delete;
     virtual ~DabModulator();
 
-    int process(Buffer* const dataIn, Buffer* dataOut);
+    int process(Buffer* dataOut);
     const char* name() { return "DabModulator"; }
 
     /* Required to get the timestamp */
-    EtiReader* getEtiReader() { return &myEtiReader; }
+    EtiSource* getEtiSource() { return &myEtiSource; }
 
 protected:
     void setMode(unsigned mode);
@@ -74,7 +74,7 @@ protected:
     GainMode myGainMode;
     float& myDigGain;
     float myNormalise;
-    EtiReader myEtiReader;
+    EtiSource& myEtiSource;
     Flowgraph* myFlowgraph;
     OutputMemory* myOutput;
     std::string myFilterTapsFilename;

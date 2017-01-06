@@ -3,7 +3,7 @@
    Her Majesty the Queen in Right of Canada (Communications Research
    Center Canada)
 
-   Copyright (C) 2015
+   Copyright (C) 2016
    Matthias P. Braendli, matthias.braendli@mpb.li
 
     http://opendigitalradio.org
@@ -55,21 +55,21 @@
 #include "Log.h"
 
 DabModulator::DabModulator(
-        double& tist_offset_s, unsigned tist_delay_stages,
+        EtiSource& etiSource,
         tii_config_t& tiiConfig,
         unsigned outputRate, unsigned clockRate,
         unsigned dabMode, GainMode gainMode,
         float& digGain, float normalise,
         const std::string& filterTapsFilename
         ) :
-    ModCodec(),
+    ModInput(),
     myOutputRate(outputRate),
     myClockRate(clockRate),
     myDabMode(dabMode),
     myGainMode(gainMode),
     myDigGain(digGain),
     myNormalise(normalise),
-    myEtiReader(tist_offset_s, tist_delay_stages),
+    myEtiSource(etiSource),
     myFlowgraph(NULL),
     myFilterTapsFilename(filterTapsFilename),
     myTiiConfig(tiiConfig)
@@ -134,16 +134,14 @@ void DabModulator::setMode(unsigned mode)
 }
 
 
-int DabModulator::process(Buffer* const dataIn, Buffer* dataOut)
+int DabModulator::process(Buffer* dataOut)
 {
     using namespace std;
 
-    PDEBUG("DabModulator::process(dataIn: %p, dataOut: %p)\n",
-            dataIn, dataOut);
+    PDEBUG("DabModulator::process(dataOut: %p)\n", dataOut);
 
-    myEtiReader.process(dataIn);
     if (myFlowgraph == NULL) {
-        unsigned mode = myEtiReader.getMode();
+        unsigned mode = myEtiSource.getMode();
         if (myDabMode != 0) {
             mode = myDabMode;
         } else if (mode == 0) {
@@ -156,10 +154,8 @@ int DabModulator::process(Buffer* const dataIn, Buffer* dataOut)
         // CIF data initialisation
         ////////////////////////////////////////////////////////////////
         auto cifPrbs = make_shared<PrbsGenerator>(864 * 8, 0x110);
-        auto cifMux = make_shared<FrameMultiplexer>(
-                myFicSizeOut + 864 * 8, myEtiReader.getSubchannels());
-
-        auto cifPart = make_shared<BlockPartitioner>(mode, myEtiReader.getFp());
+        auto cifMux = make_shared<FrameMultiplexer>(myEtiSource);
+        auto cifPart = make_shared<BlockPartitioner>(mode, myEtiSource.getFp());
 
         auto cifMap = make_shared<QpskSymbolMapper>(myNbCarriers);
         auto cifRef = make_shared<PhaseReference>(mode);
@@ -229,7 +225,7 @@ int DabModulator::process(Buffer* const dataIn, Buffer* dataOut)
         ////////////////////////////////////////////////////////////////
         // Processing FIC
         ////////////////////////////////////////////////////////////////
-        shared_ptr<FicSource> fic(myEtiReader.getFic());
+        shared_ptr<FicSource> fic(myEtiSource.getFic());
         ////////////////////////////////////////////////////////////////
         // Data initialisation
         ////////////////////////////////////////////////////////////////
@@ -269,7 +265,7 @@ int DabModulator::process(Buffer* const dataIn, Buffer* dataOut)
         ////////////////////////////////////////////////////////////////
         // Configuring subchannels
         ////////////////////////////////////////////////////////////////
-        for (const auto& subchannel : myEtiReader.getSubchannels()) {
+        for (const auto& subchannel : myEtiSource.getSubchannels()) {
 
             ////////////////////////////////////////////////////////////
             // Data initialisation

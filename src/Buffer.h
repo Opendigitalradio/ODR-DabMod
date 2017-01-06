@@ -2,6 +2,11 @@
    Copyright (C) 2011
    Her Majesty the Queen in Right of Canada (Communications Research
    Center Canada)
+
+   Copyright (C) 2016
+   Matthias P. Braendli, matthias.braendli@mpb.li
+
+    http://opendigitalradio.org
  */
 /*
    This file is part of ODR-DabMod.
@@ -27,6 +32,7 @@
 #endif
 
 #include <unistd.h>
+#include <vector>
 #include <memory>
 
 /* Buffer is a container for a byte array, that is memcpy'ed
@@ -50,7 +56,8 @@ class Buffer {
     public:
         using sptr = std::shared_ptr<Buffer>;
 
-        Buffer(const Buffer& copy);
+        Buffer(const Buffer& copy) = default;
+        Buffer(const std::vector<uint8_t> &vec);
         Buffer(size_t len = 0, const void *data = NULL);
         ~Buffer();
 
@@ -62,6 +69,7 @@ class Buffer {
          */
         void setData(const void *data, size_t len);
         Buffer &operator=(const Buffer &copy);
+        Buffer &operator=(const std::vector<uint8_t> &copy);
 
         /* Concatenate the current data with the new data given.
          * Reallocates memory if needed.

@@ -187,7 +187,6 @@ int launch_modulator(int argc, char* argv[])
     auto inputZeroMQReader = make_shared<InputZeroMQReader>();
 #endif
 
-    auto inputEdiReader = make_shared<InputEdiReader>();
     auto inputTcpReader = make_shared<InputTcpReader>();
 
     struct sigaction sa;
@@ -691,6 +690,12 @@ int launch_modulator(int argc, char* argv[])
         fprintf(stderr, "%zu Hz\n", outputRate);
     }
 
+
+    EtiReader etiReader(tist_offset_s, tist_delay_stages);
+    EdiReader ediReader;
+    EdiDecoder::ETIDecoder ediInput(ediReader);
+    EdiUdpInput ediUdpInput(ediInput);
+
     if (inputTransport == "file") {
         // Opening ETI input file
         if (inputFileReader.Open(inputName, loop) == -1) {
@@ -717,8 +722,7 @@ int launch_modulator(int argc, char* argv[])
         m.inputReader = inputTcpReader.get();
     }
     else if (inputTransport == "edi") {
-        inputEdiReader->Open(inputName);
-        m.inputReader = inputEdiReader.get();
+        ediUdpInput.Open(inputName);
     }
     else
     {
@@ -772,94 +776,139 @@ int launch_modulator(int argc, char* argv[])
     }
     set_thread_name("modulator");
 
-    while (run_again) {
-        Flowgraph flowgraph;
+    if (ediUdpInput.isEnabled()) {
+        while (run_again) {
+            Flowgraph flowgraph;
 
-        m.flowgraph = &flowgraph;
-        m.data.setLength(6144);
+            etiLog.level(debug) << "Build mod";
+            auto modulator = make_shared<DabModulator>(
+                    ediReader, tiiConfig, outputRate, clockRate,
+                    dabMode, gainMode, digitalgain, normalise,
+                    filterTapsFilename);
 
-        auto input = make_shared<InputMemory>(&m.data);
-        auto modulator = make_shared<DabModulator>(
-                tist_offset_s, tist_delay_stages,
-                tiiConfig, outputRate, clockRate, dabMode, gainMode,
-                digitalgain, normalise, filterTapsFilename);
+            etiLog.level(debug) << "Connect";
+            if (format_converter) {
+                flowgraph.connect(modulator, format_converter);
+                flowgraph.connect(format_converter, output);
+            }
+            else {
+                flowgraph.connect(modulator, output);
+            }
 
-        flowgraph.connect(input, modulator);
-        if (format_converter) {
-            flowgraph.connect(modulator, format_converter);
-            flowgraph.connect(format_converter, output);
-        }
-        else {
-            flowgraph.connect(modulator, output);
-        }
+            etiLog.level(debug) << "SetETISource";
 
 #if defined(HAVE_OUTPUT_UHD)
-        if (useUHDOutput) {
-            ((OutputUHD*)output.get())->setETIReader(modulator->getEtiReader());
-        }
+            if (useUHDOutput) {
+                ((OutputUHD*)output.get())->setETISource(modulator->getEtiSource());
+            }
 #endif
 
-        m.inputReader->PrintInfo();
+            etiLog.level(debug) << "Loop";
+            size_t framecount = 0;
+            while (true) {
+                while (not ediReader.isFrameReady()) {
+                    ediUdpInput.rxPacket();
+                }
+                etiLog.level(debug) << "Frame Ready";
+                framecount++;
+                flowgraph.run();
+                etiLog.level(debug) << "now clear";
+                ediReader.clearFrame();
 
-        run_modulator_state_t st = run_modulator(m);
-        etiLog.log(trace, "DABMOD,run_modulator() = %d", st);
+                /* Check every once in a while if the remote control
+                 * is still working */
+                if ((framecount % 250) == 0) {
+                    rcs.check_faults();
+                }
+            }
 
-        switch (st) {
-            case run_modulator_state_t::failure:
-                etiLog.level(error) << "Modulator failure.";
-                run_again = false;
-                ret = 1;
-                break;
-            case run_modulator_state_t::again:
-                etiLog.level(warn) << "Restart modulator.";
-                run_again = false;
-                if (inputTransport == "file") {
-                    if (inputFileReader.Open(inputName, loop) == -1) {
-                        etiLog.level(error) << "Unable to open input file!";
-                        ret = 1;
-                    }
-                    else {
-                        run_again = true;
-                    }
-                }
-                else if (inputTransport == "zeromq") {
-#if defined(HAVE_ZEROMQ)
-                    run_again = true;
-                    // Create a new input reader
-                    inputZeroMQReader = make_shared<InputZeroMQReader>();
-                    inputZeroMQReader->Open(inputName, inputMaxFramesQueued);
-                    m.inputReader = inputZeroMQReader.get();
-#endif
-                }
-                else if (inputTransport == "tcp") {
-                    inputTcpReader = make_shared<InputTcpReader>();
-                    inputTcpReader->Open(inputName);
-                    m.inputReader = inputTcpReader.get();
-                }
-                break;
-            case run_modulator_state_t::reconfigure:
-                etiLog.level(warn) << "Detected change in ensemble configuration.";
-                /* We can keep the input in this care */
-                run_again = true;
-                break;
-            case run_modulator_state_t::normal_end:
-            default:
-                etiLog.level(info) << "modulator stopped.";
-                ret = 0;
-                run_again = false;
-                break;
         }
-
-        fprintf(stderr, "\n\n");
-        etiLog.level(info) << m.framecount << " DAB frames encoded";
-        etiLog.level(info) << ((float)m.framecount * 0.024f) << " seconds encoded";
-
-        m.data.setLength(0);
     }
+    else {
+        while (run_again) {
+            Flowgraph flowgraph;
 
-    ////////////////////////////////////////////////////////////////////////
-    // Cleaning things
-    ////////////////////////////////////////////////////////////////////////
+            m.flowgraph = &flowgraph;
+            m.data.setLength(6144);
+
+            auto input = make_shared<InputMemory>(&m.data);
+            auto modulator = make_shared<DabModulator>(
+                    etiReader, tiiConfig, outputRate, clockRate,
+                    dabMode, gainMode, digitalgain, normalise,
+                    filterTapsFilename);
+
+            if (format_converter) {
+                flowgraph.connect(modulator, format_converter);
+                flowgraph.connect(format_converter, output);
+            }
+            else {
+                flowgraph.connect(modulator, output);
+            }
+
+#if defined(HAVE_OUTPUT_UHD)
+            if (useUHDOutput) {
+                ((OutputUHD*)output.get())->setETISource(modulator->getEtiSource());
+            }
+#endif
+
+            m.inputReader->PrintInfo();
+
+            run_modulator_state_t st = run_modulator(m);
+            etiLog.log(trace, "DABMOD,run_modulator() = %d", st);
+
+            switch (st) {
+                case run_modulator_state_t::failure:
+                    etiLog.level(error) << "Modulator failure.";
+                    run_again = false;
+                    ret = 1;
+                    break;
+                case run_modulator_state_t::again:
+                    etiLog.level(warn) << "Restart modulator.";
+                    run_again = false;
+                    if (inputTransport == "file") {
+                        if (inputFileReader.Open(inputName, loop) == -1) {
+                            etiLog.level(error) << "Unable to open input file!";
+                            ret = 1;
+                        }
+                        else {
+                            run_again = true;
+                        }
+                    }
+                    else if (inputTransport == "zeromq") {
+#if defined(HAVE_ZEROMQ)
+                        run_again = true;
+                        // Create a new input reader
+                        inputZeroMQReader = make_shared<InputZeroMQReader>();
+                        inputZeroMQReader->Open(inputName, inputMaxFramesQueued);
+                        m.inputReader = inputZeroMQReader.get();
+#endif
+                    }
+                    else if (inputTransport == "tcp") {
+                        inputTcpReader = make_shared<InputTcpReader>();
+                        inputTcpReader->Open(inputName);
+                        m.inputReader = inputTcpReader.get();
+                    }
+                    break;
+                case run_modulator_state_t::reconfigure:
+                    etiLog.level(warn) << "Detected change in ensemble configuration.";
+                    /* We can keep the input in this care */
+                    run_again = true;
+                    break;
+                case run_modulator_state_t::normal_end:
+                default:
+                    etiLog.level(info) << "modulator stopped.";
+                    ret = 0;
+                    run_again = false;
+                    break;
+            }
+
+            fprintf(stderr, "\n\n");
+            etiLog.level(info) << m.framecount << " DAB frames encoded";
+            etiLog.level(info) << ((float)m.framecount * 0.024f) << " seconds encoded";
+
+            m.data.setLength(0);
+        }
+    }
 
     etiLog.level(info) << "Terminating";
     return ret;
@@ -867,6 +916,7 @@ int launch_modulator(int argc, char* argv[])
 
 run_modulator_state_t run_modulator(modulator_data& m)
 {
+
     auto ret = run_modulator_state_t::failure;
     try {
         while (running) {
@@ -887,9 +937,6 @@ run_modulator_state_t run_modulator(modulator_data& m)
                 PDEBUG("* Read frame %lu\n", m.framecount);
                 PDEBUG("*****************************************\n");
 
-                ////////////////////////////////////////////////////////////////
-                // Processing data
-                ////////////////////////////////////////////////////////////////
                 m.flowgraph->run();
 
                 /* Check every once in a while if the remote control

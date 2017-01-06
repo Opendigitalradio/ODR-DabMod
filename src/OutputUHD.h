@@ -225,7 +225,7 @@ class OutputUHD: public ModOutput, public RemoteControllable {
 
         const char* name() { return "OutputUHD"; }
 
-        void setETIReader(EtiReader *etiReader);
+        void setETISource(EtiSource *etiSource);
 
         /*********** REMOTE CONTROL ***************/
 
@@ -242,7 +242,7 @@ class OutputUHD: public ModOutput, public RemoteControllable {
         OutputUHD(const OutputUHD& other) = delete;
         OutputUHD& operator=(const OutputUHD& other) = delete;
 
-        EtiReader *myEtiReader;
+        EtiSource *myEtiSource;
         OutputUHDConfig& myConf;
         uhd::usrp::multi_usrp::sptr myUsrp;
         std::shared_ptr<boost::barrier> mySyncBarrier;

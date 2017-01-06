@@ -39,7 +39,7 @@ const std::vector<PuncturingRule>& FicSource::get_rules()
 }
 
 
-FicSource::FicSource(eti_FC &fc) :
+FicSource::FicSource(unsigned ficf, unsigned mid) :
     ModInput()
 {
 //    PDEBUG("FicSource::FicSource(...)\n");
@@ -47,13 +47,13 @@ FicSource::FicSource(eti_FC &fc) :
 //    PDEBUG("  Framesize: %i\n", d_framesize);
 //    PDEBUG("  Protection: %i\n", d_protection);
 
-    if (fc.FICF == 0) {
+    if (ficf == 0) {
         d_framesize = 0;
         d_buffer.setLength(0);
         return;
     }
 
-    if (fc.MID == 3) {
+    if (mid == 3) {
         d_framesize = 32 * 4;
         d_puncturing_rules.emplace_back(29 * 16, 0xeeeeeeee);
         d_puncturing_rules.emplace_back(3 * 16, 0xeeeeeeec);

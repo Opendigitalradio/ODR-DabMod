@@ -2,7 +2,7 @@
    Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010, 2011 Her Majesty
    the Queen in Right of Canada (Communications Research Center Canada)
 
-   Copyright (C) 2016
+   Copyright (C) 2017
    Matthias P. Braendli, matthias.braendli@mpb.li
 
     http://opendigitalradio.org
@@ -37,23 +37,11 @@
 typedef std::complex<float> complexf;
 
 FrameMultiplexer::FrameMultiplexer(
-        size_t framesize,
-        const std::vector<std::shared_ptr<SubchannelSource> >& subchannels) :
+        const EtiSource& etiSource) :
     ModMux(),
-    d_frameSize(framesize),
-    mySubchannels(subchannels)
+    m_etiSource(etiSource)
 {
-    PDEBUG("FrameMultiplexer::FrameMultiplexer(%zu) @ %p\n", framesize, this);
-
 }
-
-
-FrameMultiplexer::~FrameMultiplexer()
-{
-    PDEBUG("FrameMultiplexer::~FrameMultiplexer() @ %p\n", this);
-
-}
-
 
 // dataIn[0] -> PRBS
 // dataIn[1+] -> subchannels
@@ -81,12 +69,14 @@ int FrameMultiplexer::process(std::vector<Buffer*> dataIn, Buffer* dataOut)
     // Write PRBS
     memcpy(out, (*in)->getData(), (*in)->getLength());
     ++in;
+
     // Write subchannel
-    if (mySubchannels.size() != dataIn.size() - 1) {
+    const auto subchannels = m_etiSource.getSubchannels();
+    if (subchannels.size() != dataIn.size() - 1) {
         throw std::out_of_range(
                 "FrameMultiplexer detected subchannel size change!");
     }
-    auto subchannel = mySubchannels.begin();
+    auto subchannel = subchannels.begin();
     while (in != dataIn.end()) {
         if ((*subchannel)->framesizeCu() * 8 != (*in)->getLength()) {
             throw std::out_of_range(

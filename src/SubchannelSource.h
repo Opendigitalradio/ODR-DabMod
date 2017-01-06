@@ -41,7 +41,11 @@
 class SubchannelSource : public ModInput
 {
 public:
-    SubchannelSource(eti_STC &stc);
+    SubchannelSource(
+            uint8_t sad,
+            uint16_t stl,
+            uint8_t tpl
+            );
 
     size_t startAddress() const;
     size_t framesize() const;

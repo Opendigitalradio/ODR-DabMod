@@ -2,6 +2,11 @@
    Copyright (C) 2011
    Her Majesty the Queen in Right of Canada (Communications Research
    Center Canada)
+
+   Copyright (C) 2016
+   Matthias P. Braendli, matthias.braendli@mpb.li
+
+    http://opendigitalradio.org
  */
 /*
    This file is part of ODR-DabMod.
@@ -44,6 +49,16 @@ Buffer::Buffer(size_t len, const void *data)
     setData(data, len);
 }
 
+Buffer::Buffer(const std::vector<uint8_t> &vec)
+{
+    PDEBUG("Buffer::Buffer(vector [%zu])\n", vec.size());
+
+    this->len = 0;
+    this->size = 0;
+    this->data = NULL;
+    setData(vec.data(), vec.size());
+}
+
 
 Buffer::~Buffer()
 {
@@ -58,6 +73,11 @@ Buffer &Buffer::operator=(const Buffer &copy)
     return *this;
 }
 
+Buffer &Buffer::operator=(const std::vector<uint8_t> &copy)
+{
+    setData(copy.data(), copy.size());
+    return *this;
+}
 
 Buffer &Buffer::operator+=(const Buffer &copy)
 {

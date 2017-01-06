@@ -39,7 +39,7 @@
 class FicSource : public ModInput
 {
 public:
-    FicSource(eti_FC &fc);
+    FicSource(unsigned ficf, unsigned mid);
 
     size_t getFramesize();
     const std::vector<PuncturingRule>& get_rules();

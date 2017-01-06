@@ -245,28 +245,5 @@ class InputZeroMQReader : public InputReader
         struct InputZeroMQThreadData workerdata_;
 };
 
-class InputEdiReader : public InputReader
-{
-public:
-    InputEdiReader();
-
-    int Open(const std::string& uri);
-
-    int GetNextFrame(void* buffer);
-
-    void PrintInfo(void);
-
-private:
-    void rx_packet(void);
-
-    std::vector<uint8_t> getEtiFrame(void);
-
-    EdiDecoder::ETIWriter m_writer;
-    EdiDecoder::ETIDecoder m_decoder;
-
-    int m_port;
-    UdpSocket m_sock;
-};
-
 #endif
 

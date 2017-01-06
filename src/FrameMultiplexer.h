@@ -2,7 +2,7 @@
    Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010, 2011 Her Majesty
    the Queen in Right of Canada (Communications Research Center Canada)
 
-   Copyright (C) 2016
+   Copyright (C) 2017
    Matthias P. Braendli, matthias.braendli@mpb.li
 
     http://opendigitalradio.org
@@ -33,6 +33,7 @@
 
 #include "ModPlugin.h"
 #include "SubchannelSource.h"
+#include "EtiReader.h"
 #include <memory>
 
 #include <sys/types.h>
@@ -42,19 +43,13 @@ class FrameMultiplexer : public ModMux
 {
 public:
     FrameMultiplexer(
-            size_t frameSize,
-            const std::vector<std::shared_ptr<SubchannelSource> >& subchannels);
-    virtual ~FrameMultiplexer();
-    FrameMultiplexer(const FrameMultiplexer&) = delete;
-    FrameMultiplexer& operator=(const FrameMultiplexer&) = delete;
-
+            const EtiSource& etiSource);
 
     int process(std::vector<Buffer*> dataIn, Buffer* dataOut);
     const char* name() { return "FrameMultiplexer"; }
 
 protected:
-    size_t d_frameSize;
-    const std::vector<std::shared_ptr<SubchannelSource> >& mySubchannels;
+    const EtiSource& m_etiSource;
 };
 
 

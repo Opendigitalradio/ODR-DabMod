@@ -65,11 +65,15 @@ const std::vector<PuncturingRule>& SubchannelSource::get_rules() const
 }
 
 
-SubchannelSource::SubchannelSource(eti_STC &stc) :
+SubchannelSource::SubchannelSource(
+            uint8_t sad,
+            uint16_t stl,
+            uint8_t tpl
+            ) :
     ModInput(),
-    d_start_address(stc.getStartAddress()),
-    d_framesize(stc.getSTL() * 8),
-    d_protection(stc.TPL)
+    d_start_address(sad),
+    d_framesize(stl * 8),
+    d_protection(tpl)
 {
     PDEBUG("SubchannelSource::SubchannelSource(...) @ %p\n", this);
     PDEBUG("  Start address: %zu\n", d_start_address);
@@ -109,7 +113,7 @@ SubchannelSource::SubchannelSource(eti_STC &stc) :
                 fprintf(stderr,
                         "Protection form(%zu), option(%zu) and level(%zu)\n",
                         protectionForm(), protectionOption(), protectionLevel());
-                fprintf(stderr, "Subchannel TPL: 0x%x (%u)\n", stc.TPL, stc.TPL);
+                fprintf(stderr, "Subchannel TPL: 0x%x (%u)\n", tpl, tpl);
                 throw std::runtime_error("SubchannelSource::SubchannelSource "
                         "unknown protection level!");
             }
@@ -143,7 +147,7 @@ SubchannelSource::SubchannelSource(eti_STC &stc) :
                 fprintf(stderr,
                         "Protection form(%zu), option(%zu) and level(%zu)\n",
                         protectionForm(), protectionOption(), protectionLevel());
-                fprintf(stderr, "Subchannel TPL: 0x%x (%u)\n", stc.TPL, stc.TPL);
+                fprintf(stderr, "Subchannel TPL: 0x%x (%u)\n", tpl, tpl);
                 throw std::runtime_error("SubchannelSource::SubchannelSource "
                         "unknown protection level!");
             }
@@ -151,7 +155,7 @@ SubchannelSource::SubchannelSource(eti_STC &stc) :
             fprintf(stderr,
                     "Protection form(%zu), option(%zu) and level(%zu)\n",
                     protectionForm(), protectionOption(), protectionLevel());
-            fprintf(stderr, "Subchannel TPL: 0x%x (%u)\n", stc.TPL, stc.TPL);
+            fprintf(stderr, "Subchannel TPL: 0x%x (%u)\n", tpl, tpl);
             throw std::runtime_error("SubchannelSource::SubchannelSource "
                     "unknown protection option!");
         }

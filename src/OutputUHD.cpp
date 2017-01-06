@@ -273,9 +273,9 @@ OutputUHD::~OutputUHD()
 }
 
 
-void OutputUHD::setETIReader(EtiReader *etiReader)
+void OutputUHD::setETISource(EtiSource *etiSource)
 {
-    myEtiReader = etiReader;
+    myEtiSource = etiSource;
 }
 
 int transmission_frame_duration_ms(unsigned int dabMode)
@@ -331,7 +331,7 @@ int OutputUHD::process(Buffer* dataIn)
             // we only set the delay buffer from the dab mode signaled in ETI if the
             // dab mode was not set in contructor
             if (myTFDurationMs == 0) {
-                SetDelayBuffer(myEtiReader->getMode());
+                SetDelayBuffer(myEtiSource->getMode());
             }
 
             worker.start(&uwd);
@@ -350,7 +350,7 @@ int OutputUHD::process(Buffer* dataIn)
         }
 
         uwd.sourceContainsTimestamp = myConf.enableSync &&
-            myEtiReader->sourceContainsTimestamp();
+            myEtiSource->sourceContainsTimestamp();
 
 
         if (uwd.check_gpsfix) {
@@ -387,7 +387,7 @@ int OutputUHD::process(Buffer* dataIn)
                     frame.buf.begin());
         }
 
-        myEtiReader->calculateTimestamp(frame.ts);
+        myEtiSource->calculateTimestamp(frame.ts);
 
         if (!uwd.running) {
             worker.stop();

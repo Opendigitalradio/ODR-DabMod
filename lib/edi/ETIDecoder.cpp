@@ -1,5 +1,5 @@
 /*
-   Copyright (C) 2016
+   Copyright (C) 2017
    Matthias P. Braendli, matthias.braendli@mpb.li
 
    http://opendigitalradio.org
@@ -30,8 +30,9 @@ namespace EdiDecoder {
 
 using namespace std;
 
-ETIDecoder::ETIDecoder(ETIWriter& eti_writer) :
-    m_eti_writer(eti_writer)
+ETIDecoder::ETIDecoder(DataCollector& data_collector) :
+    m_data_collector(data_collector),
+    m_last_seq(0)
 {
 }
 
@@ -41,7 +42,7 @@ void ETIDecoder::push_bytes(const vector<uint8_t> &buf)
 
     while (m_input_data.size() > 2) {
         if (m_input_data[0] == 'A' and m_input_data[1] == 'F') {
-            decode_state_t st = decode_afpacket(m_input_data);
+            const decode_state_t st = decode_afpacket(m_input_data);
 
             if (st.num_bytes_consumed == 0 and not st.complete) {
                 // We need to refill our buffer
@@ -57,7 +58,7 @@ void ETIDecoder::push_bytes(const vector<uint8_t> &buf)
             }
 
             if (st.complete) {
-                m_eti_writer.assemble();
+                m_data_collector.assemble();
             }
 
         }
@@ -85,7 +86,7 @@ void ETIDecoder::push_bytes(const vector<uint8_t> &buf)
                 decode_state_t st = decode_afpacket(af);
 
                 if (st.complete) {
-                    m_eti_writer.assemble();
+                    m_data_collector.assemble();
                 }
             }
 
@@ -107,7 +108,7 @@ void ETIDecoder::push_packet(const vector<uint8_t> &buf)
         const decode_state_t st = decode_afpacket(buf);
 
         if (st.complete) {
-            m_eti_writer.assemble();
+            m_data_collector.assemble();
         }
 
     }
@@ -121,10 +122,10 @@ void ETIDecoder::push_packet(const vector<uint8_t> &buf)
 
         auto af = m_pft.getNextAFPacket();
         if (not af.empty()) {
-            decode_state_t st = decode_afpacket(af);
+            const decode_state_t st = decode_afpacket(af);
 
             if (st.complete) {
-                m_eti_writer.assemble();
+                m_data_collector.assemble();
             }
         }
     }
@@ -144,7 +145,7 @@ void ETIDecoder::setMaxDelay(int num_af_packets)
 
 #define AFPACKET_HEADER_LEN 10 // includes SYNC
 
-decode_state_t ETIDecoder::decode_afpacket(
+ETIDecoder::decode_state_t ETIDecoder::decode_afpacket(
         const std::vector<uint8_t> &input_data)
 {
     if (input_data.size() < AFPACKET_HEADER_LEN) {
@@ -276,7 +277,7 @@ bool ETIDecoder::decode_starptr(const vector<uint8_t> &value)
     uint16_t major = read_16b(value.begin() + 4);
     uint16_t minor = read_16b(value.begin() + 6);
 
-    m_eti_writer.update_protocol(protocol, major, minor);
+    m_data_collector.update_protocol(protocol, major, minor);
 
     return true;
 }
@@ -330,8 +331,9 @@ bool ETIDecoder::decode_deti(const vector<uint8_t> &value)
                to_string(expected_length));
     }
 
-    m_eti_writer.update_err(stat);
-    m_eti_writer.update_mnsc(mnsc);
+    etiLog.level(debug) << "EDI DETI";
+    m_data_collector.update_err(stat);
+    m_data_collector.update_mnsc(mnsc);
 
     size_t i = 2 + 4;
 
@@ -342,7 +344,7 @@ bool ETIDecoder::decode_deti(const vector<uint8_t> &value)
         uint32_t seconds = read_32b(value.begin() + i);
         i += 4;
 
-        m_eti_writer.update_edi_time(utco, seconds);
+        m_data_collector.update_edi_time(utco, seconds);
 
         fc.tsta = read_24b(value.begin() + i);
         i += 3;
@@ -360,7 +362,7 @@ bool ETIDecoder::decode_deti(const vector<uint8_t> &value)
                 fic.begin());
         i += fic_length;
 
-        m_eti_writer.update_fic(fic);
+        m_data_collector.update_fic(fic);
     }
 
     if (rfudf) {
@@ -368,7 +370,7 @@ bool ETIDecoder::decode_deti(const vector<uint8_t> &value)
 
         // high 16 bits: RFU in LIDATA EOH
         // low 8 bits: RFU in TIST (not supported)
-        m_eti_writer.update_rfu(rfud >> 8);
+        m_data_collector.update_rfu(rfud >> 8);
         if ((rfud & 0xFF) != 0xFF) {
             etiLog.level(warn) << "EDI: RFU in TIST not supported";
         }
@@ -376,7 +378,7 @@ bool ETIDecoder::decode_deti(const vector<uint8_t> &value)
         i += 3;
     }
 
-    m_eti_writer.update_fc_data(fc);
+    m_data_collector.update_fc_data(fc);
 
     return true;
 }
@@ -387,6 +389,7 @@ bool ETIDecoder::decode_estn(const vector<uint8_t> &value, uint8_t n)
 
     eti_stc_data stc;
 
+    stc.stream_index = n - 1; // n is 1-indexed
     stc.scid = (sstc >> 18) & 0x3F;
     stc.sad = (sstc >> 8) & 0x3FF;
     stc.tpl = (sstc >> 2) & 0x3F;
@@ -399,7 +402,8 @@ bool ETIDecoder::decode_estn(const vector<uint8_t> &value, uint8_t n)
             value.end(),
             back_inserter(stc.mst));
 
-    m_eti_writer.add_subchannel(stc);
+    etiLog.level(debug) << "EDI ESTn " << (int)stc.stream_index;
+    m_data_collector.add_subchannel(stc);
 
     return true;
 }

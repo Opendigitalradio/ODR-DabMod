@@ -80,7 +80,6 @@ odr_dabmod_SOURCES  = src/DabMod.cpp \
 					  src/OutputUHD.h \
 					  src/InputMemory.cpp \
 					  src/InputMemory.h \
-					  src/InputEdiReader.cpp \
 					  src/InputFileReader.cpp \
 					  src/InputTcpReader.cpp \
 					  src/InputZeroMQReader.cpp \
@@ -140,8 +139,6 @@ odr_dabmod_SOURCES  = src/DabMod.cpp \
 					  lib/edi/ETIDecoder.cpp \
 					  lib/edi/ETIDecoder.hpp \
 					  lib/edi/eti.hpp \
-					  lib/edi/ETIWriter.cpp \
-					  lib/edi/ETIWriter.hpp \
 					  lib/edi/PFT.cpp \
 					  lib/edi/PFT.hpp \
 					  lib/fec/char.h \

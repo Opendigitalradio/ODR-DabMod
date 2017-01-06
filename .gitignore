@@ -1,6 +1,6 @@
 
 autom4te.cache
-src/*.o
+*.o
 stamp-h1
 .deps
 .dirstamp
