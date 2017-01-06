@@ -139,7 +139,7 @@ class PFT
         void incrementNextPseq(void);
 
         pseq_t m_next_pseq;
-        size_t m_max_delay = 10;
+        size_t m_max_delay = 10; // in AF packets
 
         // Keep one AFBuilder for each Pseq
         std::map<pseq_t, AFBuilder> m_afbuilders;

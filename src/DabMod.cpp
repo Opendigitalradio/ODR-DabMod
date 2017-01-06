@@ -132,6 +132,7 @@ int launch_modulator(int argc, char* argv[])
     std::string inputName = "";
     std::string inputTransport = "file";
     unsigned inputMaxFramesQueued = ZMQ_INPUT_MAX_FRAME_QUEUE;
+    int edi_max_delay = 0;
 
     std::string outputName;
     int useZeroMQOutput = 0;
@@ -386,6 +387,8 @@ int launch_modulator(int argc, char* argv[])
         inputTransport = pt.get("input.transport", "file");
         inputMaxFramesQueued = pt.get("input.max_frames_queued",
                 ZMQ_INPUT_MAX_FRAME_QUEUE);
+
+        edi_max_delay = pt.get("input.edi_max_delay", 0);
 
         inputName = pt.get("input.source", "/dev/stdin");
 
@@ -695,6 +698,9 @@ int launch_modulator(int argc, char* argv[])
 
     EdiReader ediReader;
     EdiDecoder::ETIDecoder ediInput(ediReader);
+    if (edi_max_delay > 0) {
+        ediInput.setMaxDelay(edi_max_delay);
+    }
     EdiUdpInput ediUdpInput(ediInput);
 
     if (inputTransport == "file") {
