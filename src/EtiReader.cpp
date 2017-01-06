@@ -94,18 +94,18 @@ const std::vector<std::shared_ptr<SubchannelSource> > EtiReader::getSubchannels(
 }
 
 
-int EtiReader::process(const Buffer* dataIn)
+int EtiReader::loadEtiData(const Buffer& dataIn)
 {
-    PDEBUG("EtiReader::process(dataIn: %p)\n", dataIn);
+    PDEBUG("EtiReader::loadEtiData(dataIn: %p)\n", &dataIn);
     PDEBUG(" state: %u\n", state);
-    const unsigned char* in = reinterpret_cast<const unsigned char*>(dataIn->getData());
-    size_t input_size = dataIn->getLength();
+    const unsigned char* in = reinterpret_cast<const unsigned char*>(dataIn.getData());
+    size_t input_size = dataIn.getLength();
 
     while (input_size > 0) {
         switch (state) {
         case EtiReaderStateNbFrame:
             if (input_size < 4) {
-                return dataIn->getLength() - input_size;
+                return dataIn.getLength() - input_size;
             }
             nb_frames = *(uint32_t*)in;
             input_size -= 4;
@@ -115,7 +115,7 @@ int EtiReader::process(const Buffer* dataIn)
             break;
         case EtiReaderStateFrameSize:
             if (input_size < 2) {
-                return dataIn->getLength() - input_size;
+                return dataIn.getLength() - input_size;
             }
             framesize = *(uint16_t*)in;
             input_size -= 2;
@@ -125,7 +125,7 @@ int EtiReader::process(const Buffer* dataIn)
             break;
         case EtiReaderStateSync:
             if (input_size < 4) {
-                return dataIn->getLength() - input_size;
+                return dataIn.getLength() - input_size;
             }
             framesize = 6144;
             memcpy(&eti_sync, in, 4);
@@ -138,7 +138,7 @@ int EtiReader::process(const Buffer* dataIn)
             break;
         case EtiReaderStateFc:
             if (input_size < 4) {
-                return dataIn->getLength() - input_size;
+                return dataIn.getLength() - input_size;
             }
             memcpy(&eti_fc, in, 4);
             eti_fc_valid = true;
@@ -163,7 +163,7 @@ int EtiReader::process(const Buffer* dataIn)
             break;
         case EtiReaderStateNst:
             if (input_size < 4 * (size_t)eti_fc.NST) {
-                return dataIn->getLength() - input_size;
+                return dataIn.getLength() - input_size;
             }
             if ((eti_stc.size() != eti_fc.NST) ||
                     (memcmp(&eti_stc[0], in, 4 * eti_fc.NST))) {
@@ -193,7 +193,7 @@ int EtiReader::process(const Buffer* dataIn)
             break;
         case EtiReaderStateEoh:
             if (input_size < 4) {
-                return dataIn->getLength() - input_size;
+                return dataIn.getLength() - input_size;
             }
             memcpy(&eti_eoh, in, 4);
             input_size -= 4;
@@ -206,7 +206,7 @@ int EtiReader::process(const Buffer* dataIn)
         case EtiReaderStateFic:
             if (eti_fc.MID == 3) {
                 if (input_size < 128) {
-                    return dataIn->getLength() - input_size;
+                    return dataIn.getLength() - input_size;
                 }
                 PDEBUG("Writting 128 bytes of FIC channel data\n");
                 Buffer fic = Buffer(128, in);
@@ -216,7 +216,7 @@ int EtiReader::process(const Buffer* dataIn)
                 in += 128;
             } else {
                 if (input_size < 96) {
-                    return dataIn->getLength() - input_size;
+                    return dataIn.getLength() - input_size;
                 }
                 PDEBUG("Writting 96 bytes of FIC channel data\n");
                 Buffer fic = Buffer(96, in);
@@ -241,7 +241,7 @@ int EtiReader::process(const Buffer* dataIn)
             break;
         case EtiReaderStateEof:
             if (input_size < 4) {
-                return dataIn->getLength() - input_size;
+                return dataIn.getLength() - input_size;
             }
             memcpy(&eti_eof, in, 4);
             input_size -= 4;
@@ -253,7 +253,7 @@ int EtiReader::process(const Buffer* dataIn)
             break;
         case EtiReaderStateTist:
             if (input_size < 4) {
-                return dataIn->getLength() - input_size;
+                return dataIn.getLength() - input_size;
             }
             memcpy(&eti_tist, in, 4);
             input_size -= 4;
@@ -282,7 +282,7 @@ int EtiReader::process(const Buffer* dataIn)
     myTimestampDecoder.updateTimestampEti(eti_fc.FP & 0x3,
             eti_eoh.MNSC, getPPSOffset(), eti_fc.FCT);
 
-    return dataIn->getLength() - input_size;
+    return dataIn.getLength() - input_size;
 }
 
 bool EtiReader::sourceContainsTimestamp()

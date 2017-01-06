@@ -70,7 +70,11 @@ public:
 
     virtual unsigned getMode();
     virtual unsigned getFp();
-    int process(const Buffer* dataIn);
+
+    /* Read ETI data from dataIn. Returns the number of bytes
+     * read from the buffer
+     */
+    int loadEtiData(const Buffer& dataIn);
 
     virtual void calculateTimestamp(struct frame_timestamp& ts)
     {

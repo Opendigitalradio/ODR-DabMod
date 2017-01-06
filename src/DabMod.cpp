@@ -88,16 +88,18 @@ void signalHandler(int signalNb)
 struct modulator_data
 {
     modulator_data() :
-        inputReader(NULL),
+        inputReader(nullptr),
         framecount(0),
-        flowgraph(NULL),
-        rcs(NULL) {}
+        flowgraph(nullptr),
+        etiReader(nullptr),
+        rcs(nullptr) {}
 
     InputReader* inputReader;
     Buffer data;
     uint64_t framecount;
 
     Flowgraph* flowgraph;
+    EtiReader* etiReader;
     RemoteControllers* rcs;
 };
 
@@ -691,7 +693,6 @@ int launch_modulator(int argc, char* argv[])
     }
 
 
-    EtiReader etiReader(tist_offset_s, tist_delay_stages);
     EdiReader ediReader;
     EdiDecoder::ETIDecoder ediInput(ediReader);
     EdiUdpInput ediUdpInput(ediInput);
@@ -799,7 +800,7 @@ int launch_modulator(int argc, char* argv[])
 #endif
 
         size_t framecount = 0;
-        bool running = true;
+
         while (running) {
             while (not ediReader.isFrameReady()) {
                 bool success = ediUdpInput.rxPacket();
@@ -825,6 +826,9 @@ int launch_modulator(int argc, char* argv[])
 
             m.flowgraph = &flowgraph;
             m.data.setLength(6144);
+
+            EtiReader etiReader(tist_offset_s, tist_delay_stages);
+            m.etiReader = &etiReader;
 
             auto input = make_shared<InputMemory>(&m.data);
             auto modulator = make_shared<DabModulator>(
@@ -911,7 +915,6 @@ int launch_modulator(int argc, char* argv[])
 
 run_modulator_state_t run_modulator(modulator_data& m)
 {
-
     auto ret = run_modulator_state_t::failure;
     try {
         while (running) {
@@ -931,6 +934,12 @@ run_modulator_state_t run_modulator(modulator_data& m)
                 PDEBUG("*****************************************\n");
                 PDEBUG("* Read frame %lu\n", m.framecount);
                 PDEBUG("*****************************************\n");
+
+                const int eti_bytes_read = m.etiReader->loadEtiData(m.data);
+                if ((size_t)eti_bytes_read != m.data.getLength()) {
+                    etiLog.level(error) << "ETI frame incompletely read";
+                    throw std::runtime_error("ETI read error");
+                }
 
                 m.flowgraph->run();
 
