@@ -1,6 +1,6 @@
 /* ------------------------------------------------------------------
  * Copyright (C) 2017 AVT GmbH - Fabien Vercasson
- * Copyright (C) 2016 Matthias P. Braendli
+ * Copyright (C) 2017 Matthias P. Braendli
  *                    matthias.braendli@mpb.li
  *
  * http://opendigitalradio.org
@@ -22,7 +22,6 @@
 
 #pragma once
 #include <stdio.h>
-#include <cassert>
 #include <vector>
 #include <map>
 #include <stdint.h>
@@ -84,7 +83,7 @@ class AFBuilder
             no,    // Not enough fragments present to permit RS
         };
 
-        AFBuilder(pseq_t Pseq, findex_t Fcount, int lifetime);
+        AFBuilder(pseq_t Pseq, findex_t Fcount, size_t lifetime);
 
         void pushPFTFrag(const Fragment &frag);
 
@@ -105,7 +104,7 @@ class AFBuilder
         /* The user of this instance can keep track of the lifetime of this
          * builder
          */
-        int lifeTime;
+        size_t lifeTime;
 
     private:
 
@@ -125,7 +124,7 @@ class PFT
         void pushPFTFrag(const Fragment &fragment);
 
         /* Try to build the AF packet for the next pseq. This might
-         * skip one pseq according to the maximum delay setting.
+         * skip one or more pseq according to the maximum delay setting.
          *
          * \return an empty vector if building the AF is not possible
          */
@@ -134,15 +133,13 @@ class PFT
         /* Set the maximum delay in number of AF Packets before we
          * abandon decoding a given pseq.
          */
-        void setMaxDelay(int num_af_packets);
+        void setMaxDelay(size_t num_af_packets);
 
     private:
-        bool isPacketBuildable(pseq_t pseq) const;
-
         void incrementNextPseq(void);
 
         pseq_t m_next_pseq;
-        int m_max_delay = 10;
+        size_t m_max_delay = 10;
 
         // Keep one AFBuilder for each Pseq
         std::map<pseq_t, AFBuilder> m_afbuilders;

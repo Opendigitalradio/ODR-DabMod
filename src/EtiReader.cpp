@@ -308,7 +308,6 @@ uint32_t EtiReader::getPPSOffset()
 unsigned EdiReader::getMode()
 {
     if (not m_fc_valid) {
-        assert(false);
         throw std::runtime_error("Trying to access Mode before it is ready!");
     }
     return m_fc.mid;
@@ -463,7 +462,6 @@ void EdiReader::add_subchannel(const EdiDecoder::eti_stc_data& stc)
 
 void EdiReader::assemble()
 {
-    etiLog.level(debug) << "Calling assemble";
     if (not m_proto_valid) {
         throw std::logic_error("Cannot assemble EDI data before protocol");
     }
@@ -529,7 +527,7 @@ int EdiUdpInput::Open(const std::string& uri)
     return ret;
 }
 
-void EdiUdpInput::rxPacket()
+bool EdiUdpInput::rxPacket()
 {
     const size_t packsize = 8192;
     UdpPacket packet(packsize);
@@ -538,13 +536,21 @@ void EdiUdpInput::rxPacket()
     if (ret == 0) {
         const auto &buf = packet.getBuffer();
         if (packet.getSize() == packsize) {
-            fprintf(stderr, "Warning, possible UDP truncation\n");
+            etiLog.log(warn, "Warning, possible UDP truncation");
         }
 
         m_decoder.push_packet(buf);
+        return true;
     }
     else {
-        fprintf(stderr, "Socket error: %s\n", inetErrMsg);
+        if (inetErrNo == EINTR) {
+            return false;
+        }
+        else {
+            stringstream ss;
+            ss << "EDI UDP Socket error: " << inetErrMsg;
+            throw std::runtime_error(ss.str());
+        }
     }
 }
 

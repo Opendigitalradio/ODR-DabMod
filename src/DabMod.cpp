@@ -3,7 +3,7 @@
    Her Majesty the Queen in Right of Canada (Communications Research
    Center Canada)
 
-   Copyright (C) 2016
+   Copyright (C) 2017
    Matthias P. Braendli, matthias.braendli@mpb.li
 
     http://opendigitalradio.org
@@ -777,51 +777,46 @@ int launch_modulator(int argc, char* argv[])
     set_thread_name("modulator");
 
     if (ediUdpInput.isEnabled()) {
-        while (run_again) {
-            Flowgraph flowgraph;
+        Flowgraph flowgraph;
 
-            etiLog.level(debug) << "Build mod";
-            auto modulator = make_shared<DabModulator>(
-                    ediReader, tiiConfig, outputRate, clockRate,
-                    dabMode, gainMode, digitalgain, normalise,
-                    filterTapsFilename);
+        auto modulator = make_shared<DabModulator>(
+                ediReader, tiiConfig, outputRate, clockRate,
+                dabMode, gainMode, digitalgain, normalise,
+                filterTapsFilename);
 
-            etiLog.level(debug) << "Connect";
-            if (format_converter) {
-                flowgraph.connect(modulator, format_converter);
-                flowgraph.connect(format_converter, output);
-            }
-            else {
-                flowgraph.connect(modulator, output);
-            }
-
-            etiLog.level(debug) << "SetETISource";
+        if (format_converter) {
+            flowgraph.connect(modulator, format_converter);
+            flowgraph.connect(format_converter, output);
+        }
+        else {
+            flowgraph.connect(modulator, output);
+        }
 
 #if defined(HAVE_OUTPUT_UHD)
-            if (useUHDOutput) {
-                ((OutputUHD*)output.get())->setETISource(modulator->getEtiSource());
-            }
+        if (useUHDOutput) {
+            ((OutputUHD*)output.get())->setETISource(modulator->getEtiSource());
+        }
 #endif
 
-            etiLog.level(debug) << "Loop";
-            size_t framecount = 0;
-            while (true) {
-                while (not ediReader.isFrameReady()) {
-                    ediUdpInput.rxPacket();
-                }
-                etiLog.level(debug) << "Frame Ready";
-                framecount++;
-                flowgraph.run();
-                etiLog.level(debug) << "now clear";
-                ediReader.clearFrame();
-
-                /* Check every once in a while if the remote control
-                 * is still working */
-                if ((framecount % 250) == 0) {
-                    rcs.check_faults();
+        size_t framecount = 0;
+        bool running = true;
+        while (running) {
+            while (not ediReader.isFrameReady()) {
+                bool success = ediUdpInput.rxPacket();
+                if (not success) {
+                    running = false;
+                    break;
                 }
             }
+            framecount++;
+            flowgraph.run();
+            ediReader.clearFrame();
 
+            /* Check every once in a while if the remote control
+             * is still working */
+            if ((framecount % 250) == 0) {
+                rcs.check_faults();
+            }
         }
     }
     else {

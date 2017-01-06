@@ -1,6 +1,6 @@
 /* ------------------------------------------------------------------
  * Copyright (C) 2017 AVT GmbH - Fabien Vercasson
- * Copyright (C) 2016 Matthias P. Braendli
+ * Copyright (C) 2017 Matthias P. Braendli
  *                    matthias.braendli@mpb.li
  *
  * http://opendigitalradio.org
@@ -35,7 +35,6 @@ extern "C" {
 }
 
 namespace EdiDecoder {
-
 namespace PFT {
 
 using namespace std;
@@ -191,10 +190,11 @@ size_t Fragment::loadData(const std::vector<uint8_t> &buf)
 }
 
 
-AFBuilder::AFBuilder(pseq_t Pseq, findex_t Fcount, int lifetime)
+AFBuilder::AFBuilder(pseq_t Pseq, findex_t Fcount, size_t lifetime)
 {
     _Pseq = Pseq;
     _Fcount = Fcount;
+    assert(lifetime > 0);
     lifeTime = lifetime;
 }
 
@@ -459,7 +459,7 @@ void PFT::pushPFTFrag(const Fragment &fragment)
         // The AFBuilder wants to know the lifetime in number of fragments,
         // we know the delay in number of AF packets. Every AF packet
         // is cut into Fcount fragments.
-        const int lifetime = fragment.Fcount() * m_max_delay;
+        const size_t lifetime = fragment.Fcount() * m_max_delay;
 
         // Build the afbuilder in the map in-place
         m_afbuilders.emplace(std::piecewise_construct,
@@ -485,26 +485,34 @@ void PFT::pushPFTFrag(const Fragment &fragment)
 std::vector<uint8_t> PFT::getNextAFPacket()
 {
     if (m_afbuilders.count(m_next_pseq) == 0) {
-        assert(m_afbuilders.empty());
+        if (m_afbuilders.size() > m_max_delay) {
+            m_afbuilders.clear();
+            etiLog.level(debug) << " Reinit";
+        }
+
         return {};
     }
 
     auto &builder = m_afbuilders.at(m_next_pseq);
-    //const auto lt = builder.lifeTime;
     //const auto nf = builder.numberOfFragments();
 
     using dar_t = AFBuilder::decode_attempt_result_t;
 
     if (builder.canAttemptToDecode() == dar_t::yes) {
-        //etiLog.log(debug, "pseq %d (%d %d/%d) yes\n", m_next_pseq, lt, nf.first, nf.second);
+        //etiLog.log(debug, "pseq %d (%d %d/%d) yes\n",
+        //           m_next_pseq, lt, nf.first, nf.second);
         auto afpacket = builder.extractAF();
         assert(not afpacket.empty());
         incrementNextPseq();
         return afpacket;
     }
     else if (builder.canAttemptToDecode() == dar_t::maybe) {
-        //etiLog.log(debug, "pseq %d (%d %d/%d) maybe\n", m_next_pseq, lt, nf.first, nf.second);
-        builder.lifeTime--;
+        //etiLog.log(debug, "pseq %d (%d %d/%d) maybe\n",
+        //           m_next_pseq, lt, nf.first, nf.second);
+        if (builder.lifeTime > 0) {
+            builder.lifeTime--;
+        }
+
         if (builder.lifeTime == 0) {
             // Attempt Reed-Solomon decoding
             auto afpacket = builder.extractAF();
@@ -517,8 +525,12 @@ std::vector<uint8_t> PFT::getNextAFPacket()
         }
     }
     else {
-        //etiLog.log(debug, "pseq %d (%d %d/%d) no\n", m_next_pseq, lt, nf.first, nf.second);
-        builder.lifeTime--;
+        //etiLog.log(debug, "pseq %d (%d %d/%d) no\n",
+        //           m_next_pseq, lt, nf.first, nf.second);
+        if (builder.lifeTime > 0) {
+            builder.lifeTime--;
+        }
+
         if (builder.lifeTime == 0) {
             etiLog.log(debug, "pseq %d timed out\n", m_next_pseq);
             incrementNextPseq();
@@ -528,15 +540,9 @@ std::vector<uint8_t> PFT::getNextAFPacket()
     return {};
 }
 
-void PFT::setMaxDelay(int num_af_packets)
+void PFT::setMaxDelay(size_t num_af_packets)
 {
     m_max_delay = num_af_packets;
-}
-
-bool PFT::isPacketBuildable(pseq_t pseq) const
-{
-    return m_afbuilders.count(pseq) > 0 and
-        not m_afbuilders.at(pseq).extractAF().empty();
 }
 
 void PFT::incrementNextPseq()
@@ -549,5 +555,4 @@ void PFT::incrementNextPseq()
 }
 
 }
-
 }

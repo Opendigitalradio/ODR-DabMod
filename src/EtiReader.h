@@ -176,7 +176,11 @@ class EdiUdpInput {
 
         bool isEnabled(void) const { return m_enabled; }
 
-        void rxPacket(void);
+        /* Receive a packet and give it to the decoder. Returns
+         * true if a packet was received, false in case of socket
+         * read was interrupted by a signal.
+         */
+        bool rxPacket(void);
 
     private:
         bool m_enabled;

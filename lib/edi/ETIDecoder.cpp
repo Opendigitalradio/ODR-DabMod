@@ -331,7 +331,6 @@ bool ETIDecoder::decode_deti(const vector<uint8_t> &value)
                to_string(expected_length));
     }
 
-    etiLog.level(debug) << "EDI DETI";
     m_data_collector.update_err(stat);
     m_data_collector.update_mnsc(mnsc);
 
@@ -402,7 +401,6 @@ bool ETIDecoder::decode_estn(const vector<uint8_t> &value, uint8_t n)
             value.end(),
             back_inserter(stc.mst));
 
-    etiLog.level(debug) << "EDI ESTn " << (int)stc.stream_index;
     m_data_collector.add_subchannel(stc);
 
     return true;
