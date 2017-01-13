@@ -31,6 +31,7 @@
 #endif
 
 #include "InetAddress.h"
+#include "ThreadsafeQueue.h"
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <unistd.h>
@@ -45,6 +46,8 @@
 #include <stdlib.h>
 #include <iostream>
 #include <vector>
+#include <thread>
+#include <atomic>
 
 class UdpPacket;
 
@@ -171,4 +174,30 @@ class UdpPacket
         std::vector<uint8_t> m_buffer;
         InetAddress address;
 };
+
+/* Threaded UDP receiver */
+class UdpReceiver {
+    public:
+        UdpReceiver() : m_port(0), m_thread(), m_stop(false), m_packets() {}
+        ~UdpReceiver();
+        UdpReceiver(const UdpReceiver&) = delete;
+        UdpReceiver operator=(const UdpReceiver&) = delete;
+
+        // Start the receiver in a separate thread
+        void start(int port);
+
+        // Get the data contained in a UDP packet, blocks if none available
+        // In case of error, throws a runtime_error
+        std::vector<uint8_t> get_packet_buffer(void);
+
+    private:
+        void m_run(void);
+
+        int m_port;
+        std::thread m_thread;
+        std::atomic<bool> m_stop;
+        ThreadsafeQueue<UdpPacket> m_packets;
+        UdpSocket m_sock;
+};
+
 

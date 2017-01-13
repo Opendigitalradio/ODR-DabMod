@@ -627,6 +627,9 @@ int launch_modulator(int argc, char* argv[])
             else if (inputName.substr(0, 6) == "tcp://") {
                 inputTransport = "tcp";
             }
+            else if (inputName.substr(0, 6) == "udp://") {
+                inputTransport = "edi";
+            }
         }
         else {
             inputName = "/dev/stdin";
@@ -784,7 +787,11 @@ int launch_modulator(int argc, char* argv[])
     }
     set_thread_name("modulator");
 
-    if (ediUdpInput.isEnabled()) {
+    if (inputTransport == "edi") {
+        if (not ediUdpInput.isEnabled()) {
+            etiLog.level(error) << "inputTransport is edi, but ediUdpInput is not enabled";
+            return -1;
+        }
         Flowgraph flowgraph;
 
         auto modulator = make_shared<DabModulator>(

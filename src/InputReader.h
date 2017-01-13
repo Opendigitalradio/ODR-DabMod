@@ -40,7 +40,6 @@
 #endif
 #include "porting.h"
 #include "Log.h"
-#include "lib/edi/ETIDecoder.hpp"
 #include "lib/UdpSocket.h"
 #include <sys/socket.h>
 #include <netinet/in.h>

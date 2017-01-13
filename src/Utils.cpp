@@ -3,7 +3,7 @@
    Her Majesty the Queen in Right of Canada (Communications Research
    Center Canada)
 
-   Copyright (C) 2015
+   Copyright (C) 2017
    Matthias P. Braendli, matthias.braendli@mpb.li
 
     http://opendigitalradio.org
@@ -64,6 +64,7 @@ void printUsage(char* progName)
     fprintf(out, "input:         ETI input filename (default: stdin), or\n");
     fprintf(out, "                  tcp://source:port for ETI-over-TCP input, or\n");
     fprintf(out, "                  zmq+tcp://source:port for ZMQ input.\n");
+    fprintf(out, "                  udp://:port for EDI input.\n");
     fprintf(out, "-f name:       Use file output with given filename. (use /dev/stdout for standard output)\n");
     fprintf(out, "-u device:     Use UHD output with given device string. (use "" for default device)\n");
     fprintf(out, "-F frequency:  Set the transmit frequency when using UHD output. (mandatory option when using UHD)\n");

@@ -2,7 +2,7 @@
    Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010, 2011 Her Majesty
    the Queen in Right of Canada (Communications Research Center Canada)
 
-   Copyright (C) 2016
+   Copyright (C) 2017
    Matthias P. Braendli, matthias.braendli@mpb.li
 
     http://opendigitalradio.org
@@ -508,11 +508,9 @@ EdiUdpInput::EdiUdpInput(EdiDecoder::ETIDecoder& decoder) :
     m_port(0),
     m_decoder(decoder) { }
 
-int EdiUdpInput::Open(const std::string& uri)
+void EdiUdpInput::Open(const std::string& uri)
 {
     etiLog.level(info) << "Opening EDI :" << uri;
-
-    int ret = 1;
 
     const std::regex re_udp("udp://:([0-9]+)");
     std::smatch m;
@@ -520,37 +518,21 @@ int EdiUdpInput::Open(const std::string& uri)
         m_port = std::stoi(m[1].str());
 
         etiLog.level(info) << "EDI port :" << m_port;
-        ret = m_sock.reinit(m_port, "0.0.0.0");
-        m_enabled = (ret == 0);
+        m_udp_rx.start(m_port);
+        m_enabled = true;
     }
-
-    return ret;
 }
 
 bool EdiUdpInput::rxPacket()
 {
-    const size_t packsize = 8192;
-    UdpPacket packet(packsize);
-
-    int ret = m_sock.receive(packet);
-    if (ret == 0) {
-        const auto &buf = packet.getBuffer();
-        if (packet.getSize() == packsize) {
-            etiLog.log(warn, "Warning, possible UDP truncation");
-        }
-
-        m_decoder.push_packet(buf);
+    try {
+        auto udp_data = m_udp_rx.get_packet_buffer();
+        m_decoder.push_packet(udp_data);
         return true;
     }
-    else {
-        if (inetErrNo == EINTR) {
-            return false;
-        }
-        else {
-            stringstream ss;
-            ss << "EDI UDP Socket error: " << inetErrMsg;
-            throw std::runtime_error(ss.str());
-        }
+    catch (std::runtime_error& e) {
+        etiLog.level(warn) << "EDI input: " << e.what();
+        return false;
     }
 }
 

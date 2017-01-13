@@ -2,7 +2,7 @@
    Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010, 2011 Her Majesty
    the Queen in Right of Canada (Communications Research Center Canada)
 
-   Copyright (C) 2016
+   Copyright (C) 2017
    Matthias P. Braendli, matthias.braendli@mpb.li
 
     http://opendigitalradio.org
@@ -38,29 +38,40 @@
 #include "TimestampDecoder.h"
 #include "lib/edi/ETIDecoder.hpp"
 #include "lib/UdpSocket.h"
+#include "ThreadsafeQueue.h"
 
 #include <vector>
 #include <memory>
 #include <stdint.h>
 #include <sys/types.h>
 
-
+/* The modulator uses this interface to get the necessary multiplex data,
+ * either from an ETI or an EDI source.
+ */
 class EtiSource
 {
 public:
+    /* Get the DAB Transmission Mode. Valid values: 1, 2, 3 or 4 */
     virtual unsigned getMode() = 0;
+
+    /* Get the current Frame Phase */
     virtual unsigned getFp() = 0;
 
+    /* Returns true if we have valid time stamps in the ETI*/
     virtual bool sourceContainsTimestamp() = 0;
     virtual void calculateTimestamp(struct frame_timestamp& ts) = 0;
 
+    /* Return the FIC source to be used for modulation */
     virtual std::shared_ptr<FicSource>& getFic(void);
+
+    /* Return all subchannel sources containing MST data */
     virtual const std::vector<std::shared_ptr<SubchannelSource> > getSubchannels() const = 0;
 
 protected:
     std::shared_ptr<FicSource> myFicSource;
 };
 
+/* The EtiReader extracts the necessary data for modulation from an ETI(NI) byte stream. */
 class EtiReader : public EtiSource
 {
 public:
@@ -72,17 +83,15 @@ public:
     virtual unsigned getFp();
 
     /* Read ETI data from dataIn. Returns the number of bytes
-     * read from the buffer
+     * read from the buffer.
      */
     int loadEtiData(const Buffer& dataIn);
 
+    virtual bool sourceContainsTimestamp();
     virtual void calculateTimestamp(struct frame_timestamp& ts)
     {
         myTimestampDecoder.calculateTimestamp(ts);
     }
-
-    /* Returns true if we have valid time stamps in the ETI*/
-    virtual bool sourceContainsTimestamp();
 
     virtual const std::vector<std::shared_ptr<SubchannelSource> > getSubchannels() const;
 
@@ -90,7 +99,6 @@ private:
     /* Transform the ETI TIST to a PPS offset in units of 1/16384000 s */
     uint32_t getPPSOffset();
 
-    void sync();
     int state;
     uint32_t nb_frames;
     uint16_t framesize;
@@ -108,6 +116,9 @@ private:
     std::vector<std::shared_ptr<SubchannelSource> > mySources;
 };
 
+/* The EdiReader extracts the necessary data using the EDI input library in
+ * lib/edi
+ */
 class EdiReader : public EtiSource, public EdiDecoder::DataCollector
 {
 public:
@@ -147,7 +158,7 @@ public:
 
     virtual void add_subchannel(const EdiDecoder::eti_stc_data& stc);
 
-    // Tell the ETIWriter that the AFPacket is complete
+    // Gets called by the EDI library to tell us that all data for a frame was given to us
     virtual void assemble(void);
 private:
     bool m_proto_valid = false;
@@ -172,11 +183,15 @@ private:
     std::map<uint8_t, std::shared_ptr<SubchannelSource> > m_sources;
 };
 
+/* The EDI input does not use the inputs defined in InputReader.h, as they were designed
+ * for ETI. It uses the EdiUdpInput which in turn uses a threaded receiver.
+ */
+
 class EdiUdpInput {
     public:
         EdiUdpInput(EdiDecoder::ETIDecoder& decoder);
 
-        int Open(const std::string& uri);
+        void Open(const std::string& uri);
 
         bool isEnabled(void) const { return m_enabled; }
 
@@ -190,7 +205,7 @@ class EdiUdpInput {
         bool m_enabled;
         int m_port;
 
-        UdpSocket m_sock;
+        UdpReceiver m_udp_rx;
         EdiDecoder::ETIDecoder& m_decoder;
 };
 
