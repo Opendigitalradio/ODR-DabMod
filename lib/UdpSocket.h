@@ -2,7 +2,7 @@
    Copyright (C) 2003, 2004, 2005, 2006, 2007, 2008, 2009 Her Majesty the
    Queen in Right of Canada (Communications Research Center Canada)
 
-   Copyright (C) 2016
+   Copyright (C) 2017
    Matthias P. Braendli, matthias.braendli@mpb.li
 
     http://www.opendigitalradio.org
@@ -24,8 +24,7 @@
    along with ODR-DabMux.  If not, see <http://www.gnu.org/licenses/>.
    */
 
-#ifndef _UDPSOCKET
-#define _UDPSOCKET
+#pragma once
 
 #ifdef HAVE_CONFIG_H
 #   include "config.h"
@@ -140,10 +139,6 @@ class UdpPacket
          */
         UdpPacket();
         UdpPacket(size_t initSize);
-        UdpPacket(const UdpPacket& packet) = delete;
-        const UdpPacket& operator=(const UdpPacket&) = delete;
-        UdpPacket(const UdpPacket&& packet) = delete;
-        const UdpPacket& operator=(const UdpPacket&&) = delete;
 
         /** Give the pointer to data.
          *  @return The pointer
@@ -177,4 +172,3 @@ class UdpPacket
         InetAddress address;
 };
 
-#endif // _UDPSOCKET
