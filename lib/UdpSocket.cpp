@@ -261,8 +261,9 @@ UdpReceiver::~UdpReceiver() {
     }
 }
 
-void UdpReceiver::start(int port) {
+void UdpReceiver::start(int port, size_t max_packets_queued) {
     m_port = port;
+    m_max_packets_queued = max_packets_queued;
     m_thread = std::thread(&UdpReceiver::m_run, this);
 }
 
@@ -299,7 +300,9 @@ void UdpReceiver::m_run()
                 // TODO replace fprintf
                 fprintf(stderr, "Warning, possible UDP truncation\n");
             }
-            m_packets.push(packet);
+
+            // If this blocks, the UDP socket will lose incoming packets
+            m_packets.push_wait_if_full(packet, m_max_packets_queued);
         }
         else
         {

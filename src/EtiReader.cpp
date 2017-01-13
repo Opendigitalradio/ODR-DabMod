@@ -545,7 +545,14 @@ void EdiUdpInput::Open(const std::string& uri)
         m_port = std::stoi(m[1].str());
 
         etiLog.level(info) << "EDI port :" << m_port;
-        m_udp_rx.start(m_port);
+
+        // The max_fragments_queued is only a protection against a runaway
+        // memory usage.
+        // Rough calculation:
+        // 300 seconds, 24ms per frame, up to 20 fragments per frame
+        const size_t max_fragments_queued = 20 * 300 * 1000 / 24;
+
+        m_udp_rx.start(m_port, max_fragments_queued);
         m_enabled = true;
     }
 }

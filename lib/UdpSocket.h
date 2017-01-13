@@ -184,7 +184,7 @@ class UdpReceiver {
         UdpReceiver operator=(const UdpReceiver&) = delete;
 
         // Start the receiver in a separate thread
-        void start(int port);
+        void start(int port, size_t max_packets_queued);
 
         // Get the data contained in a UDP packet, blocks if none available
         // In case of error, throws a runtime_error
@@ -194,6 +194,7 @@ class UdpReceiver {
         void m_run(void);
 
         int m_port;
+        size_t m_max_packets_queued;
         std::thread m_thread;
         std::atomic<bool> m_stop;
         ThreadsafeQueue<UdpPacket> m_packets;
