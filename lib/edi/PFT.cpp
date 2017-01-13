@@ -445,6 +445,22 @@ std::vector<uint8_t> AFBuilder::extractAF() const
     return _af_packet;
 }
 
+std::string AFBuilder::visualise() const
+{
+    stringstream ss;
+    ss << "|";
+    for (size_t i = 0; i < _Fcount; i++) {
+        if (_fragments.count(i)) {
+            ss << ".";
+        }
+        else {
+            ss << " ";
+        }
+    }
+    ss << "| " << AFBuilder::dar_to_string(canAttemptToDecode()) << " " << lifeTime;
+    return ss.str();
+}
+
 void PFT::pushPFTFrag(const Fragment &fragment)
 {
     // Start decoding the first pseq we receive. In normal
@@ -473,11 +489,12 @@ void PFT::pushPFTFrag(const Fragment &fragment)
     p.pushPFTFrag(fragment);
 
 #if 0
-    etiLog.log(debug, "After new frag with pseq %u, afbuilders: ", fragment.Pseq());
+    etiLog.log(debug, "Got frag %u:%u, afbuilders: ",
+            fragment.Pseq(), fragment.Findex());
     for (const auto &k : m_afbuilders) {
-        etiLog.log(debug, "%u ", k.first);
+        const bool isNextPseq = (m_next_pseq == k.first);
+        etiLog.level(debug) << (isNextPseq ? "->" : "  ") << k.first << " " << k.second.visualise();
     }
-    etiLog.log(debug, "\n");
 #endif
 }
 
@@ -494,21 +511,16 @@ std::vector<uint8_t> PFT::getNextAFPacket()
     }
 
     auto &builder = m_afbuilders.at(m_next_pseq);
-    //const auto nf = builder.numberOfFragments();
 
     using dar_t = AFBuilder::decode_attempt_result_t;
 
     if (builder.canAttemptToDecode() == dar_t::yes) {
-        //etiLog.log(debug, "pseq %d (%d %d/%d) yes\n",
-        //           m_next_pseq, lt, nf.first, nf.second);
         auto afpacket = builder.extractAF();
         assert(not afpacket.empty());
         incrementNextPseq();
         return afpacket;
     }
     else if (builder.canAttemptToDecode() == dar_t::maybe) {
-        //etiLog.log(debug, "pseq %d (%d %d/%d) maybe\n",
-        //           m_next_pseq, lt, nf.first, nf.second);
         if (builder.lifeTime > 0) {
             builder.lifeTime--;
         }
@@ -518,15 +530,13 @@ std::vector<uint8_t> PFT::getNextAFPacket()
             auto afpacket = builder.extractAF();
 
             if (afpacket.empty()) {
-                etiLog.log(debug,"pseq %d timed out after RS\n", m_next_pseq);
+                etiLog.log(debug,"pseq %d timed out after RS", m_next_pseq);
             }
             incrementNextPseq();
             return afpacket;
         }
     }
     else {
-        //etiLog.log(debug, "pseq %d (%d %d/%d) no\n",
-        //           m_next_pseq, lt, nf.first, nf.second);
         if (builder.lifeTime > 0) {
             builder.lifeTime--;
         }

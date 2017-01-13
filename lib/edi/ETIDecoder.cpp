@@ -406,7 +406,7 @@ bool ETIDecoder::decode_estn(const vector<uint8_t> &value, uint8_t n)
     return true;
 }
 
-bool ETIDecoder::decode_stardmy(const vector<uint8_t> &value)
+bool ETIDecoder::decode_stardmy(const vector<uint8_t>& /*value*/)
 {
     return true;
 }

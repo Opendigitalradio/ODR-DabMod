@@ -83,6 +83,15 @@ class AFBuilder
             no,    // Not enough fragments present to permit RS
         };
 
+        static std::string dar_to_string(decode_attempt_result_t dar) {
+            switch (dar) {
+                case decode_attempt_result_t::yes: return "y";
+                case decode_attempt_result_t::no: return "n";
+                case decode_attempt_result_t::maybe: return "m";
+            }
+            return "?";
+        }
+
         AFBuilder(pseq_t Pseq, findex_t Fcount, size_t lifetime);
 
         void pushPFTFrag(const Fragment &frag);
@@ -100,6 +109,8 @@ class AFBuilder
             numberOfFragments(void) const {
                 return {_fragments.size(), _Fcount};
             }
+
+        std::string visualise(void) const;
 
         /* The user of this instance can keep track of the lifetime of this
          * builder
