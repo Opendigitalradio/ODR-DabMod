@@ -2,7 +2,7 @@
    Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010 Her Majesty the
    Queen in Right of Canada (Communications Research Center Canada)
 
-   Copyright (C) 2014, 2015
+   Copyright (C) 2017
    Matthias P. Braendli, matthias.braendli@mpb.li
 
     http://opendigitalradio.org
@@ -194,6 +194,16 @@ void TimestampDecoder::updateTimestampEti(
 {
     updateTimestampPPS(pps);
     pushMNSCData(framephase, mnsc);
+    latestFCT = fct;
+}
+
+void TimestampDecoder::updateTimestampEdi(
+        uint32_t seconds_utc,
+        uint32_t pps, // In units of 1/16384000 s
+        int32_t fct)
+{
+    updateTimestampPPS(pps);
+    time_secs = seconds_utc;
     latestFCT = fct;
 }
 

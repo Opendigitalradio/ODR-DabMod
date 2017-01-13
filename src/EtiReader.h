@@ -122,11 +122,14 @@ private:
 class EdiReader : public EtiSource, public EdiDecoder::DataCollector
 {
 public:
+    EdiReader(
+            double& tist_offset_s,
+            unsigned tist_delay_stages);
+
     virtual unsigned getMode();
     virtual unsigned getFp();
-    virtual bool sourceContainsTimestamp() { return false; }
-    virtual void calculateTimestamp(struct frame_timestamp& ts)
-    { /* TODO */ }
+    virtual bool sourceContainsTimestamp();
+    virtual void calculateTimestamp(struct frame_timestamp& ts);
     virtual const std::vector<std::shared_ptr<SubchannelSource> > getSubchannels() const;
 
     virtual bool isFrameReady(void);
@@ -181,10 +184,13 @@ private:
     uint16_t m_rfu = 0xffff;
 
     std::map<uint8_t, std::shared_ptr<SubchannelSource> > m_sources;
+
+    TimestampDecoder m_timestamp_decoder;
 };
 
-/* The EDI input does not use the inputs defined in InputReader.h, as they were designed
- * for ETI. It uses the EdiUdpInput which in turn uses a threaded receiver.
+/* The EDI input does not use the inputs defined in InputReader.h, as they were
+ * designed for ETI. It uses the EdiUdpInput which in turn uses a threaded
+ * receiver.
  */
 
 class EdiUdpInput {

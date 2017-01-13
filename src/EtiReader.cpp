@@ -304,6 +304,13 @@ uint32_t EtiReader::getPPSOffset()
     return timestamp;
 }
 
+EdiReader::EdiReader(
+        double& tist_offset_s,
+        unsigned tist_delay_stages) :
+    m_timestamp_decoder(tist_offset_s, tist_delay_stages)
+{
+    rcs.enrol(&m_timestamp_decoder);
+}
 
 unsigned EdiReader::getMode()
 {
@@ -337,6 +344,19 @@ const std::vector<std::shared_ptr<SubchannelSource> > EdiReader::getSubchannels(
     }
 
     return sources;
+}
+
+bool EdiReader::sourceContainsTimestamp()
+{
+    if (not (m_frameReady and m_fc_valid)) {
+        throw std::runtime_error("Trying to get timestamp before it is ready");
+    }
+
+    return m_fc.tsta != 0xFFFFFF;
+}
+
+void EdiReader::calculateTimestamp(struct frame_timestamp& ts)
+{
 }
 
 bool EdiReader::isFrameReady()
@@ -493,13 +513,20 @@ void EdiReader::assemble()
     // Accept zero subchannels, because of an edge-case that can happen
     // during reconfiguration. See ETS 300 799 Clause 5.3.3
 
-    // TODO check time validity
+    if (m_utco == 0 and m_seconds == 0) {
+        // We don't support relative-only timestamps
+        m_fc.tsta = 0xFFFFFF; // disable TSTA
+    }
 
-    /* TODO timestamp
-    myTimestampDecoder.updateTimestampEti(
-            eti_fc.FP & 0x3,
-            eti_eoh.MNSC, getPPSOffset(), eti_fc.FCT);
-            */
+    /* According to Annex F
+     *  EDI = UTC + UTCO
+     * We need UTC = EDI - UTCO
+     */
+    auto utc_ts = m_seconds - m_utco;
+
+    m_timestamp_decoder.updateTimestampEdi(
+            utc_ts, m_fc.tsta, m_fc.fct());
+
     m_frameReady = true;
 }
 

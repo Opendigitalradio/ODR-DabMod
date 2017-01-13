@@ -2,7 +2,7 @@
    Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010 Her Majesty the
    Queen in Right of Canada (Communications Research Center Canada)
 
-   Copyright (C) 2014, 2015
+   Copyright (C) 2017
    Matthias P. Braendli, matthias.braendli@mpb.li
 
     http://opendigitalradio.org
@@ -24,8 +24,7 @@
    along with ODR-DabMod.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef TIMESTAMP_DECODER_H
-#define TIMESTAMP_DECODER_H
+#pragma once
 
 #include <queue>
 #include <memory>
@@ -97,7 +96,8 @@ struct frame_timestamp
     }
 };
 
-/* This module decodes MNSC time information */
+/* This module decodes MNSC time information from an ETI source and
+ * EDI time information*/
 class TimestampDecoder : public RemoteControllable
 {
     public:
@@ -135,10 +135,16 @@ class TimestampDecoder : public RemoteControllable
         /* Calculate the timestamp for the current frame. */
         void calculateTimestamp(struct frame_timestamp& ts);
 
-        /* Update timestamp data from data in ETI */
+        /* Update timestamp data from ETI */
         void updateTimestampEti(
                 int framephase,
                 uint16_t mnsc,
+                uint32_t pps, // In units of 1/16384000 s
+                int32_t fct);
+
+        /* Update timestamp data from EDI */
+        void updateTimestampEdi(
+                uint32_t seconds_utc,
                 uint32_t pps, // In units of 1/16384000 s
                 int32_t fct);
 
@@ -199,5 +205,4 @@ class TimestampDecoder : public RemoteControllable
 
 };
 
-#endif
 

@@ -699,7 +699,7 @@ int launch_modulator(int argc, char* argv[])
     }
 
 
-    EdiReader ediReader;
+    EdiReader ediReader(tist_offset_s, tist_delay_stages);
     EdiDecoder::ETIDecoder ediInput(ediReader);
     if (edi_max_delay_ms > 0.0f) {
         // setMaxDelay wants number of AF packets, which correspond to 24ms ETI frames

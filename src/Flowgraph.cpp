@@ -111,32 +111,6 @@ void Node::removeInputBuffer(Buffer::sptr& buffer)
     }
 }
 
-Edge::Edge(shared_ptr<Node>& srcNode, shared_ptr<Node>& dstNode) :
-    mySrcNode(srcNode),
-    myDstNode(dstNode)
-{
-    PDEBUG("Edge::Edge(srcNode(%s): %p, dstNode(%s): %p) @ %p\n",
-            srcNode->plugin()->name(), srcNode.get(),
-            dstNode->plugin()->name(), dstNode.get(),
-            this);
-
-    myBuffer = make_shared<Buffer>();
-    srcNode->addOutputBuffer(myBuffer);
-    dstNode->addInputBuffer(myBuffer);
-}
-
-
-Edge::~Edge()
-{
-    PDEBUG("Edge::~Edge() @ %p\n", this);
-
-    if (myBuffer) {
-        mySrcNode->removeOutputBuffer(myBuffer);
-        myDstNode->removeInputBuffer(myBuffer);
-    }
-}
-
-
 int Node::process()
 {
     PDEBUG("Node::process()\n");
@@ -178,12 +152,37 @@ int Node::process()
     return ret;
 }
 
+Edge::Edge(shared_ptr<Node>& srcNode, shared_ptr<Node>& dstNode) :
+    mySrcNode(srcNode),
+    myDstNode(dstNode)
+{
+    PDEBUG("Edge::Edge(srcNode(%s): %p, dstNode(%s): %p) @ %p\n",
+            srcNode->plugin()->name(), srcNode.get(),
+            dstNode->plugin()->name(), dstNode.get(),
+            this);
+
+    myBuffer = make_shared<Buffer>();
+    srcNode->addOutputBuffer(myBuffer);
+    dstNode->addInputBuffer(myBuffer);
+}
+
+
+Edge::~Edge()
+{
+    PDEBUG("Edge::~Edge() @ %p\n", this);
+
+    if (myBuffer) {
+        mySrcNode->removeOutputBuffer(myBuffer);
+        myDstNode->removeInputBuffer(myBuffer);
+    }
+}
+
+
 
 Flowgraph::Flowgraph() :
     myProcessTime(0)
 {
     PDEBUG("Flowgraph::Flowgraph() @ %p\n", this);
-
 }
 
 
