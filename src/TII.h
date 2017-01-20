@@ -58,13 +58,13 @@ class TIIError : public std::runtime_error {
             std::runtime_error(msg) {}
 };
 
-class TII : public ModCodec, public RemoteControllable
+class TII : public ModInput, public RemoteControllable
 {
     public:
         TII(unsigned int dabmode, tii_config_t& tii_config);
         virtual ~TII();
 
-        int process(Buffer* const dataIn, Buffer* dataOut);
+        int process(Buffer* dataOut);
         const char* name();
 
         /******* REMOTE CONTROL ********/

@@ -107,7 +107,7 @@ const int pattern_tm1_2_4[][8] = { // {{{
     {1,1,1,1,0,0,0,0} }; // }}}
 
 TII::TII(unsigned int dabmode, tii_config_t& tii_config) :
-    ModCodec(),
+    ModInput(),
     RemoteControllable("tii"),
     m_dabmode(dabmode),
     m_conf(tii_config),
@@ -176,14 +176,10 @@ const char* TII::name()
 }
 
 
-int TII::process(Buffer* const dataIn, Buffer* dataOut)
+int TII::process(Buffer* dataOut)
 {
-    PDEBUG("TII::process(dataIn: %p, dataOut: %p)\n",
-            dataIn, dataOut);
-
-    if ((dataIn != NULL) && (dataIn->getLength() != 0)) {
-        throw TIIError("TII::process input size not valid!");
-    }
+    PDEBUG("TII::process(dataOut: %p)\n",
+            dataOut);
 
     if (m_conf.enable and m_insert) {
         boost::mutex::scoped_lock lock(m_dataIn_mutex);
