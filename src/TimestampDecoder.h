@@ -121,7 +121,7 @@ class TimestampDecoder : public RemoteControllable
             time_secs = 0;
             latestFCT = 0;
             enableDecode = false;
-            full_timestamp_received_mnsc = false;
+            full_timestamp_received = false;
             gmtime_r(0, &temp_time);
             offset_changed = false;
 
@@ -193,8 +193,8 @@ class TimestampDecoder : public RemoteControllable
          */
         bool enableDecode;
 
-        /* Disable timstamps until full time has been received in mnsc */
-        bool full_timestamp_received_mnsc;
+        /* Disable timstamps until full time has been received */
+        bool full_timestamp_received;
 
         /* when pipelining, we must shift the calculated timestamps
          * through this queue. Otherwise, it would not be possible to

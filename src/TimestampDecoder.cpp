@@ -34,8 +34,8 @@
 #include "Eti.h"
 #include "Log.h"
 
-//#define MDEBUG(fmt, args...) fprintf (LOG, "*****" fmt , ## args) 
-#define MDEBUG(fmt, args...) PDEBUG(fmt, ## args) 
+//#define MDEBUG(fmt, args...) fprintf (LOG, "*****" fmt , ## args)
+#define MDEBUG(fmt, args...) PDEBUG(fmt, ## args)
 
 
 void TimestampDecoder::calculateTimestamp(struct frame_timestamp& ts)
@@ -44,7 +44,7 @@ void TimestampDecoder::calculateTimestamp(struct frame_timestamp& ts)
         std::make_shared<struct frame_timestamp>();
 
     /* Push new timestamp into queue */
-    ts_queued->timestamp_valid = full_timestamp_received_mnsc;
+    ts_queued->timestamp_valid = full_timestamp_received;
     ts_queued->timestamp_sec = time_secs;
     ts_queued->timestamp_pps = time_pps;
     ts_queued->fct = latestFCT;
@@ -144,7 +144,7 @@ void TimestampDecoder::pushMNSCData(int framephase, uint16_t mnsc)
 
             if (enableDecode)
             {
-                full_timestamp_received_mnsc = true;
+                full_timestamp_received = true;
                 updateTimestampSeconds(mktime(&temp_time));
             }
             break;
@@ -205,6 +205,7 @@ void TimestampDecoder::updateTimestampEdi(
     updateTimestampPPS(pps);
     time_secs = seconds_utc;
     latestFCT = fct;
+    full_timestamp_received = true;
 }
 
 void TimestampDecoder::set_parameter(

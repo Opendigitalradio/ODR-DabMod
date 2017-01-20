@@ -88,10 +88,7 @@ public:
     int loadEtiData(const Buffer& dataIn);
 
     virtual bool sourceContainsTimestamp();
-    virtual void calculateTimestamp(struct frame_timestamp& ts)
-    {
-        myTimestampDecoder.calculateTimestamp(ts);
-    }
+    virtual void calculateTimestamp(struct frame_timestamp& ts);
 
     virtual const std::vector<std::shared_ptr<SubchannelSource> > getSubchannels() const;
 

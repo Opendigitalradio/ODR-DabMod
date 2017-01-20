@@ -291,6 +291,11 @@ bool EtiReader::sourceContainsTimestamp()
     /* See ETS 300 799, Annex C.2.2 */
 }
 
+void EtiReader::calculateTimestamp(struct frame_timestamp& ts)
+{
+    myTimestampDecoder.calculateTimestamp(ts);
+}
+
 uint32_t EtiReader::getPPSOffset()
 {
     if (!sourceContainsTimestamp()) {
@@ -357,6 +362,7 @@ bool EdiReader::sourceContainsTimestamp()
 
 void EdiReader::calculateTimestamp(struct frame_timestamp& ts)
 {
+    m_timestamp_decoder.calculateTimestamp(ts);
 }
 
 bool EdiReader::isFrameReady()
@@ -521,8 +527,12 @@ void EdiReader::assemble()
     /* According to Annex F
      *  EDI = UTC + UTCO
      * We need UTC = EDI - UTCO
+     *
+     * The seconds value is given in number of seconds since
+     * 1.1.2000
      */
-    auto utc_ts = m_seconds - m_utco;
+    const std::time_t posix_timestamp_1_jan_2000 = 946684800;
+    auto utc_ts = posix_timestamp_1_jan_2000 + m_seconds - m_utco;
 
     m_timestamp_decoder.updateTimestampEdi(
             utc_ts, m_fc.tsta, m_fc.fct());
