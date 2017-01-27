@@ -136,9 +136,6 @@ OutputUHD::OutputUHD(
     time_last_frame.tv_sec = 0;
 
 
-#if FAKE_UHD
-    MDEBUG("OutputUHD:Using fake UHD output");
-#else
     std::stringstream device;
     device << myConf.device;
 
@@ -235,7 +232,6 @@ OutputUHD::OutputUHD(
 
     // preparing output thread worker data
     uwd.myUsrp = myUsrp;
-#endif
 
     uwd.sampleRate = myConf.sampleRate;
     uwd.sourceContainsTimestamp = false;
@@ -609,10 +605,8 @@ void UHDWorker::process()
 {
     last_tx_time_initialised = false;
 
-#if FAKE_UHD == 0
     uhd::stream_args_t stream_args("fc32"); //complex floats
     myTxStream = uwd->myUsrp->get_tx_stream(stream_args);
-#endif
 
     md.start_of_burst = false;
     md.end_of_burst   = false;
@@ -781,12 +775,7 @@ void UHDWorker::tx_frame(const struct UHDWorkerFrameData *frame, bool ts_update)
     const size_t sizeIn = frame->buf.size() / sizeof(complexf);
     const complexf* in_data = reinterpret_cast<const complexf*>(&frame->buf[0]);
 
-#if FAKE_UHD == 0
     size_t usrp_max_num_samps = myTxStream->get_max_num_samps();
-#else
-    size_t usrp_max_num_samps = 2048; // arbitrarily chosen
-#endif
-
     size_t num_acc_samps = 0; //number of accumulated samples
     while (uwd->running && !uwd->muting && (num_acc_samps < sizeIn)) {
         size_t samps_to_send = std::min(sizeIn - num_acc_samps, usrp_max_num_samps);
@@ -801,17 +790,11 @@ void UHDWorker::tx_frame(const struct UHDWorkerFrameData *frame, bool ts_update)
                 samps_to_send <= usrp_max_num_samps );
 
 
-#if FAKE_UHD
-        // This is probably very approximate
-        usleep( (1000000 / uwd->sampleRate) * samps_to_send);
-        size_t num_tx_samps = samps_to_send;
-#else
         //send a single packet
         size_t num_tx_samps = myTxStream->send(
                 &in_data[num_acc_samps],
                 samps_to_send, md_tx, tx_timeout);
         etiLog.log(trace, "UHD,sent %zu of %zu", num_tx_samps, samps_to_send);
-#endif
 
         num_acc_samps += num_tx_samps;
 
@@ -830,7 +813,6 @@ void UHDWorker::tx_frame(const struct UHDWorkerFrameData *frame, bool ts_update)
 
 void UHDWorker::print_async_metadata(const struct UHDWorkerFrameData *frame)
 {
-#if FAKE_UHD == 0
     uhd::async_metadata_t async_md;
     if (uwd->myUsrp->get_device()->recv_async_msg(async_md, 0)) {
         const char* uhd_async_message = "";
@@ -871,7 +853,6 @@ void UHDWorker::print_async_metadata(const struct UHDWorkerFrameData *frame)
 
         }
     }
-#endif
 }
 
 // =======================================

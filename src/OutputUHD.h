@@ -35,8 +35,6 @@ DESCRIPTION:
 
 #pragma once
 
-#define FAKE_UHD 0
-
 #ifdef HAVE_CONFIG_H
 #   include <config.h>
 #endif
@@ -94,9 +92,7 @@ enum refclk_lock_loss_behaviour_t { CRASH, IGNORE };
 struct UHDWorkerData {
     bool running;
 
-#if FAKE_UHD == 0
     uhd::usrp::multi_usrp::sptr myUsrp;
-#endif
     unsigned sampleRate;
 
     bool sourceContainsTimestamp;
