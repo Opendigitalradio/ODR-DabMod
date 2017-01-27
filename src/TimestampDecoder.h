@@ -126,6 +126,7 @@ class TimestampDecoder : public RemoteControllable
             offset_changed = false;
 
             RC_ADD_PARAMETER(offset, "TIST offset [s]");
+            RC_ADD_PARAMETER(timestamp, "FCT and timestamp [s]");
 
             etiLog.level(info) << "Setting up timestamp decoder with " <<
                 timestamp_offset << " offset";

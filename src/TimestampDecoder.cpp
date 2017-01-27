@@ -221,6 +221,9 @@ void TimestampDecoder::set_parameter(
         ss >> timestamp_offset;
         offset_changed = true;
     }
+    else if (parameter == "timestamp") {
+        throw ParameterError("timestamp is read-only");
+    }
     else {
         stringstream ss;
         ss << "Parameter '" << parameter
@@ -237,6 +240,16 @@ const std::string TimestampDecoder::get_parameter(
     stringstream ss;
     if (parameter == "offset") {
         ss << timestamp_offset;
+    }
+    else if (parameter == "timestamp") {
+        if (full_timestamp_received) {
+            ss.setf(std::ios_base::fixed, std::ios_base::floatfield);
+            ss << time_secs + ((double)time_pps / 16384000.0) <<
+                " for frame FCT " << latestFCT;
+        }
+        else {
+            throw ParameterError("Not available yet");
+        }
     }
     else {
         ss << "Parameter '" << parameter <<
