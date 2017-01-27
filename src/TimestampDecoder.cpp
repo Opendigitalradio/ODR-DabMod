@@ -202,8 +202,8 @@ void TimestampDecoder::updateTimestampEdi(
         uint32_t pps, // In units of 1/16384000 s
         int32_t fct)
 {
-    updateTimestampPPS(pps);
     time_secs = seconds_utc;
+    time_pps  = pps;
     latestFCT = fct;
     full_timestamp_received = true;
 }

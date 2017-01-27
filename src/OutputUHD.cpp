@@ -684,7 +684,7 @@ void UHDWorker::handle_frame(const struct UHDWorkerFrameData *frame)
             uint32_t expected_sec = last_tx_second + increment / 16384000ul;
             uint32_t expected_pps = last_tx_pps + increment % 16384000ul;
 
-            while (expected_pps > 16384000) {
+            while (expected_pps >= 16384000) {
                 expected_sec++;
                 expected_pps -= 16384000;
             }
@@ -693,10 +693,12 @@ void UHDWorker::handle_frame(const struct UHDWorkerFrameData *frame)
                     expected_pps != tx_pps) {
                 etiLog.level(warn) << "OutputUHD: timestamp irregularity!" <<
                     std::fixed <<
-                    " Expected " << expected_sec << "+" <<
-                    (double)expected_pps/16384000.0 <<
-                    " Got " << tx_second << "+" <<
-                    (double)tx_pps/16384000.0;
+                    " Expected " <<
+                    expected_sec << "+" << (double)expected_pps/16384000.0 <<
+                    "(" << expected_pps << ")" <<
+                    " Got " <<
+                    tx_second << "+" << (double)tx_pps/16384000.0 <<
+                    "(" << tx_pps << ")";
 
                 timestamp_discontinuity = true;
             }

@@ -170,6 +170,9 @@ class TimestampDecoder : public RemoteControllable
          * the timestamp.
          *
          * pps is in units of 1/16384000 s
+         *
+         * This function also takes care of updating the second when
+         * the pps rolls over.
          */
         void updateTimestampPPS(uint32_t pps);
 
