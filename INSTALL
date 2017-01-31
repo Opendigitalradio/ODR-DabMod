@@ -2,7 +2,7 @@ Required dependencies:
 ======================
 
     * A C++11 capable compiler
-    * Boost 1.41 or later
+    * Boost 1.54 or later
     * FFTW 3.x
     * Optional UHD for USRP
     * Optional ZeroMQ http://www.zeromq.org
