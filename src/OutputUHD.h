@@ -182,14 +182,14 @@ struct OutputUHDConfig {
     // The USRP1 can accept two daughterboards
     std::string subDevice; // e.g. A:0
 
-    long masterClockRate;
-    unsigned sampleRate;
-    double frequency;
-    double txgain;
-    bool enableSync;
-    bool muteNoTimestamps;
-    unsigned dabMode;
-    unsigned maxGPSHoldoverTime;
+    long masterClockRate = 32768000;
+    unsigned sampleRate = 2048000;
+    double frequency = 0.0;
+    double txgain = 0.0;
+    bool enableSync = false;
+    bool muteNoTimestamps = false;
+    unsigned dabMode = 0;
+    unsigned maxGPSHoldoverTime = 0;
 
     /* allowed values : auto, int, sma, mimo */
     std::string refclk_src;
@@ -204,10 +204,10 @@ struct OutputUHDConfig {
     refclk_lock_loss_behaviour_t refclk_lock_loss_behaviour;
 
     // muting can only be changed using the remote control
-    bool muting;
+    bool muting = false;
 
     // static delay in microseconds
-    int staticDelayUs;
+    int staticDelayUs = 0;
 };
 
 
