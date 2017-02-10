@@ -5,6 +5,7 @@ Required dependencies:
     * Boost 1.54 or later
     * FFTW 3.x
     * Optional UHD for USRP
+    * Optional SoapySDR (see below)
     * Optional ZeroMQ http://www.zeromq.org
 
 Simple install procedure:
@@ -48,3 +49,19 @@ Nearly as simple install procedure using repository:
         % aclocal && automake --gnu --add-missing && autoconf
     * Then use ./configure as above
 
+SoapySDR support and required dependencies
+==========================================
+SoapySDR is a vendor-neutral library to drive SDR devices. It can be used to
+drive the HackRF and the LimeSDR among others.
+
+Required dependencies that need to be installed are, in order:
+
+1. SoapySDR itself from https://github.com/pothosware/SoapySDR
+1. The LimeSuite for the LimeSDR from https://github.com/myriadrf/LimeSuite
+1. HackRF support for SoapySDR from https://github.com/pothosware/SoapyHackRF
+
+ODR-DabMod will automatically recognise if the SoapySDR library is installed on
+your system, and will print at the end of ./configure if support is enabled or
+not.
+
+A configuration example is available in doc/example.ini
