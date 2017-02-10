@@ -105,9 +105,11 @@ AM_CONDITIONAL([IS_GIT_REPO], [test -d '.git'])
 # Defines for config.h
 AX_PTHREAD([], AC_MSG_ERROR([requires pthread]))
 
-AC_SUBST([CFLAGS], ["$EXTRA $FFTW_CFLAGS $PTHREAD_CFLAGS"])
-AC_SUBST([CXXFLAGS], ["$CXXFLAGS $EXTRA $FFTW_CFLAGS $PTHREAD_CFLAGS"])
-AC_SUBST([LIBS], ["$FFTW_LIBS $PTHREAD_LIBS $ZMQ_LIBS"])
+PKG_CHECK_MODULES([SOAPYSDR], [SoapySDR], enable_soapysdr=yes, enable_soapysdr=no)
+
+AC_SUBST([CFLAGS], ["$EXTRA $FFTW_CFLAGS $SOAPYSDR_CFLAGS $PTHREAD_CFLAGS"])
+AC_SUBST([CXXFLAGS], ["$CXXFLAGS $EXTRA $FFTW_CFLAGS $SOAPYSDR_CFLAGS $PTHREAD_CFLAGS"])
+AC_SUBST([LIBS], ["$FFTW_LIBS $SOAPYSDR_LIBS $PTHREAD_LIBS $ZMQ_LIBS"])
 
 # Checks for UHD.
 AS_IF([test "x$enable_output_uhd" = "xyes"],
@@ -116,6 +118,9 @@ AS_IF([test "x$enable_output_uhd" = "xyes"],
 
 AS_IF([test "x$enable_output_uhd" = "xyes"],
       [AC_DEFINE(HAVE_OUTPUT_UHD, [1], [Define if UHD output is enabled])])
+
+AS_IF([test "x$enable_soapysdr" = "xyes"],
+      [AC_DEFINE(HAVE_SOAPYSDR, [1], [Define if SoapySDR output is enabled])])
 
 AX_BOOST_BASE([1.54.0], [], AC_MSG_ERROR([BOOST 1.54 or later is required]))
 AC_CHECK_LIB([boost_system], [main], [], [AC_MSG_ERROR([library boost_system is missing])])
@@ -192,7 +197,7 @@ echo "***********************************************"
 echo
 enabled=""
 disabled=""
-for feat in debug prof trace output_uhd zeromq
+for feat in debug prof trace output_uhd zeromq soapysdr
 do
     eval var=\$enable_$feat
     AS_IF([test "x$var" = "xyes"],

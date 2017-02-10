@@ -71,9 +71,6 @@ DESCRIPTION:
 // frames are too far in the future
 #define TIMESTAMP_MARGIN_FUTURE 0.5
 
-// Maximum number of frames that can wait in uwd.frames
-#define FRAMES_MAX_SIZE 2
-
 typedef std::complex<float> complexf;
 
 // Each frame contains one OFDM frame, and its

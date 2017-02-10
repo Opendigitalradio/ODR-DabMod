@@ -39,6 +39,9 @@
 #if defined(HAVE_OUTPUT_UHD)
 #   include "OutputUHD.h"
 #endif
+#if defined(HAVE_SOAPYSDR)
+#   include "OutputSoapy.h"
+#endif
 #include "OutputZeroMQ.h"
 #include "InputReader.h"
 #include "PcDebug.h"
@@ -140,6 +143,7 @@ int launch_modulator(int argc, char* argv[])
     int useFileOutput = 0;
     std::string fileOutputFormat = "complexf";
     int useUHDOutput = 0;
+    int useSoapyOutput = 0;
 
     size_t outputRate = 2048000;
     size_t clockRate = 0;
@@ -169,6 +173,10 @@ int launch_modulator(int argc, char* argv[])
 
 #if defined(HAVE_OUTPUT_UHD)
     OutputUHDConfig outputuhd_conf;
+#endif
+
+#if defined(HAVE_SOAPYSDR)
+    OutputSoapyConfig outputsoapy_conf;
 #endif
 
     modulator_data m;
@@ -311,6 +319,9 @@ int launch_modulator(int argc, char* argv[])
 #endif
 #if defined(HAVE_OUTPUT_UHD)
         "output_uhd " <<
+#endif
+#if defined(HAVE_SOAPYSDR)
+        "output_soapysdr " <<
 #endif
 #if defined(__FAST_MATH__)
         "fast-math" <<
@@ -485,50 +496,7 @@ int launch_modulator(int argc, char* argv[])
                 throw std::runtime_error("Configuration error");
             }
             else if (outputuhd_conf.frequency == 0) {
-                double freq;
-                if      (chan == "5A") freq = 174928000;
-                else if (chan == "5B") freq = 176640000;
-                else if (chan == "5C") freq = 178352000;
-                else if (chan == "5D") freq = 180064000;
-                else if (chan == "6A") freq = 181936000;
-                else if (chan == "6B") freq = 183648000;
-                else if (chan == "6C") freq = 185360000;
-                else if (chan == "6D") freq = 187072000;
-                else if (chan == "7A") freq = 188928000;
-                else if (chan == "7B") freq = 190640000;
-                else if (chan == "7C") freq = 192352000;
-                else if (chan == "7D") freq = 194064000;
-                else if (chan == "8A") freq = 195936000;
-                else if (chan == "8B") freq = 197648000;
-                else if (chan == "8C") freq = 199360000;
-                else if (chan == "8D") freq = 201072000;
-                else if (chan == "9A") freq = 202928000;
-                else if (chan == "9B") freq = 204640000;
-                else if (chan == "9C") freq = 206352000;
-                else if (chan == "9D") freq = 208064000;
-                else if (chan == "10A") freq = 209936000;
-                else if (chan == "10B") freq = 211648000;
-                else if (chan == "10C") freq = 213360000;
-                else if (chan == "10D") freq = 215072000;
-                else if (chan == "11A") freq = 216928000;
-                else if (chan == "11B") freq = 218640000;
-                else if (chan == "11C") freq = 220352000;
-                else if (chan == "11D") freq = 222064000;
-                else if (chan == "12A") freq = 223936000;
-                else if (chan == "12B") freq = 225648000;
-                else if (chan == "12C") freq = 227360000;
-                else if (chan == "12D") freq = 229072000;
-                else if (chan == "13A") freq = 230784000;
-                else if (chan == "13B") freq = 232496000;
-                else if (chan == "13C") freq = 234208000;
-                else if (chan == "13D") freq = 235776000;
-                else if (chan == "13E") freq = 237488000;
-                else if (chan == "13F") freq = 239200000;
-                else {
-                    std::cerr << "       UHD output: channel " << chan << " does not exist in table\n";
-                    throw std::out_of_range("UHD channel selection error");
-                }
-                outputuhd_conf.frequency = freq;
+                outputuhd_conf.frequency = parseChannel(chan);
             }
             else if (outputuhd_conf.frequency != 0 && chan != "") {
                 std::cerr << "       UHD output: cannot define both frequency and channel.\n";
@@ -556,6 +524,31 @@ int launch_modulator(int argc, char* argv[])
             outputuhd_conf.maxGPSHoldoverTime = pt.get("uhdoutput.max_gps_holdover_time", 0);
 
             useUHDOutput = 1;
+        }
+#endif
+#if defined(HAVE_SOAPYSDR)
+        else if (output_selected == "soapysdr") {
+            outputsoapy_conf.device = pt.get("soapyoutput.device", "");
+            outputsoapy_conf.masterClockRate = pt.get<long>("soapyoutput.master_clock_rate", 0);
+
+            outputsoapy_conf.txgain = pt.get("soapyoutput.txgain", 0.0);
+            outputsoapy_conf.frequency = pt.get<double>("soapyoutput.frequency", 0);
+            std::string chan = pt.get<std::string>("soapyoutput.channel", "");
+            outputsoapy_conf.dabMode = dabMode;
+
+            if (outputsoapy_conf.frequency == 0 && chan == "") {
+                std::cerr << "       soapy output enabled, but neither frequency nor channel defined.\n";
+                throw std::runtime_error("Configuration error");
+            }
+            else if (outputsoapy_conf.frequency == 0) {
+                outputsoapy_conf.frequency =  parseChannel(chan);
+            }
+            else if (outputsoapy_conf.frequency != 0 && chan != "") {
+                std::cerr << "       soapy output: cannot define both frequency and channel.\n";
+                throw std::runtime_error("Configuration error");
+            }
+
+            useSoapyOutput = 1;
         }
 #endif
 #if defined(HAVE_ZEROMQ)
@@ -649,7 +642,7 @@ int launch_modulator(int argc, char* argv[])
         throw std::invalid_argument("Invalid command line options");
     }
 
-    if (!useFileOutput && !useUHDOutput && !useZeroMQOutput) {
+    if (!useFileOutput && !useUHDOutput && !useZeroMQOutput && !useSoapyOutput) {
         etiLog.level(error) << "Output not specified";
         fprintf(stderr, "Must specify output !");
         throw std::runtime_error("Configuration error");
@@ -677,6 +670,15 @@ int launch_modulator(int argc, char* argv[])
                 outputuhd_conf.masterClockRate,
                 outputuhd_conf.refclk_src.c_str(),
                 outputuhd_conf.pps_src.c_str());
+    }
+#endif
+#if defined(HAVE_SOAPYSDR)
+    else if (useSoapyOutput) {
+        fprintf(stderr, " SoapySDR\n"
+                        "  Device: %s\n"
+                        "  master_clock_rate: %ld\n",
+                outputsoapy_conf.device.c_str(),
+                outputsoapy_conf.masterClockRate);
     }
 #endif
     else if (useZeroMQOutput) {
@@ -763,6 +765,15 @@ int launch_modulator(int argc, char* argv[])
         rcs.enrol((OutputUHD*)output.get());
     }
 #endif
+#if defined(HAVE_SOAPYSDR)
+    else if (useSoapyOutput) {
+        /* We normalise the same way as for the UHD output */
+        normalise = 1.0f / normalise_factor;
+        outputsoapy_conf.sampleRate = outputRate;
+        output = make_shared<OutputSoapy>(outputsoapy_conf);
+        rcs.enrol((OutputSoapy*)output.get());
+    }
+#endif
 #if defined(HAVE_ZEROMQ)
     else if (useZeroMQOutput) {
         /* We normalise the same way as for the UHD output */
@@ -810,6 +821,11 @@ int launch_modulator(int argc, char* argv[])
 #if defined(HAVE_OUTPUT_UHD)
         if (useUHDOutput) {
             ((OutputUHD*)output.get())->setETISource(modulator->getEtiSource());
+        }
+#endif
+#if defined(HAVE_SOAPYSDR)
+        if (useSoapyOutput) {
+            ((OutputSoapy*)output.get())->setETISource(modulator->getEtiSource());
         }
 #endif
 
@@ -861,6 +877,11 @@ int launch_modulator(int argc, char* argv[])
 #if defined(HAVE_OUTPUT_UHD)
             if (useUHDOutput) {
                 ((OutputUHD*)output.get())->setETISource(modulator->getEtiSource());
+            }
+#endif
+#if defined(HAVE_SOAPYSDR)
+            if (useSoapyOutput) {
+                ((OutputSoapy*)output.get())->setETISource(modulator->getEtiSource());
             }
 #endif
 

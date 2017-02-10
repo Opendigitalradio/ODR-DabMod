@@ -78,6 +78,8 @@ odr_dabmod_SOURCES  = src/DabMod.cpp \
 					  src/TimestampDecoder.cpp \
 					  src/OutputUHD.cpp \
 					  src/OutputUHD.h \
+					  src/OutputSoapy.cpp \
+					  src/OutputSoapy.h \
 					  src/InputMemory.cpp \
 					  src/InputMemory.h \
 					  src/InputFileReader.cpp \

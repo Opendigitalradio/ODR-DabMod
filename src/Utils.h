@@ -3,7 +3,7 @@
    Her Majesty the Queen in Right of Canada (Communications Research
    Center Canada)
 
-   Copyright (C) 2015
+   Copyright (C) 2017
    Matthias P. Braendli, matthias.braendli@mpb.li
 
     http://opendigitalradio.org
@@ -25,8 +25,7 @@
    along with ODR-DabMod.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __UTILS_H_
-#define __UTILS_H_
+#pragma once
 
 #ifdef HAVE_CONFIG_H
 #   include "config.h"
@@ -36,6 +35,7 @@
 #include <unistd.h>
 #include <stdio.h>
 #include <time.h>
+#include <string>
 
 void printUsage(char* progName);
 
@@ -62,5 +62,6 @@ int set_realtime_prio(int prio);
 
 void set_thread_name(const char *name);
 
-#endif
+// Convert a channel like 10A to a frequency
+double parseChannel(const std::string& chan);
 
