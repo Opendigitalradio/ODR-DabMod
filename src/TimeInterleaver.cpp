@@ -37,8 +37,7 @@ TimeInterleaver::TimeInterleaver(size_t framesize)
         throw std::invalid_argument("framesize must be 16 bits multiple");
     }
     for (int i = 0; i < 16; ++i) {
-        std::vector<unsigned char> data(framesize, 0);
-        d_history.push_back(data);
+        d_history.emplace_back(framesize, 0);
     }
 }
 
@@ -54,11 +53,16 @@ int TimeInterleaver::process(Buffer* const dataIn, Buffer* dataOut)
     PDEBUG("TimeInterleaver::process(dataIn: %p, dataOut: %p)\n",
             dataIn, dataOut);
 
+    if (dataIn->getLength() != d_framesize) {
+        throw std::invalid_argument("Interleaver buffer input size " +
+                std::to_string(dataIn->getLength()) + " expected " +
+                std::to_string(d_framesize));
+    }
+
     dataOut->setLength(dataIn->getLength());
     const unsigned char* in = reinterpret_cast<const unsigned char*>(dataIn->getData());
     unsigned char* out = reinterpret_cast<unsigned char*>(dataOut->getData());
 
-    
     for (size_t i = 0; i < dataOut->getLength();) {
         d_history.push_front(d_history.back());
         d_history.pop_back();
@@ -87,6 +91,6 @@ int TimeInterleaver::process(Buffer* const dataIn, Buffer* dataOut)
             ++j;
         }
     }
-    
+
     return dataOut->getLength();
 }
