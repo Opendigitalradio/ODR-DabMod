@@ -302,7 +302,7 @@ int DabModulator::process(Buffer* dataOut)
             auto subchConv = make_shared<ConvEncoder>(subchSizeIn);
 
             // Configuring puncturing encoder
-            auto subchPunc = make_shared<PuncturingEncoder>();
+            auto subchPunc = make_shared<PuncturingEncoder>(subchannel->framesizeCu());
 
             for (const auto& rule : subchannel->get_rules()) {
                 PDEBUG(" Adding rule:\n");

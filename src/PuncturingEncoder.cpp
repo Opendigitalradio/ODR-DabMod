@@ -35,12 +35,23 @@
 
 PuncturingEncoder::PuncturingEncoder() :
     ModCodec(),
+    d_num_cu(0),
     d_in_block_size(0),
     d_out_block_size(0),
     d_tail_rule()
 {
     PDEBUG("PuncturingEncoder() @ %p\n", this);
+}
 
+PuncturingEncoder::PuncturingEncoder(
+        size_t num_cu) :
+    ModCodec(),
+    d_num_cu(num_cu),
+    d_in_block_size(0),
+    d_out_block_size(0),
+    d_tail_rule()
+{
+    PDEBUG("PuncturingEncoder(%zu) @ %p\n", num_cu, this);
 }
 
 void PuncturingEncoder::adjust_item_size()
@@ -104,12 +115,29 @@ int PuncturingEncoder::process(Buffer* const dataIn, Buffer* dataOut)
     PDEBUG(" in block size: %zu\n", d_in_block_size);
     PDEBUG(" out block size: %zu\n", d_out_block_size);
 
+    if (d_num_cu > 0) {
+        if (d_num_cu * 8 == d_out_block_size + 1) {
+            /* EN 300 401 Table 31 in 11.3.1 UEP coding specifies
+             * that we need one byte of padding
+             */
+            d_out_block_size = d_num_cu * 8;
+        }
+
+        if (d_num_cu * 8 != d_out_block_size) {
+            throw std::runtime_error(
+                    "PuncturingEncoder encoder initialisation failed. "
+                    " CU: " + std::to_string(d_num_cu) +
+                    " block_size: " + std::to_string(d_out_block_size));
+        }
+    }
+
     dataOut->setLength(d_out_block_size);
     const unsigned char* in = reinterpret_cast<const unsigned char*>(dataIn->getData());
     unsigned char* out = reinterpret_cast<unsigned char*>(dataOut->getData());
 
     if (dataIn->getLength() != d_in_block_size) {
-        throw std::runtime_error("PuncturingEncoder::process wrong input size");
+        throw std::runtime_error(
+                "PuncturingEncoder::process wrong input size");
     }
 
     if (d_tail_rule) {
@@ -167,7 +195,8 @@ int PuncturingEncoder::process(Buffer* const dataIn, Buffer* dataOut)
             ++out_count;
         }
     }
-    for (size_t i = d_out_block_size; i < dataOut->getLength(); ++i) {
+
+    for (size_t i = out_count; i < dataOut->getLength(); ++i) {
         out[out_count++] = 0;
     }
 

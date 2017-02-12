@@ -2,7 +2,7 @@
    Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010, 2011 Her Majesty
    the Queen in Right of Canada (Communications Research Center Canada)
 
-   Copyright (C) 2016
+   Copyright (C) 2017
    Matthias P. Braendli, matthias.braendli@mpb.li
 
     http://opendigitalradio.org
@@ -52,6 +52,8 @@ public:
     size_t framesizeCu() const;
     size_t bitrate() const;
     size_t protection() const;
+
+    /* Return 1 if long form is used, 0 otherwise */
     size_t protectionForm() const;
     size_t protectionLevel() const;
     size_t protectionOption() const;

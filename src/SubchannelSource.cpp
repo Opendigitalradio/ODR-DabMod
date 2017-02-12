@@ -2,7 +2,7 @@
    Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010, 2011 Her Majesty
    the Queen in Right of Canada (Communications Research Center Canada)
 
-   Copyright (C) 2016
+   Copyright (C) 2017
    Matthias P. Braendli, matthias.braendli@mpb.li
 
     http://opendigitalradio.org
@@ -26,6 +26,7 @@
 
 #include "SubchannelSource.h"
 #include "PcDebug.h"
+#include "Log.h"
 
 #include <stdexcept>
 #include <sys/types.h>
@@ -159,8 +160,9 @@ SubchannelSource::SubchannelSource(
             throw std::runtime_error("SubchannelSource::SubchannelSource "
                     "unknown protection option!");
         }
-    } else {
-        bool error = false;
+    }
+    else {
+        bool rule_error = false;
         switch (bitrate()) {
         case 32:
             switch (protectionLevel()) {
@@ -193,7 +195,7 @@ SubchannelSource::SubchannelSource(
                 d_puncturing_rules.emplace_back(17 * 16, P2 );
                 break;
             default:
-                error = true;
+                rule_error = true;
             }
             break;
         case 48:
@@ -229,7 +231,7 @@ SubchannelSource::SubchannelSource(
                 d_puncturing_rules.emplace_back(3  * 16, P3 );
                 break;
             default:
-                error = true;
+                rule_error = true;
             }
             break;
         case 56:
@@ -259,7 +261,7 @@ SubchannelSource::SubchannelSource(
                 d_puncturing_rules.emplace_back(3  * 16, P3 );
                 break;
             default:
-                error = true;
+                rule_error = true;
             }
             break;
         case 64:
@@ -294,7 +296,7 @@ SubchannelSource::SubchannelSource(
                 d_puncturing_rules.emplace_back(2  * 16, P3 );
                 break;
             default:
-                error = true;
+                rule_error = true;
             }
             break;
         case 80:
@@ -330,7 +332,7 @@ SubchannelSource::SubchannelSource(
                 d_puncturing_rules.emplace_back(3  * 16, P3 );
                 break;
             default:
-                error = true;
+                rule_error = true;
             }
             break;
         case 96:
@@ -366,7 +368,7 @@ SubchannelSource::SubchannelSource(
                 d_puncturing_rules.emplace_back(3  * 16, P4 );
                 break;
             default:
-                error = true;
+                rule_error = true;
             }
             break;
         case 112:
@@ -396,7 +398,7 @@ SubchannelSource::SubchannelSource(
                 d_puncturing_rules.emplace_back(3  * 16, P5 );
                 break;
             default:
-                error = true;
+                rule_error = true;
             }
             break;
         case 128:
@@ -432,7 +434,7 @@ SubchannelSource::SubchannelSource(
                 d_puncturing_rules.emplace_back(3  * 16, P4 );
                 break;
             default:
-                error = true;
+                rule_error = true;
             }
             break;
         case 160:
@@ -468,7 +470,7 @@ SubchannelSource::SubchannelSource(
                 d_puncturing_rules.emplace_back(3  * 16, P4 );
                 break;
             default:
-                error = true;
+                rule_error = true;
             }
             break;
         case 192:
@@ -504,7 +506,7 @@ SubchannelSource::SubchannelSource(
                 d_puncturing_rules.emplace_back(3  * 16, P5);
                 break;
             default:
-                error = true;
+                rule_error = true;
             }
             break;
         case 224:
@@ -540,7 +542,7 @@ SubchannelSource::SubchannelSource(
                 d_puncturing_rules.emplace_back(3  * 16, P6);
                 break;
             default:
-                error = true;
+                rule_error = true;
             }
             break;
         case 256:
@@ -576,7 +578,7 @@ SubchannelSource::SubchannelSource(
                 d_puncturing_rules.emplace_back(3  * 16, P5);
                 break;
             default:
-                error = true;
+                rule_error = true;
             }
             break;
         case 320:
@@ -600,7 +602,7 @@ SubchannelSource::SubchannelSource(
                 d_puncturing_rules.emplace_back(3  * 16, P6);
                 break;
             default:
-                error = true;
+                rule_error = true;
             }
             break;
         case 384:
@@ -624,17 +626,18 @@ SubchannelSource::SubchannelSource(
                 d_puncturing_rules.emplace_back(3  * 16, P7);
                 break;
             default:
-                error = true;
+                rule_error = true;
             }
             break;
         default:
-            error = true;
+            rule_error = true;
         }
-        if (error) {
-            fprintf(stderr, " Protection: UEP-%zu @ %zukb/s\n",
+
+        if (rule_error) {
+            etiLog.log(error, " Protection: UEP-%zu @ %zukb/s\n",
                     protectionLevel(), bitrate());
-            throw std::runtime_error("SubchannelSource::SubchannelSource "
-                    "UEP puncturing rules does not exist!");
+            throw std::runtime_error("ubchannelSource "
+                    "UEP puncturing rules do not exist!");
         }
     }
 }

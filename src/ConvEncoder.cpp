@@ -111,6 +111,7 @@ int ConvEncoder::process(Buffer* const dataIn, Buffer* dataOut)
             }
             ++in_offset;
         }
+
         for (unsigned pad_count = 0; pad_count < 3; ++pad_count) {
             out[out_offset] = 0;
             // For each 4-bit output word
@@ -138,5 +139,11 @@ int ConvEncoder::process(Buffer* const dataIn, Buffer* dataOut)
 
     PDEBUG(" Consume: %zu\n", in_offset);
     PDEBUG(" Return: %zu\n", out_offset);
+
+    if (out_offset != dataOut->getLength()) {
+        throw std::runtime_error("Assertion error: ConvEncoder output " +
+                std::to_string(out_offset) + " == " +
+                std::to_string(dataOut->getLength()) + " fail");
+    }
     return out_offset;
 }

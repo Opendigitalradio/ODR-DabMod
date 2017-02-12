@@ -35,13 +35,26 @@
 #include "ModPlugin.h"
 
 #include <vector>
+#include <string>
 #include <sys/types.h>
 #include <boost/optional.hpp>
 
 class PuncturingEncoder : public ModCodec
 {
 public:
-    PuncturingEncoder();
+    /* Initialise a puncturer that does not check if the
+     * outgoing data requires padding. To be used for the
+     * FIC. The size of the output buffer is derived from
+     * the puncturing rules only
+     */
+    PuncturingEncoder(void);
+
+    /* Initialise a puncturer that checks if there is up to
+     * one byte padding needed in the output buffer. See
+     * EN 300 401 Table 31 in 11.3.1 UEP coding. Up to one
+     * byte of padding is added
+     */
+    PuncturingEncoder(size_t num_cu);
 
     void append_rule(const PuncturingRule& rule);
     void append_tail_rule(const PuncturingRule& rule);
@@ -51,12 +64,12 @@ public:
     size_t getOutputSize() { return d_out_block_size; }
 
 private:
+    size_t d_num_cu;
     size_t d_in_block_size;
     size_t d_out_block_size;
     std::vector<PuncturingRule> d_rules;
     boost::optional<PuncturingRule> d_tail_rule;
 
     void adjust_item_size();
-
 };
 
