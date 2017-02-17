@@ -213,36 +213,7 @@ int launch_modulator(int argc, char* argv[])
     mod_settings_t mod_settings;
     parse_args(argc, argv, mod_settings);
 
-    std::cerr << "ODR-DabMod version " <<
-#if defined(GITVERSION)
-            GITVERSION
-#else
-            VERSION
-#endif
-            << std::endl;
-
-    std::cerr << "Compiled with features: " <<
-#if defined(HAVE_ZEROMQ)
-        "zeromq " <<
-#endif
-#if defined(HAVE_OUTPUT_UHD)
-        "output_uhd " <<
-#endif
-#if defined(HAVE_SOAPYSDR)
-        "output_soapysdr " <<
-#endif
-#if defined(__FAST_MATH__)
-        "fast-math" <<
-#endif
-        "\n";
-
-    etiLog.level(info) << "Starting up version " <<
-#if defined(GITVERSION)
-            GITVERSION;
-#else
-            VERSION;
-#endif
-
+    printStartupInfo();
 
     // When using the FIRFilter, increase the modulator offset pipelining delay
     // by the correct amount

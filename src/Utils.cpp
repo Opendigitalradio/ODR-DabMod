@@ -89,13 +89,19 @@ void printVersion(void)
 {
     FILE *out = stderr;
 
-    fprintf(out, "Welcome to %s %s, compiled at %s, %s\n\n",
-            PACKAGE, VERSION, __DATE__, __TIME__);
+    fprintf(out, "%s %s, compiled at %s, %s\n\n",
+            PACKAGE,
+#if defined(GITVERSION)
+            GITVERSION
+#else
+            VERSION
+#endif
+            ,__DATE__, __TIME__);
     fprintf(out,
             "    ODR-DabMod is copyright (C) Her Majesty the Queen in Right of Canada,\n"
-            "    2009, 2010, 2011, 2012 Communications Research Centre (CRC),\n"
+            "    2005 -- 2012 Communications Research Centre (CRC),\n"
             "     and\n"
-            "    Copyright (C) 2014, 2015 Matthias P. Braendli, matthias.braendli@mpb.li\n"
+            "    Copyright (C) 2017 Matthias P. Braendli, matthias.braendli@mpb.li\n"
             "\n"
             "    http://opendigitalradio.org\n"
             "\n"
@@ -113,7 +119,39 @@ void printVersion(void)
             "    with ODR-DabMod.  If not, see <http://www.gnu.org/licenses/>.\n"
             "\n"
            );
+}
 
+void printStartupInfo()
+{
+    std::cerr << "ODR-DabMod version " <<
+#if defined(GITVERSION)
+            GITVERSION
+#else
+            VERSION
+#endif
+            << std::endl;
+
+    std::cerr << "Compiled with features: " <<
+#if defined(HAVE_ZEROMQ)
+        "zeromq " <<
+#endif
+#if defined(HAVE_OUTPUT_UHD)
+        "output_uhd " <<
+#endif
+#if defined(HAVE_SOAPYSDR)
+        "output_soapysdr " <<
+#endif
+#if defined(__FAST_MATH__)
+        "fast-math" <<
+#endif
+        "\n";
+
+    etiLog.level(info) << "Starting up version " <<
+#if defined(GITVERSION)
+            GITVERSION;
+#else
+            VERSION;
+#endif
 }
 
 int set_realtime_prio(int prio)

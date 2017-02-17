@@ -41,6 +41,8 @@ void printUsage(const char* progName);
 
 void printVersion(void);
 
+void printStartupInfo(void);
+
 inline long timespecdiff_us(struct timespec& oldTime, struct timespec& time)
 {
     long tv_sec;
