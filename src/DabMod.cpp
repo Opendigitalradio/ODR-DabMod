@@ -100,8 +100,7 @@ struct modulator_data
         inputReader(nullptr),
         framecount(0),
         flowgraph(nullptr),
-        etiReader(nullptr),
-        rcs(nullptr) {}
+        etiReader(nullptr) {}
 
     InputReader* inputReader;
     Buffer data;
@@ -109,7 +108,6 @@ struct modulator_data
 
     Flowgraph* flowgraph;
     EtiReader* etiReader;
-    RemoteControllers* rcs;
 };
 
 enum class run_modulator_state_t {
@@ -120,6 +118,61 @@ enum class run_modulator_state_t {
 };
 
 run_modulator_state_t run_modulator(modulator_data& m);
+
+static void printModSettings(const mod_settings_t& mod_settings)
+{
+    // Print settings
+    fprintf(stderr, "Input\n");
+    fprintf(stderr, "  Type: %s\n", mod_settings.inputTransport.c_str());
+    fprintf(stderr, "  Source: %s\n", mod_settings.inputName.c_str());
+    fprintf(stderr, "Output\n");
+
+    if (mod_settings.useFileOutput) {
+        fprintf(stderr, "  Name: %s\n", mod_settings.outputName.c_str());
+    }
+#if defined(HAVE_OUTPUT_UHD)
+    else if (mod_settings.useUHDOutput) {
+        fprintf(stderr, " UHD\n"
+                        "  Device: %s\n"
+                        "  Type: %s\n"
+                        "  master_clock_rate: %ld\n"
+                        "  refclk: %s\n"
+                        "  pps source: %s\n",
+                mod_settings.outputuhd_conf.device.c_str(),
+                mod_settings.outputuhd_conf.usrpType.c_str(),
+                mod_settings.outputuhd_conf.masterClockRate,
+                mod_settings.outputuhd_conf.refclk_src.c_str(),
+                mod_settings.outputuhd_conf.pps_src.c_str());
+    }
+#endif
+#if defined(HAVE_SOAPYSDR)
+    else if (mod_settings.useSoapyOutput) {
+        fprintf(stderr, " SoapySDR\n"
+                        "  Device: %s\n"
+                        "  master_clock_rate: %ld\n",
+                mod_settings.outputsoapy_conf.device.c_str(),
+                mod_settings.outputsoapy_conf.masterClockRate);
+    }
+#endif
+    else if (mod_settings.useZeroMQOutput) {
+        fprintf(stderr, " ZeroMQ\n"
+                        "  Listening on: %s\n"
+                        "  Socket type : %s\n",
+                        mod_settings.outputName.c_str(),
+                        mod_settings.zmqOutputSocketType.c_str());
+    }
+
+    fprintf(stderr, "  Sampling rate: ");
+    if (mod_settings.outputRate > 1000) {
+        if (mod_settings.outputRate > 1000000) {
+            fprintf(stderr, "%.4g MHz\n", mod_settings.outputRate / 1000000.0f);
+        } else {
+            fprintf(stderr, "%.4g kHz\n", mod_settings.outputRate / 1000.0f);
+        }
+    } else {
+        fprintf(stderr, "%zu Hz\n", mod_settings.outputRate);
+    }
+}
 
 static shared_ptr<ModOutput> prepare_output(
         mod_settings_t& s)
@@ -179,24 +232,6 @@ int launch_modulator(int argc, char* argv[])
 {
     int ret = 0;
 
-    modulator_data m;
-
-
-    auto flowgraph = make_shared<Flowgraph>();
-    shared_ptr<FormatConverter> format_converter;
-    shared_ptr<ModOutput> output;
-
-    m.rcs = &rcs;
-
-    bool run_again = true;
-
-    InputFileReader inputFileReader;
-#if defined(HAVE_ZEROMQ)
-    auto inputZeroMQReader = make_shared<InputZeroMQReader>();
-#endif
-
-    auto inputTcpReader = make_shared<InputTcpReader>();
-
     struct sigaction sa;
     memset(&sa, 0, sizeof(struct sigaction));
     sa.sa_handler = &signalHandler;
@@ -215,12 +250,6 @@ int launch_modulator(int argc, char* argv[])
 
     printStartupInfo();
 
-    // When using the FIRFilter, increase the modulator offset pipelining delay
-    // by the correct amount
-    if (not mod_settings.filterTapsFilename.empty()) {
-        mod_settings.tist_delay_stages += FIRFILTER_PIPELINE_DELAY;
-    }
-
     if (not (mod_settings.useFileOutput or
              mod_settings.useUHDOutput or
              mod_settings.useZeroMQOutput or
@@ -230,107 +259,22 @@ int launch_modulator(int argc, char* argv[])
         throw std::runtime_error("Configuration error");
     }
 
-    // Print settings
-    fprintf(stderr, "Input\n");
-    fprintf(stderr, "  Type: %s\n", mod_settings.inputTransport.c_str());
-    fprintf(stderr, "  Source: %s\n", mod_settings.inputName.c_str());
-    fprintf(stderr, "Output\n");
-
-    if (mod_settings.useFileOutput) {
-        fprintf(stderr, "  Name: %s\n", mod_settings.outputName.c_str());
-    }
-#if defined(HAVE_OUTPUT_UHD)
-    else if (mod_settings.useUHDOutput) {
-        fprintf(stderr, " UHD\n"
-                        "  Device: %s\n"
-                        "  Type: %s\n"
-                        "  master_clock_rate: %ld\n"
-                        "  refclk: %s\n"
-                        "  pps source: %s\n",
-                mod_settings.outputuhd_conf.device.c_str(),
-                mod_settings.outputuhd_conf.usrpType.c_str(),
-                mod_settings.outputuhd_conf.masterClockRate,
-                mod_settings.outputuhd_conf.refclk_src.c_str(),
-                mod_settings.outputuhd_conf.pps_src.c_str());
-    }
-#endif
-#if defined(HAVE_SOAPYSDR)
-    else if (mod_settings.useSoapyOutput) {
-        fprintf(stderr, " SoapySDR\n"
-                        "  Device: %s\n"
-                        "  master_clock_rate: %ld\n",
-                mod_settings.outputsoapy_conf.device.c_str(),
-                mod_settings.outputsoapy_conf.masterClockRate);
-    }
-#endif
-    else if (mod_settings.useZeroMQOutput) {
-        fprintf(stderr, " ZeroMQ\n"
-                        "  Listening on: %s\n"
-                        "  Socket type : %s\n",
-                        mod_settings.outputName.c_str(),
-                        mod_settings.zmqOutputSocketType.c_str());
+    // When using the FIRFilter, increase the modulator offset pipelining delay
+    // by the correct amount
+    if (not mod_settings.filterTapsFilename.empty()) {
+        mod_settings.tist_delay_stages += FIRFILTER_PIPELINE_DELAY;
     }
 
-    fprintf(stderr, "  Sampling rate: ");
-    if (mod_settings.outputRate > 1000) {
-        if (mod_settings.outputRate > 1000000) {
-            fprintf(stderr, "%.4g MHz\n", mod_settings.outputRate / 1000000.0f);
-        } else {
-            fprintf(stderr, "%.4g kHz\n", mod_settings.outputRate / 1000.0f);
-        }
-    } else {
-        fprintf(stderr, "%zu Hz\n", mod_settings.outputRate);
-    }
+    printModSettings(mod_settings);
 
+    modulator_data m;
 
-    EdiReader ediReader(mod_settings.tist_offset_s, mod_settings.tist_delay_stages);
-    EdiDecoder::ETIDecoder ediInput(ediReader, false);
-    if (mod_settings.edi_max_delay_ms > 0.0f) {
-        // setMaxDelay wants number of AF packets, which correspond to 24ms ETI frames
-        ediInput.setMaxDelay(lroundf(mod_settings.edi_max_delay_ms / 24.0f));
-    }
-    EdiUdpInput ediUdpInput(ediInput);
-
-    if (mod_settings.inputTransport == "file") {
-        // Opening ETI input file
-        if (inputFileReader.Open(mod_settings.inputName, mod_settings.loop) == -1) {
-            fprintf(stderr, "Unable to open input file!\n");
-            etiLog.level(error) << "Unable to open input file!";
-            ret = -1;
-            throw std::runtime_error("Unable to open input");
-        }
-
-        m.inputReader = &inputFileReader;
-    }
-    else if (mod_settings.inputTransport == "zeromq") {
-#if !defined(HAVE_ZEROMQ)
-        fprintf(stderr, "Error, ZeroMQ input transport selected, but not compiled in!\n");
-        ret = -1;
-        throw std::runtime_error("Unable to open input");
-#else
-        inputZeroMQReader->Open(mod_settings.inputName, mod_settings.inputMaxFramesQueued);
-        m.inputReader = inputZeroMQReader.get();
-#endif
-    }
-    else if (mod_settings.inputTransport == "tcp") {
-        inputTcpReader->Open(mod_settings.inputName);
-        m.inputReader = inputTcpReader.get();
-    }
-    else if (mod_settings.inputTransport == "edi") {
-        ediUdpInput.Open(mod_settings.inputName);
-    }
-    else
-    {
-        fprintf(stderr, "Error, invalid input transport %s selected!\n", mod_settings.inputTransport.c_str());
-        ret = -1;
-        throw std::runtime_error("Unable to open input");
-    }
-
+    shared_ptr<FormatConverter> format_converter;
     if (mod_settings.useFileOutput and mod_settings.fileOutputFormat == "s8") {
         format_converter = make_shared<FormatConverter>();
     }
 
-    prepare_output(mod_settings);
+    auto output = prepare_output(mod_settings);
 
     // Set thread priority to realtime
     if (int r = set_realtime_prio(1)) {
@@ -339,6 +283,15 @@ int launch_modulator(int argc, char* argv[])
     set_thread_name("modulator");
 
     if (mod_settings.inputTransport == "edi") {
+        EdiReader ediReader(mod_settings.tist_offset_s, mod_settings.tist_delay_stages);
+        EdiDecoder::ETIDecoder ediInput(ediReader, false);
+        if (mod_settings.edi_max_delay_ms > 0.0f) {
+            // setMaxDelay wants number of AF packets, which correspond to 24ms ETI frames
+            ediInput.setMaxDelay(lroundf(mod_settings.edi_max_delay_ms / 24.0f));
+        }
+        EdiUdpInput ediUdpInput(ediInput);
+
+        ediUdpInput.Open(mod_settings.inputName);
         if (not ediUdpInput.isEnabled()) {
             etiLog.level(error) << "inputTransport is edi, but ediUdpInput is not enabled";
             return -1;
@@ -397,9 +350,50 @@ int launch_modulator(int argc, char* argv[])
         }
     }
     else {
+        shared_ptr<InputReader> inputReader;
+
+        if (mod_settings.inputTransport == "file") {
+            auto inputFileReader = make_shared<InputFileReader>();
+
+            // Opening ETI input file
+            if (inputFileReader->Open(mod_settings.inputName, mod_settings.loop) == -1) {
+                fprintf(stderr, "Unable to open input file!\n");
+                etiLog.level(error) << "Unable to open input file!";
+                ret = -1;
+                throw std::runtime_error("Unable to open input");
+            }
+
+            inputReader = inputFileReader;
+        }
+        else if (mod_settings.inputTransport == "zeromq") {
+#if !defined(HAVE_ZEROMQ)
+            fprintf(stderr, "Error, ZeroMQ input transport selected, but not compiled in!\n");
+            ret = -1;
+            throw std::runtime_error("Unable to open input");
+#else
+            auto inputZeroMQReader = make_shared<InputZeroMQReader>();
+            inputZeroMQReader->Open(mod_settings.inputName, mod_settings.inputMaxFramesQueued);
+            inputReader = inputZeroMQReader;
+#endif
+        }
+        else if (mod_settings.inputTransport == "tcp") {
+            auto inputTcpReader = make_shared<InputTcpReader>();
+            inputTcpReader->Open(mod_settings.inputName);
+            inputReader = inputTcpReader;
+        }
+        else
+        {
+            fprintf(stderr, "Error, invalid input transport %s selected!\n", mod_settings.inputTransport.c_str());
+            ret = -1;
+            throw std::runtime_error("Unable to open input");
+        }
+
+        bool run_again = true;
+
         while (run_again) {
             Flowgraph flowgraph;
 
+            m.inputReader = inputReader.get();
             m.flowgraph = &flowgraph;
             m.data.setLength(6144);
 
@@ -437,7 +431,7 @@ int launch_modulator(int argc, char* argv[])
             }
 #endif
 
-            m.inputReader->PrintInfo();
+            inputReader->PrintInfo();
 
             run_modulator_state_t st = run_modulator(m);
             etiLog.log(trace, "DABMOD,run_modulator() = %d", st);
@@ -451,8 +445,8 @@ int launch_modulator(int argc, char* argv[])
                 case run_modulator_state_t::again:
                     etiLog.level(warn) << "Restart modulator.";
                     run_again = false;
-                    if (mod_settings.inputTransport == "file") {
-                        if (inputFileReader.Open(mod_settings.inputName, mod_settings.loop) == -1) {
+                    if (auto in = dynamic_pointer_cast<InputFileReader>(inputReader)) {
+                        if (in->Open(mod_settings.inputName, mod_settings.loop) == -1) {
                             etiLog.level(error) << "Unable to open input file!";
                             ret = 1;
                         }
@@ -460,19 +454,19 @@ int launch_modulator(int argc, char* argv[])
                             run_again = true;
                         }
                     }
-                    else if (mod_settings.inputTransport == "zeromq") {
 #if defined(HAVE_ZEROMQ)
+                    else if (auto in = dynamic_pointer_cast<InputZeroMQReader>(inputReader)) {
                         run_again = true;
                         // Create a new input reader
-                        inputZeroMQReader = make_shared<InputZeroMQReader>();
+                        auto inputZeroMQReader = make_shared<InputZeroMQReader>();
                         inputZeroMQReader->Open(mod_settings.inputName, mod_settings.inputMaxFramesQueued);
-                        m.inputReader = inputZeroMQReader.get();
-#endif
+                        inputReader = inputZeroMQReader;
                     }
-                    else if (mod_settings.inputTransport == "tcp") {
-                        inputTcpReader = make_shared<InputTcpReader>();
+#endif
+                    else if (auto in = dynamic_pointer_cast<InputTcpReader>(inputReader)) {
+                        auto inputTcpReader = make_shared<InputTcpReader>();
                         inputTcpReader->Open(mod_settings.inputName);
-                        m.inputReader = inputTcpReader.get();
+                        inputReader = inputTcpReader;
                     }
                     break;
                 case run_modulator_state_t::reconfigure:
