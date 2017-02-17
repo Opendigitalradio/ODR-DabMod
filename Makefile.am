@@ -50,6 +50,8 @@ odr_dabmod_SOURCES  = src/DabMod.cpp \
 					  src/DabModulator.h \
 					  src/Buffer.cpp \
 					  src/Buffer.h \
+					  src/ConfigParser.cpp \
+					  src/ConfigParser.h \
 					  src/ModPlugin.cpp \
 					  src/ModPlugin.h \
 					  src/EtiReader.cpp \

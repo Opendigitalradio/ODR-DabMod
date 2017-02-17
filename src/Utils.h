@@ -37,7 +37,7 @@
 #include <time.h>
 #include <string>
 
-void printUsage(char* progName);
+void printUsage(const char* progName);
 
 void printVersion(void);
 

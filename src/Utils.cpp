@@ -30,7 +30,7 @@
 #include <sys/prctl.h>
 #include <pthread.h>
 
-void printUsage(char* progName)
+void printUsage(const char* progName)
 {
     FILE* out = stderr;
 
