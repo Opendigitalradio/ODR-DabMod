@@ -49,7 +49,7 @@ struct eti_fc_data {
 struct eti_stc_data {
     uint8_t stream_index;
     uint8_t scid;
-    uint8_t sad;
+    uint16_t sad;
     uint8_t tpl;
     std::vector<uint8_t> mst;
 
@@ -101,7 +101,7 @@ class DataCollector {
  */
 class ETIDecoder {
     public:
-        ETIDecoder(DataCollector& data_collector);
+        ETIDecoder(DataCollector& data_collector, bool verbose);
 
         /* Push bytes into the decoder. The buf can contain more
          * than a single packet. This is useful when reading from streams

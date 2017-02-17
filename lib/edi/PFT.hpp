@@ -58,17 +58,17 @@ class Fragment
     private:
         std::vector<uint8_t> _payload;
 
-        pseq_t _Pseq;
-        findex_t _Findex;
-        findex_t _Fcount;
-        bool _FEC;
-        bool _Addr;
-        uint16_t _Plen;
-        uint8_t _RSk;
-        uint8_t _RSz;
-        uint16_t _Source;
-        uint16_t _Dest;
-        bool _valid;
+        pseq_t _Pseq = 0;
+        findex_t _Findex = 0;
+        findex_t _Fcount = 0;
+        bool _FEC = false;
+        bool _Addr = false;
+        uint16_t _Plen = 0;
+        uint8_t _RSk = 0;
+        uint8_t _RSz = 0;
+        uint16_t _Source = 0;
+        uint16_t _Dest = 0;
+        bool _valid = false;
 };
 
 /* The AFBuilder collects Fragments and builds an Application Frame
@@ -146,6 +146,9 @@ class PFT
          */
         void setMaxDelay(size_t num_af_packets);
 
+        /* Enable verbose fprintf */
+        void setVerbose(bool enable);
+
     private:
         void incrementNextPseq(void);
 
@@ -155,6 +158,7 @@ class PFT
         // Keep one AFBuilder for each Pseq
         std::map<pseq_t, AFBuilder> m_afbuilders;
 
+        bool m_verbose = 0;
 };
 
 }

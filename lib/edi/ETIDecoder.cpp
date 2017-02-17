@@ -30,10 +30,11 @@ namespace EdiDecoder {
 
 using namespace std;
 
-ETIDecoder::ETIDecoder(DataCollector& data_collector) :
+ETIDecoder::ETIDecoder(DataCollector& data_collector, bool verbose) :
     m_data_collector(data_collector),
     m_last_seq(0)
 {
+    m_pft.setVerbose(verbose);
 }
 
 void ETIDecoder::push_bytes(const vector<uint8_t> &buf)

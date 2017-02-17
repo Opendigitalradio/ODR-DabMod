@@ -488,14 +488,15 @@ void PFT::pushPFTFrag(const Fragment &fragment)
     auto& p = m_afbuilders.at(fragment.Pseq());
     p.pushPFTFrag(fragment);
 
-#if 0
-    etiLog.log(debug, "Got frag %u:%u, afbuilders: ",
-            fragment.Pseq(), fragment.Findex());
-    for (const auto &k : m_afbuilders) {
-        const bool isNextPseq = (m_next_pseq == k.first);
-        etiLog.level(debug) << (isNextPseq ? "->" : "  ") << k.first << " " << k.second.visualise();
+    if (m_verbose) {
+        etiLog.log(debug, "Got frag %u:%u, afbuilders: ",
+                fragment.Pseq(), fragment.Findex());
+        for (const auto &k : m_afbuilders) {
+            const bool isNextPseq = (m_next_pseq == k.first);
+            etiLog.level(debug) << (isNextPseq ? "->" : "  ") <<
+                k.first << " " << k.second.visualise();
+        }
     }
-#endif
 }
 
 
@@ -553,6 +554,11 @@ std::vector<uint8_t> PFT::getNextAFPacket()
 void PFT::setMaxDelay(size_t num_af_packets)
 {
     m_max_delay = num_af_packets;
+}
+
+void PFT::setVerbose(bool enable)
+{
+    m_verbose = enable;
 }
 
 void PFT::incrementNextPseq()
