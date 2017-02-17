@@ -67,7 +67,7 @@ const std::vector<PuncturingRule>& SubchannelSource::get_rules() const
 
 
 SubchannelSource::SubchannelSource(
-            uint8_t sad,
+            uint16_t sad,
             uint16_t stl,
             uint8_t tpl
             ) :
