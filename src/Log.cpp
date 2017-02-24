@@ -77,9 +77,7 @@ void Logger::io_process()
     set_thread_name("logger");
     while (1) {
         log_message_t m;
-        while (m_message_queue.pop(m) == false) {
-            std::this_thread::sleep_for(std::chrono::milliseconds(10));
-        }
+        m_message_queue.wait_and_pop(m);
 
         auto message = m.message;
 

@@ -43,7 +43,7 @@
 #include <map>
 #include <mutex>
 #include <thread>
-#include <boost/lockfree/spsc_queue.hpp>
+#include "ThreadsafeQueue.h"
 
 #define SYSLOG_IDENT "ODR-DabMod"
 #define SYSLOG_FACILITY LOG_LOCAL0
@@ -179,9 +179,7 @@ class Logger {
     private:
         std::list<LogBackend*> backends;
 
-        boost::lockfree::spsc_queue<
-            log_message_t,
-            boost::lockfree::capacity<80> > m_message_queue;
+        ThreadsafeQueue<log_message_t> m_message_queue;
         std::thread m_io_thread;
         std::mutex m_cerr_mutex;
 };
