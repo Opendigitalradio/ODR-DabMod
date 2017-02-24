@@ -2,7 +2,7 @@
    Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010, 2011 Her Majesty
    the Queen in Right of Canada (Communications Research Center Canada)
 
-   Copyright (C) 2015
+   Copyright (C) 2017
    Matthias P. Braendli, matthias.braendli@mpb.li
 
     http://opendigitalradio.org
@@ -43,11 +43,33 @@
 
 struct tii_config_t
 {
-    tii_config_t() : enable(false), comb(0), pattern(0) {}
+    tii_config_t() : enable(false), comb(0), pattern(0), old_variant(false) {}
 
     bool enable;
     int comb;
     int pattern;
+
+    /* EN 300 401 clause 14.8 describes how to generate the TII signal, and
+     * defines z_{m,0,k}:
+     *
+     * z_{m,0,k} = A_{c,p}(k) e^{j \psi_k} + A_{c,p}(k-1) e^{j \psi{k-1}}
+     *
+     * What was implemented in the old variant was
+     *
+     * z_{m,0,k} = A_{c,p}(k) e^{j \psi_k} + A_{c,p}(k-1) e^{j \psi{k}}
+     *                                                              ^
+     *                                                              |
+     *                                                  Wrong phase on the second
+     *                                                  carrier of the pair.
+     *
+     * Correctly implemented decoders ought to be able to decode such a TII,
+     * but will not be able to correctly estimate the delay of different
+     * transmitters.
+     *
+     * The option 'old_variant' allows the user to choose between this
+     * old incorrect implementation and the new conforming one.
+     */
+    bool old_variant;
 };
 
 class TIIError : public std::runtime_error {
@@ -58,13 +80,15 @@ class TIIError : public std::runtime_error {
             std::runtime_error(msg) {}
 };
 
-class TII : public ModInput, public RemoteControllable
+class TII : public ModCodec, public RemoteControllable
 {
     public:
-        TII(unsigned int dabmode, tii_config_t& tii_config);
+        TII(unsigned int dabmode, tii_config_t& tii_config, unsigned phase);
         virtual ~TII();
+        TII(const TII&) = delete;
+        TII& operator=(const TII&) = delete;
 
-        int process(Buffer* dataOut);
+        int process(Buffer* dataIn, Buffer* dataOut);
         const char* name();
 
         /******* REMOTE CONTROL ********/
@@ -74,13 +98,12 @@ class TII : public ModInput, public RemoteControllable
         virtual const std::string get_parameter(
                 const std::string& parameter) const;
 
-
     protected:
-        // Fill m_dataIn with the correct carriers for the pattern/comb
+        // Fill m_enabled_carriers with the correct carriers for the pattern/comb
         // combination
         void prepare_pattern(void);
 
-        // prerequisites: calling thread must hold m_dataIn mutex
+        // prerequisites: calling thread must hold m_enabled_carriers mutex
         void enable_carrier(int k);
 
         // Configuration settings
@@ -96,14 +119,10 @@ class TII : public ModInput, public RemoteControllable
 
         std::string m_name;
 
-        // m_dataIn is read by modulator thread, and written
+        // m_enabled_carriers is read by modulator thread, and written
         // to by RC thread.
-        mutable boost::mutex m_dataIn_mutex;
-        std::vector<std::complex<float> > m_dataIn;
-
-    private:
-        TII(const TII&);
-        TII& operator=(const TII&);
+        mutable boost::mutex m_enabled_carriers_mutex;
+        std::vector<bool> m_enabled_carriers;
 };
 
 

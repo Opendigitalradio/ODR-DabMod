@@ -588,9 +588,10 @@ int launch_modulator(int argc, char* argv[])
 #endif
 
         /* Read TII parameters from config file */
-        tiiConfig.enable  = pt.get("tii.enable", 0);
-        tiiConfig.comb    = pt.get("tii.comb", 0);
-        tiiConfig.pattern = pt.get("tii.pattern", 0);
+        tiiConfig.enable       = pt.get("tii.enable", 0);
+        tiiConfig.comb         = pt.get("tii.comb", 0);
+        tiiConfig.pattern      = pt.get("tii.pattern", 0);
+        tiiConfig.old_variant  = pt.get("tii.old_variant", 0);
     }
 
     etiLog.level(info) << "Starting up version " <<

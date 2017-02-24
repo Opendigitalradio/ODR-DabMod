@@ -187,9 +187,11 @@ int DabModulator::process(Buffer* dataOut)
                 (float)mySpacing * (float)myOutputRate / 2048000.0f, cic_ratio);
 
         shared_ptr<TII> tii;
+        shared_ptr<PhaseReference> tiiRef;
         try {
-            tii = make_shared<TII>(myDabMode, myTiiConfig);
+            tii = make_shared<TII>(myDabMode, myTiiConfig, myEtiSource.getFp());
             rcs.enrol(tii.get());
+            tiiRef = make_shared<PhaseReference>(mode);
         }
         catch (TIIError& e) {
             etiLog.level(error) << "Could not initialise TII: " << e.what();
@@ -331,6 +333,7 @@ int DabModulator::process(Buffer* dataOut)
         myFlowgraph->connect(cifNull, cifSig);
         myFlowgraph->connect(cifDiff, cifSig);
         if (tii) {
+            myFlowgraph->connect(tiiRef, tii);
             myFlowgraph->connect(tii, cifSig);
         }
 

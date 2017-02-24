@@ -2,7 +2,7 @@
    Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010, 2011 Her Majesty
    the Queen in Right of Canada (Communications Research Center Canada)
 
-   Copyright (C) 2015
+   Copyright (C) 2017
    Matthias P. Braendli, matthias.braendli@mpb.li
 
     http://opendigitalradio.org
@@ -106,22 +106,23 @@ const int pattern_tm1_2_4[][8] = { // {{{
     {1,1,1,0,1,0,0,0},
     {1,1,1,1,0,0,0,0} }; // }}}
 
-TII::TII(unsigned int dabmode, tii_config_t& tii_config) :
-    ModInput(),
+TII::TII(unsigned int dabmode, tii_config_t& tii_config, unsigned phase) :
+    ModCodec(),
     RemoteControllable("tii"),
     m_dabmode(dabmode),
-    m_conf(tii_config),
-    m_insert(true)
+    m_conf(tii_config)
 {
     PDEBUG("TII::TII(%u) @ %p\n", dabmode, this);
 
     RC_ADD_PARAMETER(enable, "enable TII [0-1]");
     RC_ADD_PARAMETER(comb, "TII comb number [0-23]");
     RC_ADD_PARAMETER(pattern, "TII pattern number [0-69]");
+    RC_ADD_PARAMETER(old_variant, "select old TII variant for old (buggy) receivers [0-1]");
 
     switch (m_dabmode) {
         case 1:
             m_carriers = 1536;
+            m_insert = (phase & 0x40) ? false : true;
 
             if (not(0 <= m_conf.pattern and m_conf.pattern <= 69) ) {
                 throw TIIError("TII::TII pattern not valid!");
@@ -129,6 +130,7 @@ TII::TII(unsigned int dabmode, tii_config_t& tii_config) :
             break;
         case 2:
             m_carriers = 384;
+            m_insert = (phase & 0x01) ? false : true;
 
             if (not(0 <= m_conf.pattern and m_conf.pattern <= 69) ) {
                 throw TIIError("TII::TII pattern not valid!");
@@ -153,8 +155,8 @@ TII::TII(unsigned int dabmode, tii_config_t& tii_config) :
         throw TIIError("TII::TII comb not valid!");
     }
 
-    m_dataIn.clear();
-    m_dataIn.resize(m_carriers);
+    m_enabled_carriers.clear();
+    m_enabled_carriers.resize(m_carriers);
     prepare_pattern();
 }
 
@@ -169,28 +171,47 @@ const char* TII::name()
     // Calculate name on demand because comb and pattern are
     // modifiable through RC
     std::stringstream ss;
-    ss << "TII(comb:" << m_conf.comb << ", pattern:" << m_conf.pattern << ")";
+    ss << "TII(comb:" << m_conf.comb <<
+        ", pattern:" << m_conf.pattern <<
+        ", variant:" << (m_conf.old_variant ? "old" : "new") << ")";
     m_name = ss.str();
 
     return m_name.c_str();
 }
 
 
-int TII::process(Buffer* dataOut)
+int TII::process(Buffer* dataIn, Buffer* dataOut)
 {
     PDEBUG("TII::process(dataOut: %p)\n",
             dataOut);
+    if (    (dataIn == NULL) or
+            (dataIn->getLength() != m_carriers * sizeof(complexf))) {
+        throw TIIError("TII::process input size not valid!");
+    }
+
+    dataOut->setLength(m_carriers * sizeof(complexf));
+    bzero(dataOut->getData(), dataOut->getLength());
 
     if (m_conf.enable and m_insert) {
-        boost::mutex::scoped_lock lock(m_dataIn_mutex);
-        dataOut->setData(&m_dataIn[0], m_carriers * sizeof(complexf));
-    }
-    else {
-        dataOut->setLength(m_carriers * sizeof(complexf));
-        bzero(dataOut->getData(), dataOut->getLength());
+        boost::mutex::scoped_lock lock(m_enabled_carriers_mutex);
+        complexf* in = reinterpret_cast<complexf*>(dataIn->getData());
+        complexf* out = reinterpret_cast<complexf*>(dataOut->getData());
+
+        for (size_t i = 0; i < m_enabled_carriers.size(); i+=2) {
+            //BAD implementation:
+            // setting exactly the same phase of the signal for lower adjacent
+            // frequency
+            if (m_enabled_carriers[i]) {
+                out[i] = m_conf.old_variant ? in[i+1] : in[i];
+            }
+
+            if (m_enabled_carriers[i+1]) {
+                out[i+1] = in[i+1];
+            }
+        }
     }
 
-    // TODO wrong! Must align with frames containing the right data
+    // Align with frames containing the right data (when FC.fp is first quarter)
     m_insert = not m_insert;
 
     return 1;
@@ -199,23 +220,25 @@ int TII::process(Buffer* dataOut)
 void TII::enable_carrier(int k) {
     int ix = m_carriers/2 + k;
 
-    if (ix < 0 or ix+1 >= (ssize_t)m_dataIn.size()) {
+    if (ix < 0 or ix+1 >= (ssize_t)m_enabled_carriers.size()) {
         throw TIIError("TII::enable_carrier invalid k!");
     }
 
-    // TODO power of the carrier ?
-    m_dataIn.at(ix) = 1.0;
-    m_dataIn.at(ix+1) = 1.0; // TODO verify if +1 is really correct
+    m_enabled_carriers[ix] = true;
+    // NULL frequency is never enabled.
+    if (ix > 1 and (ix-1 != 768)) {
+        m_enabled_carriers[ix-1] = true;
+    }
 }
 
 void TII::prepare_pattern() {
     int comb = m_conf.comb; // Convert from unsigned to signed
 
-    boost::mutex::scoped_lock lock(m_dataIn_mutex);
+    boost::mutex::scoped_lock lock(m_enabled_carriers_mutex);
 
     // Clear previous pattern
-    for (size_t i = 0; i < m_dataIn.size(); i++) {
-        m_dataIn[i] = 0.0;
+    for (size_t i = 0; i < m_enabled_carriers.size(); i++) {
+        m_enabled_carriers[i] = false;
     }
 
     // This could be written more efficiently, but since it is
@@ -309,6 +332,9 @@ void TII::set_parameter(const std::string& parameter, const std::string& value)
         m_conf.comb = new_comb;
         prepare_pattern();
     }
+    else if (parameter == "old_variant") {
+        ss >> m_conf.old_variant;
+    }
     else {
         stringstream ss;
         ss << "Parameter '" << parameter <<
@@ -329,6 +355,9 @@ const std::string TII::get_parameter(const std::string& parameter) const
     }
     else if (parameter == "comb") {
         ss << m_conf.comb;
+    }
+    else if (parameter == "old_variant") {
+        ss << (m_conf.old_variant ? 1 : 0);
     }
     else {
         ss << "Parameter '" << parameter <<
