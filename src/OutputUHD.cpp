@@ -430,6 +430,7 @@ void OutputUHD::set_usrp_time()
         else {
             myUsrp->set_time_now(uhd::time_spec_t(now.tv_sec));
             etiLog.level(info) << "OutputUHD: Setting USRP time to " <<
+                std::fixed <<
                 uhd::time_spec_t(now.tv_sec).get_real_secs();
         }
     }
@@ -462,6 +463,7 @@ void OutputUHD::set_usrp_time()
             usleep(200000); // 200ms, we want the PPS to be later
             myUsrp->set_time_unknown_pps(uhd::time_spec_t(seconds + 2));
             etiLog.level(info) << "OutputUHD: Setting USRP time next pps to " <<
+                std::fixed <<
                 uhd::time_spec_t(seconds + 2).get_real_secs();
         }
 
@@ -733,6 +735,7 @@ void UHDWorker::handle_frame(const struct UHDWorkerFrameData *frame)
         if (md.time_spec.get_real_secs() > usrp_time + TIMESTAMP_ABORT_FUTURE) {
             etiLog.level(error) <<
                 "OutputUHD: Timestamp way too far in the future! offset: " <<
+                std::fixed <<
                 md.time_spec.get_real_secs() - usrp_time;
             throw std::runtime_error("Timestamp error. Aborted.");
         }
