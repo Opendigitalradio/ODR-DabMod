@@ -182,6 +182,7 @@ struct OutputUHDConfig {
     long masterClockRate = 32768000;
     unsigned sampleRate = 2048000;
     double frequency = 0.0;
+    double lo_offset = 0.0;
     double txgain = 0.0;
     bool enableSync = false;
     bool muteNoTimestamps = false;

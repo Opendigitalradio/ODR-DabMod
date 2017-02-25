@@ -503,6 +503,7 @@ int launch_modulator(int argc, char* argv[])
                 throw std::runtime_error("Configuration error");
             }
 
+            outputuhd_conf.lo_offset = pt.get<double>("uhdoutput.lo_offset", 0);
 
             outputuhd_conf.refclk_src = pt.get("uhdoutput.refclk_source", "internal");
             outputuhd_conf.pps_src = pt.get("uhdoutput.pps_source", "none");

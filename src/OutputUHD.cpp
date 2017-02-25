@@ -221,9 +221,29 @@ OutputUHD::OutputUHD(
         throw std::runtime_error("Cannot set USRP sample rate. Aborted.");
     }
 
-    //set the centre frequency
-    MDEBUG("OutputUHD:Setting freq to %f...\n", myConf.frequency);
-    myUsrp->set_tx_freq(myConf.frequency);
+    if (myConf.lo_offset != 0.0) {
+        etiLog.log(info, "OutputUHD:Setting freq to %f with LO offset %f...\n",
+                myConf.frequency, myConf.lo_offset);
+        const auto tr = uhd::tune_request_t(myConf.frequency, myConf.lo_offset);
+        uhd::tune_result_t result = myUsrp->set_tx_freq(tr);
+
+        etiLog.level(info) << "OutputUHD: " << std::fixed <<
+            "Target RF: " << result.target_rf_freq <<
+            "Actual RF: " << result.actual_rf_freq <<
+            "Target DSP: " << result.target_dsp_freq <<
+            "Actual DSP: " << result.actual_dsp_freq;
+
+        if (result.clipped_rf_freq != result.target_rf_freq) {
+            etiLog.level(warn) <<
+                "OutputUHD: clipped RF frequency " << std::fixed <<
+                " different from target";
+        }
+    }
+    else {
+        //set the centre frequency
+        etiLog.log(info, "OutputUHD:Setting freq to %f...\n", myConf.frequency);
+        myUsrp->set_tx_freq(myConf.frequency);
+    }
     myConf.frequency = myUsrp->get_tx_freq();
     MDEBUG("OutputUHD:Actual frequency: %f\n", myConf.frequency);
 
