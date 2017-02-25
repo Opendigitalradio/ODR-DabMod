@@ -209,10 +209,6 @@ int launch_modulator(int argc, char* argv[])
         return EXIT_FAILURE;
     }
 
-    // Set timezone to UTC
-    setenv("TZ", "", 1);
-    tzset();
-
     while (true) {
         int c = getopt(argc, argv, "a:C:c:f:F:g:G:hlm:o:O:r:T:u:V");
         if (c == -1) {
@@ -1015,6 +1011,10 @@ run_modulator_state_t run_modulator(modulator_data& m)
 
 int main(int argc, char* argv[])
 {
+    // Set timezone to UTC
+    setenv("TZ", "", 1);
+    tzset();
+
     try {
         return launch_modulator(argc, argv);
     }
