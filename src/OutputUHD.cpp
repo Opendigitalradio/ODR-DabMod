@@ -2,7 +2,7 @@
    Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010 Her Majesty the
    Queen in Right of Canada (Communications Research Center Canada)
 
-   Copyright (C) 2016
+   Copyright (C) 2017
    Matthias P. Braendli, matthias.braendli@mpb.li
 
     http://opendigitalradio.org
@@ -213,7 +213,7 @@ OutputUHD::OutputUHD(
     //set the tx sample rate
     MDEBUG("OutputUHD:Setting rate to %d...\n", myConf.sampleRate);
     myUsrp->set_tx_rate(myConf.sampleRate);
-    MDEBUG("OutputUHD:Actual TX Rate: %f Msps...\n", myUsrp->get_tx_rate());
+    MDEBUG("OutputUHD:Actual TX Rate: %f sps...\n", myUsrp->get_tx_rate());
 
     if (fabs(myUsrp->get_tx_rate() / myConf.sampleRate) >
              myConf.sampleRate * 1e-6) {
