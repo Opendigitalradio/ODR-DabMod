@@ -22,7 +22,7 @@ Short list of features:
   - Tested for B200, B100, USRP2, USRP1
   - With WBX daughterboard (where appropriate)
 - Experimental [SoapySDR](https://github.com/pothosware/SoapySDR/wiki) output
-  - Can be used to drive the [LimeSDR board](https://myriadrf.org/projects/limesdr/)
+  - Can be used to drive the [LimeSDR board](https://myriadrf.org/projects/limesdr/), the [HackRF](https://greatscottgadgets.com/hackrf/) and others.
 - Timestamping support required for SFN
 - GPSDO monitoring (both Ettus and [ODR LEA-M8F board](http://www.opendigitalradio.org/lea-m8f-gpsdo))
 - A FIR filter for improved spectrum mask
