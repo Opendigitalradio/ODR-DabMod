@@ -221,11 +221,31 @@ OutputUHD::OutputUHD(
         throw std::runtime_error("Cannot set USRP sample rate. Aborted.");
     }
 
-    //set the centre frequency
-    MDEBUG("OutputUHD:Setting freq to %f...\n", myConf.frequency);
-    myUsrp->set_tx_freq(myConf.frequency);
+    if (myConf.lo_offset != 0.0) {
+        etiLog.level(info) << std::fixed << std::setprecision(3) <<
+            "OutputUHD:Setting freq to " << myConf.frequency <<
+            "  with LO offset " << myConf.lo_offset << "...";
+
+        const auto tr = uhd::tune_request_t(myConf.frequency, myConf.lo_offset);
+        uhd::tune_result_t result = myUsrp->set_tx_freq(tr);
+
+        etiLog.level(debug) << "OutputUHD:" <<
+            std::fixed << std::setprecision(0) <<
+            " Target RF: " << result.target_rf_freq <<
+            " Actual RF: " << result.actual_rf_freq <<
+            " Target DSP: " << result.target_dsp_freq <<
+            " Actual DSP: " << result.actual_dsp_freq;
+    }
+    else {
+        //set the centre frequency
+        etiLog.level(info) << std::fixed << std::setprecision(3) <<
+            "OutputUHD:Setting freq to " << myConf.frequency << "...";
+        myUsrp->set_tx_freq(myConf.frequency);
+    }
+
     myConf.frequency = myUsrp->get_tx_freq();
-    MDEBUG("OutputUHD:Actual frequency: %f\n", myConf.frequency);
+    etiLog.level(info) << std::fixed << std::setprecision(3) <<
+        "OutputUHD:Actual frequency: " << myConf.frequency;
 
     myUsrp->set_tx_gain(myConf.txgain);
     MDEBUG("OutputUHD:Actual TX Gain: %f ...\n", myUsrp->get_tx_gain());
@@ -430,6 +450,7 @@ void OutputUHD::set_usrp_time()
         else {
             myUsrp->set_time_now(uhd::time_spec_t(now.tv_sec));
             etiLog.level(info) << "OutputUHD: Setting USRP time to " <<
+                std::fixed <<
                 uhd::time_spec_t(now.tv_sec).get_real_secs();
         }
     }
@@ -462,6 +483,7 @@ void OutputUHD::set_usrp_time()
             usleep(200000); // 200ms, we want the PPS to be later
             myUsrp->set_time_unknown_pps(uhd::time_spec_t(seconds + 2));
             etiLog.level(info) << "OutputUHD: Setting USRP time next pps to " <<
+                std::fixed <<
                 uhd::time_spec_t(seconds + 2).get_real_secs();
         }
 
@@ -733,6 +755,7 @@ void UHDWorker::handle_frame(const struct UHDWorkerFrameData *frame)
         if (md.time_spec.get_real_secs() > usrp_time + TIMESTAMP_ABORT_FUTURE) {
             etiLog.level(error) <<
                 "OutputUHD: Timestamp way too far in the future! offset: " <<
+                std::fixed <<
                 md.time_spec.get_real_secs() - usrp_time;
             throw std::runtime_error("Timestamp error. Aborted.");
         }

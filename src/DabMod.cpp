@@ -559,6 +559,10 @@ run_modulator_state_t run_modulator(modulator_data& m)
 
 int main(int argc, char* argv[])
 {
+    // Set timezone to UTC
+    setenv("TZ", "", 1);
+    tzset();
+
     try {
         return launch_modulator(argc, argv);
     }
