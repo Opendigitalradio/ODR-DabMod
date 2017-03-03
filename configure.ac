@@ -1,7 +1,7 @@
 # Copyright (C) 2007, 2008, 2009, 2010, 2011, 2012 Her Majesty the
 # Queen in Right of Canada (Communications Research Center Canada)
 
-# Copyright (C) 2016 Matthias P. Braendli, http://mpb.li
+# Copyright (C) 2017 Matthias P. Braendli, http://opendigitalradio.org
 
 # This file is part of ODR-DabMod.
 #
@@ -14,12 +14,12 @@
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU General Public License
 # along with ODR-DabMod.  If not, see <http://www.gnu.org/licenses/>.
 
 AC_PREREQ(2.59)
-AC_INIT([ODR-DabMod], [0.6.0], [matthias.braendli@mpb.li])
+AC_INIT([ODR-DabMod], [1.0.0], [matthias.braendli@mpb.li])
 AC_CONFIG_AUX_DIR([build-aux])
 AC_CONFIG_MACRO_DIR([m4])
 AC_CANONICAL_SYSTEM

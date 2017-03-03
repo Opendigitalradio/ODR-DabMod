@@ -1,6 +1,23 @@
 This file contains information about the changes done to
 ODR-DabMod in this repository
 
+2017-03-03: Matthias P. Braendli <matthias@mpb.li>
+	(v1.0.0):
+	* odr-dabmod:
+		Add ETI-over-TCP input.
+		Add EDI input.
+		Add SoapySDR output, than can drive HackRF, LimeSDR and other boards.
+		Add LO offset to UHD output.
+		Make gainmode VAR the default and improve config syntax.
+		Fix TII insertion.
+		Display FCT and TIST in remote control.
+		Add most commonly used FIRFilter taps into binary and enable the
+		filter by default.
+		Add fast math configure option that can be used to improve performance
+		on ARM platforms as it allows the compiler to use NEON.
+		Improve logging.
+		Refactor internals (flowgraph, main loop, C++11 modernisation and more)
+
 2016-07-30: Matthias P. Braendli <matthias@mpb.li>
 	(v0.6.0):
 	* odr-dabmod:
@@ -27,7 +44,7 @@ ODR-DabMod in this repository
 		Add (experimental) TII support.
 		Improve thread priority definition.
 		Simplify handling of TIST offset, and add to RC.
-		Switch projecet to C++11.
+		Switch project to C++11.
 
 2015-07-24: Matthias P. Braendli <matthias@mpb.li>
 	(v0.5.3)

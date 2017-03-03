@@ -13,7 +13,7 @@ ODR-mmbTools is available in the *guide*, available on the
 
 Short list of features:
 
-- Reads ETI, outputs compliant COFDM I/Q
+- Reads ETI and EDI, outputs compliant COFDM I/Q
 - Supports native DAB sample rate and can also
   resample to other rates
 - supports all four DAB transmission modes
@@ -30,7 +30,6 @@ Short list of features:
 - ETI sources: ETI-over-TCP, file (Raw, Framed and Streamed) and ZeroMQ
 - A Telnet and ZeroMQ remote-control that can be used to change
   some parameters during runtime
-- 8-bit signed I/Q output format, useful for the [HackRF](https://greatscottgadgets.com/hackrf/)
 - ZeroMQ PUB and REP output.
 
 The src/ directory contains the source code of ODR-DabMod.
