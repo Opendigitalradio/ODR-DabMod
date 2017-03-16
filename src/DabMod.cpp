@@ -81,6 +81,11 @@
  */
 static const float normalise_factor = 50000.0f;
 
+//Empirical normalisation factors used to normalise the samples to amplitude 1.
+static const float normalise_factor_file_fix = 81000.0f;
+static const float normalise_factor_file_var = 46000.0f;
+static const float normalise_factor_file_max = 46000.0f;
+
 typedef std::complex<float> complexf;
 
 using namespace std;
@@ -181,6 +186,15 @@ static shared_ptr<ModOutput> prepare_output(
 
     if (s.useFileOutput) {
         if (s.fileOutputFormat == "complexf") {
+            output = make_shared<OutputFile>(s.outputName);
+        }
+        if (s.fileOutputFormat == "complexf_normalised") {
+            if (s.gainMode == GainMode::GAIN_FIX)
+                s.normalise = 1.0 / normalise_factor_file_fix;
+            else if (s.gainMode == GainMode::GAIN_MAX)
+                s.normalise = 1.0 / normalise_factor_file_max;
+            else if (s.gainMode == GainMode::GAIN_VAR)
+                s.normalise = 1.0 / normalise_factor_file_var;
             output = make_shared<OutputFile>(s.outputName);
         }
         else if (s.fileOutputFormat == "s8") {
