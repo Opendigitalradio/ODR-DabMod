@@ -2,8 +2,10 @@
    Copyright (C) 2007, 2008, 2009, 2010, 2011 Her Majesty the Queen in
    Right of Canada (Communications Research Center Canada)
 
-   Written by
-   2012, Matthias P. Braendli, matthias.braendli@mpb.li
+   Copyright (C) 2017
+   Matthias P. Braendli, matthias.braendli@mpb.li
+
+    http://opendigitalradio.org
  */
 /*
    This file is part of ODR-DabMod.
@@ -28,7 +30,6 @@
 #   include <config.h>
 #endif
 
-#include <boost/thread.hpp>
 
 #include "RemoteControl.h"
 #include "ModPlugin.h"
@@ -37,6 +38,7 @@
 
 #include <sys/types.h>
 #include <complex>
+#include <thread>
 #include <vector>
 #include <time.h>
 #include <cstdio>
@@ -47,62 +49,11 @@
 
 typedef std::complex<float> complexf;
 
-struct FIRFilterWorkerData {
-    /* Thread-safe queues to give data to and get data from
-     * the worker
-     */
-    ThreadsafeQueue<std::shared_ptr<Buffer> > input_queue;
-    ThreadsafeQueue<std::shared_ptr<Buffer> > output_queue;
-
-    /* Remote-control can change the taps while the filter
-     * runs. This lock makes sure nothing bad happens when
-     * the taps are being modified
-     */
-    mutable boost::mutex taps_mutex;
-    std::vector<float> taps;
-};
-
-class FIRFilterWorker {
-    public:
-        FIRFilterWorker () {
-            running = false;
-            calculationTime = 0;
-        }
-
-        ~FIRFilterWorker() {
-            PDEBUG("~FIRFilterWorker: Total elapsed thread time filtering: %zu\n", calculationTime);
-        }
-
-        void start(struct FIRFilterWorkerData *firworkerdata) {
-            running = true;
-            fir_thread = boost::thread(&FIRFilterWorker::process, this, firworkerdata);
-        }
-
-        void stop() {
-            running = false;
-            fir_thread.interrupt();
-            fir_thread.join();
-        }
-
-        void process(struct FIRFilterWorkerData *fwd);
-
-
-    private:
-        time_t calculationTime;
-        bool running;
-        boost::thread fir_thread;
-};
-
-
-class FIRFilter : public ModCodec, public RemoteControllable
+class FIRFilter : public PipelinedModCodec, public RemoteControllable
 {
 public:
     FIRFilter(const std::string& taps_file);
-    virtual ~FIRFilter();
-    FIRFilter(const FIRFilter&);
-    FIRFilter& operator=(const FIRFilter&);
 
-    int process(Buffer* const dataIn, Buffer* dataOut);
     const char* name() { return "FIRFilter"; }
 
     /******* REMOTE CONTROL ********/
@@ -114,12 +65,12 @@ public:
 
 
 protected:
+    int internal_process(Buffer* const dataIn, Buffer* dataOut);
     void load_filter_taps(const std::string &tapsFile);
 
-    std::string myTapsFile;
+    std::string m_taps_file;
 
-    FIRFilterWorker worker;
-    int number_of_runs;
-    struct FIRFilterWorkerData firwd;
+    mutable std::mutex m_taps_mutex;
+    std::vector<float> m_taps;
 };
 

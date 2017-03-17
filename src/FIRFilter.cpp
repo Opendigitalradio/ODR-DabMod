@@ -2,7 +2,7 @@
    Copyright (C) 2007, 2008, 2009, 2010, 2011 Her Majesty the Queen in
    Right of Canada (Communications Research Center Canada)
 
-   Copyright (C) 2016
+   Copyright (C) 2017
    Matthias P. Braendli, matthias.braendli@mpb.li
 
     http://opendigitalradio.org
@@ -72,202 +72,11 @@ static const std::array<float, 45> default_filter_taps({
         0.00184351124335, -0.000187368263141, -0.000840645749122, 0.00120703084394,
         -0.00110450468492});
 
-void FIRFilterWorker::process(struct FIRFilterWorkerData *fwd)
-{
-    size_t i;
-    struct timespec time_start;
-    struct timespec time_end;
-
-    set_realtime_prio(1);
-    set_thread_name("firfilter");
-
-    // This thread creates the dataOut buffer, and deletes
-    // the incoming buffer
-
-    while(running) {
-        std::shared_ptr<Buffer> dataIn;
-        fwd->input_queue.wait_and_pop(dataIn);
-
-        std::shared_ptr<Buffer> dataOut = make_shared<Buffer>();
-        dataOut->setLength(dataIn->getLength());
-
-        PDEBUG("FIRFilterWorker: dataIn->getLength() %zu\n", dataIn->getLength());
-
-#if __SSE__
-        // The SSE accelerated version cannot work on the complex values,
-        // it is necessary to do the convolution on the real and imaginary
-        // parts separately. Thankfully, the taps are real, simplifying the
-        // procedure.
-
-        const float* in = reinterpret_cast<const float*>(dataIn->getData());
-        float* out      = reinterpret_cast<float*>(dataOut->getData());
-        size_t sizeIn   = dataIn->getLength() / sizeof(float);
-
-        if ((uintptr_t)(&out[0]) % 16 != 0) {
-            fprintf(stderr, "FIRFilterWorker: out not aligned %p ", out);
-            throw std::runtime_error("FIRFilterWorker: out not aligned");
-        }
-
-        clock_gettime(CLOCK_THREAD_CPUTIME_ID, &time_start);
-
-        __m128 SSEout;
-        __m128 SSEtaps;
-        __m128 SSEin;
-        {
-            boost::mutex::scoped_lock lock(fwd->taps_mutex);
-
-            for (i = 0; i < sizeIn - 2*fwd->taps.size(); i += 4) {
-                SSEout = _mm_setr_ps(0,0,0,0);
-
-                for (size_t j = 0; j < fwd->taps.size(); j++) {
-                    if ((uintptr_t)(&in[i+2*j]) % 16 == 0) {
-                        SSEin = _mm_load_ps(&in[i+2*j]); //faster when aligned
-                    }
-                    else {
-                        SSEin = _mm_loadu_ps(&in[i+2*j]);
-                    }
-
-                    SSEtaps = _mm_load1_ps(&fwd->taps[j]);
-
-                    SSEout = _mm_add_ps(SSEout, _mm_mul_ps(SSEin, SSEtaps));
-                }
-                _mm_store_ps(&out[i], SSEout);
-            }
-
-            for (; i < sizeIn; i++) {
-                out[i] = 0.0;
-                for (int j = 0; i+2*j < sizeIn; j++) {
-                    out[i] += in[i+2*j] * fwd->taps[j];
-                }
-            }
-        }
-        clock_gettime(CLOCK_THREAD_CPUTIME_ID, &time_end);
-
-#else
-        // No SSE ? Loop unrolling should make this faster. As for the SSE,
-        // the real and imaginary parts are calculated separately.
-        const float* in = reinterpret_cast<const float*>(dataIn->getData());
-        float* out      = reinterpret_cast<float*>(dataOut->getData());
-        size_t sizeIn   = dataIn->getLength() / sizeof(float);
-
-        clock_gettime(CLOCK_THREAD_CPUTIME_ID, &time_start);
-
-        {
-            boost::mutex::scoped_lock lock(fwd->taps_mutex);
-            // Convolve by aligning both frame and taps at zero.
-            for (i = 0; i < sizeIn - 2*fwd->taps.size(); i += 4) {
-                out[i]    = 0.0;
-                out[i+1]  = 0.0;
-                out[i+2]  = 0.0;
-                out[i+3]  = 0.0;
-
-                for (size_t j = 0; j < fwd->taps.size(); j++) {
-                    out[i]   += in[i   + 2*j] * fwd->taps[j];
-                    out[i+1] += in[i+1 + 2*j] * fwd->taps[j];
-                    out[i+2] += in[i+2 + 2*j] * fwd->taps[j];
-                    out[i+3] += in[i+3 + 2*j] * fwd->taps[j];
-                }
-            }
-
-            // At the end of the frame, we cut the convolution off.
-            // The beginning of the next frame starts with a NULL symbol
-            // anyway.
-            for (; i < sizeIn; i++) {
-                out[i] = 0.0;
-                for (int j = 0; i+2*j < sizeIn; j++) {
-                    out[i] += in[i+2*j] * fwd->taps[j];
-                }
-            }
-        }
-
-        clock_gettime(CLOCK_THREAD_CPUTIME_ID, &time_end);
-
-
-#endif
-
-        // The following implementations are for debugging only.
-#if 0
-        // Same thing as above, without loop unrolling. For debugging.
-        const float* in = reinterpret_cast<const float*>(dataIn->getData());
-        float* out      = reinterpret_cast<float*>(dataOut->getData());
-        size_t sizeIn   = dataIn->getLength() / sizeof(float);
-
-        for (i = 0; i < sizeIn - 2*fwd->taps.size(); i += 1) {
-            out[i]  = 0.0;
-
-            for (size_t j = 0; j < fwd->taps.size(); j++) {
-                out[i]  += in[i+2*j] * fwd->taps[j];
-            }
-        }
-
-        for (; i < sizeIn; i++) {
-            out[i] = 0.0;
-            for (int j = 0; i+2*j < sizeIn; j++) {
-                out[i] += in[i+2*j] * fwd->taps[j];
-            }
-        }
-
-#elif 0
-        // An unrolled loop, but this time, the input data is cast to complex float.
-        // Makes indices more natural. For debugging.
-        const complexf* in = reinterpret_cast<const complexf*>(dataIn->getData());
-        complexf* out      = reinterpret_cast<complexf*>(dataOut->getData());
-        size_t sizeIn      = dataIn->getLength() / sizeof(complexf);
-
-        for (i = 0; i < sizeIn - fwd->taps.size(); i += 4) {
-            out[i]   = 0.0;
-            out[i+1] = 0.0;
-            out[i+2] = 0.0;
-            out[i+3] = 0.0;
-
-            for (size_t j = 0; j < fwd->taps.size(); j++) {
-                out[i]   += in[i+j  ] * fwd->taps[j];
-                out[i+1] += in[i+1+j] * fwd->taps[j];
-                out[i+2] += in[i+2+j] * fwd->taps[j];
-                out[i+3] += in[i+3+j] * fwd->taps[j];
-            }
-        }
-
-        for (; i < sizeIn; i++) {
-            out[i] = 0.0;
-            for (int j = 0; j+i < sizeIn; j++) {
-                out[i] += in[i+j] * fwd->taps[j];
-            }
-        }
-
-#elif 0
-        // Simple implementation. Slow. For debugging.
-        const complexf* in = reinterpret_cast<const complexf*>(dataIn->getData());
-        complexf* out      = reinterpret_cast<complexf*>(dataOut->getData());
-        size_t sizeIn      = dataIn->getLength() / sizeof(complexf);
-
-        for (i = 0; i < sizeIn - fwd->taps.size(); i += 1) {
-            out[i]   = 0.0;
-
-            for (size_t j = 0; j < fwd->taps.size(); j++) {
-                out[i]  += in[i+j  ] * fwd->taps[j];
-            }
-        }
-
-        for (; i < sizeIn; i++) {
-            out[i] = 0.0;
-            for (int j = 0; j+i < sizeIn; j++) {
-                out[i] += in[i+j] * fwd->taps[j];
-            }
-        }
-#endif
-
-        calculationTime += (time_end.tv_sec - time_start.tv_sec) * 1000000000L +
-            time_end.tv_nsec - time_start.tv_nsec;
-        fwd->output_queue.push(dataOut);
-    }
-}
-
 
 FIRFilter::FIRFilter(const std::string& taps_file) :
-    ModCodec(),
+    PipelinedModCodec(),
     RemoteControllable("firfilter"),
-    myTapsFile(taps_file)
+    m_taps_file(taps_file)
 {
     PDEBUG("FIRFilter::FIRFilter(%s) @ %p\n",
             taps_file.c_str(), this);
@@ -275,12 +84,7 @@ FIRFilter::FIRFilter(const std::string& taps_file) :
     RC_ADD_PARAMETER(ntaps, "(Read-only) number of filter taps.");
     RC_ADD_PARAMETER(tapsfile, "Filename containing filter taps. When written to, the new file gets automatically loaded.");
 
-    number_of_runs = 0;
-
-    load_filter_taps(myTapsFile);
-
-    PDEBUG("FIRFilter: Starting worker\n" );
-    worker.start(&firwd);
+    load_filter_taps(m_taps_file);
 }
 
 void FIRFilter::load_filter_taps(const std::string &tapsFile)
@@ -325,48 +129,185 @@ void FIRFilter::load_filter_taps(const std::string &tapsFile)
     }
 
     {
-        boost::mutex::scoped_lock lock(firwd.taps_mutex);
+        std::lock_guard<std::mutex> lock(m_taps_mutex);
 
-        firwd.taps = filter_taps;
+        m_taps = filter_taps;
     }
 }
 
 
-FIRFilter::~FIRFilter()
+int FIRFilter::internal_process(Buffer* const dataIn, Buffer* dataOut)
 {
-    PDEBUG("FIRFilter::~FIRFilter() @ %p\n", this);
+        size_t i;
 
-    worker.stop();
-}
+#if __SSE__
+        // The SSE accelerated version cannot work on the complex values,
+        // it is necessary to do the convolution on the real and imaginary
+        // parts separately. Thankfully, the taps are real, simplifying the
+        // procedure.
+
+        const float* in = reinterpret_cast<const float*>(dataIn->getData());
+        float* out      = reinterpret_cast<float*>(dataOut->getData());
+        size_t sizeIn   = dataIn->getLength() / sizeof(float);
+
+        if ((uintptr_t)(&out[0]) % 16 != 0) {
+            fprintf(stderr, "FIRFilterWorker: out not aligned %p ", out);
+            throw std::runtime_error("FIRFilterWorker: out not aligned");
+        }
+
+        __m128 SSEout;
+        __m128 SSEtaps;
+        __m128 SSEin;
+        {
+            std::lock_guard<std::mutex> lock(m_taps_mutex);
+
+            for (i = 0; i < sizeIn - 2*m_taps.size(); i += 4) {
+                SSEout = _mm_setr_ps(0,0,0,0);
+
+                for (size_t j = 0; j < m_taps.size(); j++) {
+                    if ((uintptr_t)(&in[i+2*j]) % 16 == 0) {
+                        SSEin = _mm_load_ps(&in[i+2*j]); //faster when aligned
+                    }
+                    else {
+                        SSEin = _mm_loadu_ps(&in[i+2*j]);
+                    }
+
+                    SSEtaps = _mm_load1_ps(&m_taps[j]);
+
+                    SSEout = _mm_add_ps(SSEout, _mm_mul_ps(SSEin, SSEtaps));
+                }
+                _mm_store_ps(&out[i], SSEout);
+            }
+
+            for (; i < sizeIn; i++) {
+                out[i] = 0.0;
+                for (int j = 0; i+2*j < sizeIn; j++) {
+                    out[i] += in[i+2*j] * m_taps[j];
+                }
+            }
+        }
+
+#else
+        // No SSE ? Loop unrolling should make this faster. As for the SSE,
+        // the real and imaginary parts are calculated separately.
+        const float* in = reinterpret_cast<const float*>(dataIn->getData());
+        float* out      = reinterpret_cast<float*>(dataOut->getData());
+        size_t sizeIn   = dataIn->getLength() / sizeof(float);
+
+        clock_gettime(CLOCK_THREAD_CPUTIME_ID, &time_start);
+
+        {
+            std::lock_guard<std::mutex> lock(m_taps_mutex);
+            // Convolve by aligning both frame and taps at zero.
+            for (i = 0; i < sizeIn - 2*m_taps.size(); i += 4) {
+                out[i]    = 0.0;
+                out[i+1]  = 0.0;
+                out[i+2]  = 0.0;
+                out[i+3]  = 0.0;
+
+                for (size_t j = 0; j < m_taps.size(); j++) {
+                    out[i]   += in[i   + 2*j] * m_taps[j];
+                    out[i+1] += in[i+1 + 2*j] * m_taps[j];
+                    out[i+2] += in[i+2 + 2*j] * m_taps[j];
+                    out[i+3] += in[i+3 + 2*j] * m_taps[j];
+                }
+            }
+
+            // At the end of the frame, we cut the convolution off.
+            // The beginning of the next frame starts with a NULL symbol
+            // anyway.
+            for (; i < sizeIn; i++) {
+                out[i] = 0.0;
+                for (int j = 0; i+2*j < sizeIn; j++) {
+                    out[i] += in[i+2*j] * m_taps[j];
+                }
+            }
+        }
+
+        clock_gettime(CLOCK_THREAD_CPUTIME_ID, &time_end);
 
 
-int FIRFilter::process(Buffer* const dataIn, Buffer* dataOut)
-{
-    PDEBUG("FIRFilter::process(dataIn: %p, dataOut: %p)\n",
-            dataIn, dataOut);
+#endif
 
-    // This thread creates the dataIn buffer, and deletes
-    // the outgoing buffer
+        // The following implementations are for debugging only.
+#if 0
+        // Same thing as above, without loop unrolling. For debugging.
+        const float* in = reinterpret_cast<const float*>(dataIn->getData());
+        float* out      = reinterpret_cast<float*>(dataOut->getData());
+        size_t sizeIn   = dataIn->getLength() / sizeof(float);
 
-    std::shared_ptr<Buffer> inbuffer =
-        make_shared<Buffer>(dataIn->getLength(), dataIn->getData());
+        std::lock_guard<std::mutex> lock(m_taps_mutex);
 
-    firwd.input_queue.push(inbuffer);
+        for (i = 0; i < sizeIn - 2*m_taps.size(); i += 1) {
+            out[i]  = 0.0;
 
-    if (number_of_runs > 2) {
-        std::shared_ptr<Buffer> outbuffer;
-        firwd.output_queue.wait_and_pop(outbuffer);
+            for (size_t j = 0; j < m_taps.size(); j++) {
+                out[i]  += in[i+2*j] * m_taps[j];
+            }
+        }
 
-        dataOut->setData(outbuffer->getData(), outbuffer->getLength());
-    }
-    else {
-        dataOut->setLength(dataIn->getLength());
-        memset(dataOut->getData(), 0, dataOut->getLength());
-        number_of_runs++;
-    }
+        for (; i < sizeIn; i++) {
+            out[i] = 0.0;
+            for (int j = 0; i+2*j < sizeIn; j++) {
+                out[i] += in[i+2*j] * m_taps[j];
+            }
+        }
+
+#elif 0
+        // An unrolled loop, but this time, the input data is cast to complex float.
+        // Makes indices more natural. For debugging.
+        const complexf* in = reinterpret_cast<const complexf*>(dataIn->getData());
+        complexf* out      = reinterpret_cast<complexf*>(dataOut->getData());
+        size_t sizeIn      = dataIn->getLength() / sizeof(complexf);
+
+        std::lock_guard<std::mutex> lock(m_taps_mutex);
+
+        for (i = 0; i < sizeIn - m_taps.size(); i += 4) {
+            out[i]   = 0.0;
+            out[i+1] = 0.0;
+            out[i+2] = 0.0;
+            out[i+3] = 0.0;
+
+            for (size_t j = 0; j < m_taps.size(); j++) {
+                out[i]   += in[i+j  ] * m_taps[j];
+                out[i+1] += in[i+1+j] * m_taps[j];
+                out[i+2] += in[i+2+j] * m_taps[j];
+                out[i+3] += in[i+3+j] * m_taps[j];
+            }
+        }
+
+        for (; i < sizeIn; i++) {
+            out[i] = 0.0;
+            for (int j = 0; j+i < sizeIn; j++) {
+                out[i] += in[i+j] * m_taps[j];
+            }
+        }
+
+#elif 0
+        // Simple implementation. Slow. For debugging.
+        const complexf* in = reinterpret_cast<const complexf*>(dataIn->getData());
+        complexf* out      = reinterpret_cast<complexf*>(dataOut->getData());
+        size_t sizeIn      = dataIn->getLength() / sizeof(complexf);
+
+        std::lock_guard<std::mutex> lock(m_taps_mutex);
+
+        for (i = 0; i < sizeIn - m_taps.size(); i += 1) {
+            out[i]   = 0.0;
+
+            for (size_t j = 0; j < m_taps.size(); j++) {
+                out[i]  += in[i+j  ] * m_taps[j];
+            }
+        }
+
+        for (; i < sizeIn; i++) {
+            out[i] = 0.0;
+            for (int j = 0; j+i < sizeIn; j++) {
+                out[i] += in[i+j] * m_taps[j];
+            }
+        }
+#endif
 
     return dataOut->getLength();
-
 }
 
 void FIRFilter::set_parameter(const string& parameter, const string& value)
@@ -380,7 +321,7 @@ void FIRFilter::set_parameter(const string& parameter, const string& value)
     else if (parameter == "tapsfile") {
         try {
             load_filter_taps(value);
-            myTapsFile = value;
+            m_taps_file = value;
         }
         catch (std::runtime_error &e) {
             throw ParameterError(e.what());
@@ -388,7 +329,8 @@ void FIRFilter::set_parameter(const string& parameter, const string& value)
     }
     else {
         stringstream ss;
-        ss << "Parameter '" << parameter << "' is not exported by controllable " << get_rc_name();
+        ss << "Parameter '" << parameter <<
+            "' is not exported by controllable " << get_rc_name();
         throw ParameterError(ss.str());
     }
 }
@@ -397,16 +339,16 @@ const string FIRFilter::get_parameter(const string& parameter) const
 {
     stringstream ss;
     if (parameter == "ntaps") {
-        ss << firwd.taps.size();
+        ss << m_taps.size();
     }
     else if (parameter == "tapsfile") {
-        ss << myTapsFile;
+        ss << m_taps_file;
     }
     else {
-        ss << "Parameter '" << parameter << "' is not exported by controllable " << get_rc_name();
+        ss << "Parameter '" << parameter <<
+            "' is not exported by controllable " << get_rc_name();
         throw ParameterError(ss.str());
     }
     return ss.str();
-
 }
 
