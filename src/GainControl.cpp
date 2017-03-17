@@ -43,6 +43,7 @@ union __u128 {
 
 using namespace std;
 
+static float var_variance;
 
 GainControl::GainControl(size_t framesize,
                          GainMode mode,
@@ -56,38 +57,23 @@ GainControl::GainControl(size_t framesize,
     m_frameSize(framesize),
 #endif
     m_digGain(digGain),
-    m_normalise(normalise)
+    m_normalise(normalise),
+    m_var_variance_rc(4.0f),
+    m_gainmode(mode),
+    m_mutex()
 {
     PDEBUG("GainControl::GainControl(%zu, %zu) @ %p\n", framesize, (size_t)mode, this);
 
     /* register the parameters that can be remote controlled */
     RC_ADD_PARAMETER(digital, "Digital Gain");
-
-    switch(mode) {
-        case GainMode::GAIN_FIX:
-            PDEBUG("Gain mode: fix\n");
-            computeGain = computeGainFix;
-            break;
-        case GainMode::GAIN_MAX:
-            PDEBUG("Gain mode: max\n");
-            computeGain = computeGainMax;
-            break;
-        case GainMode::GAIN_VAR:
-            PDEBUG("Gain mode: var\n");
-            computeGain = computeGainVar;
-            break;
-        default:
-            throw std::runtime_error(
-                    "GainControl::GainControl invalid computation gain mode!");
-    }
+    RC_ADD_PARAMETER(mode, "Gainmode (fix|max|var)");
+    RC_ADD_PARAMETER(var, "Variance setting for gainmode var (default: 4)");
 }
-
 
 GainControl::~GainControl()
 {
     PDEBUG("GainControl::~GainControl() @ %p\n", this);
 }
-
 
 int GainControl::internal_process(Buffer* const dataIn, Buffer* dataOut)
 {
@@ -98,11 +84,40 @@ int GainControl::internal_process(Buffer* const dataIn, Buffer* dataOut)
     dataOut->setLength(dataIn->getLength());
 
 #ifdef __SSE__
+    __m128 (*computeGain)(const __m128* in, size_t sizeIn);
+#else
+    float (*computeGain)(const complexf* in, size_t sizeIn);
+#endif
+    {
+        std::lock_guard<std::mutex> lock(m_mutex);
+
+        var_variance = m_var_variance_rc;
+
+        switch (m_gainmode) {
+            case GainMode::GAIN_FIX:
+                PDEBUG("Gain mode: fix\n");
+                computeGain = computeGainFix;
+                break;
+            case GainMode::GAIN_MAX:
+                PDEBUG("Gain mode: max\n");
+                computeGain = computeGainMax;
+                break;
+            case GainMode::GAIN_VAR:
+                PDEBUG("Gain mode: var\n");
+                computeGain = computeGainVar;
+                break;
+            default:
+                throw std::logic_error("Internal error: invalid gainmode");
+        }
+    }
+
+#ifdef __SSE__
     const __m128* in  = reinterpret_cast<const __m128*>(dataIn->getData());
     __m128* out       = reinterpret_cast<__m128*>(dataOut->getData());
     size_t  sizeIn    = dataIn->getLength() / sizeof(__m128);
     size_t  sizeOut   = dataOut->getLength() / sizeof(__m128);
     __u128  gain128;
+
 
     if ((sizeIn % m_frameSize) != 0) {
         PDEBUG("%zu != %zu\n", sizeIn, m_frameSize);
@@ -287,7 +302,7 @@ __m128 GainControl::computeGainVar(const __m128* in, size_t sizeIn)
     var128.m = _mm_sqrt_ps(var128.m);
     PDEBUG("********** Var:   %10f + %10fj, %10f + %10fj **********\n",
             var128.f[0], var128.f[1], var128.f[2], var128.f[3]);
-    var128.m = _mm_mul_ps(var128.m, _mm_set1_ps(4.0f));
+    var128.m = _mm_mul_ps(var128.m, _mm_set1_ps(var_variance));
     PDEBUG("********** 4*Var: %10f + %10fj, %10f + %10fj **********\n",
             var128.f[0], var128.f[1], var128.f[2], var128.f[3]);
 
@@ -446,7 +461,7 @@ float GainControl::computeGainVar(const complexf* in, size_t sizeIn)
     complexf var(sqrt(tmpvar.real()), sqrt(tmpvar.imag()));
     PDEBUG("********** Var:   %10f + %10fj **********\n", var.real(), var.imag());
 
-    var = var * 4.0f;
+    var = var * var_variance;
     PDEBUG("********** 4*Var: %10f + %10fj **********\n", var.real(), var.imag());
 
     ////////////////////////////////////////////////////////////////////////////
@@ -480,6 +495,39 @@ void GainControl::set_parameter(const string& parameter, const string& value)
         ss >> new_factor;
         m_digGain = new_factor;
     }
+    else if (parameter == "mode") {
+        string new_mode;
+        ss >> new_mode;
+        std::transform(new_mode.begin(), new_mode.end(), new_mode.begin(),
+                [](const char c) { return std::tolower(c); } );
+
+        GainMode m;
+        if (new_mode == "fix") {
+            m = GainMode::GAIN_FIX;
+        }
+        else if (new_mode == "max") {
+            m = GainMode::GAIN_MAX;
+        }
+        else if (new_mode == "var") {
+            m = GainMode::GAIN_VAR;
+        }
+        else {
+            throw ParameterError("Gainmode " + new_mode + " unknown");
+        }
+
+        {
+            std::lock_guard<std::mutex> lock(m_mutex);
+            m_gainmode = m;
+        }
+    }
+    else if (parameter == "var") {
+        float newvar = 0;
+        ss >> newvar;
+        {
+            std::lock_guard<std::mutex> lock(m_mutex);
+            m_var_variance_rc = newvar;
+        }
+    }
     else {
         stringstream ss;
         ss << "Parameter '" << parameter
@@ -493,6 +541,22 @@ const string GainControl::get_parameter(const string& parameter) const
     stringstream ss;
     if (parameter == "digital") {
         ss << std::fixed << m_digGain;
+    }
+    else if (parameter == "mode") {
+        switch (m_gainmode) {
+            case GainMode::GAIN_FIX:
+                ss << "fix";
+                break;
+            case GainMode::GAIN_MAX:
+                ss << "max";
+                break;
+            case GainMode::GAIN_VAR:
+                ss << "var";
+                break;
+        }
+    }
+    else if (parameter == "var") {
+        ss << std::fixed << m_var_variance_rc;
     }
     else {
         ss << "Parameter '" << parameter <<

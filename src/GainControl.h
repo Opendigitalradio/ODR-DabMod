@@ -37,6 +37,7 @@
 #include <sys/types.h>
 #include <complex>
 #include <string>
+#include <mutex>
 #ifdef __SSE__
 #   include <xmmintrin.h>
 #endif
@@ -58,29 +59,35 @@ class GainControl : public PipelinedModCodec, public RemoteControllable
         GainControl(const GainControl&);
         GainControl& operator=(const GainControl&);
 
-        const char* name() { return "GainControl"; }
+        const char* name() override { return "GainControl"; }
 
         /* Functions for the remote control */
         /* Base function to set parameters. */
         virtual void set_parameter(const std::string& parameter,
-                const std::string& value);
+                const std::string& value) override;
 
         /* Getting a parameter always returns a string. */
-        virtual const std::string get_parameter(const std::string& parameter) const;
+        virtual const std::string get_parameter(
+                const std::string& parameter) const override;
 
     protected:
-        virtual int internal_process(Buffer* const dataIn, Buffer* dataOut) override;
+        virtual int internal_process(
+                Buffer* const dataIn, Buffer* dataOut) override;
 
         size_t m_frameSize;
         float& m_digGain;
-        float  m_normalise;
+        float m_normalise;
+
+        // The following variables are accessed from the RC thread
+        float m_var_variance_rc;
+        GainMode m_gainmode;
+        mutable std::mutex m_mutex;
+
 #ifdef __SSE__
-        __m128 (*computeGain)(const __m128* in, size_t sizeIn);
         __m128 static computeGainFix(const __m128* in, size_t sizeIn);
         __m128 static computeGainMax(const __m128* in, size_t sizeIn);
         __m128 static computeGainVar(const __m128* in, size_t sizeIn);
 #else
-        float (*computeGain)(const complexf* in, size_t sizeIn);
         float static computeGainFix(const complexf* in, size_t sizeIn);
         float static computeGainMax(const complexf* in, size_t sizeIn);
         float static computeGainVar(const complexf* in, size_t sizeIn);
