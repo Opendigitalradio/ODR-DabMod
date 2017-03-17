@@ -3,7 +3,7 @@
    Her Majesty the Queen in Right of Canada (Communications Research
    Center Canada)
 
-   Copyright (C) 2014
+   Copyright (C) 2017
    Matthias P. Braendli, matthias.braendli@mpb.li
 
     http://opendigitalradio.org
@@ -48,7 +48,7 @@ GainControl::GainControl(size_t framesize,
                          GainMode mode,
                          float& digGain,
                          float normalise) :
-    ModCodec(),
+    PipelinedModCodec(),
     RemoteControllable("gain"),
 #ifdef __SSE__
     m_frameSize(framesize * sizeof(complexf) / sizeof(__m128)),
@@ -89,7 +89,7 @@ GainControl::~GainControl()
 }
 
 
-int GainControl::process(Buffer* const dataIn, Buffer* dataOut)
+int GainControl::internal_process(Buffer* const dataIn, Buffer* dataOut)
 {
     PDEBUG("GainControl::process"
             "(dataIn: %p, dataOut: %p)\n",

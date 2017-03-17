@@ -3,7 +3,7 @@
    Her Majesty the Queen in Right of Canada (Communications Research
    Center Canada)
 
-   Copyright (C) 2014
+   Copyright (C) 2017
    Matthias P. Braendli, matthias.braendli@mpb.li
 
     http://opendigitalradio.org
@@ -46,7 +46,7 @@ typedef std::complex<float> complexf;
 
 enum class GainMode { GAIN_FIX = 0, GAIN_MAX = 1, GAIN_VAR = 2 };
 
-class GainControl : public ModCodec, public RemoteControllable
+class GainControl : public PipelinedModCodec, public RemoteControllable
 {
     public:
         GainControl(size_t framesize,
@@ -58,7 +58,6 @@ class GainControl : public ModCodec, public RemoteControllable
         GainControl(const GainControl&);
         GainControl& operator=(const GainControl&);
 
-        int process(Buffer* const dataIn, Buffer* dataOut);
         const char* name() { return "GainControl"; }
 
         /* Functions for the remote control */
@@ -70,6 +69,8 @@ class GainControl : public ModCodec, public RemoteControllable
         virtual const std::string get_parameter(const std::string& parameter) const;
 
     protected:
+        virtual int internal_process(Buffer* const dataIn, Buffer* dataOut) override;
+
         size_t m_frameSize;
         float& m_digGain;
         float  m_normalise;
