@@ -58,6 +58,7 @@ struct mod_settings_t {
     float digitalgain = 1.0f;
     float normalise = 1.0f;
     GainMode gainMode = GainMode::GAIN_VAR;
+    float gainmodeVariance = 4.0f;
 
     // To handle the timestamp offset of the modulator
     unsigned tist_delay_stages = 0;

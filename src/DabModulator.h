@@ -3,7 +3,7 @@
    Her Majesty the Queen in Right of Canada (Communications Research
    Center Canada)
 
-   Copyright (C) 2016
+   Copyright (C) 2017
    Matthias P. Braendli, matthias.braendli@mpb.li
 
     http://opendigitalradio.org
@@ -54,6 +54,7 @@ public:
             unsigned outputRate, unsigned clockRate,
             unsigned dabMode, GainMode gainMode,
             float& digGain, float normalise,
+            float gainmodeVariance,
             const std::string& filterTapsFilename);
     DabModulator(const DabModulator& other) = delete;
     DabModulator& operator=(const DabModulator& other) = delete;
@@ -74,6 +75,7 @@ protected:
     GainMode myGainMode;
     float& myDigGain;
     float myNormalise;
+    float myGainmodeVariance;
     EtiSource& myEtiSource;
     Flowgraph* myFlowgraph;
     OutputMemory* myOutput;

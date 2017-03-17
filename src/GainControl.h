@@ -53,7 +53,8 @@ class GainControl : public PipelinedModCodec, public RemoteControllable
         GainControl(size_t framesize,
                     GainMode mode,
                     float& digGain,
-                    float normalise);
+                    float normalise,
+                    float varVariance);
 
         virtual ~GainControl();
         GainControl(const GainControl&);

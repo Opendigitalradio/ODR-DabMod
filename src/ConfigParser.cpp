@@ -154,6 +154,8 @@ static void parse_configfile(
     // modulator parameters:
     const string gainMode_setting = pt.get("modulator.gainmode", "var");
     mod_settings.gainMode = parse_gainmode(gainMode_setting);
+    mod_settings.gainmodeVariance = pt.get("modulator.normalise_variance",
+            mod_settings.gainmodeVariance);
 
     mod_settings.dabMode = pt.get("modulator.mode", mod_settings.dabMode);
     mod_settings.clockRate = pt.get("modulator.dac_clk_rate", (size_t)0);

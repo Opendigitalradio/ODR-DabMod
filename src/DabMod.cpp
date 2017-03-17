@@ -307,6 +307,7 @@ int launch_modulator(int argc, char* argv[])
                 mod_settings.gainMode,
                 mod_settings.digitalgain,
                 mod_settings.normalise,
+                mod_settings.gainmodeVariance,
                 mod_settings.filterTapsFilename);
 
         if (format_converter) {
@@ -410,6 +411,7 @@ int launch_modulator(int argc, char* argv[])
                     mod_settings.gainMode,
                     mod_settings.digitalgain,
                     mod_settings.normalise,
+                    mod_settings.gainmodeVariance,
                     mod_settings.filterTapsFilename);
 
             if (format_converter) {

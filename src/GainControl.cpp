@@ -48,7 +48,8 @@ static float var_variance;
 GainControl::GainControl(size_t framesize,
                          GainMode mode,
                          float& digGain,
-                         float normalise) :
+                         float normalise,
+                         float varVariance) :
     PipelinedModCodec(),
     RemoteControllable("gain"),
 #ifdef __SSE__
@@ -58,7 +59,7 @@ GainControl::GainControl(size_t framesize,
 #endif
     m_digGain(digGain),
     m_normalise(normalise),
-    m_var_variance_rc(4.0f),
+    m_var_variance_rc(varVariance),
     m_gainmode(mode),
     m_mutex()
 {

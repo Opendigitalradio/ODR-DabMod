@@ -3,7 +3,7 @@
    Her Majesty the Queen in Right of Canada (Communications Research
    Center Canada)
 
-   Copyright (C) 2016
+   Copyright (C) 2017
    Matthias P. Braendli, matthias.braendli@mpb.li
 
     http://opendigitalradio.org
@@ -60,6 +60,7 @@ DabModulator::DabModulator(
         unsigned outputRate, unsigned clockRate,
         unsigned dabMode, GainMode gainMode,
         float& digGain, float normalise,
+        float gainmodeVariance,
         const std::string& filterTapsFilename
         ) :
     ModInput(),
@@ -69,6 +70,7 @@ DabModulator::DabModulator(
     myGainMode(gainMode),
     myDigGain(digGain),
     myNormalise(normalise),
+    myGainmodeVariance(gainmodeVariance),
     myEtiSource(etiSource),
     myFlowgraph(NULL),
     myFilterTapsFilename(filterTapsFilename),
@@ -201,7 +203,7 @@ int DabModulator::process(Buffer* dataOut)
                 (1 + myNbSymbols), myNbCarriers, mySpacing);
 
         auto cifGain = make_shared<GainControl>(
-                mySpacing, myGainMode, myDigGain, myNormalise);
+                mySpacing, myGainMode, myDigGain, myNormalise, myGainmodeVariance);
 
         rcs.enrol(cifGain.get());
 
