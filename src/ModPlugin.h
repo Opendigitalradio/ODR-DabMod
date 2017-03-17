@@ -38,6 +38,7 @@
 #include <vector>
 #include <memory>
 #include <thread>
+#include <atomic>
 
 class ModPlugin
 {
