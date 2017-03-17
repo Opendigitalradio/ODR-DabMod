@@ -119,6 +119,7 @@ int PipelinedModCodec::process(Buffer* dataIn, Buffer* dataOut)
 void PipelinedModCodec::process_thread()
 {
     set_thread_name(name());
+    set_realtime_prio(1);
 
     while (m_running) {
         std::shared_ptr<Buffer> dataIn;
