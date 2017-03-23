@@ -47,8 +47,6 @@
 
 using namespace std;
 
-#include <sys/time.h>
-
 /* This is the FIR Filter calculated with the doc/fir-filter/generate-filter.py script
  * with settings
  *   gain = 1
@@ -194,8 +192,6 @@ int FIRFilter::internal_process(Buffer* const dataIn, Buffer* dataOut)
         float* out      = reinterpret_cast<float*>(dataOut->getData());
         size_t sizeIn   = dataIn->getLength() / sizeof(float);
 
-        clock_gettime(CLOCK_THREAD_CPUTIME_ID, &time_start);
-
         {
             std::lock_guard<std::mutex> lock(m_taps_mutex);
             // Convolve by aligning both frame and taps at zero.
@@ -223,10 +219,6 @@ int FIRFilter::internal_process(Buffer* const dataIn, Buffer* dataOut)
                 }
             }
         }
-
-        clock_gettime(CLOCK_THREAD_CPUTIME_ID, &time_end);
-
-
 #endif
 
         // The following implementations are for debugging only.
