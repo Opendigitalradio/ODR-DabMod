@@ -83,15 +83,20 @@ public:
     virtual const char* name() = 0;
 
 protected:
-    void process_thread(void);
+    // Once the instance implementing PipelinedModCodec has been constructed,
+    // it must call start_pipeline_thread()
+    void start_pipeline_thread(void);
     virtual int internal_process(Buffer* const dataIn, Buffer* dataOut) = 0;
+
+private:
+    size_t m_number_of_runs;
 
     ThreadsafeQueue<std::shared_ptr<Buffer> > m_input_queue;
     ThreadsafeQueue<std::shared_ptr<Buffer> > m_output_queue;
 
     std::atomic<bool> m_running;
-    size_t m_number_of_runs;
     std::thread m_thread;
+    void process_thread(void);
 };
 
 

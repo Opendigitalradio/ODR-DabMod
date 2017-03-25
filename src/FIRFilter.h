@@ -65,7 +65,7 @@ public:
 
 
 protected:
-    int internal_process(Buffer* const dataIn, Buffer* dataOut);
+    virtual int internal_process(Buffer* const dataIn, Buffer* dataOut);
     void load_filter_taps(const std::string &tapsFile);
 
     std::string m_taps_file;

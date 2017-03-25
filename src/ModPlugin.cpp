@@ -74,10 +74,11 @@ int ModOutput::process(
 
 PipelinedModCodec::PipelinedModCodec() :
     ModCodec(),
+    m_number_of_runs(0),
     m_input_queue(),
     m_output_queue(),
-    m_number_of_runs(0),
-    m_thread(&PipelinedModCodec::process_thread, this)
+    m_running(false),
+    m_thread()
 {
 }
 
@@ -87,6 +88,11 @@ PipelinedModCodec::~PipelinedModCodec()
     if (m_thread.joinable()) {
         m_thread.join();
     }
+}
+
+void PipelinedModCodec::start_pipeline_thread()
+{
+    m_thread = std::thread(&PipelinedModCodec::process_thread, this);
 }
 
 int PipelinedModCodec::process(Buffer* dataIn, Buffer* dataOut)

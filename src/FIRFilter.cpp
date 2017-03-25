@@ -83,6 +83,8 @@ FIRFilter::FIRFilter(const std::string& taps_file) :
     RC_ADD_PARAMETER(tapsfile, "Filename containing filter taps. When written to, the new file gets automatically loaded.");
 
     load_filter_taps(m_taps_file);
+
+    start_pipeline_thread();
 }
 
 void FIRFilter::load_filter_taps(const std::string &tapsFile)

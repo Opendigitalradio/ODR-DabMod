@@ -69,6 +69,8 @@ GainControl::GainControl(size_t framesize,
     RC_ADD_PARAMETER(digital, "Digital Gain");
     RC_ADD_PARAMETER(mode, "Gainmode (fix|max|var)");
     RC_ADD_PARAMETER(var, "Variance setting for gainmode var (default: 4)");
+
+    start_pipeline_thread();
 }
 
 GainControl::~GainControl()
