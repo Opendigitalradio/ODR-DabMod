@@ -92,6 +92,7 @@ PipelinedModCodec::~PipelinedModCodec()
 
 void PipelinedModCodec::start_pipeline_thread()
 {
+    m_running = true;
     m_thread = std::thread(&PipelinedModCodec::process_thread, this);
 }
 
