@@ -166,7 +166,7 @@ void MemlessPoly::set_parameter(const string& parameter, const string& value)
     if (parameter == "ntaps") {
         throw ParameterError("Parameter 'ntaps' is read-only");
     }
-    else if (parameter == "tapsfile") {
+    else if (parameter == "coeffile") {
         try {
             load_filter_taps(value);
             m_taps_file = value;
