@@ -73,7 +73,7 @@ MemlessPoly::MemlessPoly(const std::string& taps_file) :
             taps_file.c_str(), this);
 
     RC_ADD_PARAMETER(ntaps, "(Read-only) number of filter taps.");
-    RC_ADD_PARAMETER(tapsfile, "Filename containing filter taps. When written to, the new file gets automatically loaded.");
+    RC_ADD_PARAMETER(coeffile, "Filename containing filter taps. When written to, the new file gets automatically loaded.");
 
     load_filter_taps(m_taps_file);
 
@@ -143,14 +143,14 @@ int MemlessPoly::internal_process(Buffer* const dataIn, Buffer* dataOut)
                  float mag = std::abs(in[i]);
                  //out[i] = in[i];
                  out[i] = in[i] * (
-                     default_coefficients[0] +
-                     default_coefficients[1] * mag +
-                     default_coefficients[2] * mag*mag +
-                     default_coefficients[3] * mag*mag*mag +
-                     default_coefficients[4] * mag*mag*mag*mag +
-                     default_coefficients[5] * mag*mag*mag*mag*mag +
-                     default_coefficients[6] * mag*mag*mag*mag*mag*mag +
-                     default_coefficients[7] * mag*mag*mag*mag*mag*mag*mag
+                     m_taps[0] +
+                     m_taps[1] * mag +
+                     m_taps[2] * mag*mag +
+                     m_taps[3] * mag*mag*mag +
+                     m_taps[4] * mag*mag*mag*mag +
+                     m_taps[5] * mag*mag*mag*mag*mag +
+                     m_taps[6] * mag*mag*mag*mag*mag*mag +
+                     m_taps[7] * mag*mag*mag*mag*mag*mag*mag
                      );
             }
         }
