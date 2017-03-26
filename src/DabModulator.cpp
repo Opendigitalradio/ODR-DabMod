@@ -47,6 +47,7 @@
 #include "Resampler.h"
 #include "ConvEncoder.h"
 #include "FIRFilter.h"
+#include "MemlessPoly.h"
 #include "TII.h"
 #include "PuncturingEncoder.h"
 #include "TimeInterleaver.h"
@@ -215,6 +216,11 @@ int DabModulator::process(Buffer* dataOut)
             cifFilter = make_shared<FIRFilter>(myFilterTapsFilename);
             rcs.enrol(cifFilter.get());
         }
+
+        shared_ptr<MemlessPoly> cifPoly;
+        cifPoly = make_shared<MemlessPoly>("default");
+        rcs.enrol(cifPoly.get());
+
         auto myOutput = make_shared<OutputMemory>(dataOut);
 
         shared_ptr<Resampler> cifRes;
@@ -348,23 +354,30 @@ int DabModulator::process(Buffer* dataOut)
         myFlowgraph->connect(cifOfdm, cifGain);
         myFlowgraph->connect(cifGain, cifGuard);
 
-        if (cifFilter) {
-            myFlowgraph->connect(cifGuard, cifFilter);
-            if (cifRes) {
-                myFlowgraph->connect(cifFilter, cifRes);
-                myFlowgraph->connect(cifRes, myOutput);
-            } else {
-                myFlowgraph->connect(cifFilter, myOutput);
-            }
-        }
-        else { //no filtering
-            if (cifRes) {
-                myFlowgraph->connect(cifGuard, cifRes);
-                myFlowgraph->connect(cifRes, myOutput);
-            } else {
-                myFlowgraph->connect(cifGuard, myOutput);
-            }
-
+        //if (cifFilter) {
+        //    myFlowgraph->connect(cifGuard, cifFilter);
+        //    if (cifRes) {
+        //        myFlowgraph->connect(cifFilter, cifRes);
+        //        myFlowgraph->connect(cifRes, myOutput);
+        //    } else {
+        //        myFlowgraph->connect(cifFilter, myOutput);
+        //    }
+        //}
+        //else { //no filtering
+        //    if (cifRes) {
+        //        myFlowgraph->connect(cifGuard, cifRes);
+        //        myFlowgraph->connect(cifRes, myOutput);
+        //    } else {
+        //        myFlowgraph->connect(cifGuard, myOutput);
+        //    }
+        //}
+        if (cifRes) {
+            myFlowgraph->connect(cifGuard, cifRes);
+            myFlowgraph->connect(cifRes, cifPoly);
+            myFlowgraph->connect(cifPoly, myOutput);
+        } else {
+            myFlowgraph->connect(cifGuard, cifPoly);
+            myFlowgraph->connect(cifPoly, myOutput);
         }
     }
 

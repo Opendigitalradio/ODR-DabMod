@@ -62,6 +62,8 @@ odr_dabmod_SOURCES  = src/DabMod.cpp \
 					  src/FicSource.h \
 					  src/FIRFilter.cpp \
 					  src/FIRFilter.h \
+					  src/MemlessPoly.cpp \
+					  src/MemlessPoly.h \
 					  src/PuncturingRule.cpp \
 					  src/PuncturingRule.h \
 					  src/PuncturingEncoder.cpp \
