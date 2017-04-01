@@ -76,9 +76,9 @@ Resampler::Resampler(size_t inputRate, size_t outputRate, size_t resolution) :
     PDEBUG(" FFT size in: %zu, FFT size out: %zu\n", myFftSizeIn, myFftSizeOut);
 
     if (myFftSizeIn > myFftSizeOut) {
-        myFactor = 1.0f / myFftSizeIn;
+        myFactor = 1.0f / myFftSizeIn * outputRate / inputRate;
     } else {
-        myFactor = 1.0f / myFftSizeOut;
+        myFactor = 1.0f / myFftSizeOut * outputRate / inputRate;
     }
 
     myWindow = (float*)memalign(16, myFftSizeIn * sizeof(float));
