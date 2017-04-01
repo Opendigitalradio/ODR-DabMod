@@ -168,6 +168,12 @@ static void parse_configfile(
             pt.get<std::string>("firfilter.filtertapsfile", "default");
     }
 
+    // Poly coefficients:
+    if (pt.get("poly.enabled", 0) == 1) {
+        mod_settings.polyCoefFilename =
+            pt.get<std::string>("poly.polycoeffile", "default");
+    }
+
     // Output options
     std::string output_selected;
     try {

@@ -322,7 +322,8 @@ int launch_modulator(int argc, char* argv[])
                 mod_settings.digitalgain,
                 mod_settings.normalise,
                 mod_settings.gainmodeVariance,
-                mod_settings.filterTapsFilename);
+                mod_settings.filterTapsFilename,
+                mod_settings.polyCoefFilename);
 
         if (format_converter) {
             flowgraph.connect(modulator, format_converter);
@@ -426,7 +427,8 @@ int launch_modulator(int argc, char* argv[])
                     mod_settings.digitalgain,
                     mod_settings.normalise,
                     mod_settings.gainmodeVariance,
-                    mod_settings.filterTapsFilename);
+                    mod_settings.filterTapsFilename,
+                    mod_settings.polyCoefFilename);
 
             if (format_converter) {
                 flowgraph.connect(modulator, format_converter);

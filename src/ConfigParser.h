@@ -74,6 +74,8 @@ struct mod_settings_t {
 
     std::string filterTapsFilename = "";
 
+    std::string polyCoefFilename = "";
+
 
 #if defined(HAVE_OUTPUT_UHD)
     OutputUHDConfig outputuhd_conf;

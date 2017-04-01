@@ -63,6 +63,9 @@ public:
     virtual const std::string get_parameter(
             const std::string& parameter) const;
 
+//TODO to protected
+    std::vector<float> m_taps;
+
 
 protected:
     int internal_process(Buffer* const dataIn, Buffer* dataOut);
@@ -71,6 +74,5 @@ protected:
     std::string m_taps_file;
 
     mutable std::mutex m_taps_mutex;
-    std::vector<float> m_taps;
 };
 

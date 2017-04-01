@@ -84,6 +84,7 @@ void MemlessPoly::load_filter_taps(const std::string &tapsFile)
 {
     std::vector<float> filter_taps;
     if (tapsFile == "default") {
+        std::cout << "MemlessPoly default\n";
         std::copy(default_coefficients.begin(), default_coefficients.end(),
                 std::back_inserter(filter_taps));
     }

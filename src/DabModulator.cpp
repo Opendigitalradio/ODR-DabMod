@@ -62,7 +62,8 @@ DabModulator::DabModulator(
         unsigned dabMode, GainMode gainMode,
         float& digGain, float normalise,
         float gainmodeVariance,
-        const std::string& filterTapsFilename
+        const std::string& filterTapsFilename,
+        const std::string& polyCoefFilename
         ) :
     ModInput(),
     myOutputRate(outputRate),
@@ -75,6 +76,7 @@ DabModulator::DabModulator(
     myEtiSource(etiSource),
     myFlowgraph(NULL),
     myFilterTapsFilename(filterTapsFilename),
+    myPolyCoefFilename(polyCoefFilename),
     myTiiConfig(tiiConfig)
 {
     PDEBUG("DabModulator::DabModulator(%u, %u, %u, %zu) @ %p\n",
@@ -218,8 +220,12 @@ int DabModulator::process(Buffer* dataOut)
         }
 
         shared_ptr<MemlessPoly> cifPoly;
-        cifPoly = make_shared<MemlessPoly>("default");
-        rcs.enrol(cifPoly.get());
+        if (not myPolyCoefFilename.empty()) {
+            cifPoly = make_shared<MemlessPoly>(myPolyCoefFilename);
+            std::cout << myPolyCoefFilename << "\n";
+            std::cout << cifPoly->m_taps[0] << " " << cifPoly->m_taps[1] << " "<< cifPoly->m_taps[2] << " "<< cifPoly->m_taps[3] << " "<< cifPoly->m_taps[4] << " "<< cifPoly->m_taps[5] << " "<< cifPoly->m_taps[6] << " "<< cifPoly->m_taps[7] << "\n";
+            rcs.enrol(cifPoly.get());
+        }
 
         auto myOutput = make_shared<OutputMemory>(dataOut);
 
@@ -371,13 +377,19 @@ int DabModulator::process(Buffer* dataOut)
         //        myFlowgraph->connect(cifGuard, myOutput);
         //    }
         //}
+        //if (cifRes) {
+        //    myFlowgraph->connect(cifGuard, cifRes);
+        //    myFlowgraph->connect(cifRes, cifPoly);
+        //    myFlowgraph->connect(cifPoly, myOutput);
+        //} else {
+        //    myFlowgraph->connect(cifGuard, cifPoly);
+        //    myFlowgraph->connect(cifPoly, myOutput);
+        //}
         if (cifRes) {
             myFlowgraph->connect(cifGuard, cifRes);
-            myFlowgraph->connect(cifRes, cifPoly);
-            myFlowgraph->connect(cifPoly, myOutput);
+            myFlowgraph->connect(cifRes, myOutput);
         } else {
-            myFlowgraph->connect(cifGuard, cifPoly);
-            myFlowgraph->connect(cifPoly, myOutput);
+            myFlowgraph->connect(cifGuard, myOutput);
         }
     }
 
