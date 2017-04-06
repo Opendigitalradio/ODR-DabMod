@@ -206,7 +206,8 @@ int DabModulator::process(Buffer* dataOut)
                 (1 + myNbSymbols), myNbCarriers, mySpacing);
 
         auto cifGain = make_shared<GainControl>(
-                mySpacing, myGainMode, myDigGain, myNormalise, myGainmodeVariance);
+                mySpacing, myGainMode, myDigGain, myNormalise, 
+                myGainmodeVariance);
 
         rcs.enrol(cifGain.get());
 
@@ -222,8 +223,12 @@ int DabModulator::process(Buffer* dataOut)
         shared_ptr<MemlessPoly> cifPoly;
         if (not myPolyCoefFilename.empty()) {
             cifPoly = make_shared<MemlessPoly>(myPolyCoefFilename);
-            std::cout << myPolyCoefFilename << "\n";
-            std::cout << cifPoly->m_taps[0] << " " << cifPoly->m_taps[1] << " "<< cifPoly->m_taps[2] << " "<< cifPoly->m_taps[3] << " "<< cifPoly->m_taps[4] << " "<< cifPoly->m_taps[5] << " "<< cifPoly->m_taps[6] << " "<< cifPoly->m_taps[7] << "\n";
+            etiLog.level(debug) << myPolyCoefFilename << "\n";
+            etiLog.level(debug) << cifPoly->m_coefs[0] << " " <<
+                cifPoly->m_coefs[1] << " "<< cifPoly->m_coefs[2] << " "<<
+                cifPoly->m_coefs[3] << " "<< cifPoly->m_coefs[4] << " "<<
+                cifPoly->m_coefs[5] << " "<< cifPoly->m_coefs[6] << " "<<
+                cifPoly->m_coefs[7] << "\n";
             rcs.enrol(cifPoly.get());
         }
 
@@ -318,7 +323,8 @@ int DabModulator::process(Buffer* dataOut)
             auto subchConv = make_shared<ConvEncoder>(subchSizeIn);
 
             // Configuring puncturing encoder
-            auto subchPunc = make_shared<PuncturingEncoder>(subchannel->framesizeCu());
+            auto subchPunc =
+                make_shared<PuncturingEncoder>(subchannel->framesizeCu());
 
             for (const auto& rule : subchannel->get_rules()) {
                 PDEBUG(" Adding rule:\n");
