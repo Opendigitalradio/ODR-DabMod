@@ -52,7 +52,7 @@ typedef std::complex<float> complexf;
 class MemlessPoly : public PipelinedModCodec, public RemoteControllable
 {
 public:
-    MemlessPoly(const std::string& taps_file);
+    MemlessPoly(const std::string& coefs_file);
 
     virtual const char* name() { return "MemlessPoly"; }
 
@@ -64,15 +64,15 @@ public:
             const std::string& parameter) const;
 
 //TODO to protected
-    std::vector<float> m_taps;
+    std::vector<float> m_coefs;
 
 
 protected:
     int internal_process(Buffer* const dataIn, Buffer* dataOut);
-    void load_filter_taps(const std::string &tapsFile);
+    void load_coefficients(const std::string &coefFile);
 
-    std::string m_taps_file;
+    std::string m_coefs_file;
 
-    mutable std::mutex m_taps_mutex;
+    mutable std::mutex m_coefs_mutex;
 };
 
