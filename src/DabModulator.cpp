@@ -366,6 +366,7 @@ int DabModulator::process(Buffer* dataOut)
         myFlowgraph->connect(cifOfdm, cifGain);
         myFlowgraph->connect(cifGain, cifGuard);
 
+#warning "Flowgraph logic incomplete (skips FIRFilter)!"
         //if (cifFilter) {
         //    myFlowgraph->connect(cifGuard, cifFilter);
         //    if (cifRes) {
@@ -383,19 +384,13 @@ int DabModulator::process(Buffer* dataOut)
         //        myFlowgraph->connect(cifGuard, myOutput);
         //    }
         //}
-        //if (cifRes) {
-        //    myFlowgraph->connect(cifGuard, cifRes);
-        //    myFlowgraph->connect(cifRes, cifPoly);
-        //    myFlowgraph->connect(cifPoly, myOutput);
-        //} else {
-        //    myFlowgraph->connect(cifGuard, cifPoly);
-        //    myFlowgraph->connect(cifPoly, myOutput);
-        //}
         if (cifRes) {
             myFlowgraph->connect(cifGuard, cifRes);
-            myFlowgraph->connect(cifRes, myOutput);
+            myFlowgraph->connect(cifRes, cifPoly);
+            myFlowgraph->connect(cifPoly, myOutput);
         } else {
-            myFlowgraph->connect(cifGuard, myOutput);
+            myFlowgraph->connect(cifGuard, cifPoly);
+            myFlowgraph->connect(cifPoly, myOutput);
         }
     }
 
