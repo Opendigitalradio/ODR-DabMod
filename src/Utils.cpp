@@ -30,18 +30,40 @@
 #include <sys/prctl.h>
 #include <pthread.h>
 
+static void printHeader()
+{
+    std::cerr << "ODR-DabMod version " <<
+#if defined(GITVERSION)
+            GITVERSION
+#else
+            VERSION
+#endif
+            ", compiled at " << __DATE__ << ", " << __TIME__ << std::endl;
+
+    std::cerr << "Compiled with features: " <<
+#if defined(HAVE_ZEROMQ)
+        "zeromq " <<
+#endif
+#if defined(HAVE_OUTPUT_UHD)
+        "output_uhd " <<
+#endif
+#if defined(HAVE_SOAPYSDR)
+        "output_soapysdr " <<
+#endif
+#if defined(__FAST_MATH__)
+        "fast-math " <<
+#endif
+#if defined(__SSE__)
+        "SSE " <<
+#endif
+        "\n";
+}
+
 void printUsage(const char* progName)
 {
-    FILE* out = stderr;
+    printHeader();
 
-    fprintf(out, "Welcome to %s %s, compiled at %s, %s\n\n",
-            PACKAGE,
-#if defined(GITVERSION)
-            GITVERSION,
-#else
-            VERSION,
-#endif
-            __DATE__, __TIME__);
+    FILE* out = stderr;
     fprintf(out, "Usage with configuration file:\n");
     fprintf(out, "\t%s [-C] config_file.ini\n\n", progName);
 
@@ -87,16 +109,9 @@ void printUsage(const char* progName)
 
 void printVersion(void)
 {
-    FILE *out = stderr;
+    printHeader();
 
-    fprintf(out, "%s %s, compiled at %s, %s\n\n",
-            PACKAGE,
-#if defined(GITVERSION)
-            GITVERSION
-#else
-            VERSION
-#endif
-            ,__DATE__, __TIME__);
+    FILE *out = stderr;
     fprintf(out,
             "    ODR-DabMod is copyright (C) Her Majesty the Queen in Right of Canada,\n"
             "    2005 -- 2012 Communications Research Centre (CRC),\n"
@@ -123,28 +138,7 @@ void printVersion(void)
 
 void printStartupInfo()
 {
-    std::cerr << "ODR-DabMod version " <<
-#if defined(GITVERSION)
-            GITVERSION
-#else
-            VERSION
-#endif
-            << std::endl;
-
-    std::cerr << "Compiled with features: " <<
-#if defined(HAVE_ZEROMQ)
-        "zeromq " <<
-#endif
-#if defined(HAVE_OUTPUT_UHD)
-        "output_uhd " <<
-#endif
-#if defined(HAVE_SOAPYSDR)
-        "output_soapysdr " <<
-#endif
-#if defined(__FAST_MATH__)
-        "fast-math" <<
-#endif
-        "\n";
+    printHeader();
 
     etiLog.level(info) << "Starting up version " <<
 #if defined(GITVERSION)

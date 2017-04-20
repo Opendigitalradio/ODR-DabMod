@@ -161,30 +161,21 @@ AC_COMPILE_IFELSE(
 AC_LANG_POP([C++])
 
 
-# Check for SSE
-AC_MSG_CHECKING(for SSE in current arch/CFLAGS)
+# Check for march
+AC_MSG_CHECKING(if we can add -march=native to CFLAGS)
 
 save_CXXFLAGS="$CXXFLAGS"
-CXXFLAGS="$CXXFLAGS -msse"
-AC_MSG_CHECKING([whether we need to add -msse])
+CXXFLAGS="$CXXFLAGS -march=native"
 AC_COMPILE_IFELSE(  [AC_LANG_PROGRAM([[
-#include <xmmintrin.h>
-__m128 testfunc(float *a, float *b) {
-  return _mm_add_ps(_mm_loadu_ps(a), _mm_loadu_ps(b));
-}
+void testfunc(void) {}
 ]])],
-[has_sse=yes],
-[has_sse=no]
+[supports_march_native=yes],
+[supports_march_native=no]
 )
-AC_MSG_RESULT($has_sse)
-if test x"$has_sse" = xno; then
+AC_MSG_RESULT($supports_march_native)
+if test x"$supports_march_native" = xno; then
     CXXFLAGS="$save_CXXFLAGS"
 fi
-
-
-AM_CONDITIONAL([HAVE_SSE], [test "x$has_sse" = "xyes"])
-
-# TODO: Check for NEON
 
 AC_TYPE_SIGNAL
 AC_CHECK_FUNCS([bzero floor ftime gettimeofday memset sqrt strchr strerror strtol])
@@ -211,7 +202,7 @@ echo
 echo
 enabled=""
 disabled=""
-for feat in with_debug_malloc has_sse enable_fast_math
+for feat in with_debug_malloc supports_march_native enable_fast_math
 do
     eval var=\$$feat
     AS_IF([test "x$var" != "xno"],
