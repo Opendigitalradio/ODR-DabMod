@@ -639,16 +639,29 @@ void UHDWorker::process()
     num_underflows   = 0;
     num_late_packets = 0;
 
+    int last_num_underflows = 0;
+    size_t pop_prebuffering = FRAMES_MAX_SIZE;
+
     while (uwd->running) {
         md.has_time_spec  = false;
         md.time_spec      = uhd::time_spec_t(0.0);
 
         struct UHDWorkerFrameData frame;
         etiLog.log(trace, "UHD,wait");
-        uwd->frames.wait_and_pop(frame);
+        uwd->frames.wait_and_pop(frame, pop_prebuffering);
         etiLog.log(trace, "UHD,pop");
 
         handle_frame(&frame);
+
+        /* Ensure we fill uwd->frames after every underrun and
+         * at startup to reduce underrun likelihood. */
+        if (last_num_underflows < num_underflows) {
+            pop_prebuffering = FRAMES_MAX_SIZE;
+        }
+        else {
+            pop_prebuffering = 1;
+        }
+        last_num_underflows = num_underflows;
     }
 }
 
