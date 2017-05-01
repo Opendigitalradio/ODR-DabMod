@@ -56,8 +56,12 @@ typedef std::complex<float> complexf;
 
 std::string stringtrim(const std::string &s)
 {
-    auto wsfront = std::find_if_not(s.begin(), s.end(), [](int c){return std::isspace(c);} );
-    return std::string(wsfront, std::find_if_not(s.rbegin(), std::string::const_reverse_iterator(wsfront), [](int c){return std::isspace(c);} ).base());
+    auto wsfront = std::find_if_not(s.begin(), s.end(),
+            [](int c){ return std::isspace(c);} );
+    return std::string(wsfront,
+            std::find_if_not(s.rbegin(),
+                std::string::const_reverse_iterator(wsfront),
+                [](int c){ return std::isspace(c);} ).base());
 }
 
 void uhd_msg_handler(uhd::msg::type_t type, const std::string &msg)
