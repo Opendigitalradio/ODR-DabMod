@@ -125,6 +125,8 @@ class UHDWorker {
         void start(struct UHDWorkerData *uhdworkerdata) {
             uwd->running = true;
             uhd_thread = boost::thread(&UHDWorker::process_errhandler, this);
+            async_rx_thread = boost::thread(
+                    &UHDWorker::print_async_metadata, this);
         }
 
         void stop() {
@@ -133,6 +135,7 @@ class UHDWorker {
             }
             uhd_thread.interrupt();
             uhd_thread.join();
+            async_rx_thread.join();
         }
 
         ~UHDWorker() {
@@ -155,13 +158,14 @@ class UHDWorker {
         // Used to print statistics once a second
         std::chrono::steady_clock::time_point last_print_time;
 
-        void print_async_metadata(const struct UHDWorkerFrameData *frame);
+        void print_async_metadata(void);
 
         void handle_frame(const struct UHDWorkerFrameData *frame);
         void tx_frame(const struct UHDWorkerFrameData *frame, bool ts_update);
 
         struct UHDWorkerData *uwd;
         boost::thread uhd_thread;
+        boost::thread async_rx_thread;
 
         uhd::tx_streamer::sptr myTxStream;
 

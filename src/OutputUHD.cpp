@@ -56,8 +56,12 @@ typedef std::complex<float> complexf;
 
 std::string stringtrim(const std::string &s)
 {
-    auto wsfront = std::find_if_not(s.begin(), s.end(), [](int c){return std::isspace(c);} );
-    return std::string(wsfront, std::find_if_not(s.rbegin(), std::string::const_reverse_iterator(wsfront), [](int c){return std::isspace(c);} ).base());
+    auto wsfront = std::find_if_not(s.begin(), s.end(),
+            [](int c){ return std::isspace(c);} );
+    return std::string(wsfront,
+            std::find_if_not(s.rbegin(),
+                std::string::const_reverse_iterator(wsfront),
+                [](int c){ return std::isspace(c);} ).base());
 }
 
 void uhd_msg_handler(uhd::msg::type_t type, const std::string &msg)
@@ -639,16 +643,29 @@ void UHDWorker::process()
     num_underflows   = 0;
     num_late_packets = 0;
 
+    int last_num_underflows = 0;
+    size_t pop_prebuffering = FRAMES_MAX_SIZE;
+
     while (uwd->running) {
         md.has_time_spec  = false;
         md.time_spec      = uhd::time_spec_t(0.0);
 
         struct UHDWorkerFrameData frame;
         etiLog.log(trace, "UHD,wait");
-        uwd->frames.wait_and_pop(frame);
+        uwd->frames.wait_and_pop(frame, pop_prebuffering);
         etiLog.log(trace, "UHD,pop");
 
         handle_frame(&frame);
+
+        /* Ensure we fill uwd->frames after every underrun and
+         * at startup to reduce underrun likelihood. */
+        if (last_num_underflows < num_underflows) {
+            pop_prebuffering = FRAMES_MAX_SIZE;
+        }
+        else {
+            pop_prebuffering = 1;
+        }
+        last_num_underflows = num_underflows;
     }
 }
 
@@ -780,21 +797,6 @@ void UHDWorker::handle_frame(const struct UHDWorkerFrameData *frame)
     }
 
     tx_frame(frame, timestamp_discontinuity);
-
-    auto time_now = std::chrono::steady_clock::now();
-    if (last_print_time + std::chrono::seconds(1) < time_now) {
-        if (num_underflows or num_late_packets) {
-            etiLog.log(info,
-                    "OutputUHD status (usrp time: %f): "
-                    "%d underruns and %d late packets since last status.\n",
-                    usrp_time,
-                    num_underflows, num_late_packets);
-        }
-        num_underflows = 0;
-        num_late_packets = 0;
-
-        last_print_time = time_now;
-    }
 }
 
 void UHDWorker::tx_frame(const struct UHDWorkerFrameData *frame, bool ts_update)
@@ -834,51 +836,70 @@ void UHDWorker::tx_frame(const struct UHDWorkerFrameData *frame, bool ts_update)
                     "UHDWorker::process() unable to write to device, skipping frame!\n");
             break;
         }
-
-        print_async_metadata(frame);
     }
 }
 
-void UHDWorker::print_async_metadata(const struct UHDWorkerFrameData *frame)
+void UHDWorker::print_async_metadata()
 {
-    uhd::async_metadata_t async_md;
-    if (uwd->myUsrp->get_device()->recv_async_msg(async_md, 0)) {
-        const char* uhd_async_message = "";
-        bool failure = false;
-        switch (async_md.event_code) {
-            case uhd::async_metadata_t::EVENT_CODE_BURST_ACK:
-                break;
-            case uhd::async_metadata_t::EVENT_CODE_UNDERFLOW:
-                uhd_async_message = "Underflow";
-                num_underflows++;
-                break;
-            case uhd::async_metadata_t::EVENT_CODE_SEQ_ERROR:
-                uhd_async_message = "Packet loss between host and device.";
-                failure = true;
-                break;
-            case uhd::async_metadata_t::EVENT_CODE_TIME_ERROR:
-                uhd_async_message = "Packet had time that was late.";
-                num_late_packets++;
-                break;
-            case uhd::async_metadata_t::EVENT_CODE_UNDERFLOW_IN_PACKET:
-                uhd_async_message = "Underflow occurred inside a packet.";
-                failure = true;
-                break;
-            case uhd::async_metadata_t::EVENT_CODE_SEQ_ERROR_IN_BURST:
-                uhd_async_message = "Packet loss within a burst.";
-                failure = true;
-                break;
-            default:
-                uhd_async_message = "unknown event code";
-                failure = true;
-                break;
+    while (uwd->running) {
+        uhd::async_metadata_t async_md;
+        if (uwd->myUsrp->get_device()->recv_async_msg(async_md, 1)) {
+            const char* uhd_async_message = "";
+            bool failure = false;
+            switch (async_md.event_code) {
+                case uhd::async_metadata_t::EVENT_CODE_BURST_ACK:
+                    break;
+                case uhd::async_metadata_t::EVENT_CODE_UNDERFLOW:
+                    uhd_async_message = "Underflow";
+                    num_underflows++;
+                    break;
+                case uhd::async_metadata_t::EVENT_CODE_SEQ_ERROR:
+                    uhd_async_message = "Packet loss between host and device.";
+                    failure = true;
+                    break;
+                case uhd::async_metadata_t::EVENT_CODE_TIME_ERROR:
+                    uhd_async_message = "Packet had time that was late.";
+                    num_late_packets++;
+                    break;
+                case uhd::async_metadata_t::EVENT_CODE_UNDERFLOW_IN_PACKET:
+                    uhd_async_message = "Underflow occurred inside a packet.";
+                    failure = true;
+                    break;
+                case uhd::async_metadata_t::EVENT_CODE_SEQ_ERROR_IN_BURST:
+                    uhd_async_message = "Packet loss within a burst.";
+                    failure = true;
+                    break;
+                default:
+                    uhd_async_message = "unknown event code";
+                    failure = true;
+                    break;
+            }
+
+            if (failure) {
+                etiLog.level(alert) <<
+                    "Received Async UHD Message '" <<
+                    uhd_async_message << "' at time " <<
+                    md.time_spec.get_real_secs();
+
+            }
         }
 
-        if (failure) {
-            etiLog.level(alert) << "Near frame " <<
-                frame->ts.fct << ": Received Async UHD Message '" << 
-                uhd_async_message << "'";
+        auto time_now = std::chrono::steady_clock::now();
+        if (last_print_time + std::chrono::seconds(1) < time_now) {
+            const double usrp_time =
+                uwd->myUsrp->get_time_now().get_real_secs();
 
+            if (num_underflows or num_late_packets) {
+                etiLog.log(info,
+                        "OutputUHD status (usrp time: %f): "
+                        "%d underruns and %d late packets since last status.\n",
+                        usrp_time,
+                        num_underflows, num_late_packets);
+            }
+            num_underflows = 0;
+            num_late_packets = 0;
+
+            last_print_time = time_now;
         }
     }
 }
