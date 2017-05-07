@@ -2,7 +2,7 @@
    Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010, 2011 Her Majesty
    the Queen in Right of Canada (Communications Research Center Canada)
 
-   Copyright (C) 2014
+   Copyright (C) 2017
    Matthias P. Braendli, matthias.braendli@mpb.li
 
     http://opendigitalradio.org
@@ -35,6 +35,7 @@
 #include "porting.h"
 #include "ModPlugin.h"
 #include <complex>
+#include <string>
 #include <stdint.h>
 
 typedef std::complex<float> complexf;
@@ -42,10 +43,13 @@ typedef std::complex<float> complexf;
 class FormatConverter : public ModCodec
 {
     public:
-        FormatConverter(void);
+        FormatConverter(const std::string& format);
 
         int process(Buffer* const dataIn, Buffer* dataOut);
         const char* name();
+
+    private:
+        bool m_offset_by_127 = false;
 };
 
 

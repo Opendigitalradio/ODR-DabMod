@@ -2,7 +2,7 @@
    Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010, 2011 Her Majesty
    the Queen in Right of Canada (Communications Research Center Canada)
 
-   Copyright (C) 2014
+   Copyright (C) 2017
    Matthias P. Braendli, matthias.braendli@mpb.li
 
     http://opendigitalradio.org
@@ -39,8 +39,10 @@
 #  include <xmmintrin.h>
 #endif
 
-FormatConverter::FormatConverter(void) :
-    ModCodec() { }
+FormatConverter::FormatConverter(const std::string& format) :
+    ModCodec(),
+    m_offset_by_127(format == "u8")
+{ }
 
 /* Expect the input samples to be in the range [-255.0, 255.0] */
 int FormatConverter::process(Buffer* const dataIn, Buffer* dataOut)
@@ -54,6 +56,8 @@ int FormatConverter::process(Buffer* const dataIn, Buffer* dataOut)
     float* in = reinterpret_cast<float*>(dataIn->getData());
 
 #if 0
+#error "TODO: SSE FormatConvert does not support u8 yet"
+
     // Disabled because subscripting a __m64 doesn't seem to work
     // on all platforms.
 
@@ -84,11 +88,20 @@ int FormatConverter::process(Buffer* const dataIn, Buffer* dataOut)
         out[j+3]  = b4[0];
     }
 #else
-    int8_t* out = reinterpret_cast<int8_t*>(dataOut->getData());
-
     // Slow implementation that uses _ftol()
-    for (size_t i = 0; i < sizeIn; i++) {
-        out[i] = in[i];
+    if (m_offset_by_127) {
+        uint8_t* out = reinterpret_cast<uint8_t*>(dataOut->getData());
+
+        for (size_t i = 0; i < sizeIn; i++) {
+            out[i] = in[i] + 128;
+        }
+    }
+    else {
+        int8_t* out = reinterpret_cast<int8_t*>(dataOut->getData());
+
+        for (size_t i = 0; i < sizeIn; i++) {
+            out[i] = in[i];
+        }
     }
 #endif
 
