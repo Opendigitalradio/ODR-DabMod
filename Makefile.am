@@ -1,7 +1,7 @@
 # Copyright (C) 2007, 2008, 2009, 2010 Her Majesty the Queen in Right
 # of Canada (Communications Research Center Canada)
 #
-#  Copyright (C) 2016
+#  Copyright (C) 2017
 #  Matthias P. Braendli, matthias.braendli@mpb.li
 
 #   http://opendigitalradio.org
@@ -82,6 +82,8 @@ odr_dabmod_SOURCES  = src/DabMod.cpp \
 					  src/TimestampDecoder.cpp \
 					  src/OutputUHD.cpp \
 					  src/OutputUHD.h \
+					  src/OutputUHDFeedback.cpp \
+					  src/OutputUHDFeedback.h \
 					  src/OutputSoapy.cpp \
 					  src/OutputSoapy.h \
 					  src/InputMemory.cpp \

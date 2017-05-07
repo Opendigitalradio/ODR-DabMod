@@ -255,6 +255,8 @@ static void parse_configfile(
 
         outputuhd_conf.maxGPSHoldoverTime = pt.get("uhdoutput.max_gps_holdover_time", 0);
 
+        outputuhd_conf.dpdFeedbackServerPort = pt.get<long>("uhdoutput.dpd_port", 0);
+
         mod_settings.outputuhd_conf = outputuhd_conf;
         mod_settings.useUHDOutput = 1;
     }

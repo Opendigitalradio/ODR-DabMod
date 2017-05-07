@@ -169,8 +169,6 @@ OutputUHD::OutputUHD(
     RC_ADD_PARAMETER(muting, "Mute the output by stopping the transmitter");
     RC_ADD_PARAMETER(staticdelay, "Set static delay (uS) between 0 and 96000");
 
-    // TODO: find out how to use boost::bind to give the logger to the
-    // uhd_msg_handler
     uhd::msg::register_handler(uhd_msg_handler);
 
     uhd::set_thread_priority_safe();
@@ -286,13 +284,9 @@ OutputUHD::OutputUHD(
 
     SetDelayBuffer(myConf.dabMode);
 
+    uhdFeedback.setup(myUsrp, myConf.dpdFeedbackServerPort);
+
     MDEBUG("OutputUHD:UHD ready.\n");
-}
-
-
-OutputUHD::~OutputUHD()
-{
-    MDEBUG("OutputUHD::~OutputUHD() @ %p\n", this);
 }
 
 
@@ -426,12 +420,11 @@ int OutputUHD::process(Buffer* dataIn)
                 "OutputUHD: dropping one frame with invalid FCT";
         }
         else {
-            while (true) {
-                size_t num_frames = uwd.frames.push_wait_if_full(frame,
-                        FRAMES_MAX_SIZE);
-                etiLog.log(trace, "UHD,push %zu", num_frames);
-                break;
-            }
+            uhdFeedback.set_tx_frame(frame.buf, frame.ts);
+
+            size_t num_frames = uwd.frames.push_wait_if_full(frame,
+                    FRAMES_MAX_SIZE);
+            etiLog.log(trace, "UHD,push %zu", num_frames);
         }
     }
 
