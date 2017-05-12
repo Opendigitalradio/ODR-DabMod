@@ -77,7 +77,7 @@ def get_samples(port, num_samps_to_request):
         rxframe_bytes = recv_exact(s, num_samps * SIZEOF_SAMPLE)
         rxframe = np.fromstring(rxframe_bytes, dtype=np.complex64)
     else:
-        txframe = np.array([], dtype=np.complex64)
+        rxframe = np.array([], dtype=np.complex64)
 
     print("Disconnecting")
     s.close()
