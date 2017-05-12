@@ -44,6 +44,7 @@ DESCRIPTION:
 #include <boost/thread.hpp>
 #include <memory>
 #include <string>
+#include <atomic>
 
 #include "Log.h"
 #include "TimestampDecoder.h"
@@ -62,21 +63,23 @@ struct UHDReceiveBurstRequest {
 
     BurstRequestState state;
 
-    // In the SaveTransmit states, frame_length samples are saved into
+    // In the SaveTransmit states, num_samples complexf samples are saved into
     // the vectors
-    size_t frame_length;
+    size_t num_samples;
 
     // The timestamp of the first sample of the TX buffers
     uint32_t tx_second;
     uint32_t tx_pps; // in units of 1/16384000s
 
+    // Samples contain complexf, but since our internal representation is uint8_t
+    // we keep it like that
     std::vector<uint8_t> tx_samples;
 
     // The timestamp of the first sample of the RX buffers
     uint32_t rx_second;
     uint32_t rx_pps;
 
-    std::vector<uint8_t> rx_samples;
+    std::vector<uint8_t> rx_samples; // Also, actually complexf
 };
 
 // Serve TX samples and RX feedback samples over a TCP connection
@@ -104,7 +107,8 @@ class OutputUHDFeedback {
 
         UHDReceiveBurstRequest burstRequest;
 
-        bool m_running = false;
+        std::atomic_bool m_running;
+        int m_server_sock = -1;
         uint16_t m_port = 0;
         uint32_t m_sampleRate = 0;
         uhd::usrp::multi_usrp::sptr m_usrp;
