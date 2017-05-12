@@ -153,9 +153,6 @@ void OutputUHDFeedback::ReceiveBurstThread()
         const double usrp_time = m_usrp->get_time_now().get_real_secs();
         const double cmd_time = cmd.time_spec.get_real_secs();
 
-        etiLog.level(debug) <<
-            "RX stream command ts=" << std::fixed << cmd_time << " Delta=" << cmd_time - usrp_time;
-
         rxStream->issue_stream_cmd(cmd);
 
         uhd::rx_metadata_t md;
@@ -173,9 +170,10 @@ void OutputUHDFeedback::ReceiveBurstThread()
         burstRequest.rx_second = md.time_spec.get_full_secs();
         burstRequest.rx_pps = md.time_spec.get_frac_secs() * 16384000.0;
 
-        etiLog.level(debug) << "Read " << samples_read << " RX feedback samples "
-            << "at time " << std::fixed << burstRequest.tx_second << "." <<
-            burstRequest.tx_pps / 16384000.0;
+        etiLog.level(debug) << "DPD: acquired " << samples_read << " RX feedback samples " <<
+            "at time " << burstRequest.tx_second << " + " <<
+            std::fixed << burstRequest.tx_pps / 16384000.0 <<
+            " Delta=" << cmd_time - usrp_time;
 
         burstRequest.state = BurstRequestState::Acquired;
 

@@ -218,6 +218,7 @@ static void parse_configfile(
         }
 
         outputuhd_conf.txgain = pt.get("uhdoutput.txgain", 0.0);
+        outputuhd_conf.rxgain = pt.get("uhdoutput.rxgain", 0.0);
         outputuhd_conf.frequency = pt.get<double>("uhdoutput.frequency", 0);
         std::string chan = pt.get<std::string>("uhdoutput.channel", "");
         outputuhd_conf.dabMode = mod_settings.dabMode;

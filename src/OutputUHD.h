@@ -189,6 +189,7 @@ struct OutputUHDConfig {
     double frequency = 0.0;
     double lo_offset = 0.0;
     double txgain = 0.0;
+    double rxgain = 0.0;
     bool enableSync = false;
     bool muteNoTimestamps = false;
     unsigned dabMode = 0;
