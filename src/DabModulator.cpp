@@ -367,27 +367,33 @@ int DabModulator::process(Buffer* dataOut)
         myFlowgraph->connect(cifOfdm, cifGain);
         myFlowgraph->connect(cifGain, cifGuard);
 
+        auto cifOut = cifPoly ?
+            static_pointer_cast<ModPlugin>(cifPoly) :
+            static_pointer_cast<ModPlugin>(myOutput);
+
         if (cifFilter) {
             myFlowgraph->connect(cifGuard, cifFilter);
             if (cifRes) {
                 myFlowgraph->connect(cifFilter, cifRes);
-                myFlowgraph->connect(cifRes, cifPoly);
+                myFlowgraph->connect(cifRes, cifOut);
             }
             else {
-                myFlowgraph->connect(cifFilter, cifPoly);
+                myFlowgraph->connect(cifFilter, cifOut);
             }
         }
         else {
             if (cifRes) {
                 myFlowgraph->connect(cifGuard, cifRes);
-                myFlowgraph->connect(cifRes, cifPoly);
+                myFlowgraph->connect(cifRes, cifOut);
             }
             else {
-                myFlowgraph->connect(cifGuard, cifPoly);
+                myFlowgraph->connect(cifGuard, cifOut);
             }
         }
 
-        myFlowgraph->connect(cifPoly, myOutput);
+        if (cifPoly) {
+            myFlowgraph->connect(cifPoly, myOutput);
+        }
     }
 
     ////////////////////////////////////////////////////////////////////
