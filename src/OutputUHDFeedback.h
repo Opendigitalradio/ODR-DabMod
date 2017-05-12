@@ -79,7 +79,7 @@ struct UHDReceiveBurstRequest {
     std::vector<uint8_t> rx_samples;
 };
 
-
+// Serve TX samples and RX feedback samples over a TCP connection
 class OutputUHDFeedback {
     public:
         OutputUHDFeedback();
@@ -87,11 +87,10 @@ class OutputUHDFeedback {
         OutputUHDFeedback& operator=(const OutputUHDFeedback& other) = delete;
         ~OutputUHDFeedback();
 
-        void setup(uhd::usrp::multi_usrp::sptr usrp, uint16_t port);
+        void setup(uhd::usrp::multi_usrp::sptr usrp, uint16_t port, uint32_t sampleRate);
 
         void set_tx_frame(const std::vector<uint8_t> &buf,
                 const struct frame_timestamp& ts);
-
 
     private:
         // Thread that reacts to burstRequests and receives from the USRP
@@ -105,9 +104,10 @@ class OutputUHDFeedback {
 
         UHDReceiveBurstRequest burstRequest;
 
-        bool running = false;
+        bool m_running = false;
         uint16_t m_port = 0;
-        uhd::usrp::multi_usrp::sptr myUsrp;
+        uint32_t m_sampleRate = 0;
+        uhd::usrp::multi_usrp::sptr m_usrp;
 };
 
 

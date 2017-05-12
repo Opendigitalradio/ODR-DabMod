@@ -30,7 +30,14 @@ DESCRIPTION:
    along with ODR-DabMod.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#ifdef HAVE_CONFIG_H
+#   include <config.h>
+#endif
+
+#ifdef HAVE_OUTPUT_UHD
+
 #include <vector>
+#include <complex>
 #include <uhd/types/stream_cmd.hpp>
 #include <sys/socket.h>
 #include "OutputUHDFeedback.h"
@@ -41,17 +48,18 @@ typedef std::complex<float> complexf;
 
 OutputUHDFeedback::OutputUHDFeedback()
 {
-    running = false;
+    m_running = false;
 }
 
-void OutputUHDFeedback::setup(uhd::usrp::multi_usrp::sptr usrp, uint16_t port)
+void OutputUHDFeedback::setup(uhd::usrp::multi_usrp::sptr usrp, uint16_t port, uint32_t sampleRate)
 {
-    myUsrp = usrp;
+    m_usrp = usrp;
+    m_sampleRate = sampleRate;
     burstRequest.state = BurstRequestState::None;
 
     if (port) {
         m_port = port;
-        running = true;
+        m_running = true;
 
         rx_burst_thread = boost::thread(&OutputUHDFeedback::ReceiveBurstThread, this);
         burst_tcp_thread = boost::thread(&OutputUHDFeedback::ServeFeedbackThread, this);
@@ -60,14 +68,14 @@ void OutputUHDFeedback::setup(uhd::usrp::multi_usrp::sptr usrp, uint16_t port)
 
 OutputUHDFeedback::~OutputUHDFeedback()
 {
-    running = false;
+    m_running = false;
     rx_burst_thread.join();
     burst_tcp_thread.join();
 }
 
 void OutputUHDFeedback::set_tx_frame(
         const std::vector<uint8_t> &buf,
-        const struct frame_timestamp& ts)
+        const struct frame_timestamp &buf_ts)
 {
     boost::mutex::scoped_lock lock(burstRequest.mutex);
 
@@ -77,7 +85,15 @@ void OutputUHDFeedback::set_tx_frame(
 
         burstRequest.tx_samples.clear();
         burstRequest.tx_samples.resize(n);
-        copy(buf.begin(), buf.begin() + n, burstRequest.tx_samples.begin());
+        // A frame will always begin with the NULL symbol, which contains
+        // no power. Instead of taking n samples at the beginning of the
+        // frame, we take them at the end and adapt the timestamp accordingly.
+
+        const size_t start_ix = buf.size() - n;
+        copy(buf.begin() + start_ix, buf.end(), burstRequest.tx_samples.begin());
+
+        frame_timestamp ts = buf_ts;
+        ts += (1.0 * start_ix) / (sizeof(complexf) * m_sampleRate);
 
         burstRequest.tx_second = ts.timestamp_sec;
         burstRequest.tx_pps = ts.timestamp_pps;
@@ -100,16 +116,16 @@ void OutputUHDFeedback::ReceiveBurstThread()
     set_thread_name("uhdreceiveburst");
 
     uhd::stream_args_t stream_args("fc32"); //complex floats
-    auto rxStream = myUsrp->get_rx_stream(stream_args);
+    auto rxStream = m_usrp->get_rx_stream(stream_args);
 
-    while (running) {
+    while (m_running) {
         boost::mutex::scoped_lock lock(burstRequest.mutex);
         while (burstRequest.state != BurstRequestState::SaveReceiveFrame) {
-            if (not running) break;
+            if (not m_running) break;
             burstRequest.mutex_notification.wait(lock);
         }
 
-        if (not running) break;
+        if (not m_running) break;
 
         uhd::stream_cmd_t cmd(
                 uhd::stream_cmd_t::stream_mode_t::STREAM_MODE_NUM_SAMPS_AND_DONE);
@@ -158,7 +174,7 @@ void OutputUHDFeedback::ServeFeedbackThread()
             throw std::runtime_error("Can't listen TCP socket");
         }
 
-        while (running) {
+        while (m_running) {
             struct sockaddr_in client;
             socklen_t client_len = sizeof(client);
             int client_sock = accept(server_sock,
@@ -168,7 +184,7 @@ void OutputUHDFeedback::ServeFeedbackThread()
                 throw runtime_error("Could not establish new connection");
             }
 
-            while (running) {
+            while (m_running) {
                 uint8_t request_version = 0;
                 int read = recv(client_sock, &request_version, 1, 0);
                 if (!read) break; // done reading
@@ -202,7 +218,7 @@ void OutputUHDFeedback::ServeFeedbackThread()
                 // Wait for the result to be ready
                 boost::mutex::scoped_lock lock(burstRequest.mutex);
                 while (burstRequest.state != BurstRequestState::Acquired) {
-                    if (not running) break;
+                    if (not m_running) break;
                     burstRequest.mutex_notification.wait(lock);
                 }
 
@@ -237,9 +253,11 @@ void OutputUHDFeedback::ServeFeedbackThread()
         etiLog.level(error) << "DPD Feedback Server fault: " << e.what();
     }
 
-    running = false;
+    m_running = false;
 
     if (server_sock != -1) {
         close(server_sock);
     }
 }
+
+#endif

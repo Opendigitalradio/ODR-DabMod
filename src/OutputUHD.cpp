@@ -284,7 +284,7 @@ OutputUHD::OutputUHD(
 
     SetDelayBuffer(myConf.dabMode);
 
-    uhdFeedback.setup(myUsrp, myConf.dpdFeedbackServerPort);
+    uhdFeedback.setup(myUsrp, myConf.dpdFeedbackServerPort, myConf.sampleRate);
 
     MDEBUG("OutputUHD:UHD ready.\n");
 }
