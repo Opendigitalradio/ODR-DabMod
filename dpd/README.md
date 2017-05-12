@@ -8,3 +8,11 @@ This folder contains work in progress for digital predistortion. It requires:
 - A feedback connection from the power amplifier output, at an appropriate power level for the B200.
   Usually this is done with a directional coupler.
 - ODR-DabMod with enabled dpd_port, and with a samplerate of 8192000 samples per second.
+- Synchronous=1 so that the USRP has the timestamping set properly.
+
+See dpd/dpd.ini for an example.
+
+TODO
+----
+
+Fix timestamps and test if frame data is valid.
