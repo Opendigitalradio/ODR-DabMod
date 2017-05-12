@@ -18,7 +18,7 @@ import sys
 import socket
 import struct
 import numpy as np
-import matplotlib as mp
+import matplotlib.pyplot as pp
 import scipy.signal
 
 SIZEOF_SAMPLE = 8 # complex floats
@@ -90,6 +90,27 @@ tx_ts, txframe, rx_ts, rxframe = get_samples(port, num_samps_to_request)
 print("Received {} & {} frames at {} and {}".format(
     len(txframe), len(rxframe), tx_ts, rx_ts))
 
+print("Calculate TX and RX spectrum assuming 8192000 samples per second")
+fft_size = 4096
+tx_spectrum = np.fft.fftshift(np.fft.fft(txframe, fft_size))
+tx_power = 20*np.log10(np.abs(tx_spectrum))
+
+rx_spectrum = np.fft.fftshift(np.fft.fft(rxframe, fft_size))
+rx_power = 20*np.log10(np.abs(rx_spectrum))
+
+sampling_rate = 8192000
+freqs = np.fft.fftshift(np.fft.fftfreq(fft_size, d=1./sampling_rate))
+
+fig = pp.figure()
+
+fig.suptitle("TX and RX spectrum")
+ax1 = fig.add_subplot(211)
+ax1.set_title("TX")
+ax1.plot(freqs, tx_power)
+ax2 = fig.add_subplot(212)
+ax2.set_title("RX")
+ax2.plot(freqs, rx_power)
+pp.show()
 
 # The MIT License (MIT)
 #
