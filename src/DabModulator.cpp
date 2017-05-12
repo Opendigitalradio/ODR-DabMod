@@ -360,42 +360,38 @@ int DabModulator::process(Buffer* dataOut)
         if (useCicEq) {
             myFlowgraph->connect(cifSig, cifCicEq);
             myFlowgraph->connect(cifCicEq, cifOfdm);
-        } else {
+        }
+        else {
             myFlowgraph->connect(cifSig, cifOfdm);
         }
         myFlowgraph->connect(cifOfdm, cifGain);
         myFlowgraph->connect(cifGain, cifGuard);
 
-#warning "Flowgraph logic incomplete (skips FIRFilter)!"
-        //if (cifFilter) {
-        //    myFlowgraph->connect(cifGuard, cifFilter);
-        //    if (cifRes) {
-        //        myFlowgraph->connect(cifFilter, cifRes);
-        //        myFlowgraph->connect(cifRes, myOutput);
-        //    } else {
-        //        myFlowgraph->connect(cifFilter, myOutput);
-        //    }
-        //}
-        //else { //no filtering
-        //    if (cifRes) {
-        //        myFlowgraph->connect(cifGuard, cifRes);
-        //        myFlowgraph->connect(cifRes, myOutput);
-        //    } else {
-        //        myFlowgraph->connect(cifGuard, myOutput);
-        //    }
-        //}
-        if (cifRes) {
-            myFlowgraph->connect(cifGuard, cifRes);
-            myFlowgraph->connect(cifRes, cifPoly);
-            myFlowgraph->connect(cifPoly, myOutput);
-        } else {
-            myFlowgraph->connect(cifGuard, cifPoly);
-            myFlowgraph->connect(cifPoly, myOutput);
+        if (cifFilter) {
+            myFlowgraph->connect(cifGuard, cifFilter);
+            if (cifRes) {
+                myFlowgraph->connect(cifFilter, cifRes);
+                myFlowgraph->connect(cifRes, cifPoly);
+            }
+            else {
+                myFlowgraph->connect(cifFilter, cifPoly);
+            }
         }
+        else {
+            if (cifRes) {
+                myFlowgraph->connect(cifGuard, cifRes);
+                myFlowgraph->connect(cifRes, cifPoly);
+            }
+            else {
+                myFlowgraph->connect(cifGuard, cifPoly);
+            }
+        }
+
+        myFlowgraph->connect(cifPoly, myOutput);
     }
 
     ////////////////////////////////////////////////////////////////////
-    // Proccessing data
+    // Processing data
     ////////////////////////////////////////////////////////////////////
     return myFlowgraph->run();
 }
