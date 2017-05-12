@@ -38,8 +38,10 @@ DESCRIPTION:
 
 #include <vector>
 #include <complex>
+#include <cstring>
 #include <uhd/types/stream_cmd.hpp>
 #include <sys/socket.h>
+#include <errno.h>
 #include <poll.h>
 #include "OutputUHDFeedback.h"
 #include "Utils.h"
@@ -214,113 +216,113 @@ void OutputUHDFeedback::ServeFeedbackThread()
                 continue;
             }
 
-            while (m_running) {
-                uint8_t request_version = 0;
-                ssize_t read = recv(client_sock, &request_version, 1, 0);
-                if (!read) break; // done reading
-                if (read < 0) {
-                    etiLog.level(info) <<
-                        "DPD Feedback Server Client read request version failed";
-                }
+            uint8_t request_version = 0;
+            ssize_t read = recv(client_sock, &request_version, 1, 0);
+            if (!read) break; // done reading
+            if (read < 0) {
+                etiLog.level(info) <<
+                    "DPD Feedback Server Client read request version failed: " << strerror(errno);
+                break;
+            }
 
-                if (request_version != 1) {
-                    etiLog.level(info) << "DPD Feedback Server wrong request version";
-                    break;
-                }
+            if (request_version != 1) {
+                etiLog.level(info) << "DPD Feedback Server wrong request version";
+                break;
+            }
 
-                uint32_t num_samples = 0;
-                read = recv(client_sock, &num_samples, 4, 0);
-                if (!read) break; // done reading
-                if (read < 0) {
-                    etiLog.level(info) <<
-                        "DPD Feedback Server Client read num samples failed";
-                }
+            uint32_t num_samples = 0;
+            read = recv(client_sock, &num_samples, 4, 0);
+            if (!read) break; // done reading
+            if (read < 0) {
+                etiLog.level(info) <<
+                    "DPD Feedback Server Client read num samples failed";
+                break;
+            }
 
-                // We are ready to issue the request now
-                {
-                    boost::mutex::scoped_lock lock(burstRequest.mutex);
-                    burstRequest.num_samples = num_samples;
-                    burstRequest.state = BurstRequestState::SaveTransmitFrame;
-
-                    lock.unlock();
-                }
-
-                // Wait for the result to be ready
+            // We are ready to issue the request now
+            {
                 boost::mutex::scoped_lock lock(burstRequest.mutex);
-                while (burstRequest.state != BurstRequestState::Acquired) {
-                    if (not m_running) break;
-                    burstRequest.mutex_notification.wait(lock);
-                }
+                burstRequest.num_samples = num_samples;
+                burstRequest.state = BurstRequestState::SaveTransmitFrame;
 
-                burstRequest.state = BurstRequestState::None;
                 lock.unlock();
+            }
 
-                if (send(client_sock,
-                            &burstRequest.num_samples,
-                            sizeof(burstRequest.num_samples),
-                            0) < 0) {
-                    etiLog.level(info) <<
-                        "DPD Feedback Server Client send num_samples failed";
-                    break;
-                }
+            // Wait for the result to be ready
+            boost::mutex::scoped_lock lock(burstRequest.mutex);
+            while (burstRequest.state != BurstRequestState::Acquired) {
+                if (not m_running) break;
+                burstRequest.mutex_notification.wait(lock);
+            }
 
-                if (send(client_sock,
-                            &burstRequest.tx_second,
-                            sizeof(burstRequest.tx_second),
-                            0) < 0) {
-                    etiLog.level(info) <<
-                        "DPD Feedback Server Client send tx_second failed";
-                    break;
-                }
+            burstRequest.state = BurstRequestState::None;
+            lock.unlock();
 
-                if (send(client_sock,
-                            &burstRequest.tx_pps,
-                            sizeof(burstRequest.tx_pps),
-                            0) < 0) {
-                    etiLog.level(info) <<
-                        "DPD Feedback Server Client send tx_pps failed";
-                    break;
-                }
+            if (send(client_sock,
+                        &burstRequest.num_samples,
+                        sizeof(burstRequest.num_samples),
+                        0) < 0) {
+                etiLog.level(info) <<
+                    "DPD Feedback Server Client send num_samples failed";
+                break;
+            }
 
-                const size_t frame_bytes = burstRequest.num_samples * sizeof(complexf);
+            if (send(client_sock,
+                        &burstRequest.tx_second,
+                        sizeof(burstRequest.tx_second),
+                        0) < 0) {
+                etiLog.level(info) <<
+                    "DPD Feedback Server Client send tx_second failed";
+                break;
+            }
 
-                assert(burstRequest.tx_samples.size() == frame_bytes);
-                if (send(client_sock,
-                            &burstRequest.tx_samples[0],
-                            frame_bytes,
-                            0) < 0) {
-                    etiLog.level(info) <<
-                        "DPD Feedback Server Client send tx_frame failed";
-                    break;
-                }
+            if (send(client_sock,
+                        &burstRequest.tx_pps,
+                        sizeof(burstRequest.tx_pps),
+                        0) < 0) {
+                etiLog.level(info) <<
+                    "DPD Feedback Server Client send tx_pps failed";
+                break;
+            }
 
-                if (send(client_sock,
-                            &burstRequest.rx_second,
-                            sizeof(burstRequest.rx_second),
-                            0) < 0) {
-                    etiLog.level(info) <<
-                        "DPD Feedback Server Client send rx_second failed";
-                    break;
-                }
+            const size_t frame_bytes = burstRequest.num_samples * sizeof(complexf);
 
-                if (send(client_sock,
-                            &burstRequest.rx_pps,
-                            sizeof(burstRequest.rx_pps),
-                            0) < 0) {
-                    etiLog.level(info) <<
-                        "DPD Feedback Server Client send rx_pps failed";
-                    break;
-                }
+            assert(burstRequest.tx_samples.size() == frame_bytes);
+            if (send(client_sock,
+                        &burstRequest.tx_samples[0],
+                        frame_bytes,
+                        0) < 0) {
+                etiLog.level(info) <<
+                    "DPD Feedback Server Client send tx_frame failed";
+                break;
+            }
 
-                assert(burstRequest.rx_samples.size() == frame_bytes);
-                if (send(client_sock,
-                            &burstRequest.rx_samples[0],
-                            frame_bytes,
-                            0) < 0) {
-                    etiLog.level(info) <<
-                        "DPD Feedback Server Client send rx_frame failed";
-                    break;
-                }
+            if (send(client_sock,
+                        &burstRequest.rx_second,
+                        sizeof(burstRequest.rx_second),
+                        0) < 0) {
+                etiLog.level(info) <<
+                    "DPD Feedback Server Client send rx_second failed";
+                break;
+            }
+
+            if (send(client_sock,
+                        &burstRequest.rx_pps,
+                        sizeof(burstRequest.rx_pps),
+                        0) < 0) {
+                etiLog.level(info) <<
+                    "DPD Feedback Server Client send rx_pps failed";
+                break;
+            }
+
+            assert(burstRequest.rx_samples.size() == frame_bytes);
+            if (send(client_sock,
+                        &burstRequest.rx_samples[0],
+                        frame_bytes,
+                        0) < 0) {
+                etiLog.level(info) <<
+                    "DPD Feedback Server Client send rx_frame failed";
+                break;
             }
 
             close(client_sock);
