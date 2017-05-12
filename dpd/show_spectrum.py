@@ -30,6 +30,15 @@ if len(sys.argv) != 3:
 port = int(sys.argv[1])
 num_samps_to_request = int(sys.argv[2])
 
+def recv_exact(sock, num_bytes):
+    bufs = []
+    while num_bytes > 0:
+        b = sock.recv(num_bytes)
+        if len(b) == 0:
+            break
+        num_bytes -= len(b)
+        bufs.append(b)
+    return b''.join(bufs)
 
 def get_samples(port, num_samps_to_request):
     """Connect to ODR-DabMod, retrieve TX and RX samples, load
@@ -49,20 +58,26 @@ def get_samples(port, num_samps_to_request):
     s.sendall(struct.pack("=I", num_samps_to_request))
 
     print("Wait for TX metadata")
-    num_samps, tx_second, tx_pps = struct.unpack("=III", s.recv(12))
+    num_samps, tx_second, tx_pps = struct.unpack("=III", recv_exact(s, 12))
     tx_ts = tx_second + tx_pps / 16384000.0
 
-    print("Receiving {} TX samples".format(num_samps))
-    txframe_bytes = s.recv(num_samps * SIZEOF_SAMPLE)
-    txframe = np.fromstring(txframe_bytes, dtype=np.complex64)
+    if num_samps > 0:
+        print("Receiving {} TX samples".format(num_samps))
+        txframe_bytes = recv_exact(s, num_samps * SIZEOF_SAMPLE)
+        txframe = np.fromstring(txframe_bytes, dtype=np.complex64)
+    else:
+        txframe = np.array([], dtype=np.complex64)
 
     print("Wait for RX metadata")
-    rx_second, rx_pps = struct.unpack("=II", s.recv(8))
+    rx_second, rx_pps = struct.unpack("=II", recv_exact(s, 8))
     rx_ts = rx_second + rx_pps / 16384000.0
 
-    print("Receiving {} RX samples".format(num_samps))
-    rxframe_bytes = s.recv(num_samps * SIZEOF_SAMPLE)
-    rxframe = np.fromstring(rxframe_bytes, dtype=np.complex64)
+    if num_samps > 0:
+        print("Receiving {} RX samples".format(num_samps))
+        rxframe_bytes = recv_exact(s, num_samps * SIZEOF_SAMPLE)
+        rxframe = np.fromstring(rxframe_bytes, dtype=np.complex64)
+    else:
+        txframe = np.array([], dtype=np.complex64)
 
     print("Disconnecting")
     s.close()

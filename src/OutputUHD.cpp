@@ -50,7 +50,7 @@
 using namespace std;
 
 // Maximum number of frames that can wait in uwd.frames
-static const size_t FRAMES_MAX_SIZE = 2;
+static const size_t FRAMES_MAX_SIZE = 8;
 
 typedef std::complex<float> complexf;
 

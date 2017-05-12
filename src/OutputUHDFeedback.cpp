@@ -138,6 +138,8 @@ void OutputUHDFeedback::ReceiveBurstThread()
 
         if (not m_running) break;
 
+        etiLog.level(debug) << "Prepare RX stream command for " << burstRequest.num_samples;
+
         uhd::stream_cmd_t cmd(
                 uhd::stream_cmd_t::stream_mode_t::STREAM_MODE_NUM_SAMPS_AND_DONE);
         cmd.num_samps = burstRequest.num_samples;
@@ -146,15 +148,27 @@ void OutputUHDFeedback::ReceiveBurstThread()
         double pps = burstRequest.rx_pps / 16384000.0;
         cmd.time_spec = uhd::time_spec_t(burstRequest.rx_second, pps);
 
+        const double usrp_time = m_usrp->get_time_now().get_real_secs();
+        const double cmd_time = cmd.time_spec.get_real_secs();
+
+        etiLog.level(debug) <<
+            "RX stream command ts=" << std::fixed << cmd_time << " Delta=" << cmd_time - usrp_time;
+
         rxStream->issue_stream_cmd(cmd);
 
         uhd::rx_metadata_t md;
         burstRequest.rx_samples.resize(burstRequest.num_samples * sizeof(complexf));
-        rxStream->recv(&burstRequest.rx_samples[0], burstRequest.num_samples, md);
+        size_t samples_read = rxStream->recv(&burstRequest.rx_samples[0], burstRequest.num_samples, md);
+        assert(samples_read <= burstRequest.num_samples);
+        burstRequest.rx_samples.resize(samples_read * sizeof(complexf));
 
         // The recv might have happened at another time than requested
         burstRequest.rx_second = md.time_spec.get_full_secs();
         burstRequest.rx_pps = md.time_spec.get_frac_secs() * 16384000.0;
+
+        etiLog.level(debug) << "Read " << samples_read << " RX feedback samples "
+            << "at time " << std::fixed << burstRequest.tx_second << "." <<
+            burstRequest.tx_pps / 16384000.0;
 
         burstRequest.state = BurstRequestState::Acquired;
 
@@ -258,6 +272,11 @@ void OutputUHDFeedback::ServeFeedbackThread()
             burstRequest.state = BurstRequestState::None;
             lock.unlock();
 
+            burstRequest.num_samples = std::min(burstRequest.num_samples,
+                    std::min(
+                        burstRequest.tx_samples.size() / sizeof(complexf),
+                        burstRequest.rx_samples.size() / sizeof(complexf)));
+
             if (send(client_sock,
                         &burstRequest.num_samples,
                         sizeof(burstRequest.num_samples),
@@ -287,7 +306,7 @@ void OutputUHDFeedback::ServeFeedbackThread()
 
             const size_t frame_bytes = burstRequest.num_samples * sizeof(complexf);
 
-            assert(burstRequest.tx_samples.size() == frame_bytes);
+            assert(burstRequest.tx_samples.size() >= frame_bytes);
             if (send(client_sock,
                         &burstRequest.tx_samples[0],
                         frame_bytes,
@@ -315,7 +334,7 @@ void OutputUHDFeedback::ServeFeedbackThread()
                 break;
             }
 
-            assert(burstRequest.rx_samples.size() == frame_bytes);
+            assert(burstRequest.rx_samples.size() >= frame_bytes);
             if (send(client_sock,
                         &burstRequest.rx_samples[0],
                         frame_bytes,
