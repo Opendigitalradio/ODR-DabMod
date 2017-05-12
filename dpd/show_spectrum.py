@@ -19,16 +19,30 @@ import socket
 import struct
 import numpy as np
 import matplotlib.pyplot as pp
-import scipy.signal
+from matplotlib.animation import FuncAnimation
+import argparse
 
 SIZEOF_SAMPLE = 8 # complex floats
 
-if len(sys.argv) != 3:
-    print("Usage: show_spectrum.py <port> <number of samples to request>")
-    sys.exit(1)
+def main():
+    parser = argparse.ArgumentParser(description="Plot the spectrum of ODR-DabMod's DPD feedback")
+    parser.add_argument('--samps', default='10240', help='Number of samples to request at once',
+            required=False)
+    parser.add_argument('--port', default='50055',
+            help='port to connect to ODR-DabMod DPD (default: 50055)',
+            required=False)
 
-port = int(sys.argv[1])
-num_samps_to_request = int(sys.argv[2])
+    parser.add_argument('--animated', action='store_true', help='Enable real-time animation')
+
+    cli_args = parser.parse_args()
+
+    port = int(cli_args.port)
+    num_samps_to_request = int(cli_args.samps)
+
+    if cli_args.animated:
+        plot_spectrum_animated(port, num_samps_to_request)
+    else:
+        plot_spectrum_once(port, num_samps_to_request)
 
 def recv_exact(sock, num_bytes):
     bufs = []
@@ -84,33 +98,66 @@ def get_samples(port, num_samps_to_request):
 
     return (tx_ts, txframe, rx_ts, rxframe)
 
-
-tx_ts, txframe, rx_ts, rxframe = get_samples(port, num_samps_to_request)
-
-print("Received {} & {} frames at {} and {}".format(
-    len(txframe), len(rxframe), tx_ts, rx_ts))
-
-print("Calculate TX and RX spectrum assuming 8192000 samples per second")
-fft_size = 4096
-tx_spectrum = np.fft.fftshift(np.fft.fft(txframe, fft_size))
-tx_power = 20*np.log10(np.abs(tx_spectrum))
-
-rx_spectrum = np.fft.fftshift(np.fft.fft(rxframe, fft_size))
-rx_power = 20*np.log10(np.abs(rx_spectrum))
-
 sampling_rate = 8192000
+fft_size = 4096
 freqs = np.fft.fftshift(np.fft.fftfreq(fft_size, d=1./sampling_rate))
 
-fig = pp.figure()
+def plot_spectrum_once(port, num_samps_to_request):
+    tx_ts, txframe, rx_ts, rxframe = get_samples(port, num_samps_to_request)
 
-fig.suptitle("TX and RX spectrum")
-ax1 = fig.add_subplot(211)
-ax1.set_title("TX")
-ax1.plot(freqs, tx_power)
-ax2 = fig.add_subplot(212)
-ax2.set_title("RX")
-ax2.plot(freqs, rx_power)
-pp.show()
+    print("Received {} & {} frames at {} and {}".format(
+        len(txframe), len(rxframe), tx_ts, rx_ts))
+
+    print("Calculate TX and RX spectrum assuming 8192000 samples per second")
+    tx_spectrum = np.fft.fftshift(np.fft.fft(txframe, fft_size))
+    tx_power = 20*np.log10(np.abs(tx_spectrum))
+
+    rx_spectrum = np.fft.fftshift(np.fft.fft(rxframe, fft_size))
+    rx_power = 20*np.log10(np.abs(rx_spectrum))
+
+    fig = pp.figure()
+
+    fig.suptitle("TX and RX spectrum")
+    ax1 = fig.add_subplot(211)
+    ax1.set_title("TX")
+    ax1.plot(freqs, tx_power, 'r')
+    ax2 = fig.add_subplot(212)
+    ax2.set_title("RX")
+    ax2.plot(freqs, rx_power, 'b')
+    pp.show()
+
+def plot_spectrum_animated(port, num_samps_to_request):
+    fig, axes = pp.subplots(2, sharex=True)
+    line1, = axes[0].plot(freqs, np.ones(len(freqs)), 'r', animated=True)
+    axes[0].set_title("TX")
+    line2, = axes[1].plot(freqs, np.ones(len(freqs)), 'b', animated=True)
+    axes[1].set_title("RX")
+    lines = [line1, line2]
+
+    axes[0].set_ylim(-30, 50)
+    axes[1].set_ylim(-60, 40)
+
+    def update(frame):
+        tx_ts, txframe, rx_ts, rxframe = get_samples(port, num_samps_to_request)
+
+        print("Received {} & {} frames at {} and {}".format(
+            len(txframe), len(rxframe), tx_ts, rx_ts))
+
+        print("Calculate TX and RX spectrum assuming 8192000 samples per second")
+        tx_spectrum = np.fft.fftshift(np.fft.fft(txframe, fft_size))
+        tx_power = 20*np.log10(np.abs(tx_spectrum))
+
+        rx_spectrum = np.fft.fftshift(np.fft.fft(rxframe, fft_size))
+        rx_power = 20*np.log10(np.abs(rx_spectrum))
+
+        lines[0].set_ydata(tx_power)
+        lines[1].set_ydata(rx_power)
+        return lines
+
+    ani = FuncAnimation(fig, update, blit=True)
+    pp.show()
+
+main()
 
 # The MIT License (MIT)
 #
