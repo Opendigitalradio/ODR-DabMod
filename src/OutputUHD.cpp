@@ -298,6 +298,9 @@ OutputUHD::OutputUHD(
 
     SetDelayBuffer(myConf.dabMode);
 
+    myUsrp->set_rx_rate(myConf.sampleRate);
+    MDEBUG("OutputUHD:Actual RX Rate: %f sps...\n", myUsrp->get_rx_rate());
+
     myUsrp->set_rx_antenna("RX2");
     MDEBUG("OutputUHD:Set RX Antenna: %s ...\n", myUsrp->get_rx_antenna().c_str());
 
