@@ -98,11 +98,7 @@ def get_samples(port, num_samps_to_request):
 
     return (tx_ts, txframe, rx_ts, rxframe)
 
-sampling_rate = 8192000
-fft_size = 4096
-freqs = np.fft.fftshift(np.fft.fftfreq(fft_size, d=1./sampling_rate))
-
-def plot_spectrum_once(port, num_samps_to_request):
+def get_spectrum(port, num_samps_to_request):
     tx_ts, txframe, rx_ts, rxframe = get_samples(port, num_samps_to_request)
 
     print("Received {} & {} frames at {} and {}".format(
@@ -114,7 +110,15 @@ def plot_spectrum_once(port, num_samps_to_request):
 
     rx_spectrum = np.fft.fftshift(np.fft.fft(rxframe, fft_size))
     rx_power = 20*np.log10(np.abs(rx_spectrum))
+    return tx_power, rx_power
 
+
+sampling_rate = 8192000
+fft_size = 4096
+freqs = np.fft.fftshift(np.fft.fftfreq(fft_size, d=1./sampling_rate))
+
+def plot_spectrum_once(port, num_samps_to_request):
+    tx_power, rx_power = get_spectrum(port, num_samps_to_request)
     fig = pp.figure()
 
     fig.suptitle("TX and RX spectrum")
@@ -138,17 +142,7 @@ def plot_spectrum_animated(port, num_samps_to_request):
     axes[1].set_ylim(-60, 40)
 
     def update(frame):
-        tx_ts, txframe, rx_ts, rxframe = get_samples(port, num_samps_to_request)
-
-        print("Received {} & {} frames at {} and {}".format(
-            len(txframe), len(rxframe), tx_ts, rx_ts))
-
-        print("Calculate TX and RX spectrum assuming 8192000 samples per second")
-        tx_spectrum = np.fft.fftshift(np.fft.fft(txframe, fft_size))
-        tx_power = 20*np.log10(np.abs(tx_spectrum))
-
-        rx_spectrum = np.fft.fftshift(np.fft.fft(rxframe, fft_size))
-        rx_power = 20*np.log10(np.abs(rx_spectrum))
+        tx_power, rx_power = get_spectrum(port, num_samps_to_request)
 
         lines[0].set_ydata(tx_power)
         lines[1].set_ydata(rx_power)
