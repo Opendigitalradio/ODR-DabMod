@@ -101,6 +101,10 @@ def get_samples(port, num_samps_to_request):
 def get_spectrum(port, num_samps_to_request):
     tx_ts, txframe, rx_ts, rxframe = get_samples(port, num_samps_to_request)
 
+    # convert to complex doubles for more dynamic range
+    txframe = txframe.astype(np.complex128)
+    rxframe = rxframe.astype(np.complex128)
+
     print("Received {} & {} frames at {} and {}".format(
         len(txframe), len(rxframe), tx_ts, rx_ts))
 
