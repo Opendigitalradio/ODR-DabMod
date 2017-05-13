@@ -240,6 +240,8 @@ void OutputUHDFeedback::ServeFeedbackThread()
             throw std::runtime_error("Can't listen TCP socket");
         }
 
+        etiLog.level(info) << "DPD Feedback server listening on port " << m_port;
+
         while (m_running) {
             struct sockaddr_in client;
             int client_sock = accept_with_timeout(m_server_sock, 1000, &client);
