@@ -26,8 +26,7 @@
 #include <stdint.h>
 
 
-TimeInterleaver::TimeInterleaver(size_t framesize)
-    throw (std::invalid_argument) :
+TimeInterleaver::TimeInterleaver(size_t framesize) :
         ModCodec(),
         d_framesize(framesize)
 {

@@ -43,7 +43,7 @@ protected:
     std::deque<std::vector<unsigned char> > d_history;
 
 public:
-    TimeInterleaver(size_t framesize) throw (std::invalid_argument);
+    TimeInterleaver(size_t framesize);
     virtual ~TimeInterleaver();
 
     int process(Buffer* const dataIn, Buffer* dataOut);
