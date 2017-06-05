@@ -1,6 +1,19 @@
 This file contains information about the changes done to
 ODR-DabMod in this repository
 
+2017-06-05: Matthias P. Braendli <matthias@mpb.li>
+	(v1.0.1):
+		Move GainControl into a separate thread to make better use
+		of multiprocessor systems.
+		Give explicit names to GainControl modes (fix, max, var) in
+		configuration.
+		Add u8 IQ output format.
+		Add a normalised complexf IQ output format.
+		Read UHD async messages in separate thread to lessen influence on the
+		time-critical transmit thread.
+		Pre-fill UHD IQ buffer before starting to stream data, to ensure it is
+		properly filled and reduce underruns.
+
 2017-03-03: Matthias P. Braendli <matthias@mpb.li>
 	(v1.0.0):
 	* odr-dabmod:
