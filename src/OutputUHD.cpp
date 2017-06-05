@@ -169,8 +169,6 @@ OutputUHD::OutputUHD(
     RC_ADD_PARAMETER(muting, "Mute the output by stopping the transmitter");
     RC_ADD_PARAMETER(staticdelay, "Set static delay (uS) between 0 and 96000");
 
-    // TODO: find out how to use boost::bind to give the logger to the
-    // uhd_msg_handler
     uhd::msg::register_handler(uhd_msg_handler);
 
     uhd::set_thread_priority_safe();
