@@ -47,6 +47,7 @@
 #include "Resampler.h"
 #include "ConvEncoder.h"
 #include "FIRFilter.h"
+#include "MemlessPoly.h"
 #include "TII.h"
 #include "PuncturingEncoder.h"
 #include "TimeInterleaver.h"
@@ -61,7 +62,8 @@ DabModulator::DabModulator(
         unsigned dabMode, GainMode gainMode,
         float& digGain, float normalise,
         float gainmodeVariance,
-        const std::string& filterTapsFilename
+        const std::string& filterTapsFilename,
+        const std::string& polyCoefFilename
         ) :
     ModInput(),
     myOutputRate(outputRate),
@@ -74,6 +76,7 @@ DabModulator::DabModulator(
     myEtiSource(etiSource),
     myFlowgraph(NULL),
     myFilterTapsFilename(filterTapsFilename),
+    myPolyCoefFilename(polyCoefFilename),
     myTiiConfig(tiiConfig)
 {
     PDEBUG("DabModulator::DabModulator(%u, %u, %u, %zu) @ %p\n",
@@ -203,7 +206,8 @@ int DabModulator::process(Buffer* dataOut)
                 (1 + myNbSymbols), myNbCarriers, mySpacing);
 
         auto cifGain = make_shared<GainControl>(
-                mySpacing, myGainMode, myDigGain, myNormalise, myGainmodeVariance);
+                mySpacing, myGainMode, myDigGain, myNormalise, 
+                myGainmodeVariance);
 
         rcs.enrol(cifGain.get());
 
@@ -215,6 +219,19 @@ int DabModulator::process(Buffer* dataOut)
             cifFilter = make_shared<FIRFilter>(myFilterTapsFilename);
             rcs.enrol(cifFilter.get());
         }
+
+        shared_ptr<MemlessPoly> cifPoly;
+        if (not myPolyCoefFilename.empty()) {
+            cifPoly = make_shared<MemlessPoly>(myPolyCoefFilename);
+            etiLog.level(debug) << myPolyCoefFilename << "\n";
+            etiLog.level(debug) << cifPoly->m_coefs[0] << " " <<
+                cifPoly->m_coefs[1] << " "<< cifPoly->m_coefs[2] << " "<<
+                cifPoly->m_coefs[3] << " "<< cifPoly->m_coefs[4] << " "<<
+                cifPoly->m_coefs[5] << " "<< cifPoly->m_coefs[6] << " "<<
+                cifPoly->m_coefs[7] << "\n";
+            rcs.enrol(cifPoly.get());
+        }
+
         auto myOutput = make_shared<OutputMemory>(dataOut);
 
         shared_ptr<Resampler> cifRes;
@@ -306,7 +323,8 @@ int DabModulator::process(Buffer* dataOut)
             auto subchConv = make_shared<ConvEncoder>(subchSizeIn);
 
             // Configuring puncturing encoder
-            auto subchPunc = make_shared<PuncturingEncoder>(subchannel->framesizeCu());
+            auto subchPunc =
+                make_shared<PuncturingEncoder>(subchannel->framesizeCu());
 
             for (const auto& rule : subchannel->get_rules()) {
                 PDEBUG(" Adding rule:\n");
@@ -342,34 +360,44 @@ int DabModulator::process(Buffer* dataOut)
         if (useCicEq) {
             myFlowgraph->connect(cifSig, cifCicEq);
             myFlowgraph->connect(cifCicEq, cifOfdm);
-        } else {
+        }
+        else {
             myFlowgraph->connect(cifSig, cifOfdm);
         }
         myFlowgraph->connect(cifOfdm, cifGain);
         myFlowgraph->connect(cifGain, cifGuard);
 
+        auto cifOut = cifPoly ?
+            static_pointer_cast<ModPlugin>(cifPoly) :
+            static_pointer_cast<ModPlugin>(myOutput);
+
         if (cifFilter) {
             myFlowgraph->connect(cifGuard, cifFilter);
             if (cifRes) {
                 myFlowgraph->connect(cifFilter, cifRes);
-                myFlowgraph->connect(cifRes, myOutput);
-            } else {
-                myFlowgraph->connect(cifFilter, myOutput);
+                myFlowgraph->connect(cifRes, cifOut);
+            }
+            else {
+                myFlowgraph->connect(cifFilter, cifOut);
             }
         }
-        else { //no filtering
+        else {
             if (cifRes) {
                 myFlowgraph->connect(cifGuard, cifRes);
-                myFlowgraph->connect(cifRes, myOutput);
-            } else {
-                myFlowgraph->connect(cifGuard, myOutput);
+                myFlowgraph->connect(cifRes, cifOut);
             }
+            else {
+                myFlowgraph->connect(cifGuard, cifOut);
+            }
+        }
 
+        if (cifPoly) {
+            myFlowgraph->connect(cifPoly, myOutput);
         }
     }
 
     ////////////////////////////////////////////////////////////////////
-    // Proccessing data
+    // Processing data
     ////////////////////////////////////////////////////////////////////
     return myFlowgraph->run();
 }

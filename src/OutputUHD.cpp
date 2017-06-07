@@ -50,7 +50,7 @@
 using namespace std;
 
 // Maximum number of frames that can wait in uwd.frames
-static const size_t FRAMES_MAX_SIZE = 2;
+static const size_t FRAMES_MAX_SIZE = 8;
 
 typedef std::complex<float> complexf;
 
@@ -78,6 +78,36 @@ void uhd_msg_handler(uhd::msg::type_t type, const std::string &msg)
             etiLog.level(debug) << "UHD Message: " << msg;
         }
     }
+}
+
+static void tune_usrp_to(
+        uhd::usrp::multi_usrp::sptr usrp,
+        double lo_offset,
+        double frequency)
+{
+    if (lo_offset != 0.0) {
+        etiLog.level(info) << std::fixed << std::setprecision(3) <<
+            "OutputUHD:Setting freq to " << frequency <<
+            "  with LO offset " << lo_offset << "...";
+
+        const auto tr = uhd::tune_request_t(frequency, lo_offset);
+        uhd::tune_result_t result = usrp->set_tx_freq(tr);
+
+        etiLog.level(debug) << "OutputUHD:" <<
+            std::fixed << std::setprecision(0) <<
+            " Target RF: " << result.target_rf_freq <<
+            " Actual RF: " << result.actual_rf_freq <<
+            " Target DSP: " << result.target_dsp_freq <<
+            " Actual DSP: " << result.actual_dsp_freq;
+    }
+    else {
+        //set the centre frequency
+        etiLog.level(info) << std::fixed << std::setprecision(3) <<
+            "OutputUHD:Setting freq to " << frequency << "...";
+        usrp->set_tx_freq(frequency);
+    }
+
+    usrp->set_rx_freq(frequency);
 }
 
 // Check function for GPS TIMELOCK sensor from the ODR LEA-M8F board GPSDO
@@ -165,6 +195,7 @@ OutputUHD::OutputUHD(
 
     /* register the parameters that can be remote controlled */
     RC_ADD_PARAMETER(txgain, "UHD analog daughterboard TX gain");
+    RC_ADD_PARAMETER(rxgain, "UHD analog daughterboard RX gain for DPD feedback");
     RC_ADD_PARAMETER(freq,   "UHD transmission frequency");
     RC_ADD_PARAMETER(muting, "Mute the output by stopping the transmitter");
     RC_ADD_PARAMETER(staticdelay, "Set static delay (uS) between 0 and 96000");
@@ -223,31 +254,14 @@ OutputUHD::OutputUHD(
         throw std::runtime_error("Cannot set USRP sample rate. Aborted.");
     }
 
-    if (myConf.lo_offset != 0.0) {
-        etiLog.level(info) << std::fixed << std::setprecision(3) <<
-            "OutputUHD:Setting freq to " << myConf.frequency <<
-            "  with LO offset " << myConf.lo_offset << "...";
-
-        const auto tr = uhd::tune_request_t(myConf.frequency, myConf.lo_offset);
-        uhd::tune_result_t result = myUsrp->set_tx_freq(tr);
-
-        etiLog.level(debug) << "OutputUHD:" <<
-            std::fixed << std::setprecision(0) <<
-            " Target RF: " << result.target_rf_freq <<
-            " Actual RF: " << result.actual_rf_freq <<
-            " Target DSP: " << result.target_dsp_freq <<
-            " Actual DSP: " << result.actual_dsp_freq;
-    }
-    else {
-        //set the centre frequency
-        etiLog.level(info) << std::fixed << std::setprecision(3) <<
-            "OutputUHD:Setting freq to " << myConf.frequency << "...";
-        myUsrp->set_tx_freq(myConf.frequency);
-    }
+    tune_usrp_to(myUsrp, myConf.lo_offset, myConf.frequency);
 
     myConf.frequency = myUsrp->get_tx_freq();
     etiLog.level(info) << std::fixed << std::setprecision(3) <<
-        "OutputUHD:Actual frequency: " << myConf.frequency;
+        "OutputUHD:Actual TX frequency: " << myConf.frequency;
+
+    etiLog.level(info) << std::fixed << std::setprecision(3) <<
+        "OutputUHD:Actual RX frequency: " << myUsrp->get_tx_freq();
 
     myUsrp->set_tx_gain(myConf.txgain);
     MDEBUG("OutputUHD:Actual TX Gain: %f ...\n", myUsrp->get_tx_gain());
@@ -284,13 +298,18 @@ OutputUHD::OutputUHD(
 
     SetDelayBuffer(myConf.dabMode);
 
+    myUsrp->set_rx_rate(myConf.sampleRate);
+    MDEBUG("OutputUHD:Actual RX Rate: %f sps...\n", myUsrp->get_rx_rate());
+
+    myUsrp->set_rx_antenna("RX2");
+    MDEBUG("OutputUHD:Set RX Antenna: %s ...\n", myUsrp->get_rx_antenna().c_str());
+
+    myUsrp->set_rx_gain(myConf.rxgain);
+    MDEBUG("OutputUHD:Actual RX Gain: %f ...\n", myUsrp->get_rx_gain());
+
+    uhdFeedback.setup(myUsrp, myConf.dpdFeedbackServerPort, myConf.sampleRate);
+
     MDEBUG("OutputUHD:UHD ready.\n");
-}
-
-
-OutputUHD::~OutputUHD()
-{
-    MDEBUG("OutputUHD::~OutputUHD() @ %p\n", this);
 }
 
 
@@ -424,12 +443,11 @@ int OutputUHD::process(Buffer* dataIn)
                 "OutputUHD: dropping one frame with invalid FCT";
         }
         else {
-            while (true) {
-                size_t num_frames = uwd.frames.push_wait_if_full(frame,
-                        FRAMES_MAX_SIZE);
-                etiLog.log(trace, "UHD,push %zu", num_frames);
-                break;
-            }
+            uhdFeedback.set_tx_frame(frame.buf, frame.ts);
+
+            size_t num_frames = uwd.frames.push_wait_if_full(frame,
+                    FRAMES_MAX_SIZE);
+            etiLog.log(trace, "UHD,push %zu", num_frames);
         }
     }
 
@@ -915,9 +933,13 @@ void OutputUHD::set_parameter(const string& parameter, const string& value)
         ss >> myConf.txgain;
         myUsrp->set_tx_gain(myConf.txgain);
     }
+    else if (parameter == "rxgain") {
+        ss >> myConf.rxgain;
+        myUsrp->set_rx_gain(myConf.rxgain);
+    }
     else if (parameter == "freq") {
         ss >> myConf.frequency;
-        myUsrp->set_tx_freq(myConf.frequency);
+        tune_usrp_to(myUsrp, myConf.lo_offset, myConf.frequency);
         myConf.frequency = myUsrp->get_tx_freq();
     }
     else if (parameter == "muting") {
@@ -955,6 +977,9 @@ const string OutputUHD::get_parameter(const string& parameter) const
     stringstream ss;
     if (parameter == "txgain") {
         ss << myConf.txgain;
+    }
+    else if (parameter == "rxgain") {
+        ss << myConf.rxgain;
     }
     else if (parameter == "freq") {
         ss << myConf.frequency;

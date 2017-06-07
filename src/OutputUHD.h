@@ -2,7 +2,7 @@
    Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010 Her Majesty the
    Queen in Right of Canada (Communications Research Center Canada)
 
-   Copyright (C) 2016
+   Copyright (C) 2017
    Matthias P. Braendli, matthias.braendli@mpb.li
 
     http://opendigitalradio.org
@@ -56,6 +56,7 @@ DESCRIPTION:
 #include "TimestampDecoder.h"
 #include "RemoteControl.h"
 #include "ThreadsafeQueue.h"
+#include "OutputUHDFeedback.h"
 
 #include <stdio.h>
 #include <sys/types.h>
@@ -188,6 +189,7 @@ struct OutputUHDConfig {
     double frequency = 0.0;
     double lo_offset = 0.0;
     double txgain = 0.0;
+    double rxgain = 0.0;
     bool enableSync = false;
     bool muteNoTimestamps = false;
     unsigned dabMode = 0;
@@ -210,14 +212,15 @@ struct OutputUHDConfig {
 
     // static delay in microseconds
     int staticDelayUs = 0;
-};
 
+    // TCP port on which to serve TX and RX samples for the
+    // digital pre distortion learning tool
+    uint16_t dpdFeedbackServerPort = 0;
+};
 
 class OutputUHD: public ModOutput, public RemoteControllable {
     public:
-
         OutputUHD(OutputUHDConfig& config);
-        ~OutputUHD();
 
         int process(Buffer* dataIn);
 
@@ -235,11 +238,7 @@ class OutputUHD: public ModOutput, public RemoteControllable {
         virtual const std::string get_parameter(
                 const std::string& parameter) const;
 
-
     protected:
-        OutputUHD(const OutputUHD& other) = delete;
-        OutputUHD& operator=(const OutputUHD& other) = delete;
-
         EtiSource *myEtiSource;
         OutputUHDConfig& myConf;
         uhd::usrp::multi_usrp::sptr myUsrp;
@@ -248,6 +247,7 @@ class OutputUHD: public ModOutput, public RemoteControllable {
         bool gps_fix_verified;
         struct UHDWorkerData uwd;
         UHDWorker worker;
+        OutputUHDFeedback uhdFeedback;
 
     private:
         // Resize the internal delay buffer according to the dabMode and

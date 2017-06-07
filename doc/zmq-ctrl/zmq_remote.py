@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 
 import sys
 import zmq
@@ -18,7 +18,7 @@ message_parts = sys.argv[2:]
 # first do a ping test
 
 print("ping")
-sock.send("ping")
+sock.send(b"ping")
 data = sock.recv_multipart()
 print("Received: {}".format(len(data)))
 for i,part in enumerate(data):
@@ -32,7 +32,7 @@ for i, part in enumerate(message_parts):
 
     print("Send {}({}): '{}'".format(i, f, part))
 
-    sock.send(part, flags=f)
+    sock.send(part.encode(), flags=f)
 
 data = sock.recv_multipart()
 

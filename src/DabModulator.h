@@ -55,7 +55,8 @@ public:
             unsigned dabMode, GainMode gainMode,
             float& digGain, float normalise,
             float gainmodeVariance,
-            const std::string& filterTapsFilename);
+            const std::string& filterTapsFilename,
+            const std::string& polyCoefFilename);
     DabModulator(const DabModulator& other) = delete;
     DabModulator& operator=(const DabModulator& other) = delete;
     virtual ~DabModulator();
@@ -80,6 +81,7 @@ protected:
     Flowgraph* myFlowgraph;
     OutputMemory* myOutput;
     std::string myFilterTapsFilename;
+    std::string myPolyCoefFilename;
     tii_config_t& myTiiConfig;
 
     size_t myNbSymbols;

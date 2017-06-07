@@ -168,6 +168,12 @@ static void parse_configfile(
             pt.get<std::string>("firfilter.filtertapsfile", "default");
     }
 
+    // Poly coefficients:
+    if (pt.get("poly.enabled", 0) == 1) {
+        mod_settings.polyCoefFilename =
+            pt.get<std::string>("poly.polycoeffile", "default");
+    }
+
     // Output options
     std::string output_selected;
     try {
@@ -212,6 +218,7 @@ static void parse_configfile(
         }
 
         outputuhd_conf.txgain = pt.get("uhdoutput.txgain", 0.0);
+        outputuhd_conf.rxgain = pt.get("uhdoutput.rxgain", 0.0);
         outputuhd_conf.frequency = pt.get<double>("uhdoutput.frequency", 0);
         std::string chan = pt.get<std::string>("uhdoutput.channel", "");
         outputuhd_conf.dabMode = mod_settings.dabMode;
@@ -248,6 +255,8 @@ static void parse_configfile(
         }
 
         outputuhd_conf.maxGPSHoldoverTime = pt.get("uhdoutput.max_gps_holdover_time", 0);
+
+        outputuhd_conf.dpdFeedbackServerPort = pt.get<long>("uhdoutput.dpd_port", 0);
 
         mod_settings.outputuhd_conf = outputuhd_conf;
         mod_settings.useUHDOutput = 1;
