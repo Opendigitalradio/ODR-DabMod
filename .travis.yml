@@ -4,6 +4,8 @@ dist: trusty
 
 addons: &addons
   apt:
+    sources: &sources
+      - ubuntu-toolchain-r-test
     packages: &packages
       - libzmq3-dev
       - libzmq3
@@ -13,17 +15,18 @@ addons: &addons
       - libcurl4-openssl-dev
       - libfftw3-dev
       # libuhd-dev is not allowed
+      - g++-6
 
 compiler:
-  - clang
+  - gcc
 
 script:
   - |
     ./bootstrap.sh
-    CC=clang CXX=clang++ ./configure --disable-zeromq --disable-output-uhd
+    CC=gcc-6 CXX=g++-6 ./configure --disable-zeromq --disable-output-uhd
     make
   - |
     ./bootstrap.sh
-    CC=clang CXX=clang++ ./configure --disable-output-uhd
+    CC=gcc-6 CXX=g++-6 ./configure --disable-output-uhd
     make
 
