@@ -64,7 +64,7 @@ public:
             const std::string& parameter) const;
 
 //TODO to protected
-    std::vector<float> m_coefs;
+    std::vector<complexf> m_coefs;
 
 
 protected:

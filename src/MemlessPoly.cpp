@@ -45,10 +45,10 @@ using namespace std;
 
 
 // By default the signal is unchanged
-static const std::array<float, 8> default_coefficients({
+static const std::array<complexf, 8> default_coefficients({{
         1, 0.0, 0.0, 0.0,
         0.0, 0.0, 0.0, 0.0
-        });
+        }});
 
 
 MemlessPoly::MemlessPoly(const std::string& coefs_file) :
@@ -69,7 +69,7 @@ MemlessPoly::MemlessPoly(const std::string& coefs_file) :
 
 void MemlessPoly::load_coefficients(const std::string &coefFile)
 {
-    std::vector<float> coefs;
+    std::vector<complexf> coefs;
     if (coefFile == "default") {
         std::copy(default_coefficients.begin(), default_coefficients.end(),
                 std::back_inserter(coefs));
@@ -98,7 +98,10 @@ void MemlessPoly::load_coefficients(const std::string &coefFile)
 
         int n;
         for (n = 0; n < n_coefs; n++) {
-            coef_fstream >> coefs[n];
+            float a, b;
+            coef_fstream >> a;
+            coef_fstream >> b;
+            coefs[n] = complexf(a, b)
             PDEBUG("MemlessPoly: coef: %f\n",  coefs[n] );
             if (coef_fstream.eof()) {
                 fprintf(stderr, "MemlessPoly: file %s should contains %d coefs, but EOF reached "\
@@ -118,27 +121,29 @@ void MemlessPoly::load_coefficients(const std::string &coefFile)
 
 int MemlessPoly::internal_process(Buffer* const dataIn, Buffer* dataOut)
 {
-        const float* in = reinterpret_cast<const float*>(dataIn->getData());
-        float* out      = reinterpret_cast<float*>(dataOut->getData());
-        size_t sizeIn   = dataIn->getLength() / sizeof(float);
+    dataOut->setLength(dataIn->getLength());
 
-        {
-             std::lock_guard<std::mutex> lock(m_coefs_mutex);
-             for (size_t i = 0; i < sizeIn; i += 1) {
-                 float mag = std::abs(in[i]);
-                 //out[i] = in[i];
-                 out[i] = in[i] * (
-                     m_coefs[0] +
-                     m_coefs[1] * mag +
-                     m_coefs[2] * mag*mag +
-                     m_coefs[3] * mag*mag*mag +
-                     m_coefs[4] * mag*mag*mag*mag +
-                     m_coefs[5] * mag*mag*mag*mag*mag +
-                     m_coefs[6] * mag*mag*mag*mag*mag*mag +
-                     m_coefs[7] * mag*mag*mag*mag*mag*mag*mag
-                     );
-            }
+    const complexf* in = reinterpret_cast<const complexf*>(dataIn->getData());
+    complexf* out = reinterpret_cast<complexf*>(dataOut->getData());
+    size_t sizeOut = dataOut->getLength() / sizeof(complexf);
+
+    {
+         std::lock_guard<std::mutex> lock(m_coefs_mutex);
+         for (size_t i = 0; i < sizeOut; i += 1) {
+             float mag = std::abs(in[i]);
+             //out[i] = in[i];
+             out[i] = in[i] * (
+                 m_coefs[0] +
+                 m_coefs[1] * mag +
+                 m_coefs[2] * mag*mag +
+                 m_coefs[3] * mag*mag*mag +
+                 m_coefs[4] * mag*mag*mag*mag +
+                 m_coefs[5] * mag*mag*mag*mag*mag +
+                 m_coefs[6] * mag*mag*mag*mag*mag*mag +
+                 m_coefs[7] * mag*mag*mag*mag*mag*mag*mag
+                );
         }
+    }
 
     return dataOut->getLength();
 }
