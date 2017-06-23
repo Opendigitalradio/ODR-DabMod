@@ -29,4 +29,8 @@ script:
     ./bootstrap.sh
     CC=gcc-6 CXX=g++-6 ./configure --disable-output-uhd
     make
+  - |
+    ./bootstrap.sh
+    CC=gcc-6 CXX=g++-6 ./configure --disable-output-uhd --disable-native
+    make
 
