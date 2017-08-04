@@ -70,6 +70,10 @@ AC_ARG_ENABLE([zeromq],
         [AS_HELP_STRING([--disable-zeromq], [Disable ZeroMQ input, output and remote control])],
         [], [enable_zeromq=yes])
 
+AC_ARG_ENABLE([native],
+        [AS_HELP_STRING([--disable-native], [Do not compile with -march=native])],
+        [], [enable_native=yes])
+
 # UHD support control
 AC_ARG_ENABLE([output_uhd],
         [AS_HELP_STRING([--disable-output-uhd], [Disable UHD output])],
@@ -162,20 +166,21 @@ AC_LANG_POP([C++])
 
 
 # Check for march
-AC_MSG_CHECKING(if we can add -march=native to CFLAGS)
-
-save_CXXFLAGS="$CXXFLAGS"
-CXXFLAGS="$CXXFLAGS -march=native"
-AC_COMPILE_IFELSE(  [AC_LANG_PROGRAM([[
-void testfunc(void) {}
-]])],
-[supports_march_native=yes],
-[supports_march_native=no]
-)
-AC_MSG_RESULT($supports_march_native)
-if test x"$supports_march_native" = xno; then
-    CXXFLAGS="$save_CXXFLAGS"
-fi
+AS_IF([test "x$enable_native" = "xyes"],
+      [AC_MSG_CHECKING(if we can add -march=native to CFLAGS)
+       save_CXXFLAGS="$CXXFLAGS"
+       CXXFLAGS="$CXXFLAGS -march=native"
+       AC_COMPILE_IFELSE(  [AC_LANG_PROGRAM([[
+                            void testfunc(void) {}
+                            ]])],
+                            [supports_march_native=yes],
+                            [supports_march_native=no]
+                            )
+       AC_MSG_RESULT($supports_march_native)
+       if test x"$supports_march_native" = xno; then
+           CXXFLAGS="$save_CXXFLAGS"
+       fi
+      ])
 
 AC_TYPE_SIGNAL
 AC_CHECK_FUNCS([bzero floor ftime gettimeofday memset sqrt strchr strerror strtol])
