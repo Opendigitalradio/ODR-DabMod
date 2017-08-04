@@ -223,12 +223,6 @@ int DabModulator::process(Buffer* dataOut)
         shared_ptr<MemlessPoly> cifPoly;
         if (not myPolyCoefFilename.empty()) {
             cifPoly = make_shared<MemlessPoly>(myPolyCoefFilename);
-            etiLog.level(debug) << myPolyCoefFilename << "\n";
-            etiLog.level(debug) << cifPoly->m_coefs[0] << " " <<
-                cifPoly->m_coefs[1] << " "<< cifPoly->m_coefs[2] << " "<<
-                cifPoly->m_coefs[3] << " "<< cifPoly->m_coefs[4] << " "<<
-                cifPoly->m_coefs[5] << " "<< cifPoly->m_coefs[6] << " "<<
-                cifPoly->m_coefs[7] << "\n";
             rcs.enrol(cifPoly.get());
         }
 

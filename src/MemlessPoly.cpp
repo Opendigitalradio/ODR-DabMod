@@ -56,7 +56,9 @@ static const std::array<complexf, 8> default_coefficients({{
 MemlessPoly::MemlessPoly(const std::string& coefs_file) :
     PipelinedModCodec(),
     RemoteControllable("memlesspoly"),
-    m_coefs_file(coefs_file)
+    m_coefs(),
+    m_coefs_file(coefs_file),
+    m_coefs_mutex()
 {
     PDEBUG("MemlessPoly::MemlessPoly(%s) @ %p\n",
             coefs_file.c_str(), this);

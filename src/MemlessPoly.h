@@ -63,16 +63,12 @@ public:
     virtual const std::string get_parameter(
             const std::string& parameter) const;
 
-//TODO to protected
-    std::vector<complexf> m_coefs;
-
-
-protected:
+private:
     int internal_process(Buffer* const dataIn, Buffer* dataOut);
     void load_coefficients(const std::string &coefFile);
 
+    std::vector<complexf> m_coefs;
     std::string m_coefs_file;
-
     mutable std::mutex m_coefs_mutex;
 };
 
