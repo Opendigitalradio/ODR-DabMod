@@ -36,6 +36,7 @@
 #include <stdio.h>
 #include <stdexcept>
 
+#include <future>
 #include <array>
 #include <iostream>
 #include <fstream>
@@ -117,6 +118,29 @@ void MemlessPoly::load_coefficients(const std::string &coefFile)
     }
 }
 
+static void apply_coeff(
+        const vector<complexf> &coefs,
+        const complexf* in, size_t start, size_t stop,
+        complexf* out)
+{
+    for (size_t i = start; i < stop; i++) {
+
+        /* Implement
+           a0 + a1*x + a2*x^2 + a3*x^3 + a4*x^4 + a5*x^5;
+           with less multiplications:
+           a0 + x*(a1 + x*(a2 + x*(a3 + x*(a3 + x*(a4 + a5*x)))));
+           */
+
+        /* Make sure to adapt NUM_COEFS when you change this */
+        out[i] =
+            coefs[0] + in[i] *
+            ( coefs[1] + in[i] *
+              ( coefs[2] + in[i] *
+                ( coefs[3] + in[i] *
+                  ( coefs[4] + in[i] *
+                    ( coefs[5] + in[i] )))));
+    }
+}
 
 int MemlessPoly::internal_process(Buffer* const dataIn, Buffer* dataOut)
 {
@@ -127,23 +151,38 @@ int MemlessPoly::internal_process(Buffer* const dataIn, Buffer* dataOut)
     size_t sizeOut = dataOut->getLength() / sizeof(complexf);
 
     {
-         std::lock_guard<std::mutex> lock(m_coefs_mutex);
-         for (size_t i = 0; i < sizeOut; i += 1) {
+        std::lock_guard<std::mutex> lock(m_coefs_mutex);
+        const unsigned int hw_concurrency = std::thread::hardware_concurrency();
 
-             /* Implement
-                a0 + a1*x + a2*x^2 + a3*x^3 + a4*x^4 + a5*x^5;
-                with less multiplications:
-                a0 + x*(a1 + x*(a2 + x*(a3 + x*(a3 + x*(a4 + a5*x)))));
-              */
+        if (hw_concurrency) {
+            const size_t step = sizeOut / hw_concurrency;
+            vector<future<void> > flags;
 
-             /* Make sure to adapt NUM_COEFS when you change this */
-             out[i] =
-                 m_coefs[0] + in[i] *
-                 ( m_coefs[1] + in[i] *
-                   ( m_coefs[2] + in[i] *
-                     ( m_coefs[3] + in[i] *
-                       ( m_coefs[4] + in[i] *
-                         ( m_coefs[5] + in[i] )))));
+            size_t start = 0;
+            for (size_t i = 0; i < hw_concurrency - 1; i++) {
+                flags.push_back(async(launch::async, apply_coeff,
+                            m_coefs, in, start, start + step, out));
+
+                start += step;
+            }
+
+            // Do the last in this thread
+            apply_coeff(m_coefs, in, start, sizeOut, out);
+
+            // Wait for completion of the tasks
+            for (auto& f : flags) {
+                f.get();
+            }
+        }
+        else {
+            static bool error_printed = false;
+            if (not error_printed) {
+                etiLog.level(warn) <<
+                    "Your platform doesn't seem to have hardware concurrency. "
+                    "MemlessPoly will run single-threaded";
+            }
+            // For some reason we don't have hw concurrency.
+            apply_coeff(m_coefs, in, 0, sizeOut, out);
         }
     }
 
