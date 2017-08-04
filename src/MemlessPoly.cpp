@@ -43,6 +43,7 @@
 
 using namespace std;
 
+#define NUM_COEFS 5
 
 // By default the signal is unchanged
 static const std::array<complexf, 8> default_coefficients({{
@@ -76,37 +77,35 @@ void MemlessPoly::load_coefficients(const std::string &coefFile)
     }
     else {
         std::ifstream coef_fstream(coefFile.c_str());
-        if(!coef_fstream) {
-            fprintf(stderr, "MemlessPoly: file %s could not be opened !\n", coefFile.c_str());
-            throw std::runtime_error("MemlessPoly: Could not open file with coefs! ");
+        if (!coef_fstream) {
+            throw std::runtime_error("MemlessPoly: Could not open file with coefs!");
         }
         int n_coefs;
         coef_fstream >> n_coefs;
 
         if (n_coefs <= 0) {
-            fprintf(stderr, "MemlessPoly: warning: coefs file has invalid format\n");
             throw std::runtime_error("MemlessPoly: coefs file has invalid format.");
         }
-
-        if (n_coefs != 8) {
-            throw std::runtime_error( "MemlessPoly: error: coefs file does not have 8 coefs\n");
+        else if (n_coefs != NUM_COEFS) {
+            throw std::runtime_error("MemlessPoly: invalid number of coefs: " +
+                    std::to_string(coefs.size()));
         }
 
-        fprintf(stderr, "MemlessPoly: Reading %d coefs...\n", n_coefs);
+        etiLog.log(debug, "MemlessPoly: Reading %d coefs...", n_coefs);
 
         coefs.resize(n_coefs);
 
-        int n;
-        for (n = 0; n < n_coefs; n++) {
+        for (int n = 0; n < n_coefs; n++) {
             float a, b;
             coef_fstream >> a;
             coef_fstream >> b;
-            coefs[n] = complexf(a, b)
-            PDEBUG("MemlessPoly: coef: %f\n",  coefs[n] );
+            coefs[n] = complexf(a, b);
+
             if (coef_fstream.eof()) {
-                fprintf(stderr, "MemlessPoly: file %s should contains %d coefs, but EOF reached "\
-                        "after %d coefs !\n", coefFile.c_str(), n_coefs, n);
-                throw std::runtime_error("MemlessPoly: coefs file invalid ! ");
+                etiLog.log(error, "MemlessPoly: file %s should contains %d coefs, "
+                        "but EOF reached after %d coefs !",
+                        coefFile.c_str(), n_coefs, n);
+                throw std::runtime_error("MemlessPoly: coefs file invalid !");
             }
         }
     }
@@ -130,18 +129,21 @@ int MemlessPoly::internal_process(Buffer* const dataIn, Buffer* dataOut)
     {
          std::lock_guard<std::mutex> lock(m_coefs_mutex);
          for (size_t i = 0; i < sizeOut; i += 1) {
-             float mag = std::abs(in[i]);
-             //out[i] = in[i];
-             out[i] = in[i] * (
-                 m_coefs[0] +
-                 m_coefs[1] * mag +
-                 m_coefs[2] * mag*mag +
-                 m_coefs[3] * mag*mag*mag +
-                 m_coefs[4] * mag*mag*mag*mag +
-                 m_coefs[5] * mag*mag*mag*mag*mag +
-                 m_coefs[6] * mag*mag*mag*mag*mag*mag +
-                 m_coefs[7] * mag*mag*mag*mag*mag*mag*mag
-                );
+
+             /* Implement
+                a0 + a1*x + a2*x^2 + a3*x^3 + a4*x^4 + a5*x^5;
+                with less multiplications:
+                a0 + x*(a1 + x*(a2 + x*(a3 + x*(a3 + x*(a4 + a5*x)))));
+              */
+
+             /* Make sure to adapt NUM_COEFS when you change this */
+             out[i] =
+                 m_coefs[0] + in[i] *
+                 ( m_coefs[1] + in[i] *
+                   ( m_coefs[2] + in[i] *
+                     ( m_coefs[3] + in[i] *
+                       ( m_coefs[4] + in[i] *
+                         ( m_coefs[5] + in[i] )))));
         }
     }
 
