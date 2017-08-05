@@ -1,32 +1,14 @@
 # -*- coding: utf-8 -*-
-"""This Python script calculates and updates the parameter of the digital
-predistortion module of the ODR-DabMod. More precisely the complex 
-coefficients of the polynom which is used for predistortion."""
 
-import logging
-logging.basicConfig(format='%(asctime)s - %(module)s - %(levelname)s - %(message)s',
-                    datefmt='%Y-%m-%d %H:%M:%S',
-                    filename='/tmp/dpd.log',
-                    filemode='w',
-                    level=logging.DEBUG)
+class Model:
+    """Calculates new coefficients using the measurement and the old
+    coefficients"""
 
-import src.Measure as Measure
-import src.Model as Model
-import src.Adapt as Adapt
+    def __init__(self, coefs):
+        self.coefs = coefs
 
-port = 50055
-port_rc = 9400
-coef_path = "/home/andreas/dab/ODR-DabMod/polyCoefsCustom"
-num_req = 10240
-
-meas = Measure.Measure(port, num_req)
-adapt = Adapt.Adapt(port_rc, coef_path)
-coefs = adapt.get_coefs()
-model = Model.Model(coefs)
-
-txframe_aligned, rxframe_aligned = meas.get_samples()
-coefs = model.get_next_coefs(txframe_aligned, rxframe_aligned)
-adapt.set_coefs(coefs)
+    def get_next_coefs(self, txframe_aligned, rxframe_aligned):
+        return self.coefs
 
 # The MIT License (MIT)
 #
