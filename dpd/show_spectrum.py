@@ -21,8 +21,17 @@ import numpy as np
 import matplotlib.pyplot as pp
 from matplotlib.animation import FuncAnimation
 import argparse
+from scipy.misc import imsave
 
 SIZEOF_SAMPLE = 8 # complex floats
+
+# Constants for TM 1
+NbSymbols = 76
+NbCarriers = 1536
+Spacing = 2048
+NullSize = 2656
+SymSize = 2552
+FicSizeOut = 288
 
 def main():
     parser = argparse.ArgumentParser(description="Plot the spectrum of ODR-DabMod's DPD feedback")
@@ -31,18 +40,19 @@ def main():
     parser.add_argument('--port', default='50055',
             help='port to connect to ODR-DabMod DPD (default: 50055)',
             required=False)
-
     parser.add_argument('--animated', action='store_true', help='Enable real-time animation')
+    parser.add_argument('--constellation', action='store_true', help='Draw constellaton plot')
+    parser.add_argument('--samplerate', default='8192000', help='Sample rate',
+            required=False)
 
     cli_args = parser.parse_args()
 
-    port = int(cli_args.port)
-    num_samps_to_request = int(cli_args.samps)
-
-    if cli_args.animated:
-        plot_spectrum_animated(port, num_samps_to_request)
+    if cli_args.constellation:
+        plot_constellation_once(cli_args)
+    elif cli_args.animated:
+        plot_spectrum_animated(cli_args)
     else:
-        plot_spectrum_once(port, num_samps_to_request)
+        plot_spectrum_once(cli_args)
 
 def recv_exact(sock, num_bytes):
     bufs = []
@@ -98,7 +108,7 @@ def get_samples(port, num_samps_to_request):
 
     return (tx_ts, txframe, rx_ts, rxframe)
 
-def get_spectrum(port, num_samps_to_request):
+def recv_rxtx(port, num_samps_to_request):
     tx_ts, txframe, rx_ts, rxframe = get_samples(port, num_samps_to_request)
 
     # convert to complex doubles for more dynamic range
@@ -107,6 +117,10 @@ def get_spectrum(port, num_samps_to_request):
 
     print("Received {} & {} frames at {} and {}".format(
         len(txframe), len(rxframe), tx_ts, rx_ts))
+    return tx_ts, txframe, rx_ts, rxframe
+
+def get_spectrum(port, num_samps_to_request):
+    tx_ts, txframe, rx_ts, rxframe = recv_rxtx(port, num_samps_to_request)
 
     print("Calculate TX and RX spectrum assuming 8192000 samples per second")
     tx_spectrum = np.fft.fftshift(np.fft.fft(txframe, fft_size))
@@ -116,12 +130,77 @@ def get_spectrum(port, num_samps_to_request):
     rx_power = 20*np.log10(np.abs(rx_spectrum))
     return tx_power, rx_power
 
+def remove_guard_intervals(frame, options):
+    """Remove the cyclic prefix. The frame needs to be aligned to the
+    end of the transmission frame. Transmission Mode 1 is assumed"""
+    oversample = int(int(options.samplerate) / 2048000)
 
-sampling_rate = 8192000
+    # From the end, take 2048 samples, then skip 504 samples
+    frame = frame[::-1]
+
+    stride_len = Spacing * oversample
+    stride_advance = SymSize * oversample
+
+    # Truncate the frame to an integer length of strides
+    newlen = len(frame) - (len(frame) % stride_advance)
+    print("Truncating frame from {} to {}".format(len(frame), newlen))
+    frame = frame[:newlen]
+
+    # Remove the cyclic prefix
+    frame = frame.reshape(-1, stride_advance)[:,:stride_len].reshape(-1)
+
+    # Reverse again
+    return frame[::-1]
+
+
+def plot_constellation_once(options):
+    port = int(options.port)
+    num_samps_to_request = int(options.samps)
+
+    tx_ts, txframe, rx_ts, rxframe = recv_rxtx(port, num_samps_to_request)
+
+    frame = remove_guard_intervals(txframe, options)
+
+    oversample = int(int(options.samplerate) / 2048000)
+
+    n = Spacing * oversample # is also number of samples per symbol
+    if len(frame) % n != 0:
+        raise ValueError("Frame length doesn't contain exact number of symbols")
+    num_syms = int(len(frame) / n)
+    print("frame {} has {} symbols".format(len(frame), num_syms))
+    spectrums = np.array([np.fft.fftshift(np.fft.fft(frame[n*i:n*(i+1)], n)) for i in range(num_syms)])
+    #imsave("spectrums.png", np.abs(spectrums))
+
+    # Only take bins that are supposed to contain energy
+    spectrums = np.concatenate([spectrums[...,256:1024], spectrums[...,1025:1793]], axis=1)
+
+    sym_indices = (np.tile(np.arange(num_syms-1).reshape(num_syms-1,1), (1,NbCarriers)) +
+                   np.tile(np.linspace(-0.25, 0.25, NbCarriers), (num_syms-1, 1) ) )
+    sym_indices = sym_indices.reshape(-1)
+    diff_angles = np.mod(np.diff(np.angle(spectrums, deg=1), axis=0), 360)
+    #sym_points = spectrums[:-1].reshape(-1)
+    # Set amplitude and phase of low power points to zero, avoid cluttering diagram
+    #sym_points[np.abs(sym_points) < np.mean(np.abs(sym_points)) * 0.1] = 0
+
+    print("ix {}  spec {} da {}".format(
+        sym_indices.shape, spectrums.shape, diff_angles.shape))
+
+    fig = pp.figure()
+
+    fig.suptitle("Constellation")
+    ax1 = fig.add_subplot(111)
+    ax1.set_title("TX")
+    ax1.scatter(sym_indices, diff_angles.reshape(-1), alpha=0.1)
+
+    pp.show()
+
 fft_size = 4096
-freqs = np.fft.fftshift(np.fft.fftfreq(fft_size, d=1./sampling_rate))
 
-def plot_spectrum_once(port, num_samps_to_request):
+def plot_spectrum_once(options):
+    port = int(options.port)
+    num_samps_to_request = int(options.samps)
+    freqs = np.fft.fftshift(np.fft.fftfreq(fft_size, d=1./int(options.samplerate)))
+
     tx_power, rx_power = get_spectrum(port, num_samps_to_request)
     fig = pp.figure()
 
@@ -134,7 +213,11 @@ def plot_spectrum_once(port, num_samps_to_request):
     ax2.plot(freqs, rx_power, 'b')
     pp.show()
 
-def plot_spectrum_animated(port, num_samps_to_request):
+def plot_spectrum_animated(options):
+    port = int(options.port)
+    num_samps_to_request = int(options.samps)
+    freqs = np.fft.fftshift(np.fft.fftfreq(fft_size, d=1./int(options.samplerate)))
+
     fig, axes = pp.subplots(2, sharex=True)
     line1, = axes[0].plot(freqs, np.ones(len(freqs)), 'r', animated=True)
     axes[0].set_title("TX")
