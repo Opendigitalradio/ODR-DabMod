@@ -74,7 +74,7 @@ DabModulator::DabModulator(
     myNormalise(normalise),
     myGainmodeVariance(gainmodeVariance),
     myEtiSource(etiSource),
-    myFlowgraph(NULL),
+    myFlowgraph(),
     myFilterTapsFilename(filterTapsFilename),
     myPolyCoefFilename(polyCoefFilename),
     myTiiConfig(tiiConfig)
@@ -87,14 +87,6 @@ DabModulator::DabModulator(
     } else {
         setMode(myDabMode);
     }
-}
-
-
-DabModulator::~DabModulator()
-{
-    PDEBUG("DabModulator::~DabModulator() @ %p\n", this);
-
-    delete myFlowgraph;
 }
 
 
@@ -145,7 +137,7 @@ int DabModulator::process(Buffer* dataOut)
 
     PDEBUG("DabModulator::process(dataOut: %p)\n", dataOut);
 
-    if (myFlowgraph == NULL) {
+    if (not myFlowgraph) {
         unsigned mode = myEtiSource.getMode();
         if (myDabMode != 0) {
             mode = myDabMode;
@@ -154,7 +146,7 @@ int DabModulator::process(Buffer* dataOut)
         }
         setMode(mode);
 
-        myFlowgraph = new Flowgraph();
+        myFlowgraph = make_shared<Flowgraph>();
         ////////////////////////////////////////////////////////////////
         // CIF data initialisation
         ////////////////////////////////////////////////////////////////

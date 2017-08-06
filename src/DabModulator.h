@@ -57,9 +57,6 @@ public:
             float gainmodeVariance,
             const std::string& filterTapsFilename,
             const std::string& polyCoefFilename);
-    DabModulator(const DabModulator& other) = delete;
-    DabModulator& operator=(const DabModulator& other) = delete;
-    virtual ~DabModulator();
 
     int process(Buffer* dataOut);
     const char* name() { return "DabModulator"; }
@@ -78,8 +75,7 @@ protected:
     float myNormalise;
     float myGainmodeVariance;
     EtiSource& myEtiSource;
-    Flowgraph* myFlowgraph;
-    OutputMemory* myOutput;
+    std::shared_ptr<Flowgraph> myFlowgraph;
     std::string myFilterTapsFilename;
     std::string myPolyCoefFilename;
     tii_config_t& myTiiConfig;
