@@ -11,6 +11,7 @@ import os
 import time
 import logging
 import Dab_Util as DU
+import datetime
 
 class Measure:
     """Collect Measurement from DabMod"""
@@ -75,12 +76,46 @@ class Measure:
         else:
             rxframe = np.array([], dtype=np.complex64)
 
+        if logging.getLogger().getEffectiveLevel() == logging.DEBUG:
+            import matplotlib.pyplot as plt
+
+            txframe_path = ('/tmp/txframe_fft_' +
+                            datetime.datetime.now().isoformat() +
+                            '.pdf')
+            plt.plot(np.abs(np.fft.fftshift(np.fft.fft(txframe[2048:]))))
+            plt.savefig(txframe_path)
+            plt.clf()
+
+            rxframe_path = ('/tmp/rxframe_fft_' +
+                            datetime.datetime.now().isoformat() +
+                            '.pdf')
+            plt.plot(np.abs(np.fft.fftshift(np.fft.fft(rxframe[2048:]))))
+            plt.savefig(rxframe_path)
+            plt.clf()
+
+            logging.debug("txframe: min %f, max %f, median %f, spectrum %s" %
+                (np.min(np.abs(txframe)),
+                 np.max(np.abs(txframe)),
+                 np.median(np.abs(txframe)),
+                 txframe_path))
+
+            logging.debug("rxframe: min %f, max %f, median %f, spectrum %s" %
+                (np.min(np.abs(rxframe)),
+                 np.max(np.abs(rxframe)),
+                 np.median(np.abs(rxframe)),
+                 rxframe_path))
+
         logging.debug("Disconnecting")
         s.close()
 
-        logging.info("Measurement done, txframe %d %s, rxframe %d %s" % (len(txframe), txframe.dtype, len(rxframe), rxframe.dtype) )
         du = DU.Dab_Util(8192000)
         txframe_aligned, rxframe_aligned = du.subsample_align(txframe, rxframe)
+
+        logging.info(
+            "Measurement done, tx %d %s, rx %d %s, tx aligned %d %s, rx aligned %d %s"
+            % (len(txframe), txframe.dtype, len(rxframe), rxframe.dtype,
+            len(txframe_aligned), txframe_aligned.dtype, len(rxframe_aligned), rxframe_aligned.dtype) )
+
         return txframe_aligned, rxframe_aligned
 
 # The MIT License (MIT)

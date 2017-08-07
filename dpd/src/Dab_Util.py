@@ -94,6 +94,7 @@ class Dab_Util:
         else:
             return np.memmap(filename, dtype=np.complex64, mode='r', offset=64/8*offset, shape=length)
 
+
 # The MIT License (MIT)
 #
 # Copyright (c) 2017 Andreas Steger
