@@ -4,27 +4,29 @@ import sys
 import socket
 import struct
 import numpy as np
-import matplotlib.pyplot as pp
+import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 import argparse
 import os
 import time
 import logging
-import Dab_Util as DU
+import src.Dab_Util as DU
 import datetime
 
 class Measure:
     """Collect Measurement from DabMod"""
-    def __init__(self, port, num_samples_to_request):
-        """"""
+    def __init__(self, samplerate, port, num_samples_to_request):
         logging.info("Instantiate Measure object")
+        self.samplerate = samplerate
         self.sizeof_sample = 8 # complex floats
         self.port = port
         self.num_samples_to_request = num_samples_to_request
 
     def _recv_exact(self, sock, num_bytes):
-        """Interfaces the socket to receive a byte string
-        
+        """Receive an exact number of bytes from a socket. This is
+        a wrapper around sock.recv() that can return less than the number
+        of requested bytes.
+
         Args:
             sock (socket): Socket to receive data from.
             num_bytes (int): Number of bytes that will be returned.
@@ -77,8 +79,6 @@ class Measure:
             rxframe = np.array([], dtype=np.complex64)
 
         if logging.getLogger().getEffectiveLevel() == logging.DEBUG:
-            import matplotlib.pyplot as plt
-
             txframe_path = ('/tmp/txframe_fft_' +
                             datetime.datetime.now().isoformat() +
                             '.pdf')
@@ -108,7 +108,7 @@ class Measure:
         logging.debug("Disconnecting")
         s.close()
 
-        du = DU.Dab_Util(8192000)
+        du = DU.Dab_Util(samplerate)
         txframe_aligned, rxframe_aligned = du.subsample_align(txframe, rxframe)
 
         logging.info(

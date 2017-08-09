@@ -4,7 +4,6 @@
 # This example server simulates the ODR-DabMod's
 # DPD server, taking samples from an IQ file
 #
-# Copyright (C) 2017 Matthias P. Braendli
 # http://www.opendigitalradio.org
 # Licence: The MIT License, see notice at the end of this file
 
