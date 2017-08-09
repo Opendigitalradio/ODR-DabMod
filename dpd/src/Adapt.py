@@ -1,19 +1,20 @@
 # -*- coding: utf-8 -*-
+#
+# DPD Calculation Engine: updates ODR-DabMod's predistortion block.
+#
+# http://www.opendigitalradio.org
+# Licence: The MIT License, see notice at the end of this file
 """
 This module is used to change settings of ODR-DabMod using
 the ZMQ remote control socket.
 """
 
 import zmq
-import exceptions
 import logging
 import numpy as np
 
-port = 9400
-
 class Adapt:
-    """Uses the ZMQ remote control to change parameters 
-    of the DabMod
+    """Uses the ZMQ remote control to change parameters of the DabMod
 
     Parameters
     ----------
@@ -27,35 +28,36 @@ class Adapt:
         self.port = port
         self.coef_path = coef_path
         self.host = "localhost"
-        self._connect()
+        self._context = zmq.Context()
 
     def _connect(self):
         """Establish the connection to ODR-DabMod using
-        a ZMQ socket that is in request mode (Client)"""
-        context = zmq.Context()
-        sock = context.socket(zmq.REQ)
+        a ZMQ socket that is in request mode (Client).
+        Returns a socket"""
+        sock = self._context.socket(zmq.REQ)
         sock.connect("tcp://%s:%d" % (self.host, self.port))
 
         sock.send(b"ping")
         data = sock.recv_multipart()
 
         if data != ['ok']:
-            raise exceptions.RuntimeError(
+            raise RuntimeError(
                 "Could not connect to server %s %d." %
                 (self.host, self.port))
 
-        self.sock = sock
+        return sock
 
     def send_receive(self, message):
-        """Used to send a message to the ODR-DabMod. It always
-        returns a answer it also receives the next message
-        from ODR-DabMod over the ZMQ remote control socket.
+        """Send a message to ODR-DabMod. It always
+        returns the answer ODR-DabMod sends back.
+
+        An example message could be
+        "get uhd txgain" or "set uhd txgain 50"
 
         Parameter
         ---------
         message : str
-            The message string that will be sent to 
-            the receiver.
+            The message string that will be sent to the receiver.
         """
         logging.info("Send message: %s" % message)
         msg_parts = message.split(" ")
@@ -72,45 +74,55 @@ class Adapt:
         return data
 
     def set_txgain(self, gain):
-        """Set a new txgain for the ORD-DabMod.
+        """Set a new txgain for the ODR-DabMod.
 
         Parameters
         ----------
         gain : int
-            Value that will be set to be txgain
+            new TX gain, in the same format as ODR-DabMod's config file
         """
+        # TODO this is specific to the B200
         if gain < 0 or gain > 89:
-            raise exceptions.ValueError("Gain has to be in [0,89]")
+            raise ValueError("Gain has to be in [0,89]")
         return self.send_receive("set uhd txgain %d" % gain)
 
     def get_txgain(self):
-        """Get the txgain value in dB for the ORD-DabMod."""
+        """Get the txgain value in dB for the ODR-DabMod."""
+        # TODO handle failure
         return self.send_receive("get uhd txgain")
 
     def set_rxgain(self, gain):
-        """Set a new rxgain for the ORD-DabMod.
+        """Set a new rxgain for the ODR-DabMod.
 
         Parameters
         ----------
         gain : int
-            Value that will be set to be rxgain
+            new RX gain, in the same format as ODR-DabMod's config file
         """
+        # TODO this is specific to the B200
         if gain < 0 or gain > 89:
-            raise exceptions.ValueError("Gain has to be in [0,89]")
+            raise ValueError("Gain has to be in [0,89]")
         return self.send_receive("set uhd rxgain %d" % gain)
 
     def get_rxgain(self):
-        """Get the rxgain value in dB for the ORD-DabMod."""
+        """Get the rxgain value in dB for the ODR-DabMod."""
+        # TODO handle failure
         return self.send_receive("get uhd rxgain")
 
     def _read_coef_file(self):
+        """Load the coefficients from the file in the format given in the README"""
         coefs_complex = []
         f = open(self.coef_path, 'r')
         lines = f.readlines()
-        n_coefs = lines[0]
+        n_coefs = int(lines[0])
         coefs = [float(l) for l in lines[1:]]
+        i = 0
         for r, c in zip(coefs[0::2], coefs[1::2]):
-            coefs_complex.append(np.complex64(r + 1j * c))
+            if i < n_coefs:
+                coefs_complex.append(np.complex64(r + 1j * c))
+            else:
+                raise ValueError("Incorrect coef file format: too many coefficients")
+            i += 1
         f.close()
         return coefs_complex
 
@@ -118,36 +130,34 @@ class Adapt:
         return self._read_coef_file()
 
     def _write_coef_file(self, coefs_complex):
-        coef_path = "/home/andreas/dab/ODR-DabMod/polyCoefsCustom"
-        f = open(coef_path, 'w')
-        f.write(str(len(coefs_complex)) + "\n")
+        f = open(self.coef_path, 'w')
+        f.write("{}\n".format(len(coefs_complex)).encode())
         for coef in coefs_complex:
-            f.write(str(coef.real) + "\n")
-            f.write(str(coef.imag) + "\n")
+            f.write("{}\n{}\n".format(coef.real, coef.imag).encode())
         f.close()
 
     def set_coefs(self, coefs_complex):
         self._write_coef_file(coefs_complex)
         self.send_receive("set memlesspoly coeffile polyCoefsCustom")
 
-        # The MIT License (MIT)
-        #
-        # Copyright (c) 2017 Andreas Steger
-        #
-        # Permission is hereby granted, free of charge, to any person obtaining a copy
-        # of this software and associated documentation files (the "Software"), to deal
-        # in the Software without restriction, including without limitation the rights
-        # to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-        # copies of the Software, and to permit persons to whom the Software is
-        # furnished to do so, subject to the following conditions:
-        #
-        # The above copyright notice and this permission notice shall be included in all
-        # copies or substantial portions of the Software.
-        #
-        # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-        # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-        # FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-        # AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-        # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-        # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-        # SOFTWARE.
+# The MIT License (MIT)
+#
+# Copyright (c) 2017 Andreas Steger, Matthias P. Braendli
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
