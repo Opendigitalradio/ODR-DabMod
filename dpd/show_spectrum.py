@@ -1,16 +1,15 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
-# This is an example tool that shows how to connect to ODR-DabMod's dpd TCP server
-# and get samples from there.
+# This is an example tool that shows how to connect to ODR-DabMod's dpd TCP
+# server and get samples from there.
 #
-# Since the TX and RX samples are not perfectly aligned, the tool has to align them properly,
-# which is done in two steps: First on sample-level using a correlation, then with subsample
-# accuracy using a FFT approach.
+# Since the TX and RX samples are not perfectly aligned, the tool has to align
+# them properly, which is done in two steps: First on sample-level using a
+# correlation, then with subsample accuracy using a FFT approach.
 #
 # It requires SciPy and matplotlib.
 #
-# Copyright (C) 2017 Matthias P. Braendli
 # http://www.opendigitalradio.org
 # Licence: The MIT License, see notice at the end of this file
 
