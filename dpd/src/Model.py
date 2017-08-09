@@ -1,5 +1,9 @@
 # -*- coding: utf-8 -*-
 
+import numpy as np
+import logging
+import matplotlib.pyplot as plt
+
 class Model:
     """Calculates new coefficients using the measurement and the old
     coefficients"""
@@ -8,6 +12,26 @@ class Model:
         self.coefs = coefs
 
     def get_next_coefs(self, txframe_aligned, rxframe_aligned):
+        txframe_aligned = txframe_aligned / np.median(np.abs(txframe_aligned))
+        rxframe_aligned = rxframe_aligned / np.median(np.abs(rxframe_aligned))
+
+        logging.debug("txframe: min %f, max %f, median %f" %
+                      (np.min(np.abs(txframe_aligned)),
+                       np.max(np.abs(txframe_aligned)),
+                       np.median(np.abs(txframe_aligned))
+                       ))
+
+        logging.debug("rxframe: min %f, max %f, median %f" %
+                      (np.min(np.abs(rxframe_aligned)),
+                       np.max(np.abs(rxframe_aligned)),
+                       np.median(np.abs(rxframe_aligned))
+                       ))
+
+        plt.plot(rxframe_aligned[:1024], label="rxframe")
+        plt.plot(txframe_aligned[:1024], label="txframe")
+        plt.legend()
+        plt.savefig("/tmp/")
+
         return self.coefs
 
 # The MIT License (MIT)
