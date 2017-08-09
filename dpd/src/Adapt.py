@@ -59,6 +59,7 @@ class Adapt:
         message : str
             The message string that will be sent to the receiver.
         """
+        sock = self._connect()
         logging.info("Send message: %s" % message)
         msg_parts = message.split(" ")
         for i, part in enumerate(msg_parts):
@@ -67,9 +68,9 @@ class Adapt:
             else:
                 f = zmq.SNDMORE
 
-            self.sock.send(part.encode(), flags=f)
+            sock.send(part.encode(), flags=f)
 
-        data = self.sock.recv_multipart()
+        data = sock.recv_multipart()
         logging.info("Received message: %s" % message)
         return data
 
