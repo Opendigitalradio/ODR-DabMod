@@ -108,7 +108,7 @@ class Measure:
         logging.debug("Disconnecting")
         s.close()
 
-        du = DU.Dab_Util(samplerate)
+        du = DU.Dab_Util(self.samplerate)
         txframe_aligned, rxframe_aligned = du.subsample_align(txframe, rxframe)
 
         logging.info(

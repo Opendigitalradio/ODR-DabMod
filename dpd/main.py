@@ -20,6 +20,7 @@ logging.basicConfig(format='%(asctime)s - %(module)s - %(levelname)s - %(message
 import src.Measure as Measure
 import src.Model as Model
 import src.Adapt as Adapt
+import argparse
 
 parser = argparse.ArgumentParser(description="DPD Computation Engine for ODR-DabMod")
 parser.add_argument('--port', default='50055',
