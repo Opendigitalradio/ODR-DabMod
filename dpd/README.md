@@ -18,3 +18,4 @@ TODO
 ----
 
 Implement a PA model that updates the predistorter.
+Implement cases for different oversampling for FFT bin choice
