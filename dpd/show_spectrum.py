@@ -92,6 +92,7 @@ def get_samples(port, num_samps_to_request):
     else:
         txframe = np.array([], dtype=np.complex64)
 
+
     print("Wait for RX metadata")
     rx_second, rx_pps = struct.unpack("=II", recv_exact(s, 8))
     rx_ts = rx_second + rx_pps / 16384000.0
@@ -172,6 +173,7 @@ def plot_constellation_once(options):
     #imsave("spectrums.png", np.abs(spectrums))
 
     # Only take bins that are supposed to contain energy
+    #TODO this is only valid for 2048000 sample rate!
     spectrums = np.concatenate([spectrums[...,256:1024], spectrums[...,1025:1793]], axis=1)
 
     sym_indices = (np.tile(np.arange(num_syms-1).reshape(num_syms-1,1), (1,NbCarriers)) +
