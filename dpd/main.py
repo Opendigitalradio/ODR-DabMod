@@ -52,9 +52,10 @@ adapt = Adapt.Adapt(port_rc, coef_path)
 coefs = adapt.get_coefs()
 model = Model.Model(coefs)
 
-txframe_aligned, rxframe_aligned = meas.get_samples()
-coefs = model.get_next_coefs(txframe_aligned, rxframe_aligned)
-adapt.set_coefs(coefs)
+for i in range(10):
+    txframe_aligned, _, rxframe_aligned, _ = meas.get_samples()
+    coefs = model.get_next_coefs(txframe_aligned, rxframe_aligned)
+    adapt.set_coefs(coefs)
 
 # The MIT License (MIT)
 #
