@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import numpy as np
+import datetime
 import logging
 import matplotlib.pyplot as plt
 
@@ -12,25 +13,33 @@ class Model:
         self.coefs = coefs
 
     def get_next_coefs(self, txframe_aligned, rxframe_aligned):
-        txframe_aligned = txframe_aligned / np.median(np.abs(txframe_aligned))
-        rxframe_aligned = rxframe_aligned / np.median(np.abs(rxframe_aligned))
+        if logging.getLogger().getEffectiveLevel() == logging.DEBUG:
+            logging.debug("txframe: min %f, max %f, median %f" %
+                          (np.min(np.abs(txframe_aligned)),
+                           np.max(np.abs(txframe_aligned)),
+                           np.median(np.abs(txframe_aligned))
+                           ))
 
-        logging.debug("txframe: min %f, max %f, median %f" %
-                      (np.min(np.abs(txframe_aligned)),
-                       np.max(np.abs(txframe_aligned)),
-                       np.median(np.abs(txframe_aligned))
-                       ))
+            logging.debug("rxframe: min %f, max %f, median %f" %
+                          (np.min(np.abs(rxframe_aligned)),
+                           np.max(np.abs(rxframe_aligned)),
+                           np.median(np.abs(rxframe_aligned))
+                           ))
 
-        logging.debug("rxframe: min %f, max %f, median %f" %
-                      (np.min(np.abs(rxframe_aligned)),
-                       np.max(np.abs(rxframe_aligned)),
-                       np.median(np.abs(rxframe_aligned))
-                       ))
+            tx_rx_frame_path = ('/tmp/tx_rx_sync_' +
+                            datetime.datetime.now().isoformat() +
+                            '.pdf')
+            plt.plot(np.real(rxframe_aligned[:1024]), label="rxframe")
+            plt.plot(np.real(txframe_aligned[:1024]), label="txframe")
+            plt.xlabel("Samples")
+            plt.ylabel("Real Part")
+            plt.legend()
+            plt.savefig(tx_rx_frame_path)
+            plt.clf()
+            logging.debug("Tx, Rx synchronized %s" % tx_rx_frame_path)
 
-        plt.plot(rxframe_aligned[:1024], label="rxframe")
-        plt.plot(txframe_aligned[:1024], label="txframe")
-        plt.legend()
-        plt.savefig("/tmp/")
+        mse = np.mean(np.abs(np.square(txframe_aligned - rxframe_aligned)))
+        logging.debug("MSE: {}".format(mse))
 
         return self.coefs
 
