@@ -27,7 +27,7 @@ class Dab_Util:
             sig_rec: The signal that has been recored
         """
         off = sig_rec.shape[0]
-        c = signal.correlate(sig_orig, sig_rec)
+        c = np.abs(signal.correlate(sig_orig, sig_rec))
         return np.argmax(c) - off + 1
 
     def lag_upsampling(self, sig_orig, sig_rec, n_up):
