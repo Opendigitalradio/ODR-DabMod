@@ -139,7 +139,7 @@ class Adapt:
 
     def set_coefs(self, coefs_complex):
         self._write_coef_file(coefs_complex)
-        self.send_receive("set memlesspoly coeffile polyCoefsCustom")
+        self.send_receive("set memlesspoly coeffile {}".format(self.coef_path))
 
 # The MIT License (MIT)
 #
