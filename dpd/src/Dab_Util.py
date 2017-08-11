@@ -31,8 +31,12 @@ class Dab_Util:
         return np.argmax(c) - off + 1
 
     def lag_upsampling(self, sig_orig, sig_rec, n_up):
-        sig_orig_up = signal.resample(sig_orig, sig_orig.shape[0] * n_up)
-        sig_rec_up  = signal.resample(sig_rec, sig_rec.shape[0] * n_up)
+        if n_up != 1:
+            sig_orig_up = signal.resample(sig_orig, sig_orig.shape[0] * n_up)
+            sig_rec_up  = signal.resample(sig_rec, sig_rec.shape[0] * n_up)
+        else:
+            sig_orig_up = sig_orig
+            sig_rec_up  = sig_rec
         l = self.lag(sig_orig_up, sig_rec_up)
         l_orig = float(l) / n_up
         return l_orig
