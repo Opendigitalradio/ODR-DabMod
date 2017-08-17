@@ -63,7 +63,8 @@ DabModulator::DabModulator(
         float& digGain, float normalise,
         float gainmodeVariance,
         const std::string& filterTapsFilename,
-        const std::string& polyCoefFilename
+        const std::string& polyCoefFilename,
+        unsigned int polyNumThreads
         ) :
     ModInput(),
     myOutputRate(outputRate),
@@ -77,6 +78,7 @@ DabModulator::DabModulator(
     myFlowgraph(NULL),
     myFilterTapsFilename(filterTapsFilename),
     myPolyCoefFilename(polyCoefFilename),
+    myPolyNumThreads(polyNumThreads),
     myTiiConfig(tiiConfig)
 {
     PDEBUG("DabModulator::DabModulator(%u, %u, %u, %zu) @ %p\n",
@@ -222,7 +224,8 @@ int DabModulator::process(Buffer* dataOut)
 
         shared_ptr<MemlessPoly> cifPoly;
         if (not myPolyCoefFilename.empty()) {
-            cifPoly = make_shared<MemlessPoly>(myPolyCoefFilename);
+            cifPoly = make_shared<MemlessPoly>(
+                    myPolyCoefFilename, myPolyNumThreads);
             rcs.enrol(cifPoly.get());
         }
 

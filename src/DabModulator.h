@@ -56,7 +56,9 @@ public:
             float& digGain, float normalise,
             float gainmodeVariance,
             const std::string& filterTapsFilename,
-            const std::string& polyCoefFilename);
+            const std::string& polyCoefFilename,
+            unsigned int polyNumThreads);
+
     DabModulator(const DabModulator& other) = delete;
     DabModulator& operator=(const DabModulator& other) = delete;
     virtual ~DabModulator();
@@ -82,6 +84,7 @@ protected:
     OutputMemory* myOutput;
     std::string myFilterTapsFilename;
     std::string myPolyCoefFilename;
+    unsigned int myPolyNumThreads;
     tii_config_t& myTiiConfig;
 
     size_t myNbSymbols;

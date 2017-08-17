@@ -172,6 +172,9 @@ static void parse_configfile(
     if (pt.get("poly.enabled", 0) == 1) {
         mod_settings.polyCoefFilename =
             pt.get<std::string>("poly.polycoeffile", "default");
+
+        mod_settings.polyNumThreads =
+            pt.get<int>("poly.num_threads", 0);
     }
 
     // Output options

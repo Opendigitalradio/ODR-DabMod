@@ -52,7 +52,7 @@ typedef std::complex<float> complexf;
 class MemlessPoly : public PipelinedModCodec, public RemoteControllable
 {
 public:
-    MemlessPoly(const std::string& coefs_file);
+    MemlessPoly(const std::string& coefs_file, unsigned int num_threads);
 
     virtual const char* name() { return "MemlessPoly"; }
 
@@ -67,6 +67,7 @@ private:
     int internal_process(Buffer* const dataIn, Buffer* dataOut);
     void load_coefficients(const std::string &coefFile);
 
+    unsigned int m_num_threads;
     std::vector<complexf> m_coefs;
     std::string m_coefs_file;
     mutable std::mutex m_coefs_mutex;
