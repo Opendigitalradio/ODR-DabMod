@@ -4,6 +4,8 @@ import sys
 import socket
 import struct
 import numpy as np
+import matplotlib
+matplotlib.use('agg')
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 import argparse
@@ -116,7 +118,7 @@ class Measure:
             % (len(txframe), txframe.dtype, len(rxframe), rxframe.dtype,
             len(txframe_aligned), txframe_aligned.dtype, len(rxframe_aligned), rxframe_aligned.dtype) )
 
-        return txframe_aligned, rxframe_aligned
+        return txframe_aligned, None, rxframe_aligned, None
 
 # The MIT License (MIT)
 #

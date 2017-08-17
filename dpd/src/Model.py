@@ -3,6 +3,8 @@
 import numpy as np
 import datetime
 import logging
+import matplotlib
+matplotlib.use('agg')
 import matplotlib.pyplot as plt
 
 class Model:

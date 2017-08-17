@@ -2,7 +2,10 @@
 
 import numpy as np
 import scipy
+import matplotlib
+matplotlib.use('agg')
 import matplotlib.pyplot as plt
+import datetime
 import src.subsample_align as sa
 from scipy import signal
 import logging
@@ -27,7 +30,16 @@ class Dab_Util:
             sig_rec: The signal that has been recored
         """
         off = sig_rec.shape[0]
-        c = np.abs(signal.correlate(sig_orig, sig_rec))
+        c = signal.correlate(sig_orig, sig_rec)
+
+        corr_path = ('/tmp/tx_rx_corr_' +
+                            datetime.datetime.now().isoformat() +
+                            '.pdf')
+        plt.plot(np.real(c[:10000]), label="corr")
+        plt.legend()
+        plt.savefig(corr_path)
+        plt.clf()
+
         return np.argmax(c) - off + 1
 
     def lag_upsampling(self, sig_orig, sig_rec, n_up):

@@ -35,7 +35,7 @@ parser.add_argument('--samplerate', default='8192000',
 parser.add_argument('--coefs', default='dpdpoly.coef',
         help='File with DPD coefficients, which will be read by ODR-DabMod',
         required=False)
-parser.add_argument('--samps', default='10240',
+parser.add_argument('--samps', default='2560',
         help='Number of samples to request from ODR-DabMod',
         required=False)
 
