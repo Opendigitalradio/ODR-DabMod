@@ -169,14 +169,26 @@ def plot_constellation_once(options):
     num_syms = int(len(frame) / n)
     print("frame {} has {} symbols".format(len(frame), num_syms))
     spectrums = np.array([np.fft.fftshift(np.fft.fft(frame[n*i:n*(i+1)], n)) for i in range(num_syms)])
-    #imsave("spectrums.png", np.abs(spectrums))
+
+    def normalise(x):
+        """Normalise a real-valued array x to the range [0,1]"""
+        y = x + np.min(x)
+        return x / np.max(x)
+
+    imsave("spectrums.png", np.concatenate([
+        normalise(np.abs(spectrums)),
+        normalise(np.angle(spectrums))]))
 
     # Only take bins that are supposed to contain energy
-    #TODO this is only valid for 2048000 sample rate!
-    spectrums = np.concatenate([spectrums[...,256:1024], spectrums[...,1025:1793]], axis=1)
+    # i.e. the middle 1536 bins, excluding the bin at n/2
+    assert(n % 2 == 0)
+    n_half = int(n/2)
+    spectrums = np.concatenate(
+            [spectrums[...,n_half-768:n_half],
+             spectrums[...,n_half + 1:n_half + 769]], axis=1)
 
     sym_indices = (np.tile(np.arange(num_syms-1).reshape(num_syms-1,1), (1,NbCarriers)) +
-                   np.tile(np.linspace(-0.25, 0.25, NbCarriers), (num_syms-1, 1) ) )
+                   np.tile(np.linspace(-0.4, 0.4, NbCarriers), (num_syms-1, 1) ) )
     sym_indices = sym_indices.reshape(-1)
     diff_angles = np.mod(np.diff(np.angle(spectrums, deg=1), axis=0), 360)
     #sym_points = spectrums[:-1].reshape(-1)

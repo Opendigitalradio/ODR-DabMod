@@ -55,46 +55,22 @@
 #include "RemoteControl.h"
 #include "Log.h"
 
-DabModulator::DabModulator(
-        EtiSource& etiSource,
-        tii_config_t& tiiConfig,
-        unsigned outputRate, unsigned clockRate,
-        unsigned dabMode, GainMode gainMode,
-        float& digGain, float normalise,
-        float gainmodeVariance,
-        const std::string& filterTapsFilename,
-        const std::string& polyCoefFilename
-        ) :
+DabModulator::DabModulator(EtiSource& etiSource,
+                           const mod_settings_t& settings) :
     ModInput(),
-    myOutputRate(outputRate),
-    myClockRate(clockRate),
-    myDabMode(dabMode),
-    myGainMode(gainMode),
-    myDigGain(digGain),
-    myNormalise(normalise),
-    myGainmodeVariance(gainmodeVariance),
+    m_settings(settings),
     myEtiSource(etiSource),
-    myFlowgraph(NULL),
-    myFilterTapsFilename(filterTapsFilename),
-    myPolyCoefFilename(polyCoefFilename),
-    myTiiConfig(tiiConfig)
+    myFlowgraph()
 {
     PDEBUG("DabModulator::DabModulator(%u, %u, %u, %zu) @ %p\n",
             outputRate, clockRate, dabMode, (size_t)gainMode, this);
 
-    if (myDabMode == 0) {
+    if (m_settings.dabMode == 0) {
         setMode(2);
-    } else {
-        setMode(myDabMode);
     }
-}
-
-
-DabModulator::~DabModulator()
-{
-    PDEBUG("DabModulator::~DabModulator() @ %p\n", this);
-
-    delete myFlowgraph;
+    else {
+        setMode(m_settings.dabMode);
+    }
 }
 
 
@@ -145,16 +121,16 @@ int DabModulator::process(Buffer* dataOut)
 
     PDEBUG("DabModulator::process(dataOut: %p)\n", dataOut);
 
-    if (myFlowgraph == NULL) {
+    if (not myFlowgraph) {
         unsigned mode = myEtiSource.getMode();
-        if (myDabMode != 0) {
-            mode = myDabMode;
+        if (m_settings.dabMode != 0) {
+            mode = m_settings.dabMode;
         } else if (mode == 0) {
             mode = 4;
         }
         setMode(mode);
 
-        myFlowgraph = new Flowgraph();
+        myFlowgraph = make_shared<Flowgraph>();
         ////////////////////////////////////////////////////////////////
         // CIF data initialisation
         ////////////////////////////////////////////////////////////////
@@ -174,10 +150,10 @@ int DabModulator::process(Buffer* dataOut)
         // TODO this needs a review
         bool useCicEq = false;
         unsigned cic_ratio = 1;
-        if (myClockRate) {
-            cic_ratio = myClockRate / myOutputRate;
+        if (m_settings.clockRate) {
+            cic_ratio = m_settings.clockRate / m_settings.outputRate;
             cic_ratio /= 4; // FPGA DUC
-            if (myClockRate == 400000000) { // USRP2
+            if (m_settings.clockRate == 400000000) { // USRP2
                 if (cic_ratio & 1) { // odd
                     useCicEq = true;
                 } // even, no filter
@@ -189,12 +165,16 @@ int DabModulator::process(Buffer* dataOut)
 
         auto cifCicEq = make_shared<CicEqualizer>(
                 myNbCarriers,
-                (float)mySpacing * (float)myOutputRate / 2048000.0f, cic_ratio);
+                (float)mySpacing * (float)m_settings.outputRate / 2048000.0f,
+                cic_ratio);
 
         shared_ptr<TII> tii;
         shared_ptr<PhaseReference> tiiRef;
         try {
-            tii = make_shared<TII>(myDabMode, myTiiConfig, myEtiSource.getFp());
+            tii = make_shared<TII>(
+                    m_settings.dabMode,
+                    m_settings.tiiConfig,
+                    myEtiSource.getFp());
             rcs.enrol(tii.get());
             tiiRef = make_shared<PhaseReference>(mode);
         }
@@ -206,8 +186,11 @@ int DabModulator::process(Buffer* dataOut)
                 (1 + myNbSymbols), myNbCarriers, mySpacing);
 
         auto cifGain = make_shared<GainControl>(
-                mySpacing, myGainMode, myDigGain, myNormalise, 
-                myGainmodeVariance);
+                mySpacing,
+                m_settings.gainMode,
+                m_settings.digitalgain,
+                m_settings.normalise,
+                m_settings.gainmodeVariance);
 
         rcs.enrol(cifGain.get());
 
@@ -215,23 +198,28 @@ int DabModulator::process(Buffer* dataOut)
                 myNbSymbols, mySpacing, myNullSize, mySymSize);
 
         shared_ptr<FIRFilter> cifFilter;
-        if (not myFilterTapsFilename.empty()) {
-            cifFilter = make_shared<FIRFilter>(myFilterTapsFilename);
+        if (not m_settings.filterTapsFilename.empty()) {
+            cifFilter = make_shared<FIRFilter>(m_settings.filterTapsFilename);
             rcs.enrol(cifFilter.get());
         }
 
         shared_ptr<MemlessPoly> cifPoly;
-        if (not myPolyCoefFilename.empty()) {
-            cifPoly = make_shared<MemlessPoly>(myPolyCoefFilename);
+        if (not m_settings.polyCoefFilename.empty()) {
+            cifPoly = make_shared<MemlessPoly>(m_settings.polyCoefFilename,
+                                               m_settings.polyNumThreads);
             rcs.enrol(cifPoly.get());
         }
 
         auto myOutput = make_shared<OutputMemory>(dataOut);
 
         shared_ptr<Resampler> cifRes;
-        if (myOutputRate != 2048000) {
-            cifRes = make_shared<Resampler>(2048000, myOutputRate, mySpacing);
-        } else {
+        if (m_settings.outputRate != 2048000) {
+            cifRes = make_shared<Resampler>(
+                    2048000,
+                    m_settings.outputRate,
+                    mySpacing);
+        }
+        else {
             fprintf(stderr, "No resampler\n");
         }
 

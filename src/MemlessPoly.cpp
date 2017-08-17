@@ -53,15 +53,26 @@ static const std::array<complexf, 8> default_coefficients({{
         }});
 
 
-MemlessPoly::MemlessPoly(const std::string& coefs_file) :
+MemlessPoly::MemlessPoly(const std::string& coefs_file, unsigned int num_threads) :
     PipelinedModCodec(),
     RemoteControllable("memlesspoly"),
+    m_num_threads(num_threads),
     m_coefs(),
     m_coefs_file(coefs_file),
     m_coefs_mutex()
 {
     PDEBUG("MemlessPoly::MemlessPoly(%s) @ %p\n",
             coefs_file.c_str(), this);
+
+    if (m_num_threads == 0) {
+        const unsigned int hw_concurrency = std::thread::hardware_concurrency();
+        etiLog.level(info) << "Polynomial Predistorter will use " <<
+            hw_concurrency << " threads (auto detected)";
+    }
+    else {
+        etiLog.level(info) << "Polynomial Predistorter will use " <<
+            m_num_threads << " threads (set in config file)";
+    }
 
     RC_ADD_PARAMETER(ncoefs, "(Read-only) number of coefficients.");
     RC_ADD_PARAMETER(coeffile, "Filename containing coefficients. When written to, the new file gets automatically loaded.");
@@ -156,12 +167,15 @@ int MemlessPoly::internal_process(Buffer* const dataIn, Buffer* dataOut)
         std::lock_guard<std::mutex> lock(m_coefs_mutex);
         const unsigned int hw_concurrency = std::thread::hardware_concurrency();
 
-        if (hw_concurrency) {
-            const size_t step = sizeOut / hw_concurrency;
+        const unsigned int num_threads =
+            (m_num_threads > 0) ? m_num_threads : hw_concurrency;
+
+        if (num_threads) {
+            const size_t step = sizeOut / num_threads;
             vector<future<void> > flags;
 
             size_t start = 0;
-            for (size_t i = 0; i < hw_concurrency - 1; i++) {
+            for (size_t i = 0; i < num_threads - 1; i++) {
                 flags.push_back(async(launch::async, apply_coeff,
                             m_coefs, in, start, start + step, out));
 
@@ -177,13 +191,6 @@ int MemlessPoly::internal_process(Buffer* const dataIn, Buffer* dataOut)
             }
         }
         else {
-            static bool error_printed = false;
-            if (not error_printed) {
-                etiLog.level(warn) <<
-                    "Your platform doesn't seem to have hardware concurrency. "
-                    "MemlessPoly will run single-threaded";
-            }
-            // For some reason we don't have hw concurrency.
             apply_coeff(m_coefs, in, 0, sizeOut, out);
         }
     }
