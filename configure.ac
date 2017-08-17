@@ -79,7 +79,7 @@ AC_ARG_ENABLE([output_uhd],
         [AS_HELP_STRING([--disable-output-uhd], [Disable UHD output])],
         [], [enable_output_uhd=yes])
 
-PKG_CHECK_MODULES([FFTW], [fftw3f], enable_fftw=yes, enable_fftw=no)
+PKG_CHECK_MODULES([FFTW], [fftw3f], [], [AC_MSG_ERROR([FFTW is required])])
 
 echo "Checking zeromq"
 

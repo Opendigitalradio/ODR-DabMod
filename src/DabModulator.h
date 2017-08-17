@@ -36,6 +36,7 @@
 #include <memory>
 
 #include "ModPlugin.h"
+#include "ConfigParser.h"
 #include "EtiReader.h"
 #include "Flowgraph.h"
 #include "GainControl.h"
@@ -48,20 +49,8 @@
 class DabModulator : public ModInput
 {
 public:
-    DabModulator(
-            EtiSource& etiSource,
-            tii_config_t& tiiConfig,
-            unsigned outputRate, unsigned clockRate,
-            unsigned dabMode, GainMode gainMode,
-            float& digGain, float normalise,
-            float gainmodeVariance,
-            const std::string& filterTapsFilename,
-            const std::string& polyCoefFilename,
-            unsigned int polyNumThreads);
-
-    DabModulator(const DabModulator& other) = delete;
-    DabModulator& operator=(const DabModulator& other) = delete;
-    virtual ~DabModulator();
+    DabModulator(EtiSource& etiSource,
+                 const mod_settings_t& settings);
 
     int process(Buffer* dataOut);
     const char* name() { return "DabModulator"; }
@@ -72,20 +61,10 @@ public:
 protected:
     void setMode(unsigned mode);
 
-    unsigned myOutputRate;
-    unsigned myClockRate;
-    unsigned myDabMode;
-    GainMode myGainMode;
-    float& myDigGain;
-    float myNormalise;
-    float myGainmodeVariance;
+    const mod_settings_t& m_settings;
+
     EtiSource& myEtiSource;
-    Flowgraph* myFlowgraph;
-    OutputMemory* myOutput;
-    std::string myFilterTapsFilename;
-    std::string myPolyCoefFilename;
-    unsigned int myPolyNumThreads;
-    tii_config_t& myTiiConfig;
+    std::shared_ptr<Flowgraph> myFlowgraph;
 
     size_t myNbSymbols;
     size_t myNbCarriers;
