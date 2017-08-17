@@ -317,18 +317,7 @@ int launch_modulator(int argc, char* argv[])
         }
         Flowgraph flowgraph;
 
-        auto modulator = make_shared<DabModulator>(
-                ediReader,
-                mod_settings.tiiConfig,
-                mod_settings.outputRate,
-                mod_settings.clockRate,
-                mod_settings.dabMode,
-                mod_settings.gainMode,
-                mod_settings.digitalgain,
-                mod_settings.normalise,
-                mod_settings.gainmodeVariance,
-                mod_settings.filterTapsFilename,
-                mod_settings.polyCoefFilename);
+        auto modulator = make_shared<DabModulator>(ediReader, mod_settings);
 
         if (format_converter) {
             flowgraph.connect(modulator, format_converter);
@@ -422,18 +411,7 @@ int launch_modulator(int argc, char* argv[])
             m.etiReader = &etiReader;
 
             auto input = make_shared<InputMemory>(&m.data);
-            auto modulator = make_shared<DabModulator>(
-                    etiReader,
-                    mod_settings.tiiConfig,
-                    mod_settings.outputRate,
-                    mod_settings.clockRate,
-                    mod_settings.dabMode,
-                    mod_settings.gainMode,
-                    mod_settings.digitalgain,
-                    mod_settings.normalise,
-                    mod_settings.gainmodeVariance,
-                    mod_settings.filterTapsFilename,
-                    mod_settings.polyCoefFilename);
+            auto modulator = make_shared<DabModulator>(etiReader, mod_settings);
 
             if (format_converter) {
                 flowgraph.connect(modulator, format_converter);

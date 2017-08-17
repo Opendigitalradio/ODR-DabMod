@@ -52,7 +52,7 @@ class GainControl : public PipelinedModCodec, public RemoteControllable
     public:
         GainControl(size_t framesize,
                     GainMode mode,
-                    float& digGain,
+                    float digGain,
                     float normalise,
                     float varVariance);
 
@@ -76,7 +76,7 @@ class GainControl : public PipelinedModCodec, public RemoteControllable
                 Buffer* const dataIn, Buffer* dataOut) override;
 
         size_t m_frameSize;
-        float& m_digGain;
+        float m_digGain;
         float m_normalise;
 
         // The following variables are accessed from the RC thread

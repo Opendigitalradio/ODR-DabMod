@@ -47,7 +47,7 @@ static float var_variance;
 
 GainControl::GainControl(size_t framesize,
                          GainMode mode,
-                         float& digGain,
+                         float digGain,
                          float normalise,
                          float varVariance) :
     PipelinedModCodec(),
