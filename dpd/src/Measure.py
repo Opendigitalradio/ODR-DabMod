@@ -110,18 +110,40 @@ class Measure:
                  np.median(np.abs(rxframe)),
                  rxframe_path))
 
+            dt = datetime.datetime.now().isoformat()
+            tx_rx_frame_path = ('/tmp/tx_rx_sync0_' + dt + '.pdf')
+            plt.plot(np.abs(rxframe[:128]), label="rxframe")
+            plt.plot(np.abs(txframe[:128]), label="txframe")
+            plt.xlabel("Samples")
+            plt.ylabel("Real Part")
+            plt.legend()
+            plt.savefig(tx_rx_frame_path)
+            plt.clf()
+
         logging.debug("Disconnecting")
         s.close()
 
         du = DU.Dab_Util(self.samplerate)
         txframe_aligned, rxframe_aligned = du.subsample_align(txframe, rxframe)
 
+        if logging.getLogger().getEffectiveLevel() == logging.DEBUG:
+            tx_rx_frame_path = ('/tmp/tx_rx_sync1_' +
+                                datetime.datetime.now().isoformat() +
+                                '.pdf')
+            plt.plot(np.abs(rxframe_aligned[:128]), label="rxframe")
+            plt.plot(np.abs(txframe_aligned[:128]), label="txframe")
+            plt.xlabel("Samples")
+            plt.ylabel("Real Part")
+            plt.legend()
+            plt.savefig(tx_rx_frame_path)
+            plt.clf()
+
         logging.info(
             "Measurement done, tx %d %s, rx %d %s, tx aligned %d %s, rx aligned %d %s"
             % (len(txframe), txframe.dtype, len(rxframe), rxframe.dtype,
             len(txframe_aligned), txframe_aligned.dtype, len(rxframe_aligned), rxframe_aligned.dtype) )
 
-        return txframe_aligned, None, rxframe_aligned, None
+        return txframe_aligned, tx_ts, rxframe_aligned, rx_ts
 
 # The MIT License (MIT)
 #
