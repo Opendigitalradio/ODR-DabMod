@@ -101,6 +101,7 @@ class OutputUHDFeedback {
 
         // Thread that listens for requests over TCP to get TX and RX feedback
         void ServeFeedbackThread(void);
+        void ServeFeedback(void);
 
         boost::thread rx_burst_thread;
         boost::thread burst_tcp_thread;
