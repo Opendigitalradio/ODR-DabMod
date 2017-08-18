@@ -86,6 +86,14 @@ class Dab_Util:
         """
         Returns an aligned version of sig1 and sig2 by cropping and subsample alignment
         """
+
+        if logging.getLogger().getEffectiveLevel() == logging.DEBUG:
+            dt = datetime.datetime.now().isoformat()
+            txframe_path = ('/tmp/tx_0_' + dt + '.iq')
+            sig1.tofile(txframe_path)
+            rxframe_path = ('/tmp/rx_0_' + dt + '.iq')
+            sig2.tofile(rxframe_path)
+
         logging.debug("Sig1_orig: %d %s, Sig2_orig: %d %s" % (len(sig1), sig1.dtype, len(sig2), sig2.dtype))
         off_meas = self.lag_upsampling(sig2, sig1, n_up=1)
         off = int(abs(off_meas))
@@ -101,7 +109,20 @@ class Dab_Util:
             sig1 = sig1[:-1]
             sig2 = sig2[:-1]
 
+        if logging.getLogger().getEffectiveLevel() == logging.DEBUG:
+            txframe_path = ('/tmp/tx_1_' + dt + '.iq')
+            sig1.tofile(txframe_path)
+            rxframe_path = ('/tmp/rx_1_' + dt + '.iq')
+            sig2.tofile(rxframe_path)
+
         sig2 = sa.subsample_align(sig2, sig1)
+
+        if logging.getLogger().getEffectiveLevel() == logging.DEBUG:
+            txframe_path = ('/tmp/tx_2_' + dt + '.iq')
+            sig1.tofile(txframe_path)
+            rxframe_path = ('/tmp/rx_2_' + dt + '.iq')
+            sig2.tofile(rxframe_path)
+
         logging.debug("Sig1_cut: %d %s, Sig2_cut: %d %s, off: %d" % (len(sig1), sig1.dtype, len(sig2), sig2.dtype, off))
         return sig1, sig2
 
