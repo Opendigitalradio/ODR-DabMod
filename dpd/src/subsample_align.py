@@ -2,6 +2,7 @@ import numpy as np
 from scipy import signal, optimize
 import sys
 import matplotlib.pyplot as plt
+import datetime
 
 def gen_omega(length):
     if (length % 2) == 1:
@@ -51,19 +52,27 @@ def subsample_align(sig, ref_sig):
 
         corr_sig = np.fft.ifft(rotate_vec * fft_sig)
 
-        # TODO why do we only look at the real part? Because it's faster than
-        # a complex cross-correlation? Clarify!
-        return -np.sum(np.real(corr_sig) * np.real(ref_sig.real))
+        return -np.abs(np.sum(corr_sig * ref_sig))
 
     optim_result = optimize.minimize_scalar(correlate_for_delay, bounds=(-1,1), method='bounded', options={'disp': True})
 
     if optim_result.success:
-        #print("x:")
-        #print(optim_result.x)
-
         best_tau = optim_result.x
 
         #print("Found subsample delay = {}".format(best_tau))
+
+        if 0:
+            corr = np.vectorize(correlate_for_delay)
+            ixs = np.linspace(-1, 1, 100)
+            taus = corr(ixs)
+
+            tau_path = ('/tmp/tau_' +
+                        datetime.datetime.now().isoformat() +
+                        '.pdf')
+            plt.plot(ixs, taus)
+            plt.title("Subsample correlation, minimum is best: {}".format(best_tau))
+            plt.savefig(tau_path)
+            plt.clf()
 
         # Prepare rotate_vec = fft_sig with rotated phase
         rotate_vec = np.exp(1j * best_tau * omega)
