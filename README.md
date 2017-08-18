@@ -31,6 +31,8 @@ Short list of features:
 - A Telnet and ZeroMQ remote-control that can be used to change
   some parameters during runtime
 - ZeroMQ PUB and REP output.
+- Ongoing work about digital predistortion for PA linearisation.
+  See dpd/README.md
 
 The src/ directory contains the source code of ODR-DabMod.
 
