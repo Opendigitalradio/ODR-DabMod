@@ -80,18 +80,21 @@ class Measure:
         else:
             rxframe = np.array([], dtype=np.complex64)
 
+        txframe = txframe / np.median(np.abs(txframe))
+        rxframe = rxframe / np.median(np.abs(rxframe))
+
         if logging.getLogger().getEffectiveLevel() == logging.DEBUG:
             txframe_path = ('/tmp/txframe_fft_' +
                             datetime.datetime.now().isoformat() +
                             '.pdf')
-            plt.plot(np.abs(np.fft.fftshift(np.fft.fft(txframe[2048:]))))
+            plt.plot(np.abs(np.fft.fftshift(np.fft.fft(txframe[:self.samplerate]))))
             plt.savefig(txframe_path)
             plt.clf()
 
             rxframe_path = ('/tmp/rxframe_fft_' +
                             datetime.datetime.now().isoformat() +
                             '.pdf')
-            plt.plot(np.abs(np.fft.fftshift(np.fft.fft(rxframe[2048:]))))
+            plt.plot(np.abs(np.fft.fftshift(np.fft.fft(rxframe[:self.samplerate]))))
             plt.savefig(rxframe_path)
             plt.clf()
 
