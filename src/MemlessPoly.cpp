@@ -46,13 +46,6 @@ using namespace std;
 
 #define NUM_COEFS 5
 
-// By default the signal is unchanged
-static const std::array<complexf, 8> default_coefficients({{
-        1, 0.0, 0.0, 0.0,
-        0.0, 0.0, 0.0, 0.0
-        }});
-
-
 MemlessPoly::MemlessPoly(const std::string& coefs_file, unsigned int num_threads) :
     PipelinedModCodec(),
     RemoteControllable("memlesspoly"),
@@ -85,42 +78,36 @@ MemlessPoly::MemlessPoly(const std::string& coefs_file, unsigned int num_threads
 void MemlessPoly::load_coefficients(const std::string &coefFile)
 {
     std::vector<complexf> coefs;
-    if (coefFile == "default") {
-        std::copy(default_coefficients.begin(), default_coefficients.end(),
-                std::back_inserter(coefs));
+    std::ifstream coef_fstream(coefFile.c_str());
+    if (!coef_fstream) {
+        throw std::runtime_error("MemlessPoly: Could not open file with coefs!");
     }
-    else {
-        std::ifstream coef_fstream(coefFile.c_str());
-        if (!coef_fstream) {
-            throw std::runtime_error("MemlessPoly: Could not open file with coefs!");
-        }
-        int n_coefs;
-        coef_fstream >> n_coefs;
+    int n_coefs;
+    coef_fstream >> n_coefs;
 
-        if (n_coefs <= 0) {
-            throw std::runtime_error("MemlessPoly: coefs file has invalid format.");
-        }
-        else if (n_coefs != NUM_COEFS) {
-            throw std::runtime_error("MemlessPoly: invalid number of coefs: " +
-                    std::to_string(coefs.size()));
-        }
+    if (n_coefs <= 0) {
+        throw std::runtime_error("MemlessPoly: coefs file has invalid format.");
+    }
+    else if (n_coefs != NUM_COEFS) {
+        throw std::runtime_error("MemlessPoly: invalid number of coefs: " +
+                std::to_string(coefs.size()));
+    }
 
-        etiLog.log(debug, "MemlessPoly: Reading %d coefs...", n_coefs);
+    etiLog.log(debug, "MemlessPoly: Reading %d coefs...", n_coefs);
 
-        coefs.resize(n_coefs);
+    coefs.resize(n_coefs);
 
-        for (int n = 0; n < n_coefs; n++) {
-            float a, b;
-            coef_fstream >> a;
-            coef_fstream >> b;
-            coefs[n] = complexf(a, b);
+    for (int n = 0; n < n_coefs; n++) {
+        float a, b;
+        coef_fstream >> a;
+        coef_fstream >> b;
+        coefs[n] = complexf(a, b);
 
-            if (coef_fstream.eof()) {
-                etiLog.log(error, "MemlessPoly: file %s should contains %d coefs, "
-                        "but EOF reached after %d coefs !",
-                        coefFile.c_str(), n_coefs, n);
-                throw std::runtime_error("MemlessPoly: coefs file invalid !");
-            }
+        if (coef_fstream.eof()) {
+            etiLog.log(error, "MemlessPoly: file %s should contains %d coefs, "
+                    "but EOF reached after %d coefs !",
+                    coefFile.c_str(), n_coefs, n);
+            throw std::runtime_error("MemlessPoly: coefs file invalid !");
         }
     }
 
