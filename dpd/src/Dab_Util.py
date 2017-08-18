@@ -30,15 +30,16 @@ class Dab_Util:
             sig_rec: The signal that has been recored
         """
         off = sig_rec.shape[0]
-        c = signal.correlate(sig_orig, sig_rec)
+        c = np.abs(signal.correlate(sig_orig, sig_rec))
 
-        corr_path = ('/tmp/tx_rx_corr_' +
-                            datetime.datetime.now().isoformat() +
-                            '.pdf')
-        plt.plot(np.real(c[:10000]), label="corr")
-        plt.legend()
-        plt.savefig(corr_path)
-        plt.clf()
+        if logging.getLogger().getEffectiveLevel() == logging.DEBUG:
+            corr_path = ('/tmp/tx_rx_corr_' +
+                                datetime.datetime.now().isoformat() +
+                                '.pdf')
+            plt.plot(c, label="corr")
+            plt.legend()
+            plt.savefig(corr_path)
+            plt.clf()
 
         return np.argmax(c) - off + 1
 
