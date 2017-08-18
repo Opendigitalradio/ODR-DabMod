@@ -90,7 +90,7 @@ void MemlessPoly::load_coefficients(const std::string &coefFile)
     }
     else if (n_coefs != NUM_COEFS) {
         throw std::runtime_error("MemlessPoly: invalid number of coefs: " +
-                std::to_string(coefs.size()));
+                std::to_string(n_coefs) + " expected " + std::to_string(NUM_COEFS));
     }
 
     etiLog.log(debug, "MemlessPoly: Reading %d coefs...", n_coefs);
