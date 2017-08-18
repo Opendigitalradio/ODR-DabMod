@@ -136,6 +136,11 @@ static void apply_coeff(
            */
 
         /* Make sure to adapt NUM_COEFS when you change this */
+
+#if 1
+        // Complex polynomial, all operations are on complex values.
+        // Usually this is the representation we use when speaking
+        // about the real-valued passband signal that the PA receives.
         out[i] =
             coefs[0] + in[i] *
             ( coefs[1] + in[i] *
@@ -143,6 +148,19 @@ static void apply_coeff(
                 ( coefs[3] + in[i] *
                   ( coefs[4] + in[i] *
                     ( coefs[5] + in[i] )))));
+#else
+        // Polynomial on the magnitude only. All but one multiplication are
+        // on real values. This is what is usually used in papers for the
+        // baseband representation of the signal.
+        const float mag = std::abs(in[i]);
+        out[i] = in[i] *
+            mag * (coefs[0] +
+             mag * (coefs[1] +
+              mag * (coefs[2] +
+               mag * (coefs[3] +
+                mag * (coefs[4] +
+                 mag * coefs[5] )))));
+#endif
     }
 }
 
