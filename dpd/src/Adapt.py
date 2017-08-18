@@ -38,12 +38,12 @@ class Adapt:
         sock.connect("tcp://%s:%d" % (self.host, self.port))
 
         sock.send(b"ping")
-        data = sock.recv_multipart()
+        data = [el.decode() for el in sock.recv_multipart()]
 
         if data != ['ok']:
             raise RuntimeError(
-                "Could not connect to server %s %d." %
-                (self.host, self.port))
+                    "Could not ping server at %s %d: %s" %
+                    (self.host, self.port, data))
 
         return sock
 
@@ -70,7 +70,7 @@ class Adapt:
 
             sock.send(part.encode(), flags=f)
 
-        data = sock.recv_multipart()
+        data = [el.decode() for el in sock.recv_multipart()]
         logging.info("Received message: %s" % message)
         return data
 
@@ -132,9 +132,9 @@ class Adapt:
 
     def _write_coef_file(self, coefs_complex):
         f = open(self.coef_path, 'w')
-        f.write("{}\n".format(len(coefs_complex)).encode())
+        f.write("{}\n".format(len(coefs_complex)))
         for coef in coefs_complex:
-            f.write("{}\n{}\n".format(coef.real, coef.imag).encode())
+            f.write("{}\n{}\n".format(coef.real, coef.imag))
         f.close()
 
     def set_coefs(self, coefs_complex):
