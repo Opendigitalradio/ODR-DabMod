@@ -52,7 +52,7 @@ def subsample_align(sig, ref_sig):
 
         corr_sig = np.fft.ifft(rotate_vec * fft_sig)
 
-        return -np.abs(np.sum(corr_sig.conjugate() * ref_sig))
+        return -np.abs(np.sum(np.conj(corr_sig) * ref_sig))
 
     optim_result = optimize.minimize_scalar(correlate_for_delay, bounds=(-1,1), method='bounded', options={'disp': True})
 
