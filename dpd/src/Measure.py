@@ -80,8 +80,8 @@ class Measure:
         else:
             rxframe = np.array([], dtype=np.complex64)
 
-        txframe = txframe / np.median(np.abs(txframe))
-        rxframe = rxframe / np.median(np.abs(rxframe))
+        # Normalize received signal with sent signal
+        rxframe = rxframe / np.median(np.abs(rxframe)) * np.median(np.abs(txframe))
 
         if logging.getLogger().getEffectiveLevel() == logging.DEBUG:
             txframe_path = ('/tmp/txframe_fft_' +
