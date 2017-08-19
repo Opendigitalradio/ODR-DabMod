@@ -110,46 +110,11 @@ class Measure:
                  np.median(np.abs(rxframe)),
                  rxframe_path))
 
-            dt = datetime.datetime.now().isoformat()
-            tx_rx_frame_path = ('/tmp/tx_rx_sync0_' + dt + '.pdf')
-            plt.plot(np.abs(rxframe[:128]), label="rxframe")
-            plt.plot(np.abs(txframe[:128]), label="txframe")
-            plt.xlabel("Samples")
-            plt.ylabel("Real Part")
-            plt.legend()
-            plt.savefig(tx_rx_frame_path)
-            plt.clf()
-
         logging.debug("Disconnecting")
         s.close()
 
         du = DU.Dab_Util(self.samplerate)
         txframe_aligned, rxframe_aligned = du.subsample_align(txframe, rxframe)
-
-        if logging.getLogger().getEffectiveLevel() == logging.DEBUG:
-            tx_rx_frame_path = ('/tmp/tx_rx_sync1_' +
-                                datetime.datetime.now().isoformat() +
-                                '.pdf')
-            plt.subplot(311)
-            plt.plot(np.abs(rxframe_aligned[:128]), label="rxframe")
-            plt.plot(np.abs(txframe_aligned[:128]), label="txframe")
-            plt.xlabel("Samples")
-            plt.ylabel("Absolute Value")
-            plt.legend()
-            plt.subplot(312)
-            plt.plot(np.real(rxframe_aligned[:128]), label="rxframe_real", alpha=0.5, linestyle=":")
-            plt.plot(np.real(txframe_aligned[:128]), label="txframe_real", alpha=0.5, linestyle=":")
-            plt.xlabel("Samples")
-            plt.ylabel("Real Part")
-            plt.legend()
-            plt.subplot(313)
-            plt.plot(np.imag(rxframe_aligned[:128]), label="rxframe_imag", alpha=0.5, linestyle="--")
-            plt.plot(np.imag(txframe_aligned[:128]), label="txframe_imag", alpha=0.5, linestyle="--")
-            plt.xlabel("Samples")
-            plt.ylabel("Imaginary Part")
-            plt.legend()
-            plt.savefig(tx_rx_frame_path)
-            plt.clf()
 
         logging.info(
             "Measurement done, tx %d %s, rx %d %s, tx aligned %d %s, rx aligned %d %s"
