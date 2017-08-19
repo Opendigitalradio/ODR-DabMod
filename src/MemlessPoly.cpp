@@ -29,6 +29,8 @@
    along with ODR-DabMod.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#pragma GCC optimize ("O3")
+
 #include "MemlessPoly.h"
 #include "PcDebug.h"
 #include "Utils.h"
