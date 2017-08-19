@@ -7,6 +7,7 @@ matplotlib.use('agg')
 import matplotlib.pyplot as plt
 import datetime
 import src.subsample_align as sa
+import src.phase_align as pa
 from scipy import signal
 import logging
 
@@ -121,6 +122,17 @@ class Dab_Util:
             txframe_path = ('/tmp/tx_2_' + dt + '.iq')
             sig1.tofile(txframe_path)
             rxframe_path = ('/tmp/rx_2_' + dt + '.iq')
+            sig2.tofile(rxframe_path)
+
+        sig2 = pa.phase_align(sig2, sig1)
+
+        sig2 = sa.subsample_align(sig2, sig1)
+        sig2 = pa.phase_align(sig2, sig1)
+
+        if logging.getLogger().getEffectiveLevel() == logging.DEBUG:
+            txframe_path = ('/tmp/tx_3_' + dt + '.iq')
+            sig1.tofile(txframe_path)
+            rxframe_path = ('/tmp/rx_3_' + dt + '.iq')
             sig2.tofile(rxframe_path)
 
         logging.debug("Sig1_cut: %d %s, Sig2_cut: %d %s, off: %d" % (len(sig1), sig1.dtype, len(sig2), sig2.dtype, off))
