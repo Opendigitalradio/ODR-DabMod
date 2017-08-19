@@ -29,17 +29,57 @@ class Model:
                            ))
 
             dt = datetime.datetime.now().isoformat()
-            tx_rx_frame_path = ("/tmp/" + dt + "_tx_rx_sync.pdf")
-            plt.plot(np.abs(rxframe_aligned[:128]), label="rxframe")
-            plt.plot(np.abs(txframe_aligned[:128]), label="txframe")
-            plt.xlabel("Samples")
-            plt.ylabel("Real Part")
-            plt.legend()
-            plt.savefig(tx_rx_frame_path)
-            plt.clf()
-            logging.debug("Tx, Rx synchronized %s" % tx_rx_frame_path)
+            fig_path = "/tmp/" + dt + "_Model.pdf"
 
-        mse = np.mean(np.abs(np.square(txframe_aligned - rxframe_aligned)))
+            fig, axs = plt.subplots(4, figsize=(6,2*6))
+
+            ax = axs[0]
+            ax.plot(np.abs(txframe_aligned[:128]), label="TX Frame")
+            ax.plot(np.abs(rxframe_aligned[:128]), label="RX Frame")
+            ax.set_title("Synchronized Signals")
+            ax.set_xlabel("Samples")
+            ax.set_ylabel("Amplitude")
+            ax.legend(loc=4)
+
+            ax = axs[1]
+            ax.plot(np.real(txframe_aligned[:128]), label="TX Frame")
+            ax.plot(np.real(rxframe_aligned[:128]), label="RX Frame")
+            ax.set_title("Synchronized Signals")
+            ax.set_xlabel("Samples")
+            ax.set_ylabel("Real Part")
+            ax.legend(loc=4)
+
+            ax = axs[2]
+            ax.scatter(
+                np.abs(txframe_aligned[:1024]),
+                np.abs(rxframe_aligned[:1024]),
+                s = 0.1
+            )
+            ax.set_title("Amplifier Characteristic")
+            ax.set_xlabel("TX Amplitude")
+            ax.set_ylabel("RX Amplitude")
+
+            ax = axs[3]
+            angle_diff_rad = ((
+                             (np.angle(txframe_aligned[:1024]) -
+                              np.angle(rxframe_aligned[:1024]) +
+                              np.pi) % (2 * np.pi)) -
+                          np.pi
+                          )
+            ax.scatter(
+                np.abs(txframe_aligned[:1024]),
+                angle_diff_rad * 180 / np.pi,
+                s = 0.1
+            )
+            ax.set_title("Amplifier Characteristic")
+            ax.set_xlabel("TX Amplitude")
+            ax.set_ylabel("Phase Difference [deg]")
+
+            fig.tight_layout()
+            fig.savefig(fig_path)
+            fig.clf()
+
+        mse = np.mean(np.abs(np.square(txframe_aligned[:1024] - rxframe_aligned[:1024])))
         logging.debug("MSE: {}".format(mse))
 
         return self.coefs
