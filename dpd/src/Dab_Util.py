@@ -34,9 +34,8 @@ class Dab_Util:
         c = np.abs(signal.correlate(sig_orig, sig_rec))
 
         if logging.getLogger().getEffectiveLevel() == logging.DEBUG:
-            corr_path = ('/tmp/tx_rx_corr_' +
-                                datetime.datetime.now().isoformat() +
-                                '.pdf')
+            dt = datetime.datetime.now().isoformat()
+            corr_path = ("/tmp/" + dt + "_tx_rx_corr.pdf")
             plt.plot(c, label="corr")
             plt.legend()
             plt.savefig(corr_path)
@@ -90,10 +89,26 @@ class Dab_Util:
 
         if logging.getLogger().getEffectiveLevel() == logging.DEBUG:
             dt = datetime.datetime.now().isoformat()
-            txframe_path = ('/tmp/tx_0_' + dt + '.iq')
-            sig1.tofile(txframe_path)
-            rxframe_path = ('/tmp/rx_0_' + dt + '.iq')
-            sig2.tofile(rxframe_path)
+            fig_path = "/tmp/" + dt + "_sync_raw.pdf"
+
+            fig, axs = plt.subplots(2)
+            axs[0].plot(np.abs(sig1[:128]), label="TX Frame")
+            axs[0].plot(np.abs(sig2[:128]), label="RX Frame")
+            axs[0].set_title("Raw Data")
+            axs[0].set_ylabel("Amplitude")
+            axs[0].set_xlabel("Samples")
+            axs[0].legend(loc=4)
+
+            axs[1].plot(np.real(sig1[:128]), label="TX Frame")
+            axs[1].plot(np.real(sig2[:128]), label="RX Frame")
+            axs[1].set_title("Raw Data")
+            axs[1].set_ylabel("Real Part")
+            axs[1].set_xlabel("Samples")
+            axs[1].legend(loc=4)
+
+            fig.tight_layout()
+            fig.savefig(fig_path)
+            fig.clf()
 
         logging.debug("Sig1_orig: %d %s, Sig2_orig: %d %s" % (len(sig1), sig1.dtype, len(sig2), sig2.dtype))
         off_meas = self.lag_upsampling(sig2, sig1, n_up=1)
@@ -111,29 +126,75 @@ class Dab_Util:
             sig2 = sig2[:-1]
 
         if logging.getLogger().getEffectiveLevel() == logging.DEBUG:
-            txframe_path = ('/tmp/tx_1_' + dt + '.iq')
-            sig1.tofile(txframe_path)
-            rxframe_path = ('/tmp/rx_1_' + dt + '.iq')
-            sig2.tofile(rxframe_path)
+            dt = datetime.datetime.now().isoformat()
+            fig_path = "/tmp/" + dt + "_sync_sample_aligned.pdf"
+
+            fig, axs = plt.subplots(2)
+            axs[0].plot(np.abs(sig1[:128]), label="TX Frame")
+            axs[0].plot(np.abs(sig2[:128]), label="RX Frame")
+            axs[0].set_title("Sample Aligned Data")
+            axs[0].set_ylabel("Amplitude")
+            axs[0].set_xlabel("Samples")
+            axs[0].legend(loc=4)
+
+            axs[1].plot(np.real(sig1[:128]), label="TX Frame")
+            axs[1].plot(np.real(sig2[:128]), label="RX Frame")
+            axs[1].set_ylabel("Real Part")
+            axs[1].set_xlabel("Samples")
+            axs[1].legend(loc=4)
+
+            fig.tight_layout()
+            fig.savefig(fig_path)
+            fig.clf()
+
 
         sig2 = sa.subsample_align(sig2, sig1)
 
         if logging.getLogger().getEffectiveLevel() == logging.DEBUG:
-            txframe_path = ('/tmp/tx_2_' + dt + '.iq')
-            sig1.tofile(txframe_path)
-            rxframe_path = ('/tmp/rx_2_' + dt + '.iq')
-            sig2.tofile(rxframe_path)
+            dt = datetime.datetime.now().isoformat()
+            fig_path = "/tmp/" + dt + "_sync_subsample_aligned.pdf"
 
-        sig2 = pa.phase_align(sig2, sig1)
+            fig, axs = plt.subplots(2)
+            axs[0].plot(np.abs(sig1[:128]), label="TX Frame")
+            axs[0].plot(np.abs(sig2[:128]), label="RX Frame")
+            axs[0].set_title("Subsample Aligned")
+            axs[0].set_ylabel("Amplitude")
+            axs[0].set_xlabel("Samples")
+            axs[0].legend(loc=4)
 
-        sig2 = sa.subsample_align(sig2, sig1)
+            axs[1].plot(np.real(sig1[:128]), label="TX Frame")
+            axs[1].plot(np.real(sig2[:128]), label="RX Frame")
+            axs[1].set_ylabel("Real Part")
+            axs[1].set_xlabel("Samples")
+            axs[1].legend(loc=4)
+
+            fig.tight_layout()
+            fig.savefig(fig_path)
+            fig.clf()
+
         sig2 = pa.phase_align(sig2, sig1)
 
         if logging.getLogger().getEffectiveLevel() == logging.DEBUG:
-            txframe_path = ('/tmp/tx_3_' + dt + '.iq')
-            sig1.tofile(txframe_path)
-            rxframe_path = ('/tmp/rx_3_' + dt + '.iq')
-            sig2.tofile(rxframe_path)
+            dt = datetime.datetime.now().isoformat()
+            fig_path = "/tmp/" + dt + "_sync_phase_aligned.pdf"
+
+            fig, axs = plt.subplots(2)
+            axs[0].plot(np.abs(sig1[:128]), label="TX Frame")
+            axs[0].plot(np.abs(sig2[:128]), label="RX Frame")
+            axs[0].set_title("Phase Aligned")
+            axs[0].set_ylabel("Amplitude")
+            axs[0].set_xlabel("Samples")
+            axs[0].legend(loc=4)
+
+            axs[1].plot(np.real(sig1[:128]), label="TX Frame")
+            axs[1].plot(np.real(sig2[:128]), label="RX Frame")
+            axs[1].set_ylabel("Real Part")
+            axs[1].set_xlabel("Samples")
+            axs[1].legend(loc=4)
+
+            fig.tight_layout()
+            fig.savefig(fig_path)
+            fig.clf()
 
         logging.debug("Sig1_cut: %d %s, Sig2_cut: %d %s, off: %d" % (len(sig1), sig1.dtype, len(sig2), sig2.dtype, off))
         return sig1, sig2

@@ -84,31 +84,15 @@ class Measure:
         rxframe = rxframe / np.median(np.abs(rxframe)) * np.median(np.abs(txframe))
 
         if logging.getLogger().getEffectiveLevel() == logging.DEBUG:
-            txframe_path = ('/tmp/txframe_fft_' +
-                            datetime.datetime.now().isoformat() +
-                            '.pdf')
-            plt.plot(np.abs(np.fft.fftshift(np.fft.fft(txframe[:self.samplerate]))))
-            plt.savefig(txframe_path)
-            plt.clf()
-
-            rxframe_path = ('/tmp/rxframe_fft_' +
-                            datetime.datetime.now().isoformat() +
-                            '.pdf')
-            plt.plot(np.abs(np.fft.fftshift(np.fft.fft(rxframe[:self.samplerate]))))
-            plt.savefig(rxframe_path)
-            plt.clf()
-
-            logging.debug("txframe: min %f, max %f, median %f, spectrum %s" %
+            logging.debug("txframe: min %f, max %f, median %f" %
                 (np.min(np.abs(txframe)),
                  np.max(np.abs(txframe)),
-                 np.median(np.abs(txframe)),
-                 txframe_path))
+                 np.median(np.abs(txframe))))
 
-            logging.debug("rxframe: min %f, max %f, median %f, spectrum %s" %
+            logging.debug("rxframe: min %f, max %f, median %f" %
                 (np.min(np.abs(rxframe)),
                  np.max(np.abs(rxframe)),
-                 np.median(np.abs(rxframe)),
-                 rxframe_path))
+                 np.median(np.abs(rxframe))))
 
         logging.debug("Disconnecting")
         s.close()

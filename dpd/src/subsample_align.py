@@ -66,9 +66,8 @@ def subsample_align(sig, ref_sig):
             ixs = np.linspace(-1, 1, 100)
             taus = corr(ixs)
 
-            tau_path = ('/tmp/tau_' +
-                        datetime.datetime.now().isoformat() +
-                        '.pdf')
+            dt = datetime.datetime.now().isoformat()
+            tau_path = ("/tmp/" + dt + "_tau.pdf")
             plt.plot(ixs, taus)
             plt.title("Subsample correlation, minimum is best: {}".format(best_tau))
             plt.savefig(tau_path)

@@ -28,9 +28,8 @@ class Model:
                            np.median(np.abs(rxframe_aligned))
                            ))
 
-            tx_rx_frame_path = ('/tmp/tx_rx_sync_' +
-                            datetime.datetime.now().isoformat() +
-                            '.pdf')
+            dt = datetime.datetime.now().isoformat()
+            tx_rx_frame_path = ("/tmp/" + dt + "_tx_rx_sync.pdf")
             plt.plot(np.abs(rxframe_aligned[:128]), label="rxframe")
             plt.plot(np.abs(txframe_aligned[:128]), label="txframe")
             plt.xlabel("Samples")
@@ -39,12 +38,6 @@ class Model:
             plt.savefig(tx_rx_frame_path)
             plt.clf()
             logging.debug("Tx, Rx synchronized %s" % tx_rx_frame_path)
-
-            dt = datetime.datetime.now().isoformat()
-            txframe_path = ('/tmp/tx_3_' + dt + '.iq')
-            txframe_aligned.tofile(txframe_path)
-            rxframe_path = ('/tmp/rx_3_' + dt + '.iq')
-            rxframe_aligned.tofile(rxframe_path)
 
         mse = np.mean(np.abs(np.square(txframe_aligned - rxframe_aligned)))
         logging.debug("MSE: {}".format(mse))
