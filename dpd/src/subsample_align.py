@@ -52,7 +52,7 @@ def subsample_align(sig, ref_sig):
 
         corr_sig = np.fft.ifft(rotate_vec * fft_sig)
 
-        return -np.abs(np.sum(corr_sig * ref_sig))
+        return -np.abs(np.sum(corr_sig.conjugate() * ref_sig))
 
     optim_result = optimize.minimize_scalar(correlate_for_delay, bounds=(-1,1), method='bounded', options={'disp': True})
 
@@ -61,7 +61,7 @@ def subsample_align(sig, ref_sig):
 
         #print("Found subsample delay = {}".format(best_tau))
 
-        if 0:
+        if 1:
             corr = np.vectorize(correlate_for_delay)
             ixs = np.linspace(-1, 1, 100)
             taus = corr(ixs)
