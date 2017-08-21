@@ -149,7 +149,7 @@ static void apply_coeff(
         float in_1_8 = in_1_4 * in_1_4;
         float in_1_10 = in_1_6 * in_1_4;
 
-        float in_2_mag = std::abs(in[i]);
+        float in_2_mag = std::abs(in[i+1]);
         float in_2_2 = in_2_mag * in_2_mag;
         float in_2_4 = in_2_2 * in_2_2;
         float in_2_6 = in_2_2 * in_2_4;
