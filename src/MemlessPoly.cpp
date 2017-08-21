@@ -129,52 +129,16 @@ static void apply_coeff(
         const complexf *__restrict in, size_t start, size_t stop,
         complexf *__restrict out)
 {
-    for (size_t i = start; i < stop; i+=2) {
+    for (size_t i = start; i < stop; i+=1) {
 
-        /* Implement
-           a1*x + a3*x*|x|^2 + a5*x*|x|^4 + a5*x*|x|^4 + a5*x*|x|^4 + a7*x*|x|^6
-           with less multiplications:
-           a0 + x*(a1 + x*(a2 + x*(a3 + x*(a3 + x*(a4 + a5*x)))));
-           */
-
-        /* Make sure to adapt NUM_COEFS when you change this */
-
-        // Complex polynomial, all operations are on complex values.
-        // Usually this is the representation we use when speaking
-        // about the real-valued passband signal that the PA receives.
-        float in_1_mag = std::abs(in[i]);
-        float in_1_2 = in_1_mag * in_1_mag;
-        float in_1_4 = in_1_2 * in_1_2;
-        float in_1_6 = in_1_2 * in_1_4;
-        float in_1_8 = in_1_4 * in_1_4;
-        float in_1_10 = in_1_6 * in_1_4;
-
-        float in_2_mag = std::abs(in[i+1]);
-        float in_2_2 = in_2_mag * in_2_mag;
-        float in_2_4 = in_2_2 * in_2_2;
-        float in_2_6 = in_2_2 * in_2_4;
-        float in_2_8 = in_2_4 * in_2_4;
-        float in_2_10 = in_2_6 * in_2_4;
-
-        out[i+0] = in[i+0] *
-            (
-             coefs[0] +
-             coefs[1] * in_1_2 +
-             coefs[2] * in_1_4 +
-             coefs[3] * in_1_6 +
-             coefs[4] * in_1_8 +
-             coefs[5] * in_1_10
-             );
-
-        out[i+1] = in[i+1] *
-            (
-             coefs[0] +
-             coefs[1] * in_2_2 +
-             coefs[2] * in_2_4 +
-             coefs[3] * in_2_6 +
-             coefs[4] * in_2_8 +
-             coefs[5] * in_2_10
-             );
+        float in_mag_sq = in[i].real() * in[i].real() + in[i].imag() * in[i].imag();
+        out[i] =
+            in[i] *
+            ( coefs[0] + in_mag_sq *
+              ( coefs[1] + in_mag_sq *
+                ( coefs[2] + in_mag_sq *
+                  ( coefs[3] + in_mag_sq *
+                    ( coefs[4] + in_mag_sq )))));
     }
 }
 
