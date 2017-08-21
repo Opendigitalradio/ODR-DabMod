@@ -48,9 +48,21 @@ num_req = int(cli_args.samps)
 samplerate = int(cli_args.samplerate)
 
 meas = Measure.Measure(samplerate, port, num_req)
+
 adapt = Adapt.Adapt(port_rc, coef_path)
 coefs = adapt.get_coefs()
-model = Model.Model(coefs)
+#model = Model.Model(coefs)
+model = Model.Model([0.8, 0, 0, 0, 0])
+adapt.set_txgain(60)
+
+tx_gain   = adapt.get_txgain()
+rx_gain   = adapt.get_rxgain()
+dpd_coefs = adapt.get_coefs()
+logging.info(
+    "TX gain {}, RX gain {}, dpd_coefs {}".format(
+        tx_gain, rx_gain, dpd_coefs
+    )
+)
 
 for i in range(10):
     txframe_aligned, tx_ts, rxframe_aligned, rx_ts = meas.get_samples()

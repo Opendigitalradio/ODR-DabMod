@@ -112,33 +112,35 @@ class Adapt:
 
     def _read_coef_file(self):
         """Load the coefficients from the file in the format given in the README"""
-        coefs_complex = []
+        coefs_out = []
         f = open(self.coef_path, 'r')
         lines = f.readlines()
         n_coefs = int(lines[0])
         coefs = [float(l) for l in lines[1:]]
         i = 0
-        for r, c in zip(coefs[0::2], coefs[1::2]):
+        for c in coefs:
             if i < n_coefs:
-                coefs_complex.append(np.complex64(r + 1j * c))
+                coefs_out.append(c)
             else:
-                raise ValueError("Incorrect coef file format: too many coefficients")
+                raise ValueError(
+                    "Incorrect coef file format: too many coefficients in {}, should be {}, coefs are {}"
+                        .format(self.coef_path, n_coefs, coefs))
             i += 1
         f.close()
-        return coefs_complex
+        return coefs_out
 
     def get_coefs(self):
         return self._read_coef_file()
 
-    def _write_coef_file(self, coefs_complex):
+    def _write_coef_file(self, coefs):
         f = open(self.coef_path, 'w')
-        f.write("{}\n".format(len(coefs_complex)))
-        for coef in coefs_complex:
-            f.write("{}\n{}\n".format(coef.real, coef.imag))
+        f.write("{}\n".format(len(coefs)))
+        for coef in coefs:
+            f.write("{}\n".format(coef))
         f.close()
 
-    def set_coefs(self, coefs_complex):
-        self._write_coef_file(coefs_complex)
+    def set_coefs(self, coefs):
+        self._write_coef_file(coefs)
         self.send_receive("set memlesspoly coeffile {}".format(self.coef_path))
 
 # The MIT License (MIT)
