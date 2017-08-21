@@ -46,6 +46,9 @@ class OfdmGenerator : public ModCodec, public RemoteControllable
         OfdmGenerator(size_t nbSymbols,
                       size_t nbCarriers,
                       size_t spacing,
+                      bool enableCfr,
+                      float cfrClip,
+                      float cfrErrorClip,
                       bool inverse = true);
         virtual ~OfdmGenerator();
         OfdmGenerator(const OfdmGenerator&) = delete;
@@ -65,7 +68,7 @@ class OfdmGenerator : public ModCodec, public RemoteControllable
                 const std::string& parameter) const override;
 
     protected:
-        void cfr_one_iteration(Buffer *symbols, size_t symbol_ix);
+        void cfr_one_iteration(complexf *symbol, const complexf *reference);
 
         fftwf_plan myFftPlan;
         fftwf_complex *myFftIn, *myFftOut;
@@ -85,8 +88,11 @@ class OfdmGenerator : public ModCodec, public RemoteControllable
         float myCfrClip;
         float myCfrErrorClip;
         fftwf_plan myCfrFft;
-        std::vector<complexf> myCfrPostClip;
-        std::vector<complexf> myCfrPostFft;
+        fftwf_complex *myCfrPostClip;
+        fftwf_complex *myCfrPostFft;
+
+        size_t myNumClip;
+        size_t myNumErrorClip;
 };
 
 

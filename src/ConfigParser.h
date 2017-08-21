@@ -77,6 +77,12 @@ struct mod_settings_t {
     std::string polyCoefFilename = "";
     unsigned polyNumThreads = 0;
 
+    // Settings for crest factor reduction
+    bool enableCfr = false;
+    float cfrClip = 1.0f;
+    float cfrErrorClip = 1.0f;
+
+
 #if defined(HAVE_OUTPUT_UHD)
     OutputUHDConfig outputuhd_conf;
 #endif

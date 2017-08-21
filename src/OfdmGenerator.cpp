@@ -26,6 +26,8 @@
 
 #include "OfdmGenerator.h"
 #include "PcDebug.h"
+
+#include <complex>
 #include "fftw3.h"
 #define FFT_TYPE fftwf_complex
 
@@ -33,23 +35,25 @@
 #include <string.h>
 #include <stdexcept>
 #include <assert.h>
-#include <complex>
 #include <string>
 
 
 OfdmGenerator::OfdmGenerator(size_t nbSymbols,
-        size_t nbCarriers,
-        size_t spacing,
-        bool inverse) :
+                             size_t nbCarriers,
+                             size_t spacing,
+                             bool enableCfr,
+                             float cfrClip,
+                             float cfrErrorClip,
+                             bool inverse) :
     ModCodec(), RemoteControllable("ofdm"),
     myFftPlan(nullptr),
     myFftIn(nullptr), myFftOut(nullptr),
     myNbSymbols(nbSymbols),
     myNbCarriers(nbCarriers),
     mySpacing(spacing),
-    myCfr(false),
-    myCfrClip(1.0f),
-    myCfrErrorClip(1.0f),
+    myCfr(enableCfr),
+    myCfrClip(cfrClip),
+    myCfrErrorClip(cfrErrorClip),
     myCfrFft(nullptr)
 {
     PDEBUG("OfdmGenerator::OfdmGenerator(%zu, %zu, %zu, %s) @ %p\n",
@@ -62,8 +66,8 @@ OfdmGenerator::OfdmGenerator(size_t nbSymbols,
 
     /* register the parameters that can be remote controlled */
     RC_ADD_PARAMETER(cfr, "Enable crest factor reduction");
-    RC_ADD_PARAMETER(cfrclip, "CFR: Clip to amplitude");
-    RC_ADD_PARAMETER(cfrerrorclip, "CFR: Limit error");
+    RC_ADD_PARAMETER(clip, "CFR: Clip to amplitude");
+    RC_ADD_PARAMETER(errorclip, "CFR: Limit error");
 
     if (inverse) {
         myPosDst = (nbCarriers & 1 ? 0 : 1);
@@ -100,11 +104,10 @@ OfdmGenerator::OfdmGenerator(size_t nbSymbols,
             myFftIn, myFftOut,
             FFTW_BACKWARD, FFTW_MEASURE);
 
-    myCfrPostClip.resize(N);
-    myCfrPostFft.resize(N);
+    myCfrPostClip = (FFT_TYPE*)fftwf_malloc(sizeof(FFT_TYPE) * N);
+    myCfrPostFft = (FFT_TYPE*)fftwf_malloc(sizeof(FFT_TYPE) * N);
     myCfrFft = fftwf_plan_dft_1d(N,
-            reinterpret_cast<FFT_TYPE*>(myCfrPostClip.data()),
-            reinterpret_cast<FFT_TYPE*>(myCfrPostFft.data()),
+            myCfrPostClip, myCfrPostFft,
             FFTW_FORWARD, FFTW_MEASURE);
 
     if (sizeof(complexf) != sizeof(FFT_TYPE)) {
@@ -167,6 +170,9 @@ int OfdmGenerator::process(Buffer* const dataIn, Buffer* dataOut)
                 "OfdmGenerator::process output size not valid!");
     }
 
+    myNumClip = 0;
+    myNumErrorClip = 0;
+
     for (size_t i = 0; i < myNbSymbols; ++i) {
         myFftIn[0][0] = 0;
         myFftIn[0][1] = 0;
@@ -177,10 +183,17 @@ int OfdmGenerator::process(Buffer* const dataIn, Buffer* dataOut)
         memcpy(&myFftIn[myNegDst], &in[myNegSrc],
                 myNegSize * sizeof(FFT_TYPE));
 
+        std::vector<complexf> reference;
+        if (myCfr) {
+            reference.resize(mySpacing);
+            memcpy(reference.data(), myFftIn, mySpacing * sizeof(FFT_TYPE));
+        }
+
         fftwf_execute(myFftPlan); // IFFT from myFftIn to myFftOut
 
         if (myCfr) {
-            cfr_one_iteration(dataOut, i);
+            complexf *symbol = reinterpret_cast<complexf*>(myFftOut);
+            cfr_one_iteration(symbol, reference.data());
         }
 
         memcpy(out, myFftOut, mySpacing * sizeof(FFT_TYPE));
@@ -188,33 +201,36 @@ int OfdmGenerator::process(Buffer* const dataIn, Buffer* dataOut)
         in += myNbCarriers;
         out += mySpacing;
     }
+
+    if (myCfr) {
+        etiLog.level(debug) << "CFR: " << myNumClip << " clipped, " <<
+            myNumErrorClip << " err clipped";
+    }
+
     return sizeOut;
 }
 
-void OfdmGenerator::cfr_one_iteration(Buffer *symbols, size_t symbol_ix)
+void OfdmGenerator::cfr_one_iteration(complexf *symbol, const complexf *reference)
 {
-    complexf* out = reinterpret_cast<complexf*>(symbols->getData());
-
-    out += (symbol_ix * mySpacing);
-
     // use std::norm instead of std::abs to avoid calculating the
     // square roots
     const float clip_squared = myCfrClip * myCfrClip;
 
     // Clip
     for (size_t i = 0; i < mySpacing; i++) {
-        const float mag_squared = std::norm(out[i]);
+        const float mag_squared = std::norm(symbol[i]);
         if (mag_squared > clip_squared) {
             // normalise absolute value to myCfrClip:
             // x_clipped = x * clip / |x|
             //           = x * sqrt(clip_squared) / sqrt(mag_squared)
             //           = x * sqrt(clip_squared / mag_squared)
-            out[i] *= std::sqrt(clip_squared / mag_squared);
+            symbol[i] *= std::sqrt(clip_squared / mag_squared);
+            myNumClip++;
         }
     }
 
     // Take FFT of our clipped signal
-    std::copy(out, out + mySpacing, myCfrPostClip.begin());
+    memcpy(myCfrPostClip, symbol, mySpacing * sizeof(FFT_TYPE));
     fftwf_execute(myCfrFft); // FFT from myCfrPostClip to myCfrPostFft
 
     // Calculate the error in frequency domain by subtracting our reference
@@ -223,23 +239,26 @@ void OfdmGenerator::cfr_one_iteration(Buffer *symbols, size_t symbol_ix)
     // extent.
     const float err_clip_squared = myCfrErrorClip * myCfrErrorClip;
 
-    complexf *reference = reinterpret_cast<complexf*>(myFftIn);
     for (size_t i = 0; i < mySpacing; i++) {
-        complexf error = myCfrPostFft[i] - reference[i];
+        const complexf constellation_point =
+            reinterpret_cast<complexf*>(myCfrPostFft)[i];
+
+        complexf error = reference[i] - constellation_point;
 
         const float mag_squared = std::norm(error);
         if (mag_squared > err_clip_squared) {
             error *= std::sqrt(err_clip_squared / mag_squared);
+            myNumErrorClip++;
         }
 
-        // Update the reference in-place to avoid another copy for the
+        // Update the input to the FFT directl to avoid another copy for the
         // subsequence IFFT
-        reference[i] += error;
+        complexf *fft_in = reinterpret_cast<complexf*>(myFftIn);
+        fft_in[i] = constellation_point + error;
     }
 
     // Run our error-compensated symbol through the IFFT again
     fftwf_execute(myFftPlan); // IFFT from myFftIn to myFftOut
-
 }
 
 

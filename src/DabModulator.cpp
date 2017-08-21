@@ -183,7 +183,14 @@ int DabModulator::process(Buffer* dataOut)
         }
 
         auto cifOfdm = make_shared<OfdmGenerator>(
-                (1 + myNbSymbols), myNbCarriers, mySpacing);
+                (1 + myNbSymbols),
+                myNbCarriers,
+                mySpacing,
+                m_settings.enableCfr,
+                m_settings.cfrClip,
+                m_settings.cfrErrorClip);
+
+        rcs.enrol(cifOfdm.get());
 
         auto cifGain = make_shared<GainControl>(
                 mySpacing,
