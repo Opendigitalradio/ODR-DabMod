@@ -150,11 +150,12 @@ static void apply_coeff(
         float in_10 = in_6 * in_4;
         out[i] = in[i] *
             (
-             coefs[0] * in_2 +
-             coefs[1] * in_4 +
-             coefs[2] * in_6 +
-             coefs[3] * in_8 +
-             coefs[4] * in_10
+             coefs[0] +
+             coefs[1] * in_2 +
+             coefs[2] * in_4 +
+             coefs[3] * in_6 +
+             coefs[4] * in_8 +
+             coefs[5] * in_10
              );
     }
 }
