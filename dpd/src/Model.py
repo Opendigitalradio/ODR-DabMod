@@ -6,6 +6,7 @@ import logging
 import matplotlib
 matplotlib.use('agg')
 import matplotlib.pyplot as plt
+from sklearn.linear_model import Ridge
 
 class Model:
     """Calculates new coefficients using the measurement and the old
@@ -15,6 +16,31 @@ class Model:
         self.coefs = coefs
 
     def get_next_coefs(self, txframe_aligned, rxframe_aligned):
+        rx_abs = np.abs(rxframe_aligned)
+        A = np.vstack([rx_abs,
+                       rx_abs**3,
+                       rx_abs**5,
+                       rx_abs**7,
+                       rx_abs**9,
+                       ]).T
+        y = np.abs(txframe_aligned)
+
+        clf = Ridge(alpha=10)
+        clf.fit(A, y)
+        sol = clf.coef_
+
+        rx_range = np.linspace(0,1,50)
+        A_range = np.vstack([
+                       rx_range,
+                       rx_range**3,
+                       rx_range**5,
+                       rx_range**7,
+                       rx_range**9,
+                       ]).T
+        y_est = np.sum(A_range * sol, axis=1)
+
+        logging.debug("New coefficents {}".format(sol))
+
         if logging.getLogger().getEffectiveLevel() == logging.DEBUG:
             logging.debug("txframe: min %f, max %f, median %f" %
                           (np.min(np.abs(txframe_aligned)),
@@ -31,7 +57,7 @@ class Model:
             dt = datetime.datetime.now().isoformat()
             fig_path = "/tmp/" + dt + "_Model.pdf"
 
-            fig, axs = plt.subplots(4, figsize=(6,2*6))
+            fig, axs = plt.subplots(5, figsize=(6,2*6))
 
             ax = axs[0]
             ax.plot(np.abs(txframe_aligned[:128]), label="TX Frame")
@@ -54,6 +80,11 @@ class Model:
                 np.abs(txframe_aligned[:1024]),
                 np.abs(rxframe_aligned[:1024]),
                 s = 0.1
+            )
+            ax.plot(
+                y_est,
+                rx_range,
+                linewidth=0.25
             )
             ax.set_title("Amplifier Characteristic")
             ax.set_xlabel("TX Amplitude")
@@ -82,7 +113,8 @@ class Model:
         mse = np.mean(np.abs(np.square(txframe_aligned[:1024] - rxframe_aligned[:1024])))
         logging.debug("MSE: {}".format(mse))
 
-        return self.coefs
+        sol = sol * 1.7/sol[0]
+        return sol
 
 # The MIT License (MIT)
 #
