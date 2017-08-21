@@ -43,6 +43,7 @@
 #include <iostream>
 #include <fstream>
 #include <memory>
+#include <complex>
 
 using namespace std;
 
@@ -79,7 +80,7 @@ MemlessPoly::MemlessPoly(const std::string& coefs_file, unsigned int num_threads
 
 void MemlessPoly::load_coefficients(const std::string &coefFile)
 {
-    std::vector<complexf> coefs;
+    std::vector<float> coefs;
     std::ifstream coef_fstream(coefFile.c_str());
     if (!coef_fstream) {
         throw std::runtime_error("MemlessPoly: Could not open file with coefs!");
@@ -100,10 +101,9 @@ void MemlessPoly::load_coefficients(const std::string &coefFile)
     coefs.resize(n_coefs);
 
     for (int n = 0; n < n_coefs; n++) {
-        float a, b;
+        float a;
         coef_fstream >> a;
-        coef_fstream >> b;
-        coefs[n] = complexf(a, b);
+        coefs[n] = a;
 
         if (coef_fstream.eof()) {
             etiLog.log(error, "MemlessPoly: file %s should contains %d coefs, "
@@ -125,44 +125,37 @@ void MemlessPoly::load_coefficients(const std::string &coefFile)
  */
 
 static void apply_coeff(
-        const vector<complexf> &coefs,
+        const vector<float> &coefs,
         const complexf *__restrict in, size_t start, size_t stop,
         complexf *__restrict out)
 {
     for (size_t i = start; i < stop; i++) {
 
         /* Implement
-           a0 + a1*x + a2*x^2 + a3*x^3 + a4*x^4 + a5*x^5;
+           a1*x + a3*x*|x|^2 + a5*x*|x|^4 + a5*x*|x|^4 + a5*x*|x|^4 + a7*x*|x|^6
            with less multiplications:
            a0 + x*(a1 + x*(a2 + x*(a3 + x*(a3 + x*(a4 + a5*x)))));
            */
 
         /* Make sure to adapt NUM_COEFS when you change this */
 
-#if 1
         // Complex polynomial, all operations are on complex values.
         // Usually this is the representation we use when speaking
         // about the real-valued passband signal that the PA receives.
-        out[i] =
-            coefs[0] + in[i] *
-            ( coefs[1] + in[i] *
-              ( coefs[2] + in[i] *
-                ( coefs[3] + in[i] *
-                  ( coefs[4] + in[i] *
-                    ( coefs[5] + in[i] )))));
-#else
-        // Polynomial on the magnitude only. All but one multiplication are
-        // on real values. This is what is usually used in papers for the
-        // baseband representation of the signal.
-        const float mag = std::abs(in[i]);
+        float in_mag = std::abs(in[i]);
+        float in_2 = in_mag * in_mag;
+        float in_4 = in_2 * in_2;
+        float in_6 = in_2 * in_4;
+        float in_8 = in_4 * in_4;
+        float in_10 = in_6 * in_4;
         out[i] = in[i] *
-            mag * (coefs[0] +
-             mag * (coefs[1] +
-              mag * (coefs[2] +
-               mag * (coefs[3] +
-                mag * (coefs[4] +
-                 mag * coefs[5] )))));
-#endif
+            (
+             coefs[0] * in_2 +
+             coefs[1] * in_4 +
+             coefs[2] * in_6 +
+             coefs[3] * in_8 +
+             coefs[4] * in_10
+             );
     }
 }
 

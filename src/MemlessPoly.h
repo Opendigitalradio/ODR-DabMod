@@ -68,7 +68,7 @@ private:
     void load_coefficients(const std::string &coefFile);
 
     unsigned int m_num_threads;
-    std::vector<complexf> m_coefs;
+    std::vector<float> m_coefs;
     std::string m_coefs_file;
     mutable std::mutex m_coefs_mutex;
 };
