@@ -72,9 +72,9 @@ class OfdmGenerator : public ModCodec, public RemoteControllable
 
         fftwf_plan myFftPlan;
         fftwf_complex *myFftIn, *myFftOut;
-        size_t myNbSymbols;
-        size_t myNbCarriers;
-        size_t mySpacing;
+        const size_t myNbSymbols;
+        const size_t myNbCarriers;
+        const size_t mySpacing;
         unsigned myPosSrc;
         unsigned myPosDst;
         unsigned myPosSize;

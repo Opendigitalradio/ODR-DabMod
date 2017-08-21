@@ -173,6 +173,10 @@ int OfdmGenerator::process(Buffer* const dataIn, Buffer* dataOut)
     myNumClip = 0;
     myNumErrorClip = 0;
 
+    // It is not guaranteed that fftw keeps the FFT input vector intact.
+    // That's why we copy it to the reference.
+    std::vector<complexf> reference;
+
     for (size_t i = 0; i < myNbSymbols; ++i) {
         myFftIn[0][0] = 0;
         myFftIn[0][1] = 0;
@@ -183,7 +187,6 @@ int OfdmGenerator::process(Buffer* const dataIn, Buffer* dataOut)
         memcpy(&myFftIn[myNegDst], &in[myNegSrc],
                 myNegSize * sizeof(FFT_TYPE));
 
-        std::vector<complexf> reference;
         if (myCfr) {
             reference.resize(mySpacing);
             memcpy(reference.data(), myFftIn, mySpacing * sizeof(FFT_TYPE));
@@ -240,8 +243,13 @@ void OfdmGenerator::cfr_one_iteration(complexf *symbol, const complexf *referenc
     const float err_clip_squared = myCfrErrorClip * myCfrErrorClip;
 
     for (size_t i = 0; i < mySpacing; i++) {
+        // FFTW computes an unnormalised trasform, i.e. a FFT-IFFT pair
+        // or vice-versa give back the original vector scaled by a factor
+        // FFT-size. Because we're comparing our constellation point
+        // (calculated with IFFT-clip-FFT) against reference (input to
+        // the IFFT), we need to divide by our FFT size.
         const complexf constellation_point =
-            reinterpret_cast<complexf*>(myCfrPostFft)[i];
+            reinterpret_cast<complexf*>(myCfrPostFft)[i] / (float)mySpacing;
 
         complexf error = reference[i] - constellation_point;
 
