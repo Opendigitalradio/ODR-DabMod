@@ -122,6 +122,7 @@ class TimestampDecoder : public RemoteControllable
             latestFCT = 0;
             enableDecode = false;
             full_timestamp_received = false;
+            bzero(&temp_time, sizeof(temp_time));
             gmtime_r(0, &temp_time);
             offset_changed = false;
 
