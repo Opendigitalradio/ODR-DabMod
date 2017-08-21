@@ -1,9 +1,12 @@
+import datetime
+import os
+import logging
+logging_path = os.path.dirname(logging.getLoggerClass().root.handlers[0].baseFilename)
+
 import numpy as np
 from scipy import signal, optimize
 import sys
 import matplotlib.pyplot as plt
-import datetime
-import logging
 
 
 def phase_align(sig, ref_sig):
@@ -19,7 +22,7 @@ def phase_align(sig, ref_sig):
 
     if logging.getLogger().getEffectiveLevel() == logging.DEBUG:
         dt = datetime.datetime.now().isoformat()
-        fig_path = "/tmp/" + dt + "_phase_align.pdf"
+        fig_path = logging_path + "/" + dt + "_phase_align.pdf"
 
         plt.subplot(511)
         plt.hist(angle_diff, bins=60, label="Angle Diff")

@@ -1,8 +1,11 @@
 # -*- coding: utf-8 -*-
 
-import numpy as np
 import datetime
+import os
 import logging
+logging_path = os.path.dirname(logging.getLoggerClass().root.handlers[0].baseFilename)
+
+import numpy as np
 import matplotlib
 matplotlib.use('agg')
 import matplotlib.pyplot as plt
@@ -55,9 +58,9 @@ class Model:
                            ))
 
             dt = datetime.datetime.now().isoformat()
-            fig_path = "/tmp/" + dt + "_Model.pdf"
+            fig_path = logging_path + "/" + dt + "_Model.pdf"
 
-            fig, axs = plt.subplots(5, figsize=(6,2*6))
+            fig, axs = plt.subplots(4, figsize=(6,2*6))
 
             ax = axs[0]
             ax.plot(np.abs(txframe_aligned[:128]), label="TX Frame")

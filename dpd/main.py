@@ -10,10 +10,16 @@
 This engine calculates and updates the parameter of the digital
 predistortion module of ODR-DabMod."""
 
+import datetime
+import os
+
 import logging
+dt = datetime.datetime.now().isoformat()
+logging_path = "/tmp/dpd_{}".format(dt).replace(".","_").replace(":","-")
+os.makedirs(logging_path)
 logging.basicConfig(format='%(asctime)s - %(module)s - %(levelname)s - %(message)s',
                     datefmt='%Y-%m-%d %H:%M:%S',
-                    filename='/tmp/dpd.log',
+                    filename='{}/dpd.log'.format(logging_path),
                     filemode='w',
                     level=logging.DEBUG)
 

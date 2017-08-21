@@ -1,15 +1,18 @@
 # -*- coding: utf-8 -*-
 
+import datetime
+import os
+import logging
+logging_path = os.path.dirname(logging.getLoggerClass().root.handlers[0].baseFilename)
+
 import numpy as np
 import scipy
 import matplotlib
 matplotlib.use('agg')
 import matplotlib.pyplot as plt
-import datetime
 import src.subsample_align as sa
 import src.phase_align as pa
 from scipy import signal
-import logging
 
 class Dab_Util:
     """Collection of methods that can be applied to an array
@@ -35,7 +38,7 @@ class Dab_Util:
 
         if logging.getLogger().getEffectiveLevel() == logging.DEBUG:
             dt = datetime.datetime.now().isoformat()
-            corr_path = ("/tmp/" + dt + "_tx_rx_corr.pdf")
+            corr_path = (logging_path + "/" + dt + "_tx_rx_corr.pdf")
             plt.plot(c, label="corr")
             plt.legend()
             plt.savefig(corr_path)
@@ -89,7 +92,7 @@ class Dab_Util:
 
         if logging.getLogger().getEffectiveLevel() == logging.DEBUG:
             dt = datetime.datetime.now().isoformat()
-            fig_path = "/tmp/" + dt + "_sync_raw.pdf"
+            fig_path = logging_path + "/" + dt + "_sync_raw.pdf"
 
             fig, axs = plt.subplots(2)
             axs[0].plot(np.abs(sig1[:128]), label="TX Frame")
@@ -127,7 +130,7 @@ class Dab_Util:
 
         if logging.getLogger().getEffectiveLevel() == logging.DEBUG:
             dt = datetime.datetime.now().isoformat()
-            fig_path = "/tmp/" + dt + "_sync_sample_aligned.pdf"
+            fig_path = logging_path + "/" + dt + "_sync_sample_aligned.pdf"
 
             fig, axs = plt.subplots(2)
             axs[0].plot(np.abs(sig1[:128]), label="TX Frame")
@@ -152,7 +155,7 @@ class Dab_Util:
 
         if logging.getLogger().getEffectiveLevel() == logging.DEBUG:
             dt = datetime.datetime.now().isoformat()
-            fig_path = "/tmp/" + dt + "_sync_subsample_aligned.pdf"
+            fig_path = logging_path + "/" + dt + "_sync_subsample_aligned.pdf"
 
             fig, axs = plt.subplots(2)
             axs[0].plot(np.abs(sig1[:128]), label="TX Frame")
@@ -176,7 +179,7 @@ class Dab_Util:
 
         if logging.getLogger().getEffectiveLevel() == logging.DEBUG:
             dt = datetime.datetime.now().isoformat()
-            fig_path = "/tmp/" + dt + "_sync_phase_aligned.pdf"
+            fig_path = logging_path + "/" + dt + "_sync_phase_aligned.pdf"
 
             fig, axs = plt.subplots(2)
             axs[0].plot(np.abs(sig1[:128]), label="TX Frame")
