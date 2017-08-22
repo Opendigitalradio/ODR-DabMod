@@ -59,7 +59,7 @@ adapt = Adapt.Adapt(port_rc, coef_path)
 coefs = adapt.get_coefs()
 #model = Model.Model(coefs)
 model = Model.Model([2.2, 0, 0, 0, 0])
-adapt.set_txgain(82)
+adapt.set_txgain(84)
 
 tx_gain   = adapt.get_txgain()
 rx_gain   = adapt.get_rxgain()
@@ -70,7 +70,7 @@ logging.info(
     )
 )
 
-for i in range(10):
+for i in range(500):
     txframe_aligned, tx_ts, rxframe_aligned, rx_ts = meas.get_samples()
     logging.debug("tx_ts {}, rx_ts {}".format(tx_ts, rx_ts))
     coefs = model.get_next_coefs(txframe_aligned, rxframe_aligned)
