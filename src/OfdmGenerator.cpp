@@ -242,6 +242,8 @@ void OfdmGenerator::cfr_one_iteration(complexf *symbol, const complexf *referenc
     // extent.
     const float err_clip_squared = myCfrErrorClip * myCfrErrorClip;
 
+    std::vector<float> error_norm(mySpacing);
+
     for (size_t i = 0; i < mySpacing; i++) {
         // FFTW computes an unnormalised trasform, i.e. a FFT-IFFT pair
         // or vice-versa give back the original vector scaled by a factor
@@ -254,16 +256,22 @@ void OfdmGenerator::cfr_one_iteration(complexf *symbol, const complexf *referenc
         complexf error = reference[i] - constellation_point;
 
         const float mag_squared = std::norm(error);
+        error_norm[i] = mag_squared;
+
         if (mag_squared > err_clip_squared) {
             error *= std::sqrt(err_clip_squared / mag_squared);
             myNumErrorClip++;
         }
 
-        // Update the input to the FFT directl to avoid another copy for the
+        // Update the input to the FFT directly to avoid another copy for the
         // subsequence IFFT
         complexf *fft_in = reinterpret_cast<complexf*>(myFftIn);
         fft_in[i] = constellation_point + error;
     }
+
+    auto minmax = std::minmax_element(error_norm.begin(), error_norm.end());
+    etiLog.level(debug) << "err min: " << std::sqrt(*minmax.first)
+                        << " max: " << std::sqrt(*minmax.second);
 
     // Run our error-compensated symbol through the IFFT again
     fftwf_execute(myFftPlan); // IFFT from myFftIn to myFftOut
