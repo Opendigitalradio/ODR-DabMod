@@ -123,15 +123,13 @@ void MemlessPoly::load_coefficients(const std::string &coefFile)
 /* The restrict keyword is C99, g++ and clang++ however support __restrict
  * instead, and this allows the compiler to auto-vectorize the loop.
  */
-
 static void apply_coeff(
         const vector<float> &coefs,
         const complexf *__restrict in, size_t start, size_t stop,
         complexf *__restrict out)
 {
-    for (size_t i = start; i < stop; i+=1) {
-
-        float in_mag_sq = in[i].real() * in[i].real() + in[i].imag() * in[i].imag();
+    for (size_t i = start; i < stop; i++) {
+        const float in_mag_sq = std::norm(in[i]);
         out[i] =
             in[i] *
             ( coefs[0] + in_mag_sq *
