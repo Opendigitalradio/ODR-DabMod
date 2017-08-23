@@ -23,6 +23,9 @@ class Model:
         self.errs = [0,]
 
     def get_next_coefs(self, txframe_aligned, rxframe_aligned):
+        dt = datetime.datetime.now().isoformat()
+        txframe_aligned.tofile(logging_path + "/txframe_" + dt + ".iq")
+        rxframe_aligned.tofile(logging_path + "/rxframe_" + dt + ".iq")
         rx_abs = np.abs(rxframe_aligned)
         rx_A = np.vstack([rx_abs,
                        rx_abs**3,
@@ -39,6 +42,7 @@ class Model:
 
         a_delta = np.linalg.lstsq(rx_A, err)[0]
         new_coefs = self.coefs - 0.1 * a_delta
+        new_coefs = new_coefs * (self.coefs[0] / new_coefs[0])
         logging.debug("a_delta {}".format(a_delta))
         logging.debug("new coefs {}".format(new_coefs))
 
