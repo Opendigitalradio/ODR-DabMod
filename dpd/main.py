@@ -10,10 +10,16 @@
 This engine calculates and updates the parameter of the digital
 predistortion module of ODR-DabMod."""
 
+import datetime
+import os
+
 import logging
+dt = datetime.datetime.now().isoformat()
+logging_path = "/tmp/dpd_{}".format(dt).replace(".","_").replace(":","-")
+os.makedirs(logging_path)
 logging.basicConfig(format='%(asctime)s - %(module)s - %(levelname)s - %(message)s',
                     datefmt='%Y-%m-%d %H:%M:%S',
-                    filename='/tmp/dpd.log',
+                    filename='{}/dpd.log'.format(logging_path),
                     filemode='w',
                     level=logging.DEBUG)
 
@@ -32,7 +38,7 @@ parser.add_argument('--rc-port', default='9400',
 parser.add_argument('--samplerate', default='8192000',
         help='Sample rate',
         required=False)
-parser.add_argument('--coefs', default='dpdpoly.coef',
+parser.add_argument('--coefs', default='poly.coef',
         help='File with DPD coefficients, which will be read by ODR-DabMod',
         required=False)
 parser.add_argument('--samps', default='10240',
@@ -52,8 +58,9 @@ meas = Measure.Measure(samplerate, port, num_req)
 adapt = Adapt.Adapt(port_rc, coef_path)
 coefs = adapt.get_coefs()
 #model = Model.Model(coefs)
-model = Model.Model([0.8, 0, 0, 0, 0])
-adapt.set_txgain(60)
+model = Model.Model([2.2, 0, 0, 0, 0])
+adapt.set_txgain(79)
+adapt.set_rxgain(15+20)
 
 tx_gain   = adapt.get_txgain()
 rx_gain   = adapt.get_rxgain()
@@ -64,7 +71,7 @@ logging.info(
     )
 )
 
-for i in range(10):
+for i in range(500):
     txframe_aligned, tx_ts, rxframe_aligned, rx_ts = meas.get_samples()
     logging.debug("tx_ts {}, rx_ts {}".format(tx_ts, rx_ts))
     coefs = model.get_next_coefs(txframe_aligned, rxframe_aligned)

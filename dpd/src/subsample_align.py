@@ -1,8 +1,11 @@
+import datetime
+import os
+import logging
+logging_path = os.path.dirname(logging.getLoggerClass().root.handlers[0].baseFilename)
+
 import numpy as np
 from scipy import signal, optimize
-import sys
 import matplotlib.pyplot as plt
-import datetime
 
 def gen_omega(length):
     if (length % 2) == 1:
@@ -59,15 +62,13 @@ def subsample_align(sig, ref_sig):
     if optim_result.success:
         best_tau = optim_result.x
 
-        #print("Found subsample delay = {}".format(best_tau))
-
         if 1:
             corr = np.vectorize(correlate_for_delay)
             ixs = np.linspace(-1, 1, 100)
             taus = corr(ixs)
 
             dt = datetime.datetime.now().isoformat()
-            tau_path = ("/tmp/" + dt + "_tau.pdf")
+            tau_path = (logging_path + "/" + dt + "_tau.pdf")
             plt.plot(ixs, taus)
             plt.title("Subsample correlation, minimum is best: {}".format(best_tau))
             plt.savefig(tau_path)

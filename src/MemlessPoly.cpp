@@ -175,7 +175,6 @@ void MemlessPoly::load_coefficients_pm(const std::string &coefFile_pm)
 /* The restrict keyword is C99, g++ and clang++ however support __restrict
  * instead, and this allows the compiler to auto-vectorize the loop.
  */
-
 static void apply_coeff(
         const vector<float> &coefs_am,
         const vector<float> &coefs_pm,
@@ -191,14 +190,14 @@ static void apply_coeff(
               ( coefs_am[1] + in_mag_sq *
                 ( coefs_am[2] + in_mag_sq *
                   ( coefs_am[3] + in_mag_sq *
-                    ( coefs_am[4] + in_mag_sq )))));
+                    coefs_am[4]))));
 
         float phase_correction = -1 *
             ( coefs_pm[0] + in_mag_sq *
               ( coefs_pm[1] + in_mag_sq *
                 ( coefs_pm[2] + in_mag_sq *
                   ( coefs_pm[3] + in_mag_sq *
-                    ( coefs_pm[4] + in_mag_sq )))));
+                    coefs_pm[4]))));
 
         float phase_correction_sq = phase_correction * phase_correction;
 
