@@ -16,42 +16,86 @@ class Model:
     """Calculates new coefficients using the measurement and the old
     coefficients"""
 
-    def __init__(self, coefs):
-        self.coefs = coefs
-        self.coefs_history = [coefs,]
-        self.mses = [0,]
-        self.errs = [0,]
+    def __init__(self, coefs_am, coefs_pm):
+        self.coefs_am = coefs_am
+        self.coefs_history = [coefs_am, ]
+        self.mses = [0, ]
+        self.errs = [0, ]
+
+        self.coefs_pm = coefs_pm
+        self.coefs_pm_history = [coefs_pm, ]
+        self.errs_phase = [0, ]
 
     def get_next_coefs(self, txframe_aligned, rxframe_aligned):
         dt = datetime.datetime.now().isoformat()
         txframe_aligned.tofile(logging_path + "/txframe_" + dt + ".iq")
         rxframe_aligned.tofile(logging_path + "/rxframe_" + dt + ".iq")
+
+        # Calculate new coefficients for AM/AM correction
         rx_abs = np.abs(rxframe_aligned)
         rx_A = np.vstack([rx_abs,
-                       rx_abs**3,
-                       rx_abs**5,
-                       rx_abs**7,
-                       rx_abs**9,
-                       ]).T
-        rx_dpd = np.sum(rx_A * self.coefs, axis=1)
+                          rx_abs ** 3,
+                          rx_abs ** 5,
+                          rx_abs ** 7,
+                          rx_abs ** 9,
+                          ]).T
+        rx_dpd = np.sum(rx_A * self.coefs_am, axis=1)
         rx_dpd = rx_dpd * (
             np.median(np.abs(txframe_aligned)) / np.median(np.abs(rx_dpd)))
 
         err = rx_dpd - np.abs(txframe_aligned)
-        self.errs.append(np.mean(np.abs(err**2)))
+        self.errs.append(np.mean(np.abs(err ** 2)))
 
         a_delta = np.linalg.lstsq(rx_A, err)[0]
-        new_coefs = self.coefs - 0.1 * a_delta
-        new_coefs = new_coefs * (self.coefs[0] / new_coefs[0])
+        new_coefs = self.coefs_am - 0.1 * a_delta
+        new_coefs = new_coefs * (self.coefs_am[0] / new_coefs[0])
         logging.debug("a_delta {}".format(a_delta))
-        logging.debug("new coefs {}".format(new_coefs))
+        logging.debug("new coefs_am {}".format(new_coefs))
+
+        # Calculate new coefficients for AM/PM correction
+        phase_diff_rad = ((
+                              (np.angle(txframe_aligned) -
+                               np.angle(rxframe_aligned) +
+                               np.pi) % (2 * np.pi)) -
+                          np.pi
+                          )
+
+        tx_abs = np.abs(txframe_aligned)
+        tx_abs_A = np.vstack([tx_abs,
+                             tx_abs ** 2,
+                             tx_abs ** 3,
+                             tx_abs ** 4,
+                             tx_abs ** 5,
+                             ]).T
+        phase_dpd = np.sum(tx_abs_A * self.coefs_pm, axis=1)
+
+        err_phase = phase_dpd - phase_diff_rad
+        self.errs_phase.append(np.mean(np.abs(err_phase ** 2)))
+        a_delta = np.linalg.lstsq(tx_abs_A, err_phase)[0]
+        new_coefs_pm = self.coefs_pm - 0.1 * a_delta
+        logging.debug("a_delta {}".format(a_delta))
+        logging.debug("new new_coefs_pm {}".format(new_coefs_pm))
+
+        def dpd_phase(tx):
+            tx_abs = np.abs(tx)
+            tx_A_complex = np.vstack([tx,
+                                      tx * tx_abs ** 1,
+                                      tx * tx_abs ** 2,
+                                      tx * tx_abs ** 3,
+                                      tx * tx_abs ** 4,
+                                      ]).T
+            tx_dpd = np.sum(tx_A_complex * self.coefs_pm, axis=1)
+            return tx_dpd
+
+        tx_range = np.linspace(0, 2)
+        phase_range_dpd = dpd_phase(tx_range)
 
         tx_abs = np.abs(rxframe_aligned)
         tx_A = np.vstack([tx_abs,
-                          tx_abs**3,
-                          tx_abs**5,
-                          tx_abs**7,
-                          tx_abs**9,
+                          tx_abs ** 3,
+                          tx_abs ** 5,
+                          tx_abs ** 7,
+                          tx_abs ** 9,
                           ]).T
         tx_dpd = np.sum(tx_A * new_coefs, axis=1)
 
@@ -59,34 +103,34 @@ class Model:
             np.median(np.abs(txframe_aligned)) / np.median(np.abs(tx_dpd)))
 
         rx_A_complex = np.vstack([rxframe_aligned,
-                          rxframe_aligned * rx_abs**2,
-                          rxframe_aligned * rx_abs**4,
-                          rxframe_aligned * rx_abs**6,
-                          rxframe_aligned * rx_abs**8,
-                          ]).T
-        rx_post_distored = np.sum(rx_A_complex * self.coefs, axis=1)
+                                  rxframe_aligned * rx_abs ** 2,
+                                  rxframe_aligned * rx_abs ** 4,
+                                  rxframe_aligned * rx_abs ** 6,
+                                  rxframe_aligned * rx_abs ** 8,
+                                  ]).T
+        rx_post_distored = np.sum(rx_A_complex * self.coefs_am, axis=1)
         rx_post_distored = rx_post_distored * (
             np.median(np.abs(txframe_aligned)) /
             np.median(np.abs(rx_post_distored)))
-        mse = np.mean(np.abs((txframe_aligned - rx_post_distored)**2))
+        mse = np.mean(np.abs((txframe_aligned - rx_post_distored) ** 2))
         logging.debug("MSE: {}".format(mse))
         self.mses.append(mse)
 
         def dpd(tx):
             tx_abs = np.abs(tx)
             tx_A_complex = np.vstack([tx,
-                                  tx * tx_abs**2,
-                                  tx * tx_abs**4,
-                                  tx * tx_abs**6,
-                                  tx * tx_abs**8,
-                                  ]).T
-            tx_dpd = np.sum(tx_A_complex * self.coefs, axis=1)
+                                      tx * tx_abs ** 2,
+                                      tx * tx_abs ** 4,
+                                      tx * tx_abs ** 6,
+                                      tx * tx_abs ** 8,
+                                      ]).T
+            tx_dpd = np.sum(tx_A_complex * self.coefs_am, axis=1)
             return tx_dpd
-        tx_inverse_dpd = inversefunc(dpd, y_values=txframe_aligned[:128])
-        tx_inverse_dpd = tx_inverse_dpd * (
-            np.median(np.abs(txframe_aligned)) /
-            np.median(np.abs(tx_inverse_dpd))
-        )
+
+        rx_range = np.linspace(0, 1, num=100)
+        rx_range_dpd = dpd(rx_range)
+        rx_range = rx_range[(rx_range_dpd > 0) & (rx_range_dpd < 2)]
+        rx_range_dpd = rx_range_dpd[(rx_range_dpd > 0) & (rx_range_dpd < 2)]
 
         if logging.getLogger().getEffectiveLevel() == logging.DEBUG:
             logging.debug("txframe: min %f, max %f, median %f" %
@@ -104,15 +148,12 @@ class Model:
             dt = datetime.datetime.now().isoformat()
             fig_path = logging_path + "/" + dt + "_Model.pdf"
 
-            fig, axs = plt.subplots(7, figsize=(6,3*6))
+            fig, axs = plt.subplots(8, figsize=(6, 4 * 6))
 
             ax = axs[0]
             ax.plot(np.abs(txframe_aligned[:128]),
                     label="TX sent",
                     linestyle=":")
-            ax.plot(np.abs(tx_inverse_dpd[:128]),
-                    label="TX inverse dpd",
-                    color="green")
             ax.plot(np.abs(rxframe_aligned[:128]),
                     label="RX received",
                     color="red")
@@ -125,9 +166,6 @@ class Model:
             ax.plot(np.real(txframe_aligned[:128]),
                     label="TX sent",
                     linestyle=":")
-            ax.plot(np.real(tx_inverse_dpd[:128]),
-                    label="TX inverse dpd",
-                    color="green")
             ax.plot(np.real(rxframe_aligned[:128]),
                     label="RX received",
                     color="red")
@@ -140,44 +178,40 @@ class Model:
             ax.scatter(
                 np.abs(txframe_aligned[:1024]),
                 np.abs(rxframe_aligned[:1024]),
-                s = 0.1)
+                s=0.1)
+            ax.plot(rx_range_dpd / self.coefs_am[0], rx_range, linewidth=0.25)
             ax.set_title("Amplifier Characteristic")
             ax.set_xlabel("TX Amplitude")
             ax.set_ylabel("RX Amplitude")
 
             ax = axs[3]
-            angle_diff_rad = ((
-                             (np.angle(txframe_aligned[:1024]) -
-                              np.angle(rxframe_aligned[:1024]) +
-                              np.pi) % (2 * np.pi)) -
-                          np.pi
-                          )
             ax.scatter(
                 np.abs(txframe_aligned[:1024]),
-                angle_diff_rad * 180 / np.pi,
-                s = 0.1
+                phase_diff_rad[:1024] * 180 / np.pi,
+                s=0.1
             )
+            ax.plot(tx_range, phase_range_dpd * 180 / np.pi, linewidth=0.25)
             ax.set_title("Amplifier Characteristic")
             ax.set_xlabel("TX Amplitude")
             ax.set_ylabel("Phase Difference [deg]")
 
             ax = axs[4]
             ax.plot(np.abs(txframe_aligned[:128]),
-                     label="TX Frame",
-                     linestyle=":",
-                     linewidth=0.5)
+                    label="TX Frame",
+                    linestyle=":",
+                    linewidth=0.5)
             ax.plot(np.abs(rxframe_aligned[:128]),
-                     label="RX Frame",
-                     linestyle="--",
-                     linewidth=0.5)
+                    label="RX Frame",
+                    linestyle="--",
+                    linewidth=0.5)
             ax.plot(np.abs(rx_dpd[:128]),
-                     label="RX DPD Frame",
-                     linestyle="-.",
-                     linewidth=0.5)
+                    label="RX DPD Frame",
+                    linestyle="-.",
+                    linewidth=0.5)
             ax.plot(np.abs(tx_dpd_norm[:128]),
-                     label="TX DPD Frame Norm",
-                     linestyle="-.",
-                     linewidth=0.5)
+                    label="TX DPD Frame Norm",
+                    linestyle="-.",
+                    linewidth=0.5)
             ax.legend(loc=4)
             ax.set_title("RX DPD")
             ax.set_xlabel("Samples")
@@ -187,14 +221,25 @@ class Model:
             coefs_history = np.array(self.coefs_history)
             for idx, coef_hist in enumerate(coefs_history.T):
                 ax.plot(coef_hist,
-                     label="Coef {}".format(idx),
-                     linewidth=0.5)
+                        label="Coef {}".format(idx),
+                        linewidth=0.5)
             ax.legend(loc=4)
-            ax.set_title("Coefficient History")
+            ax.set_title("AM/AM Coefficient History")
             ax.set_xlabel("Iterations")
             ax.set_ylabel("Coefficient Value")
 
             ax = axs[6]
+            coefs_history = np.array(self.coefs_pm_history)
+            for idx, coef_hist in enumerate(coefs_history.T):
+                ax.plot(coef_hist,
+                        label="Coef {}".format(idx),
+                        linewidth=0.5)
+            ax.legend(loc=4)
+            ax.set_title("AM/PM Coefficient History")
+            ax.set_xlabel("Iterations")
+            ax.set_ylabel("Coefficient Value")
+
+            ax = axs[7]
             coefs_history = np.array(self.coefs_history)
             ax.plot(self.mses, label="MSE")
             ax.plot(self.errs, label="ERR")
@@ -207,9 +252,11 @@ class Model:
             fig.savefig(fig_path)
             fig.clf()
 
-        self.coefs = new_coefs
-        self.coefs_history.append(self.coefs)
-        return self.coefs
+        self.coefs_am = new_coefs
+        self.coefs_history.append(self.coefs_am)
+        self.coefs_pm = new_coefs_pm
+        self.coefs_pm_history.append(self.coefs_pm)
+        return self.coefs_am, self.coefs_pm
 
 # The MIT License (MIT)
 #
