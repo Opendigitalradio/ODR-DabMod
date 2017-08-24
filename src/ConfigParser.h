@@ -74,7 +74,8 @@ struct mod_settings_t {
 
     std::string filterTapsFilename = "";
 
-    std::string polyCoefFilename = "";
+    std::string polyCoefFilenameAm = "";
+    std::string polyCoefFilenamePm = "";
     unsigned polyNumThreads = 0;
 
 #if defined(HAVE_OUTPUT_UHD)
