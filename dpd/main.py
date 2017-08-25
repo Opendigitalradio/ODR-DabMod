@@ -44,6 +44,12 @@ parser.add_argument('--coefs', default='poly.coef',
 parser.add_argument('--samps', default='10240',
         help='Number of samples to request from ODR-DabMod',
         required=False)
+parser.add_argument('-i', '--iterations', default='1',
+        help='Number of iterations to run',
+        required=False)
+parser.add_argument('-l', '--load-poly',
+        help='Load existing polynomial',
+        action="store_true")
 
 cli_args = parser.parse_args()
 
@@ -52,13 +58,16 @@ port_rc = int(cli_args.rc_port)
 coef_path = cli_args.coefs
 num_req = int(cli_args.samps)
 samplerate = int(cli_args.samplerate)
+num_iter = int(cli_args.iterations)
 
 meas = Measure.Measure(samplerate, port, num_req)
 
 adapt = Adapt.Adapt(port_rc, coef_path)
 coefs_am, coefs_pm = adapt.get_coefs()
-#model = Model.Model(coefs)
-model = Model.Model([1, 0, 0, 0, 0], [0, 0, 0, 0, 0])
+if cli_args.load_poly:
+    model = Model.Model(coefs_am, coefs_pm)
+else:
+    model = Model.Model([1, 0, 0, 0, 0], [0, 0, 0, 0, 0])
 adapt.set_txgain(70)
 adapt.set_rxgain(30)
 
@@ -71,7 +80,7 @@ logging.info(
     )
 )
 
-for i in range(1):
+for i in range(num_iter):
     txframe_aligned, tx_ts, rxframe_aligned, rx_ts = meas.get_samples()
     logging.debug("tx_ts {}, rx_ts {}".format(tx_ts, rx_ts))
     coefs_am, coefs_pm = model.get_next_coefs(txframe_aligned, rxframe_aligned)
