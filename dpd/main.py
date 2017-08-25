@@ -38,12 +38,9 @@ parser.add_argument('--rc-port', default='9400',
 parser.add_argument('--samplerate', default='8192000',
         help='Sample rate',
         required=False)
-parser.add_argument('--coefs_am', default='poly_am.coef',
-        help='File with DPD Amplitude coefficients, which will be read by ODR-DabMod',
+parser.add_argument('--coefs', default='poly.coef',
+        help='File with DPD coefficients, which will be read by ODR-DabMod',
         required=False)
-parser.add_argument('--coefs_pm', default='poly_am.coef',
-                    help='File with DPD Phase coefficients, which will be read by ODR-DabMod',
-                    required=False)
 parser.add_argument('--samps', default='10240',
         help='Number of samples to request from ODR-DabMod',
         required=False)
@@ -52,37 +49,33 @@ cli_args = parser.parse_args()
 
 port = int(cli_args.port)
 port_rc = int(cli_args.rc_port)
-coef_am_path = cli_args.coefs_am
-coef_pm_path = cli_args.coefs_pm
+coef_path = cli_args.coefs
 num_req = int(cli_args.samps)
 samplerate = int(cli_args.samplerate)
 
 meas = Measure.Measure(samplerate, port, num_req)
 
-adapt = Adapt.Adapt(port_rc, coef_am_path, coef_pm_path)
-coefs_am = adapt.get_coefs_am()
-coefs_pm = adapt.get_coefs_pm()
+adapt = Adapt.Adapt(port_rc, coef_path)
+coefs_am, coefs_pm = adapt.get_coefs()
 #model = Model.Model(coefs)
-model = Model.Model([2.2, 0, 0, 0, 0], [0, 0, 0, 0, 0])
+model = Model.Model([1, 0, 0, 0, 0], [0, 0, 0, 0, 0])
 adapt.set_txgain(70)
 adapt.set_rxgain(30)
 
 tx_gain   = adapt.get_txgain()
 rx_gain   = adapt.get_rxgain()
-dpd_coefs_am = adapt.get_coefs_am()
-dpd_coefs_pm = adapt.get_coefs_pm()
+dpd_coefs_am, dpd_coefs_pm = adapt.get_coefs()
 logging.info(
     "TX gain {}, RX gain {}, dpd_coefs_am {}, dpd_coefs_pm {}".format(
         tx_gain, rx_gain, dpd_coefs_am, dpd_coefs_pm
     )
 )
 
-for i in range(500):
+for i in range(1):
     txframe_aligned, tx_ts, rxframe_aligned, rx_ts = meas.get_samples()
     logging.debug("tx_ts {}, rx_ts {}".format(tx_ts, rx_ts))
     coefs_am, coefs_pm = model.get_next_coefs(txframe_aligned, rxframe_aligned)
-    adapt.set_coefs_am(coefs_am)
-    adapt.set_coefs_pm(coefs_pm)
+    adapt.set_coefs(coefs_am, coefs_pm)
 
 # The MIT License (MIT)
 #

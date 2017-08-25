@@ -168,13 +168,10 @@ static void parse_configfile(
             pt.get<std::string>("firfilter.filtertapsfile", "default");
     }
 
-    // Poly coefficients amplitude:
+    // Poly coefficients:
     if (pt.get("poly.enabled", 0) == 1) {
-        mod_settings.polyCoefFilenameAm =
-            pt.get<std::string>("poly.polycoeffileam", "dpd/poly_am.coef");
-
-        mod_settings.polyCoefFilenamePm =
-            pt.get<std::string>("poly.polycoeffilepm", "dpd/poly_pm.coef");
+        mod_settings.polyCoefFilename =
+            pt.get<std::string>("poly.polycoeffile", "dpd/poly.coef");
 
         mod_settings.polyNumThreads =
             pt.get<int>("poly.num_threads", 0);

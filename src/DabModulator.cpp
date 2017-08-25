@@ -204,10 +204,8 @@ int DabModulator::process(Buffer* dataOut)
         }
 
         shared_ptr<MemlessPoly> cifPoly;
-        if (not m_settings.polyCoefFilenameAm.empty() and
-            not m_settings.polyCoefFilenamePm.empty() ) {
-            cifPoly = make_shared<MemlessPoly>(m_settings.polyCoefFilenameAm,
-                                               m_settings.polyCoefFilenamePm,
+        if (not m_settings.polyCoefFilename.empty()) {
+            cifPoly = make_shared<MemlessPoly>(m_settings.polyCoefFilename,
                                                m_settings.polyNumThreads);
             rcs.enrol(cifPoly.get());
         }

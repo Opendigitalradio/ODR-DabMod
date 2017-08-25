@@ -47,24 +47,20 @@
 
 using namespace std;
 
-#define NUM_COEFS_AM 5
-#define NUM_COEFS_PM 5
+// Number of AM/AM coefs, identical to number of AM/PM coefs
+#define NUM_COEFS 5
 
-MemlessPoly::MemlessPoly(const std::string& coefs_am_file, const std::string& coefs_pm_file, unsigned int num_threads) :
+MemlessPoly::MemlessPoly(const std::string& coefs_file, unsigned int num_threads) :
     PipelinedModCodec(),
     RemoteControllable("memlesspoly"),
     m_num_threads(num_threads),
     m_coefs_am(),
-    m_coefs_am_file(coefs_am_file),
-    m_coefs_am_mutex(),
     m_coefs_pm(),
-    m_coefs_pm_file(coefs_pm_file),
-    m_coefs_pm_mutex()
+    m_coefs_file(coefs_file),
+    m_coefs_mutex()
 {
     PDEBUG("MemlessPoly::MemlessPoly(%s) @ %p\n",
-            coefs_am_file.c_str(), this);
-    PDEBUG("MemlessPoly::MemlessPoly(%s) @ %p\n",
-            coefs_pm_file.c_str(), this);
+            coefs_file.c_str(), this);
 
     if (m_num_threads == 0) {
         const unsigned int hw_concurrency = std::thread::hardware_concurrency();
@@ -76,98 +72,64 @@ MemlessPoly::MemlessPoly(const std::string& coefs_am_file, const std::string& co
             m_num_threads << " threads (set in config file)";
     }
 
-    RC_ADD_PARAMETER(ncoefs_am, "(Read-only) number of coefficients for amplitude.");
-    RC_ADD_PARAMETER(coeffile_am, "Filename containing coefficients for amplitude. When written to, the new file gets automatically loaded.");
+    RC_ADD_PARAMETER(ncoefs, "(Read-only) number of coefficients.");
+    RC_ADD_PARAMETER(coeffile, "Filename containing coefficients. "
+            "When set, the file gets loaded.");
 
-    RC_ADD_PARAMETER(ncoefs_pm, "(Read-only) number of coefficients for phase.");
-    RC_ADD_PARAMETER(coeffile_pm, "Filename containing coefficients for amplitude. When written to, the new file gets automatically loaded.");
-
-    load_coefficients_am(m_coefs_am_file);
-    load_coefficients_pm(m_coefs_pm_file);
+    load_coefficients(m_coefs_file);
 
     start_pipeline_thread();
 }
 
-void MemlessPoly::load_coefficients_am(const std::string &coefFile_am)
+void MemlessPoly::load_coefficients(const std::string &coefFile)
 {
     std::vector<float> coefs_am;
-    std::ifstream coef_fstream_am(coefFile_am.c_str());
-    if (!coef_fstream_am) {
-        throw std::runtime_error("MemlessPoly: Could not open file with coefs_am!");
+    std::vector<float> coefs_pm;
+    std::ifstream coef_fstream(coefFile.c_str());
+    if (!coef_fstream) {
+        throw std::runtime_error("MemlessPoly: Could not open file with coefs!");
     }
-    int n_coefs_am;
-    coef_fstream_am >> n_coefs_am;
+    int n_coefs;
+    coef_fstream >> n_coefs;
 
-    if (n_coefs_am <= 0) {
-        throw std::runtime_error("MemlessPoly: coefs_am file has invalid format.");
+    if (n_coefs <= 0) {
+        throw std::runtime_error("MemlessPoly: coefs file has invalid format.");
     }
-    else if (n_coefs_am != NUM_COEFS_AM) {
-        throw std::runtime_error("MemlessPoly: invalid number of coefs_am: " +
-                std::to_string(n_coefs_am) + " expected " + std::to_string(NUM_COEFS_AM));
+    else if (n_coefs != NUM_COEFS) {
+        throw std::runtime_error("MemlessPoly: invalid number of coefs: " +
+                std::to_string(n_coefs) + " expected " + std::to_string(NUM_COEFS));
     }
 
-    etiLog.log(debug, "MemlessPoly: Reading %d coefs_am...", n_coefs_am);
+    const size_t n_entries = 2 * n_coefs;
 
-    coefs_am.resize(n_coefs_am);
+    etiLog.log(debug, "MemlessPoly: Reading %d coefs...", n_entries);
 
-    for (int n = 0; n < n_coefs_am; n++) {
+    coefs_am.resize(n_coefs);
+    coefs_pm.resize(n_coefs);
+
+    for (int n = 0; n < n_entries; n++) {
         float a;
-        coef_fstream_am >> a;
-        coefs_am[n] = a;
+        coef_fstream >> a;
 
-        if (coef_fstream_am.eof()) {
-            etiLog.log(error, "MemlessPoly: file %s should contains %d coefs_am, "
-                    "but EOF reached after %d coefs_am !",
-                    coefFile_am.c_str(), n_coefs_am, n);
-            throw std::runtime_error("MemlessPoly: coefs_am file invalid !");
+        if (n < n_coefs) {
+            coefs_am[n] = a;
+        }
+        else {
+            coefs_pm[n - n_coefs] = a;
+        }
+
+        if (coef_fstream.eof()) {
+            etiLog.log(error, "MemlessPoly: file %s should contains %d coefs, "
+                    "but EOF reached after %d coefs !",
+                    coefFile.c_str(), n_entries, n);
+            throw std::runtime_error("MemlessPoly: coefs file invalid !");
         }
     }
 
     {
-        std::lock_guard<std::mutex> lock(m_coefs_am_mutex);
+        std::lock_guard<std::mutex> lock(m_coefs_mutex);
 
         m_coefs_am = coefs_am;
-    }
-}
-
-void MemlessPoly::load_coefficients_pm(const std::string &coefFile_pm)
-{
-    std::vector<float> coefs_pm;
-    std::ifstream coef_fstream_pm(coefFile_pm.c_str());
-    if (!coef_fstream_pm) {
-        throw std::runtime_error("MemlessPoly: Could not open file with coefs_pm!");
-    }
-    int n_coefs_pm;
-    coef_fstream_pm >> n_coefs_pm;
-
-    if (n_coefs_pm <= 0) {
-        throw std::runtime_error("MemlessPoly: coefs_pm file has invalid format.");
-    }
-    else if (n_coefs_pm != NUM_COEFS_PM) {
-        throw std::runtime_error("MemlessPoly: invalid number of coefs_pm: " +
-                std::to_string(n_coefs_pm) + " expected " + std::to_string(NUM_COEFS_PM));
-    }
-
-    etiLog.log(debug, "MemlessPoly: Reading %d coefs_pm...", n_coefs_pm);
-
-    coefs_pm.resize(n_coefs_pm);
-
-    for (int n = 0; n < n_coefs_pm; n++) {
-        float a;
-        coef_fstream_pm >> a;
-        coefs_pm[n] = a;
-
-        if (coef_fstream_pm.eof()) {
-            etiLog.log(error, "MemlessPoly: file %s should contains %d coefs_pm, "
-                    "but EOF reached after %d coefs_pm !",
-                    coefFile_pm.c_str(), n_coefs_pm, n);
-            throw std::runtime_error("MemlessPoly: coefs_pm file invalid !");
-        }
-    }
-
-    {
-        std::lock_guard<std::mutex> lock(m_coefs_pm_mutex);
-
         m_coefs_pm = coefs_pm;
     }
 }
@@ -176,8 +138,7 @@ void MemlessPoly::load_coefficients_pm(const std::string &coefFile_pm)
  * instead, and this allows the compiler to auto-vectorize the loop.
  */
 static void apply_coeff(
-        const vector<float> &coefs_am,
-        const vector<float> &coefs_pm,
+        const vector<float> &coefs_am, const vector<float> &coefs_pm,
         const complexf *__restrict in, size_t start, size_t stop,
         complexf *__restrict out)
 {
@@ -226,8 +187,7 @@ int MemlessPoly::internal_process(Buffer* const dataIn, Buffer* dataOut)
     size_t sizeOut = dataOut->getLength() / sizeof(complexf);
 
     {
-        std::lock_guard<std::mutex> lock_am(m_coefs_am_mutex);
-        std::lock_guard<std::mutex> lock_pm(m_coefs_pm_mutex);
+        std::lock_guard<std::mutex> lock(m_coefs_mutex);
         const unsigned int hw_concurrency = std::thread::hardware_concurrency();
 
         const unsigned int num_threads =
@@ -240,7 +200,8 @@ int MemlessPoly::internal_process(Buffer* const dataIn, Buffer* dataOut)
             size_t start = 0;
             for (size_t i = 0; i < num_threads - 1; i++) {
                 flags.push_back(async(launch::async, apply_coeff,
-                            m_coefs_am, m_coefs_pm, in, start, start + step, out));
+                            m_coefs_am, m_coefs_pm,
+                            in, start, start + step, out));
 
                 start += step;
             }
@@ -266,25 +227,13 @@ void MemlessPoly::set_parameter(const string& parameter, const string& value)
     stringstream ss(value);
     ss.exceptions ( stringstream::failbit | stringstream::badbit );
 
-    if (parameter == "ncoefs_am") {
-        throw ParameterError("Parameter 'ncoefs_am' is read-only");
+    if (parameter == "ncoefs") {
+        throw ParameterError("Parameter 'ncoefs' is read-only");
     }
-    else if (parameter == "ncoefs_pm") {
-        throw ParameterError("Parameter 'ncoefs_pm' is read-only");
-    }
-    else if (parameter == "coeffile_am") {
+    else if (parameter == "coeffile") {
         try {
-            load_coefficients_am(value);
-            m_coefs_am_file = value;
-        }
-        catch (std::runtime_error &e) {
-            throw ParameterError(e.what());
-        }
-    }
-    else if (parameter == "coeffile_pm") {
-        try {
-            load_coefficients_pm(value);
-            m_coefs_pm_file = value;
+            load_coefficients(value);
+            m_coefs_file = value;
         }
         catch (std::runtime_error &e) {
             throw ParameterError(e.what());
@@ -301,17 +250,11 @@ void MemlessPoly::set_parameter(const string& parameter, const string& value)
 const string MemlessPoly::get_parameter(const string& parameter) const
 {
     stringstream ss;
-    if (parameter == "ncoefs_am") {
+    if (parameter == "ncoefs") {
         ss << m_coefs_am.size();
     }
-    else if (parameter == "ncoefs_pm") {
-        ss << m_coefs_pm.size();
-    }
-    else if (parameter == "coeffile_am") {
-        ss << m_coefs_am_file;
-    }
-    else if (parameter == "coeffile_pm") {
-        ss << m_coefs_pm_file;
+    else if (parameter == "coeffile") {
+        ss << m_coefs_file;
     }
     else {
         ss << "Parameter '" << parameter <<

@@ -23,11 +23,10 @@ class Adapt:
         ZMQ remote control.
     """
 
-    def __init__(self, port, coef_am_path, coef_pm_path):
+    def __init__(self, port, coef_path):
         logging.info("Instantiate Adapt object")
         self.port = port
-        self.coef_am_path = coef_am_path
-        self.coef_pm_path = coef_pm_path
+        self.coef_path = coef_path
         self.host = "localhost"
         self._context = zmq.Context()
 
@@ -112,8 +111,10 @@ class Adapt:
         return self.send_receive("get uhd rxgain")
 
     def _read_coef_file(self, path):
-        """Load the coefficients from the file in the format given in the README"""
-        coefs_out = []
+        """Load the coefficients from the file in the format given in the README,
+        return ([AM coef], [PM coef])"""
+        coefs_am_out = []
+        coefs_pm_out = []
         f = open(path, 'r')
         lines = f.readlines()
         n_coefs = int(lines[0])
@@ -121,35 +122,34 @@ class Adapt:
         i = 0
         for c in coefs:
             if i < n_coefs:
-                coefs_out.append(c)
+                coefs_am_out.append(c)
+            elif i < 2*n_coefs:
+                coefs_pm_out.append(c)
             else:
                 raise ValueError(
                     "Incorrect coef file format: too many coefficients in {}, should be {}, coefs are {}"
                         .format(path, n_coefs, coefs))
             i += 1
         f.close()
-        return coefs_out
+        return (coefs_am_out, coefs_pm_out)
 
-    def get_coefs_am(self):
-        return self._read_coef_file(self.coef_am_path)
+    def get_coefs(self):
+        return self._read_coef_file(self.coef_path)
 
-    def get_coefs_pm(self):
-        return self._read_coef_file(self.coef_pm_path)
+    def _write_coef_file(self, coefs_am, coefs_pm, path):
+        assert(len(coefs_am) == len(coefs_pm))
 
-    def _write_coef_file(self, coefs, path):
         f = open(path, 'w')
-        f.write("{}\n".format(len(coefs)))
-        for coef in coefs:
+        f.write("{}\n".format(len(coefs_am)))
+        for coef in coefs_am:
+            f.write("{}\n".format(coef))
+        for coef in coefs_pm:
             f.write("{}\n".format(coef))
         f.close()
 
-    def set_coefs_am(self, coefs):
-        self._write_coef_file(coefs, self.coef_am_path)
-        self.send_receive("set memlesspoly coeffile_am {}".format(self.coef_am_path))
-
-    def set_coefs_pm(self, coefs):
-        self._write_coef_file(coefs, self.coef_pm_path)
-        self.send_receive("set memlesspoly coeffile_pm {}".format(self.coef_pm_path))
+    def set_coefs(self, coefs_am, coefs_pm):
+        self._write_coef_file(coefs_am, coefs_pm, self.coef_path)
+        self.send_receive("set memlesspoly coeffile {}".format(self.coef_path))
 
 # The MIT License (MIT)
 #
