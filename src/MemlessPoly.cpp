@@ -307,10 +307,10 @@ const string MemlessPoly::get_parameter(const string& parameter) const
     else if (parameter == "ncoefs_pm") {
         ss << m_coefs_pm.size();
     }
-    else if (parameter == "coefFile_am") {
+    else if (parameter == "coeffile_am") {
         ss << m_coefs_am_file;
     }
-    else if (parameter == "coefFile_pm") {
+    else if (parameter == "coeffile_pm") {
         ss << m_coefs_pm_file;
     }
     else {
