@@ -27,10 +27,6 @@ class Model:
         self.errs_phase = [0, ]
 
     def get_next_coefs(self, txframe_aligned, rxframe_aligned):
-        dt = datetime.datetime.now().isoformat()
-        txframe_aligned.tofile(logging_path + "/txframe_" + dt + ".iq")
-        rxframe_aligned.tofile(logging_path + "/rxframe_" + dt + ".iq")
-
         # Calculate new coefficients for AM/AM correction
         rx_abs = np.abs(rxframe_aligned)
         rx_A = np.vstack([rx_abs,
@@ -148,9 +144,9 @@ class Model:
             dt = datetime.datetime.now().isoformat()
             fig_path = logging_path + "/" + dt + "_Model.pdf"
 
-            fig, axs = plt.subplots(8, figsize=(6, 4 * 6))
+            fig = plt.figure(figsize=(3*6, 1.5 * 6))
 
-            ax = axs[0]
+            ax = plt.subplot(3,3,1)
             ax.plot(np.abs(txframe_aligned[:128]),
                     label="TX sent",
                     linestyle=":")
@@ -160,9 +156,14 @@ class Model:
             ax.set_title("Synchronized Signals of Iteration {}".format(len(self.coefs_history)))
             ax.set_xlabel("Samples")
             ax.set_ylabel("Amplitude")
+            ax.text(0, 0, "TX (max {:01.3f}, mean {:01.3f}, median {:01.3f})".format(
+                np.max(np.abs(txframe_aligned)),
+                np.mean(np.abs(txframe_aligned)),
+                np.median(np.abs(txframe_aligned))
+            ), size = 8)
             ax.legend(loc=4)
 
-            ax = axs[1]
+            ax = plt.subplot(3,3,2)
             ax.plot(np.real(txframe_aligned[:128]),
                     label="TX sent",
                     linestyle=":")
@@ -174,28 +175,7 @@ class Model:
             ax.set_ylabel("Real Part")
             ax.legend(loc=4)
 
-            ax = axs[2]
-            ax.scatter(
-                np.abs(txframe_aligned[:1024]),
-                np.abs(rxframe_aligned[:1024]),
-                s=0.1)
-            ax.plot(rx_range_dpd / self.coefs_am[0], rx_range, linewidth=0.25)
-            ax.set_title("Amplifier Characteristic")
-            ax.set_xlabel("TX Amplitude")
-            ax.set_ylabel("RX Amplitude")
-
-            ax = axs[3]
-            ax.scatter(
-                np.abs(txframe_aligned[:1024]),
-                phase_diff_rad[:1024] * 180 / np.pi,
-                s=0.1
-            )
-            ax.plot(tx_range, phase_range_dpd * 180 / np.pi, linewidth=0.25)
-            ax.set_title("Amplifier Characteristic")
-            ax.set_xlabel("TX Amplitude")
-            ax.set_ylabel("Phase Difference [deg]")
-
-            ax = axs[4]
+            ax = plt.subplot(3,3,3)
             ax.plot(np.abs(txframe_aligned[:128]),
                     label="TX Frame",
                     linestyle=":",
@@ -217,7 +197,46 @@ class Model:
             ax.set_xlabel("Samples")
             ax.set_ylabel("Amplitude")
 
-            ax = axs[5]
+            ax = plt.subplot(3,3,4)
+            ax.scatter(
+                np.abs(txframe_aligned[:1024]),
+                np.abs(rxframe_aligned[:1024]),
+                s=0.1)
+            ax.plot(rx_range_dpd / self.coefs_am[0], rx_range, linewidth=0.25)
+            ax.set_title("Amplifier Characteristic")
+            ax.set_xlabel("TX Amplitude")
+            ax.set_ylabel("RX Amplitude")
+
+            ax = plt.subplot(3,3,5)
+            ax.scatter(
+                np.abs(txframe_aligned[:1024]),
+                phase_diff_rad[:1024] * 180 / np.pi,
+                s=0.1
+            )
+            ax.plot(tx_range, phase_range_dpd * 180 / np.pi, linewidth=0.25)
+            ax.set_title("Amplifier Characteristic")
+            ax.set_xlabel("TX Amplitude")
+            ax.set_ylabel("Phase Difference [deg]")
+
+            ax = plt.subplot(3,3,6)
+            ccdf_min, ccdf_max = 0, 1
+            tx_hist, ccdf_edges = np.histogram(np.abs(txframe_aligned),
+                                      bins=60,
+                                      range=(ccdf_min, ccdf_max))
+            tx_hist_normalized = tx_hist.astype(float)/np.sum(tx_hist)
+            ccdf = 1.0 - np.cumsum(tx_hist_normalized)
+            ax.semilogy(ccdf_edges[:-1], ccdf, label="CCDF")
+            ax.semilogy(ccdf_edges[:-1],
+                        tx_hist_normalized,
+                        label="Histogram",
+                        drawstyle='steps')
+            ax.legend(loc=4)
+            ax.set_ylim(1e-5,2)
+            ax.set_title("Complementary Cumulative Distribution Function")
+            ax.set_xlabel("TX Amplitude")
+            ax.set_ylabel("Ratio of Samples larger than x")
+
+            ax = plt.subplot(3,3,7)
             coefs_history = np.array(self.coefs_history)
             for idx, coef_hist in enumerate(coefs_history.T):
                 ax.plot(coef_hist,
@@ -228,7 +247,7 @@ class Model:
             ax.set_xlabel("Iterations")
             ax.set_ylabel("Coefficient Value")
 
-            ax = axs[6]
+            ax = plt.subplot(3,3,8)
             coefs_history = np.array(self.coefs_pm_history)
             for idx, coef_hist in enumerate(coefs_history.T):
                 ax.plot(coef_hist,
@@ -239,7 +258,7 @@ class Model:
             ax.set_xlabel("Iterations")
             ax.set_ylabel("Coefficient Value")
 
-            ax = axs[7]
+            ax = plt.subplot(3,3,9)
             coefs_history = np.array(self.coefs_history)
             ax.plot(self.mses, label="MSE")
             ax.plot(self.errs, label="ERR")
