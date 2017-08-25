@@ -23,6 +23,7 @@ logging.basicConfig(format='%(asctime)s - %(module)s - %(levelname)s - %(message
                     filemode='w',
                     level=logging.DEBUG)
 
+import traceback
 import src.Measure as Measure
 import src.Model as Model
 import src.Adapt as Adapt
@@ -91,10 +92,14 @@ logging.info(
 )
 
 for i in range(num_iter):
-    txframe_aligned, tx_ts, rxframe_aligned, rx_ts = meas.get_samples()
-    logging.debug("tx_ts {}, rx_ts {}".format(tx_ts, rx_ts))
-    coefs_am, coefs_pm = model.get_next_coefs(txframe_aligned, rxframe_aligned)
-    adapt.set_coefs(coefs_am, coefs_pm)
+    try:
+        txframe_aligned, tx_ts, rxframe_aligned, rx_ts = meas.get_samples()
+        logging.debug("tx_ts {}, rx_ts {}".format(tx_ts, rx_ts))
+        coefs_am, coefs_pm = model.get_next_coefs(txframe_aligned, rxframe_aligned)
+        adapt.set_coefs(coefs_am, coefs_pm)
+    except Exception as e:
+        logging.info("Iteration {} failed.".format(i))
+        logging.info(traceback.format_exc())
 
 # The MIT License (MIT)
 #

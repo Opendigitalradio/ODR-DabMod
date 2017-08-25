@@ -26,9 +26,32 @@ class Model:
         self.coefs_pm_history = [coefs_pm, ]
         self.errs_phase = [0, ]
 
+    def sample_uniformly(self, txframe_aligned, rxframe_aligned, n_bins=4):
+        """This function returns tx and rx samples in a way
+        that the tx amplitudes have an approximate uniform 
+        distribution with respect to the txframe_aligned amplitudes"""
+        txframe_aligned_abs = np.abs(txframe_aligned)
+        ccdf_min = 0
+        ccdf_max = np.max(txframe_aligned_abs)
+        tx_hist, ccdf_edges = np.histogram(txframe_aligned_abs,
+                                           bins=n_bins,
+                                           range=(ccdf_min, ccdf_max))
+        tx_choice = np.zeros(tx_hist[-1] * n_bins, dtype=np.complex64)
+        rx_choice = np.zeros(tx_hist[-1] * n_bins, dtype=np.complex64)
+        n_choise  = tx_hist[-1]
+        for idx, bin in enumerate(tx_hist[:-1]):
+            indices = np.where((txframe_aligned >= ccdf_edges[idx]) &
+                               (txframe_aligned <= ccdf_edges[idx+1]))[0]
+            indices_choise = np.random.choice(indices, n_choise, replace=False)
+            rx_choice[idx*n_choise:(idx+1)*n_choise] = rxframe_aligned[indices_choise]
+            tx_choice[idx*n_choise:(idx+1)*n_choise] = txframe_aligned[indices_choise]
+        return tx_choice, rx_choice
+
     def get_next_coefs(self, txframe_aligned, rxframe_aligned):
+        tx_choice, rx_choice = self.sample_uniformly(txframe_aligned, rxframe_aligned)
+
         # Calculate new coefficients for AM/AM correction
-        rx_abs = np.abs(rxframe_aligned)
+        rx_abs = np.abs(rx_choice)
         rx_A = np.vstack([rx_abs,
                           rx_abs ** 3,
                           rx_abs ** 5,
@@ -37,9 +60,9 @@ class Model:
                           ]).T
         rx_dpd = np.sum(rx_A * self.coefs_am, axis=1)
         rx_dpd = rx_dpd * (
-            np.median(np.abs(txframe_aligned)) / np.median(np.abs(rx_dpd)))
+            np.median(np.abs(tx_choice)) / np.median(np.abs(rx_dpd)))
 
-        err = rx_dpd - np.abs(txframe_aligned)
+        err = rx_dpd - np.abs(tx_choice)
         self.errs.append(np.mean(np.abs(err ** 2)))
 
         a_delta = np.linalg.lstsq(rx_A, err)[0]
@@ -50,13 +73,13 @@ class Model:
 
         # Calculate new coefficients for AM/PM correction
         phase_diff_rad = ((
-                              (np.angle(txframe_aligned) -
-                               np.angle(rxframe_aligned) +
+                              (np.angle(tx_choice) -
+                               np.angle(rx_choice) +
                                np.pi) % (2 * np.pi)) -
                           np.pi
                           )
 
-        tx_abs = np.abs(txframe_aligned)
+        tx_abs = np.abs(tx_choice)
         tx_abs_A = np.vstack([tx_abs,
                              tx_abs ** 2,
                              tx_abs ** 3,
@@ -86,7 +109,7 @@ class Model:
         tx_range = np.linspace(0, 2)
         phase_range_dpd = dpd_phase(tx_range)
 
-        tx_abs = np.abs(rxframe_aligned)
+        tx_abs = np.abs(rx_choice)
         tx_A = np.vstack([tx_abs,
                           tx_abs ** 3,
                           tx_abs ** 5,
@@ -96,19 +119,19 @@ class Model:
         tx_dpd = np.sum(tx_A * new_coefs, axis=1)
 
         tx_dpd_norm = tx_dpd * (
-            np.median(np.abs(txframe_aligned)) / np.median(np.abs(tx_dpd)))
+            np.median(np.abs(tx_choice)) / np.median(np.abs(tx_dpd)))
 
-        rx_A_complex = np.vstack([rxframe_aligned,
-                                  rxframe_aligned * rx_abs ** 2,
-                                  rxframe_aligned * rx_abs ** 4,
-                                  rxframe_aligned * rx_abs ** 6,
-                                  rxframe_aligned * rx_abs ** 8,
+        rx_A_complex = np.vstack([rx_choice,
+                                  rx_choice * rx_abs ** 2,
+                                  rx_choice * rx_abs ** 4,
+                                  rx_choice * rx_abs ** 6,
+                                  rx_choice * rx_abs ** 8,
                                   ]).T
         rx_post_distored = np.sum(rx_A_complex * self.coefs_am, axis=1)
         rx_post_distored = rx_post_distored * (
-            np.median(np.abs(txframe_aligned)) /
+            np.median(np.abs(tx_choice)) /
             np.median(np.abs(rx_post_distored)))
-        mse = np.mean(np.abs((txframe_aligned - rx_post_distored) ** 2))
+        mse = np.mean(np.abs((tx_choice - rx_post_distored) ** 2))
         logging.debug("MSE: {}".format(mse))
         self.mses.append(mse)
 
@@ -136,9 +159,9 @@ class Model:
                            ))
 
             logging.debug("rxframe: min %f, max %f, median %f" %
-                          (np.min(np.abs(rxframe_aligned)),
-                           np.max(np.abs(rxframe_aligned)),
-                           np.median(np.abs(rxframe_aligned))
+                          (np.min(np.abs(rx_choice)),
+                           np.max(np.abs(rx_choice)),
+                           np.median(np.abs(rx_choice))
                            ))
 
             dt = datetime.datetime.now().isoformat()
@@ -199,8 +222,8 @@ class Model:
 
             ax = plt.subplot(3,3,4)
             ax.scatter(
-                np.abs(txframe_aligned[:1024]),
-                np.abs(rxframe_aligned[:1024]),
+                np.abs(tx_choice[:1024]),
+                np.abs(rx_choice[:1024]),
                 s=0.1)
             ax.plot(rx_range_dpd / self.coefs_am[0], rx_range, linewidth=0.25)
             ax.set_title("Amplifier Characteristic")
@@ -209,7 +232,7 @@ class Model:
 
             ax = plt.subplot(3,3,5)
             ax.scatter(
-                np.abs(txframe_aligned[:1024]),
+                np.abs(tx_choice[:1024]),
                 phase_diff_rad[:1024] * 180 / np.pi,
                 s=0.1
             )
