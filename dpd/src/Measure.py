@@ -40,13 +40,7 @@ class Measure:
             bufs.append(b)
         return b''.join(bufs)
 
-    def get_samples(self):
-        """Connect to ODR-DabMod, retrieve TX and RX samples, load
-        into numpy arrays, and return a tuple
-        (tx_timestamp, tx_samples, rx_timestamp, rx_samples)
-        where the timestamps are doubles, and the samples are numpy
-        arrays of complex floats, both having the same size
-        """
+    def receive_tcp(self):
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         s.connect(('localhost', self.port))
 
@@ -78,23 +72,37 @@ class Measure:
         else:
             rxframe = np.array([], dtype=np.complex64)
 
-        # Normalize received signal with sent signal
-        rx_median = np.median(np.abs(rxframe))
-        rxframe = rxframe / rx_median * np.median(np.abs(txframe))
-
         if logging.getLogger().getEffectiveLevel() == logging.DEBUG:
             logging.debug("txframe: min %f, max %f, median %f" %
-                (np.min(np.abs(txframe)),
-                 np.max(np.abs(txframe)),
-                 np.median(np.abs(txframe))))
+                          (np.min(np.abs(txframe)),
+                           np.max(np.abs(txframe)),
+                           np.median(np.abs(txframe))))
 
             logging.debug("rxframe: min %f, max %f, median %f" %
-                (np.min(np.abs(rxframe)),
-                 np.max(np.abs(rxframe)),
-                 np.median(np.abs(rxframe))))
+                          (np.min(np.abs(rxframe)),
+                           np.max(np.abs(rxframe)),
+                           np.median(np.abs(rxframe))))
 
         logging.debug("Disconnecting")
         s.close()
+
+        return txframe, tx_ts, rxframe, rx_ts
+
+
+    def get_samples(self):
+        """Connect to ODR-DabMod, retrieve TX and RX samples, load
+        into numpy arrays, and return a tuple
+        (tx_timestamp, tx_samples, rx_timestamp, rx_samples)
+        where the timestamps are doubles, and the samples are numpy
+        arrays of complex floats, both having the same size
+        """
+
+        txframe, tx_ts, rxframe, rx_ts = self.receive_tcp()
+        txframe_end = txframe[-100:]
+
+        # Normalize received signal with sent signal
+        rx_median = np.median(np.abs(rxframe))
+        rxframe = rxframe / rx_median * np.median(np.abs(txframe))
 
         du = DU.Dab_Util(self.samplerate)
         txframe_aligned, rxframe_aligned = du.subsample_align(txframe, rxframe)

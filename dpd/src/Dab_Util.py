@@ -62,19 +62,19 @@ class Dab_Util:
         l_orig = float(l) / n_up
         return l_orig
 
-    def subsample_align_upsampling(self, sig1, sig2, n_up=32):
+    def subsample_align_upsampling(self, sig_tx, sig_rx, n_up=32):
         """
-        Returns an aligned version of sig1 and sig2 by cropping and subsample alignment
+        Returns an aligned version of sig_tx and sig_rx by cropping and subsample alignment
         Using upsampling
         """
-        assert(sig1.shape[0] == sig2.shape[0])
+        assert(sig_tx.shape[0] == sig_rx.shape[0])
 
-        if sig1.shape[0] % 2 == 1:
-            sig1 = sig1[:-1]
-            sig2 = sig2[:-1]
+        if sig_tx.shape[0] % 2 == 1:
+            sig_tx = sig_tx[:-1]
+            sig_rx = sig_rx[:-1]
 
-        sig1_up = signal.resample(sig1, sig1.shape[0] * n_up)
-        sig2_up = signal.resample(sig2, sig2.shape[0] * n_up)
+        sig1_up = signal.resample(sig_tx, sig_tx.shape[0] * n_up)
+        sig2_up = signal.resample(sig_rx, sig_rx.shape[0] * n_up)
 
         off_meas = self.lag_upsampling(sig2_up, sig1_up, n_up=1)
         off = int(abs(off_meas))
@@ -86,13 +86,13 @@ class Dab_Util:
             sig1_up = sig1_up[off:]
         sig2_up = sig2_up[:-off]
 
-        sig1 = signal.resample(sig1_up, sig1_up.shape[0] / n_up).astype(np.complex64)
-        sig2 = signal.resample(sig2_up, sig2_up.shape[0] / n_up).astype(np.complex64)
-        return sig1, sig2
+        sig_tx = signal.resample(sig1_up, sig1_up.shape[0] / n_up).astype(np.complex64)
+        sig_rx = signal.resample(sig2_up, sig2_up.shape[0] / n_up).astype(np.complex64)
+        return sig_tx, sig_rx
 
-    def subsample_align(self, sig1, sig2):
+    def subsample_align(self, sig_tx, sig_rx):
         """
-        Returns an aligned version of sig1 and sig2 by cropping and subsample alignment
+        Returns an aligned version of sig_tx and sig_rx by cropping and subsample alignment
         """
 
         if logging.getLogger().getEffectiveLevel() == logging.DEBUG:
@@ -100,15 +100,15 @@ class Dab_Util:
             fig_path = logging_path + "/" + dt + "_sync_raw.pdf"
 
             fig, axs = plt.subplots(2)
-            axs[0].plot(np.abs(sig1[:128]), label="TX Frame")
-            axs[0].plot(np.abs(sig2[:128]), label="RX Frame")
+            axs[0].plot(np.abs(sig_tx[:128]), label="TX Frame")
+            axs[0].plot(np.abs(sig_rx[:128]), label="RX Frame")
             axs[0].set_title("Raw Data")
             axs[0].set_ylabel("Amplitude")
             axs[0].set_xlabel("Samples")
             axs[0].legend(loc=4)
 
-            axs[1].plot(np.real(sig1[:128]), label="TX Frame")
-            axs[1].plot(np.real(sig2[:128]), label="RX Frame")
+            axs[1].plot(np.real(sig_tx[:128]), label="TX Frame")
+            axs[1].plot(np.real(sig_rx[:128]), label="RX Frame")
             axs[1].set_title("Raw Data")
             axs[1].set_ylabel("Real Part")
             axs[1].set_xlabel("Samples")
@@ -118,35 +118,35 @@ class Dab_Util:
             fig.savefig(fig_path)
             fig.clf()
 
-        logging.debug("Sig1_orig: %d %s, Sig2_orig: %d %s" % (len(sig1), sig1.dtype, len(sig2), sig2.dtype))
-        off_meas = self.lag_upsampling(sig2, sig1, n_up=1)
+        logging.debug("Sig1_orig: %d %s, Sig2_orig: %d %s" % (len(sig_tx), sig_tx.dtype, len(sig_rx), sig_rx.dtype))
+        off_meas = self.lag_upsampling(sig_rx, sig_tx, n_up=1)
         off = int(abs(off_meas))
 
         if off_meas > 0:
-            sig1 = sig1[:-off]
-            sig2 = sig2[off:]
+            sig_tx = sig_tx[:-off]
+            sig_rx = sig_rx[off:]
         elif off_meas < 0:
-            sig1 = sig1[off:]
-            sig2 = sig2[:-off]
+            sig_tx = sig_tx[off:]
+            sig_rx = sig_rx[:-off]
 
         if off % 2 == 1:
-            sig1 = sig1[:-1]
-            sig2 = sig2[:-1]
+            sig_tx = sig_tx[:-1]
+            sig_rx = sig_rx[:-1]
 
         if logging.getLogger().getEffectiveLevel() == logging.DEBUG:
             dt = datetime.datetime.now().isoformat()
             fig_path = logging_path + "/" + dt + "_sync_sample_aligned.pdf"
 
             fig, axs = plt.subplots(2)
-            axs[0].plot(np.abs(sig1[:128]), label="TX Frame")
-            axs[0].plot(np.abs(sig2[:128]), label="RX Frame")
+            axs[0].plot(np.abs(sig_tx[:128]), label="TX Frame")
+            axs[0].plot(np.abs(sig_rx[:128]), label="RX Frame")
             axs[0].set_title("Sample Aligned Data")
             axs[0].set_ylabel("Amplitude")
             axs[0].set_xlabel("Samples")
             axs[0].legend(loc=4)
 
-            axs[1].plot(np.real(sig1[:128]), label="TX Frame")
-            axs[1].plot(np.real(sig2[:128]), label="RX Frame")
+            axs[1].plot(np.real(sig_tx[:128]), label="TX Frame")
+            axs[1].plot(np.real(sig_rx[:128]), label="RX Frame")
             axs[1].set_ylabel("Real Part")
             axs[1].set_xlabel("Samples")
             axs[1].legend(loc=4)
@@ -156,22 +156,22 @@ class Dab_Util:
             fig.clf()
 
 
-        sig2 = sa.subsample_align(sig2, sig1)
+        sig_rx = sa.subsample_align(sig_rx, sig_tx)
 
         if logging.getLogger().getEffectiveLevel() == logging.DEBUG:
             dt = datetime.datetime.now().isoformat()
             fig_path = logging_path + "/" + dt + "_sync_subsample_aligned.pdf"
 
             fig, axs = plt.subplots(2)
-            axs[0].plot(np.abs(sig1[:128]), label="TX Frame")
-            axs[0].plot(np.abs(sig2[:128]), label="RX Frame")
+            axs[0].plot(np.abs(sig_tx[:128]), label="TX Frame")
+            axs[0].plot(np.abs(sig_rx[:128]), label="RX Frame")
             axs[0].set_title("Subsample Aligned")
             axs[0].set_ylabel("Amplitude")
             axs[0].set_xlabel("Samples")
             axs[0].legend(loc=4)
 
-            axs[1].plot(np.real(sig1[:128]), label="TX Frame")
-            axs[1].plot(np.real(sig2[:128]), label="RX Frame")
+            axs[1].plot(np.real(sig_tx[:128]), label="TX Frame")
+            axs[1].plot(np.real(sig_rx[:128]), label="RX Frame")
             axs[1].set_ylabel("Real Part")
             axs[1].set_xlabel("Samples")
             axs[1].legend(loc=4)
@@ -180,22 +180,22 @@ class Dab_Util:
             fig.savefig(fig_path)
             fig.clf()
 
-        sig2 = pa.phase_align(sig2, sig1)
+        sig_rx = pa.phase_align(sig_rx, sig_tx)
 
         if logging.getLogger().getEffectiveLevel() == logging.DEBUG:
             dt = datetime.datetime.now().isoformat()
             fig_path = logging_path + "/" + dt + "_sync_phase_aligned.pdf"
 
             fig, axs = plt.subplots(2)
-            axs[0].plot(np.abs(sig1[:128]), label="TX Frame")
-            axs[0].plot(np.abs(sig2[:128]), label="RX Frame")
+            axs[0].plot(np.abs(sig_tx[:128]), label="TX Frame")
+            axs[0].plot(np.abs(sig_rx[:128]), label="RX Frame")
             axs[0].set_title("Phase Aligned")
             axs[0].set_ylabel("Amplitude")
             axs[0].set_xlabel("Samples")
             axs[0].legend(loc=4)
 
-            axs[1].plot(np.real(sig1[:128]), label="TX Frame")
-            axs[1].plot(np.real(sig2[:128]), label="RX Frame")
+            axs[1].plot(np.real(sig_tx[:128]), label="TX Frame")
+            axs[1].plot(np.real(sig_rx[:128]), label="RX Frame")
             axs[1].set_ylabel("Real Part")
             axs[1].set_xlabel("Samples")
             axs[1].legend(loc=4)
@@ -204,8 +204,8 @@ class Dab_Util:
             fig.savefig(fig_path)
             fig.clf()
 
-        logging.debug("Sig1_cut: %d %s, Sig2_cut: %d %s, off: %d" % (len(sig1), sig1.dtype, len(sig2), sig2.dtype, off))
-        return sig1, sig2
+        logging.debug("Sig1_cut: %d %s, Sig2_cut: %d %s, off: %d" % (len(sig_tx), sig_tx.dtype, len(sig_rx), sig_rx.dtype, off))
+        return sig_tx, sig_rx
 
     def fromfile(self, filename, offset=0, length=None):
         if length is None:
