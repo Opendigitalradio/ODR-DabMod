@@ -4,16 +4,8 @@ import sys
 import socket
 import struct
 import numpy as np
-import matplotlib
-matplotlib.use('agg')
-import matplotlib.pyplot as plt
-from matplotlib.animation import FuncAnimation
-import argparse
-import os
-import time
 import logging
 import src.Dab_Util as DU
-import datetime
 
 class Measure:
     """Collect Measurement from DabMod"""
@@ -81,7 +73,8 @@ class Measure:
             rxframe = np.array([], dtype=np.complex64)
 
         # Normalize received signal with sent signal
-        rxframe = rxframe / np.median(np.abs(rxframe)) * np.median(np.abs(txframe))
+        rx_median = np.median(np.abs(rxframe))
+        rxframe = rxframe / rx_median * np.median(np.abs(txframe))
 
         if logging.getLogger().getEffectiveLevel() == logging.DEBUG:
             logging.debug("txframe: min %f, max %f, median %f" %
@@ -105,7 +98,7 @@ class Measure:
             % (len(txframe), txframe.dtype, len(rxframe), rxframe.dtype,
             len(txframe_aligned), txframe_aligned.dtype, len(rxframe_aligned), rxframe_aligned.dtype) )
 
-        return txframe_aligned, tx_ts, rxframe_aligned, rx_ts
+        return txframe_aligned, tx_ts, rxframe_aligned, rx_ts, rx_median
 
 # The MIT License (MIT)
 #
