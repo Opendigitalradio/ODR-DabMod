@@ -27,6 +27,7 @@ import traceback
 import src.Measure as Measure
 import src.Model as Model
 import src.Adapt as Adapt
+import src.Agc as Agc
 import argparse
 
 parser = argparse.ArgumentParser(description="DPD Computation Engine for ODR-DabMod")
@@ -82,8 +83,8 @@ else:
 adapt.set_txgain(txgain)
 adapt.set_rxgain(rxgain)
 
-tx_gain   = adapt.get_txgain()
-rx_gain   = adapt.get_rxgain()
+tx_gain = adapt.get_txgain()
+rx_gain = adapt.get_rxgain()
 dpd_coefs_am, dpd_coefs_pm = adapt.get_coefs()
 logging.info(
     "TX gain {}, RX gain {}, dpd_coefs_am {}, dpd_coefs_pm {}".format(
@@ -91,15 +92,19 @@ logging.info(
     )
 )
 
+# Automatic Gain Control
+agc = Agc.Agc(meas, adapt)
+agc.run()
+
 for i in range(num_iter):
     try:
-        txframe_aligned, tx_ts, rxframe_aligned, rx_ts = meas.get_samples()
+        txframe_aligned, tx_ts, rxframe_aligned, rx_ts, rx_median = meas.get_samples()
         logging.debug("tx_ts {}, rx_ts {}".format(tx_ts, rx_ts))
         coefs_am, coefs_pm = model.get_next_coefs(txframe_aligned, rxframe_aligned)
         adapt.set_coefs(coefs_am, coefs_pm)
     except Exception as e:
-        logging.info("Iteration {} failed.".format(i))
-        logging.info(traceback.format_exc())
+        logging.warning("Iteration {} failed.".format(i))
+        logging.warning(traceback.format_exc())
 
 # The MIT License (MIT)
 #
