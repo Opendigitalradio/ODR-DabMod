@@ -36,12 +36,13 @@ class Model:
         tx_hist, ccdf_edges = np.histogram(txframe_aligned_abs,
                                            bins=n_bins,
                                            range=(ccdf_min, ccdf_max))
-        tx_choice = np.zeros(tx_hist[-1] * n_bins, dtype=np.complex64)
-        rx_choice = np.zeros(tx_hist[-1] * n_bins, dtype=np.complex64)
-        n_choise  = tx_hist[-1]
-        for idx, bin in enumerate(tx_hist[:-1]):
-            indices = np.where((txframe_aligned >= ccdf_edges[idx]) &
-                               (txframe_aligned <= ccdf_edges[idx+1]))[0]
+        n_choise  = np.min(tx_hist)
+        tx_choice = np.zeros(n_choise * n_bins, dtype=np.complex64)
+        rx_choice = np.zeros(n_choise * n_bins, dtype=np.complex64)
+
+        for idx, bin in enumerate(tx_hist):
+            indices = np.where((txframe_aligned_abs >= ccdf_edges[idx]) &
+                               (txframe_aligned_abs <= ccdf_edges[idx+1]))[0]
             indices_choise = np.random.choice(indices, n_choise, replace=False)
             rx_choice[idx*n_choise:(idx+1)*n_choise] = rxframe_aligned[indices_choise]
             tx_choice[idx*n_choise:(idx+1)*n_choise] = txframe_aligned[indices_choise]
@@ -108,18 +109,6 @@ class Model:
 
         tx_range = np.linspace(0, 2)
         phase_range_dpd = dpd_phase(tx_range)
-
-        tx_abs = np.abs(rx_choice)
-        tx_A = np.vstack([tx_abs,
-                          tx_abs ** 3,
-                          tx_abs ** 5,
-                          tx_abs ** 7,
-                          tx_abs ** 9,
-                          ]).T
-        tx_dpd = np.sum(tx_A * new_coefs, axis=1)
-
-        tx_dpd_norm = tx_dpd * (
-            np.median(np.abs(tx_choice)) / np.median(np.abs(tx_dpd)))
 
         rx_A_complex = np.vstack([rx_choice,
                                   rx_choice * rx_abs ** 2,
@@ -207,10 +196,34 @@ class Model:
                     label="RX Frame",
                     linestyle="--",
                     linewidth=0.5)
+
+            rx_abs = np.abs(rxframe_aligned)
+            rx_A = np.vstack([rx_abs,
+                              rx_abs ** 3,
+                              rx_abs ** 5,
+                              rx_abs ** 7,
+                              rx_abs ** 9,
+                              ]).T
+            rx_dpd = np.sum(rx_A * self.coefs_am, axis=1)
+            rx_dpd = rx_dpd * (
+                np.median(np.abs(tx_choice)) / np.median(np.abs(rx_dpd)))
+
             ax.plot(np.abs(rx_dpd[:128]),
                     label="RX DPD Frame",
                     linestyle="-.",
                     linewidth=0.5)
+
+            tx_abs = np.abs(np.abs(txframe_aligned[:128]))
+            tx_A = np.vstack([tx_abs,
+                              tx_abs ** 3,
+                              tx_abs ** 5,
+                              tx_abs ** 7,
+                              tx_abs ** 9,
+                              ]).T
+            tx_dpd = np.sum(tx_A * new_coefs, axis=1)
+            tx_dpd_norm = tx_dpd * (
+                np.median(np.abs(tx_choice)) / np.median(np.abs(tx_dpd)))
+
             ax.plot(np.abs(tx_dpd_norm[:128]),
                     label="TX DPD Frame Norm",
                     linestyle="-.",
