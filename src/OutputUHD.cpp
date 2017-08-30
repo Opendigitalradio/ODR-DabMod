@@ -49,7 +49,7 @@
 
 using namespace std;
 
-// Maximum number of frames that can wait in uwd.frames
+// Maximum number of frames that can wait in frames
 static const size_t FRAMES_MAX_SIZE = 8;
 
 typedef std::complex<float> complexf;
@@ -158,16 +158,13 @@ OutputUHD::OutputUHD(
     myConf(config),
     // Since we don't know the buffer size, we cannot initialise
     // the buffers at object initialisation.
-    first_run(true),
-    gps_fix_verified(false),
-    worker(&uwd),
-    myDelayBuf(0)
+    myDelayBuf(0),
+    running(false)
 {
     myConf.muting = true;     // is remote-controllable, and reset by the GPS fix check
     myConf.staticDelayUs = 0; // is remote-controllable
 
     // Variables needed for GPS fix check
-    num_checks_without_gps_fix = 1;
     first_gps_fix_check.tv_sec = 0;
     last_gps_fix_check.tv_sec = 0;
     time_last_frame.tv_sec = 0;
@@ -196,25 +193,29 @@ OutputUHD::OutputUHD(
     /* register the parameters that can be remote controlled */
     RC_ADD_PARAMETER(txgain, "UHD analog daughterboard TX gain");
     RC_ADD_PARAMETER(rxgain, "UHD analog daughterboard RX gain for DPD feedback");
-    RC_ADD_PARAMETER(freq,   "UHD transmission frequency");
+    RC_ADD_PARAMETER(freq, "UHD transmission frequency");
     RC_ADD_PARAMETER(muting, "Mute the output by stopping the transmitter");
     RC_ADD_PARAMETER(staticdelay, "Set static delay (uS) between 0 and 96000");
+    RC_ADD_PARAMETER(underruns, "Read-only counter of number of underruns");
+    RC_ADD_PARAMETER(latepackets, "Read-only counter of number of late packets");
+    RC_ADD_PARAMETER(frames, "Read-only counter of number of frames modulated");
 
     uhd::msg::register_handler(uhd_msg_handler);
 
     uhd::set_thread_priority_safe();
 
-    //create a usrp device
-    MDEBUG("OutputUHD:Creating the usrp device with: %s...\n",
+    etiLog.log(info, "OutputUHD:Creating the usrp device with: %s...",
             device.str().c_str());
 
     myUsrp = uhd::usrp::multi_usrp::make(device.str());
 
-    MDEBUG("OutputUHD:Using device: %s...\n", myUsrp->get_pp_string().c_str());
+    etiLog.log(info, "OutputUHD:Using device: %s...",
+            myUsrp->get_pp_string().c_str());
 
     if (myConf.masterClockRate != 0.0) {
         double master_clk_rate = myUsrp->get_master_clock_rate();
-        MDEBUG("OutputUHD:Checking master clock rate: %f...\n", master_clk_rate);
+        etiLog.log(debug, "OutputUHD:Checking master clock rate: %f...",
+                master_clk_rate);
 
         if (fabs(master_clk_rate - myConf.masterClockRate) >
                 (myConf.masterClockRate * 1e-6)) {
@@ -237,20 +238,16 @@ OutputUHD::OutputUHD(
                 uhd::usrp::multi_usrp::ALL_MBOARDS);
     }
 
-    std::cerr << "UHD clock source is " <<
-        myUsrp->get_clock_source(0) << std::endl;
+    etiLog.level(debug) << "UHD clock source is " << myUsrp->get_clock_source(0);
 
-    std::cerr << "UHD time source is " <<
-        myUsrp->get_time_source(0) << std::endl;
+    etiLog.level(debug) << "UHD time source is " << myUsrp->get_time_source(0);
 
-    //set the tx sample rate
-    MDEBUG("OutputUHD:Setting rate to %d...\n", myConf.sampleRate);
     myUsrp->set_tx_rate(myConf.sampleRate);
-    MDEBUG("OutputUHD:Actual TX Rate: %f sps...\n", myUsrp->get_tx_rate());
+    etiLog.log(debug, "OutputUHD:Set rate to %d. Actual TX Rate: %f sps...",
+            myConf.sampleRate, myUsrp->get_tx_rate());
 
     if (fabs(myUsrp->get_tx_rate() / myConf.sampleRate) >
              myConf.sampleRate * 1e-6) {
-        MDEBUG("OutputUHD: Cannot set sample\n");
         throw std::runtime_error("Cannot set USRP sample rate. Aborted.");
     }
 
@@ -264,52 +261,71 @@ OutputUHD::OutputUHD(
         "OutputUHD:Actual RX frequency: " << myUsrp->get_tx_freq();
 
     myUsrp->set_tx_gain(myConf.txgain);
-    MDEBUG("OutputUHD:Actual TX Gain: %f ...\n", myUsrp->get_tx_gain());
+    etiLog.log(debug, "OutputUHD:Actual TX Gain: %f", myUsrp->get_tx_gain());
 
-    MDEBUG("OutputUHD:Mute on missing timestamps: %s ...\n",
+    etiLog.log(debug, "OutputUHD:Mute on missing timestamps: %s",
             myConf.muteNoTimestamps ? "enabled" : "disabled");
 
     // preparing output thread worker data
-    uwd.myUsrp = myUsrp;
-
-    uwd.sampleRate = myConf.sampleRate;
-    uwd.sourceContainsTimestamp = false;
-    uwd.muteNoTimestamps = myConf.muteNoTimestamps;
-    uwd.refclk_lock_loss_behaviour = myConf.refclk_lock_loss_behaviour;
-    uwd.gpsdo_is_ettus = false;
-
-    if (myConf.refclk_src == "internal") {
-        uwd.check_refclk_loss = false;
-        uwd.check_gpsfix = false;
-    }
-    else if (myConf.refclk_src == "gpsdo") {
-        uwd.check_refclk_loss = true;
-        uwd.check_gpsfix = (myConf.maxGPSHoldoverTime != 0);
-    }
-    else if (myConf.refclk_src == "gpsdo-ettus") {
-        uwd.check_refclk_loss = true;
-        uwd.check_gpsfix = (myConf.maxGPSHoldoverTime != 0);
-        uwd.gpsdo_is_ettus = true;
-    }
-    else {
-        uwd.check_refclk_loss = true;
-        uwd.check_gpsfix = false;
-    }
+    sourceContainsTimestamp = false;
 
     SetDelayBuffer(myConf.dabMode);
 
     myUsrp->set_rx_rate(myConf.sampleRate);
-    MDEBUG("OutputUHD:Actual RX Rate: %f sps...\n", myUsrp->get_rx_rate());
+    etiLog.log(debug, "OutputUHD:Actual RX Rate: %f sps.", myUsrp->get_rx_rate());
 
     myUsrp->set_rx_antenna("RX2");
-    MDEBUG("OutputUHD:Set RX Antenna: %s ...\n", myUsrp->get_rx_antenna().c_str());
+    etiLog.log(debug, "OutputUHD:Set RX Antenna: %s",
+            myUsrp->get_rx_antenna().c_str());
 
     myUsrp->set_rx_gain(myConf.rxgain);
-    MDEBUG("OutputUHD:Actual RX Gain: %f ...\n", myUsrp->get_rx_gain());
+    etiLog.log(debug, "OutputUHD:Actual RX Gain: %f", myUsrp->get_rx_gain());
 
     uhdFeedback.setup(myUsrp, myConf.dpdFeedbackServerPort, myConf.sampleRate);
 
     MDEBUG("OutputUHD:UHD ready.\n");
+}
+
+bool OutputUHD::refclk_loss_needs_check() const
+{
+    if (suppress_refclk_loss_check) {
+        return false;
+    }
+    return myConf.refclk_src != "internal";
+}
+
+bool OutputUHD::gpsfix_needs_check() const
+{
+    if (myConf.refclk_src == "internal") {
+        return false;
+    }
+    else if (myConf.refclk_src == "gpsdo") {
+        return (myConf.maxGPSHoldoverTime != 0);
+    }
+    else if (myConf.refclk_src == "gpsdo-ettus") {
+        return (myConf.maxGPSHoldoverTime != 0);
+    }
+    else {
+        return false;
+    }
+}
+
+bool OutputUHD::gpsdo_is_ettus() const
+{
+    return (myConf.refclk_src == "gpsdo-ettus");
+}
+
+OutputUHD::~OutputUHD()
+{
+    stop_threads();
+}
+
+void OutputUHD::stop_threads()
+{
+    running.store(false);
+    uhd_thread.interrupt();
+    uhd_thread.join();
+    async_rx_thread.join();
 }
 
 
@@ -346,10 +362,8 @@ void OutputUHD::SetDelayBuffer(unsigned int dabMode)
 
 int OutputUHD::process(Buffer* dataIn)
 {
-    uwd.muting = myConf.muting;
-
     if (not gps_fix_verified) {
-        if (uwd.check_gpsfix) {
+        if (gpsfix_needs_check()) {
             initial_gps_check();
 
             if (num_checks_without_gps_fix == 0) {
@@ -374,7 +388,10 @@ int OutputUHD::process(Buffer* dataIn)
                 SetDelayBuffer(myEtiSource->getMode());
             }
 
-            worker.start(&uwd);
+            running.store(true);
+            uhd_thread = boost::thread(&OutputUHD::workerthread, this);
+            async_rx_thread = boost::thread(
+                    &OutputUHD::print_async_thread, this);
 
             lastLen = dataIn->getLength();
             first_run = false;
@@ -389,16 +406,15 @@ int OutputUHD::process(Buffer* dataIn)
             throw std::runtime_error("Non-constant input length!");
         }
 
-        uwd.sourceContainsTimestamp = myConf.enableSync &&
+        sourceContainsTimestamp = myConf.enableSync and
             myEtiSource->sourceContainsTimestamp();
 
-
-        if (uwd.check_gpsfix) {
+        if (gpsfix_needs_check()) {
             try {
                 check_gps();
             }
             catch (std::runtime_error& e) {
-                uwd.running = false;
+                running.store(false);
                 etiLog.level(error) << e.what();
             }
         }
@@ -429,12 +445,13 @@ int OutputUHD::process(Buffer* dataIn)
 
         myEtiSource->calculateTimestamp(frame.ts);
 
-        if (!uwd.running) {
-            worker.stop();
+        if (not running.load()) {
+            uhd_thread.interrupt();
+            uhd_thread.join();
+            async_rx_thread.join();
             first_run = true;
 
-            etiLog.level(error) <<
-                "OutputUHD: Error, UHD worker failed";
+            etiLog.level(error) << "OutputUHD: Error, UHD worker failed";
             throw std::runtime_error("UHD worker failed");
         }
 
@@ -445,7 +462,7 @@ int OutputUHD::process(Buffer* dataIn)
         else {
             uhdFeedback.set_tx_frame(frame.buf, frame.ts);
 
-            size_t num_frames = uwd.frames.push_wait_if_full(frame,
+            size_t num_frames = frames.push_wait_if_full(frame,
                     FRAMES_MAX_SIZE);
             etiLog.log(trace, "UHD,push %zu", num_frames);
         }
@@ -457,7 +474,7 @@ int OutputUHD::process(Buffer* dataIn)
 
 void OutputUHD::set_usrp_time()
 {
-    if (myConf.enableSync && (myConf.pps_src == "none")) {
+    if (myConf.enableSync and (myConf.pps_src == "none")) {
         etiLog.level(warn) <<
             "OutputUHD: WARNING:"
             " you are using synchronous transmission without PPS input!";
@@ -574,7 +591,7 @@ void OutputUHD::check_gps()
 
     // Divide interval by two because we alternate between
     // launch and check
-    if (uwd.check_gpsfix and
+    if (gpsfix_needs_check() and
             last_gps_fix_check.tv_sec + gps_fix_check_interval/2.0 <
             time_now.tv_sec) {
         last_gps_fix_check = time_now;
@@ -615,7 +632,7 @@ void OutputUHD::check_gps()
         else {
             // Checking the sensor here takes too much
             // time, it has to be done in a separate thread.
-            if (uwd.gpsdo_is_ettus) {
+            if (gpsdo_is_ettus()) {
                 gps_fix_pt = boost::packaged_task<bool>(
                         boost::bind(check_gps_locked, myUsrp) );
             }
@@ -630,9 +647,7 @@ void OutputUHD::check_gps()
     }
 }
 
-//============================ UHD Worker ========================
-
-void UHDWorker::process_errhandler()
+void OutputUHD::workerthread()
 {
     // Set thread priority to realtime
     if (int ret = set_realtime_prio(1)) {
@@ -641,17 +656,10 @@ void UHDWorker::process_errhandler()
 
     set_thread_name("uhdworker");
 
-    process();
-    uwd->running = false;
-    etiLog.level(warn) << "UHD worker terminated";
-}
-
-void UHDWorker::process()
-{
     last_tx_time_initialised = false;
 
     uhd::stream_args_t stream_args("fc32"); //complex floats
-    myTxStream = uwd->myUsrp->get_tx_stream(stream_args);
+    myTxStream = myUsrp->get_tx_stream(stream_args);
 
     md.start_of_burst = false;
     md.end_of_burst   = false;
@@ -659,21 +667,22 @@ void UHDWorker::process()
     num_underflows   = 0;
     num_late_packets = 0;
 
-    int last_num_underflows = 0;
+    size_t last_num_underflows = 0;
     size_t pop_prebuffering = FRAMES_MAX_SIZE;
 
-    while (uwd->running) {
+    while (running.load()) {
         md.has_time_spec  = false;
         md.time_spec      = uhd::time_spec_t(0.0);
 
         struct UHDWorkerFrameData frame;
         etiLog.log(trace, "UHD,wait");
-        uwd->frames.wait_and_pop(frame, pop_prebuffering);
+        frames.wait_and_pop(frame, pop_prebuffering);
         etiLog.log(trace, "UHD,pop");
 
         handle_frame(&frame);
+        num_frames_modulated++;
 
-        /* Ensure we fill uwd->frames after every underrun and
+        /* Ensure we fill frames after every underrun and
          * at startup to reduce underrun likelihood. */
         if (last_num_underflows < num_underflows) {
             pop_prebuffering = FRAMES_MAX_SIZE;
@@ -683,38 +692,38 @@ void UHDWorker::process()
         }
         last_num_underflows = num_underflows;
     }
+    running.store(false);
+    etiLog.level(warn) << "UHD worker terminated";
 }
 
-void UHDWorker::handle_frame(const struct UHDWorkerFrameData *frame)
+void OutputUHD::handle_frame(const struct UHDWorkerFrameData *frame)
 {
     // Transmit timeout
     static const double tx_timeout = 20.0;
 
     // Check for ref_lock
-    if (uwd->check_refclk_loss) {
+    if (refclk_loss_needs_check()) {
         try {
-            // TODO: Is this check specific to the B100 and USRP2 ?
-            if (! uwd->myUsrp->get_mboard_sensor("ref_locked", 0).to_bool()) {
+            if (not myUsrp->get_mboard_sensor("ref_locked", 0).to_bool()) {
                 etiLog.log(alert,
                         "OutputUHD: External reference clock lock lost !");
-                if (uwd->refclk_lock_loss_behaviour == CRASH) {
+                if (myConf.refclk_lock_loss_behaviour == CRASH) {
                     throw std::runtime_error(
                             "OutputUHD: External reference clock lock lost.");
                 }
             }
         }
         catch (uhd::lookup_error &e) {
-            uwd->check_refclk_loss = false;
-            etiLog.log(warn,
-                    "OutputUHD: This USRP does not have mboard sensor for ext clock loss."
-                    " Check disabled.");
+            suppress_refclk_loss_check = true;
+            etiLog.log(warn, "OutputUHD: This USRP does not have mboard "
+                    "sensor for ext clock loss. Check disabled.");
         }
     }
 
-    double usrp_time = uwd->myUsrp->get_time_now().get_real_secs();
+    double usrp_time = myUsrp->get_time_now().get_real_secs();
     bool timestamp_discontinuity = false;
 
-    if (uwd->sourceContainsTimestamp) {
+    if (sourceContainsTimestamp) {
         // Tx time from MNSC and TIST
         uint32_t tx_second = frame->ts.timestamp_sec;
         uint32_t tx_pps    = frame->ts.timestamp_pps;
@@ -734,7 +743,7 @@ void UHDWorker::handle_frame(const struct UHDWorkerFrameData *frame)
         if (last_tx_time_initialised) {
             const size_t sizeIn = frame->buf.size() / sizeof(complexf);
             uint64_t increment = (uint64_t)sizeIn * 16384000ul /
-                                 (uint64_t)uwd->sampleRate;
+                                 (uint64_t)myConf.sampleRate;
                                   // samps  * ticks/s  / (samps/s)
                                   // (samps * ticks * s) / (s * samps)
                                   // ticks
@@ -793,11 +802,10 @@ void UHDWorker::handle_frame(const struct UHDWorkerFrameData *frame)
             throw std::runtime_error("Timestamp error. Aborted.");
         }
     }
-    else { // !uwd->sourceContainsTimestamp
-        if (uwd->muting || uwd->muteNoTimestamps) {
-            /* There was some error decoding the timestamp
-            */
-            if (uwd->muting) {
+    else { // !sourceContainsTimestamp
+        if (myConf.muting or myConf.muteNoTimestamps) {
+            /* There was some error decoding the timestamp */
+            if (myConf.muting) {
                 etiLog.log(info,
                         "OutputUHD: Muting sample %d requested\n",
                         frame->ts.fct);
@@ -815,7 +823,7 @@ void UHDWorker::handle_frame(const struct UHDWorkerFrameData *frame)
     tx_frame(frame, timestamp_discontinuity);
 }
 
-void UHDWorker::tx_frame(const struct UHDWorkerFrameData *frame, bool ts_update)
+void OutputUHD::tx_frame(const struct UHDWorkerFrameData *frame, bool ts_update)
 {
     const double tx_timeout = 20.0;
     const size_t sizeIn = frame->buf.size() / sizeof(complexf);
@@ -823,7 +831,7 @@ void UHDWorker::tx_frame(const struct UHDWorkerFrameData *frame, bool ts_update)
 
     size_t usrp_max_num_samps = myTxStream->get_max_num_samps();
     size_t num_acc_samps = 0; //number of accumulated samples
-    while (uwd->running && !uwd->muting && (num_acc_samps < sizeIn)) {
+    while (running.load() and (not myConf.muting) and (num_acc_samps < sizeIn)) {
         size_t samps_to_send = std::min(sizeIn - num_acc_samps, usrp_max_num_samps);
 
         uhd::tx_metadata_t md_tx = md;
@@ -831,8 +839,8 @@ void UHDWorker::tx_frame(const struct UHDWorkerFrameData *frame, bool ts_update)
         //ensure the the last packet has EOB set if the timestamps has been
         //refreshed and need to be reconsidered.
         md_tx.end_of_burst = (
-                uwd->sourceContainsTimestamp &&
-                (frame->ts.timestamp_refresh or ts_update) &&
+                sourceContainsTimestamp and
+                (frame->ts.timestamp_refresh or ts_update) and
                 samps_to_send <= usrp_max_num_samps );
 
 
@@ -845,21 +853,21 @@ void UHDWorker::tx_frame(const struct UHDWorkerFrameData *frame, bool ts_update)
         num_acc_samps += num_tx_samps;
 
         md_tx.time_spec = md.time_spec +
-            uhd::time_spec_t(0, num_tx_samps/uwd->sampleRate);
+            uhd::time_spec_t(0, num_tx_samps/myConf.sampleRate);
 
         if (num_tx_samps == 0) {
             etiLog.log(warn,
-                    "UHDWorker::process() unable to write to device, skipping frame!\n");
+                    "OutputUHD::workerthread() unable to write to device, skipping frame!\n");
             break;
         }
     }
 }
 
-void UHDWorker::print_async_metadata()
+void OutputUHD::print_async_thread()
 {
-    while (uwd->running) {
+    while (running.load()) {
         uhd::async_metadata_t async_md;
-        if (uwd->myUsrp->get_device()->recv_async_msg(async_md, 1)) {
+        if (myUsrp->get_device()->recv_async_msg(async_md, 1)) {
             const char* uhd_async_message = "";
             bool failure = false;
             switch (async_md.event_code) {
@@ -903,17 +911,19 @@ void UHDWorker::print_async_metadata()
         auto time_now = std::chrono::steady_clock::now();
         if (last_print_time + std::chrono::seconds(1) < time_now) {
             const double usrp_time =
-                uwd->myUsrp->get_time_now().get_real_secs();
+                myUsrp->get_time_now().get_real_secs();
 
-            if (num_underflows or num_late_packets) {
+            if ( (num_underflows > num_underflows_previous) or
+                 (num_late_packets > num_late_packets_previous)) {
                 etiLog.log(info,
                         "OutputUHD status (usrp time: %f): "
                         "%d underruns and %d late packets since last status.\n",
                         usrp_time,
                         num_underflows, num_late_packets);
             }
-            num_underflows = 0;
-            num_late_packets = 0;
+
+            num_underflows_previous = num_underflows;
+            num_late_packets_previous = num_late_packets;
 
             last_print_time = time_now;
         }
@@ -923,7 +933,6 @@ void UHDWorker::print_async_metadata()
 // =======================================
 // Remote Control for UHD
 // =======================================
-
 void OutputUHD::set_parameter(const string& parameter, const string& value)
 {
     stringstream ss(value);
@@ -964,6 +973,11 @@ void OutputUHD::set_parameter(const string& parameter, const string& value)
                 myConf.staticDelayUs = newStaticDelayUs;
         }
     }
+    else if (parameter == "underruns" or
+            parameter == "latepackets" or
+            parameter == "frames") {
+        throw ParameterError("Parameter " + parameter + " is read-only.");
+    }
     else {
         stringstream ss;
         ss << "Parameter '" << parameter
@@ -989,6 +1003,15 @@ const string OutputUHD::get_parameter(const string& parameter) const
     }
     else if (parameter == "staticdelay") {
         ss << myConf.staticDelayUs;
+    }
+    else if (parameter == "underruns") {
+        ss << num_underflows;
+    }
+    else if (parameter == "latepackets") {
+        ss << num_late_packets;
+    }
+    else if (parameter == "frames") {
+        ss << num_frames_modulated;
     }
     else {
         ss << "Parameter '" << parameter <<

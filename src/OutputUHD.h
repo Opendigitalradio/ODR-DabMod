@@ -12,8 +12,8 @@ DESCRIPTION:
    library. This version is multi-threaded. A separate thread sends the data to
    the device.
 
-   Data between the modulator and the UHD thread is exchanged by swapping
-   buffers at a synchronisation barrier.
+   Data between the modulator and the UHD thread are exchanged through a
+   threadsafe queue.
 */
 
 /*
@@ -49,6 +49,7 @@ DESCRIPTION:
 #include <chrono>
 #include <memory>
 #include <string>
+#include <atomic>
 
 #include "Log.h"
 #include "ModPlugin.h"
@@ -61,8 +62,8 @@ DESCRIPTION:
 #include <stdio.h>
 #include <sys/types.h>
 
-#define MDEBUG(fmt, args...) fprintf (LOG, fmt , ## args) 
-//#define MDEBUG(fmt, args...)
+//#define MDEBUG(fmt, args...) fprintf(LOG, fmt , ## args)
+#define MDEBUG(fmt, args...)
 
 // If the timestamp is further in the future than
 // 100 seconds, abort
@@ -87,93 +88,6 @@ struct UHDWorkerFrameData {
 
 enum refclk_lock_loss_behaviour_t { CRASH, IGNORE };
 
-struct UHDWorkerData {
-    bool running;
-
-    uhd::usrp::multi_usrp::sptr myUsrp;
-    unsigned sampleRate;
-
-    bool sourceContainsTimestamp;
-
-    // When working with timestamps, mute the frames that
-    // do not have a timestamp
-    bool muteNoTimestamps;
-
-    ThreadsafeQueue<UHDWorkerFrameData> frames;
-
-    // If we want to verify loss of refclk
-    bool check_refclk_loss;
-
-    // If we want to check for the gps_timelock sensor
-    bool check_gpsfix;
-
-    bool gpsdo_is_ettus; // Set to false in case the ODR LEA-M8F board is used
-
-    // muting set by remote control
-    bool muting;
-
-    // What to do when the reference clock PLL loses lock
-    refclk_lock_loss_behaviour_t refclk_lock_loss_behaviour;
-};
-
-
-class UHDWorker {
-    public:
-        UHDWorker(struct UHDWorkerData *uhdworkerdata) {
-            uwd = uhdworkerdata;
-        }
-
-        void start(struct UHDWorkerData *uhdworkerdata) {
-            uwd->running = true;
-            uhd_thread = boost::thread(&UHDWorker::process_errhandler, this);
-            async_rx_thread = boost::thread(
-                    &UHDWorker::print_async_metadata, this);
-        }
-
-        void stop() {
-            if (uwd) {
-                uwd->running = false;
-            }
-            uhd_thread.interrupt();
-            uhd_thread.join();
-            async_rx_thread.join();
-        }
-
-        ~UHDWorker() {
-            stop();
-        }
-
-        UHDWorker(const UHDWorker& other) = delete;
-        UHDWorker& operator=(const UHDWorker& other) = delete;
-
-    private:
-        // Asynchronous message statistics
-        int num_underflows;
-        int num_late_packets;
-
-        uhd::tx_metadata_t md;
-        bool     last_tx_time_initialised;
-        uint32_t last_tx_second;
-        uint32_t last_tx_pps;
-
-        // Used to print statistics once a second
-        std::chrono::steady_clock::time_point last_print_time;
-
-        void print_async_metadata(void);
-
-        void handle_frame(const struct UHDWorkerFrameData *frame);
-        void tx_frame(const struct UHDWorkerFrameData *frame, bool ts_update);
-
-        struct UHDWorkerData *uwd;
-        boost::thread uhd_thread;
-        boost::thread async_rx_thread;
-
-        uhd::tx_streamer::sptr myTxStream;
-
-        void process();
-        void process_errhandler();
-};
-
 /* This structure is used as initial configuration for OutputUHD.
  * It must also contain all remote-controllable settings, otherwise
  * they will get lost on a modulator restart. */
@@ -191,6 +105,9 @@ struct OutputUHDConfig {
     double txgain = 0.0;
     double rxgain = 0.0;
     bool enableSync = false;
+
+    // When working with timestamps, mute the frames that
+    // do not have a timestamp
     bool muteNoTimestamps = false;
     unsigned dabMode = 0;
     unsigned maxGPSHoldoverTime = 0;
@@ -221,6 +138,9 @@ struct OutputUHDConfig {
 class OutputUHD: public ModOutput, public RemoteControllable {
     public:
         OutputUHD(OutputUHDConfig& config);
+        OutputUHD(const OutputUHD& other) = delete;
+        OutputUHD operator=(const OutputUHD& other) = delete;
+        ~OutputUHD();
 
         int process(Buffer* dataIn);
 
@@ -239,14 +159,12 @@ class OutputUHD: public ModOutput, public RemoteControllable {
                 const std::string& parameter) const;
 
     protected:
-        EtiSource *myEtiSource;
+        EtiSource *myEtiSource = nullptr;
         OutputUHDConfig& myConf;
         uhd::usrp::multi_usrp::sptr myUsrp;
         std::shared_ptr<boost::barrier> mySyncBarrier;
-        bool first_run;
-        bool gps_fix_verified;
-        struct UHDWorkerData uwd;
-        UHDWorker worker;
+        bool first_run = true;
+        bool gps_fix_verified = false;
         OutputUHDFeedback uhdFeedback;
 
     private:
@@ -258,10 +176,10 @@ class OutputUHD: public ModOutput, public RemoteControllable {
         // The remote-controllable static delay is in the OutputUHDConfig
         int myTFDurationMs; // TF duration in milliseconds
         std::vector<complexf> myDelayBuf;
-        size_t lastLen;
+        size_t lastLen = 0;
 
         // GPS Fix check variables
-        int num_checks_without_gps_fix;
+        int num_checks_without_gps_fix = 1;
         struct timespec first_gps_fix_check;
         struct timespec last_gps_fix_check;
         struct timespec time_last_frame;
@@ -274,6 +192,52 @@ class OutputUHD: public ModOutput, public RemoteControllable {
 
         // Interval for checking the GPS at runtime
         static constexpr double gps_fix_check_interval = 10.0; // seconds
+
+        // Asynchronous message statistics
+        size_t num_underflows = 0;
+        size_t num_late_packets = 0;
+        size_t num_underflows_previous = 0;
+        size_t num_late_packets_previous = 0;
+
+        size_t num_frames_modulated = 0;
+
+        uhd::tx_metadata_t md;
+        bool     last_tx_time_initialised = false;
+        uint32_t last_tx_second = 0;
+        uint32_t last_tx_pps = 0;
+
+        // Used to print statistics once a second
+        std::chrono::steady_clock::time_point last_print_time;
+
+        bool sourceContainsTimestamp = false;
+
+        ThreadsafeQueue<UHDWorkerFrameData> frames;
+
+        // Returns true if we want to verify loss of refclk
+        bool refclk_loss_needs_check(void) const;
+        bool suppress_refclk_loss_check = false;
+
+        // Returns true if we want to check for the gps_timelock sensor
+        bool gpsfix_needs_check(void) const;
+
+        // Return true if the gpsdo is from ettus, false if it is the ODR
+        // LEA-M8F board is used
+        bool gpsdo_is_ettus(void) const;
+
+        std::atomic<bool> running;
+        boost::thread uhd_thread;
+        boost::thread async_rx_thread;
+        void stop_threads(void);
+
+        uhd::tx_streamer::sptr myTxStream;
+
+        // The worker thread decouples the modulator from UHD
+        void workerthread();
+        void handle_frame(const struct UHDWorkerFrameData *frame);
+        void tx_frame(const struct UHDWorkerFrameData *frame, bool ts_update);
+
+        // Poll asynchronous metadata from UHD
+        void print_async_thread(void);
 
         void check_gps();
 
