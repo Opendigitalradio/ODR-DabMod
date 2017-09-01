@@ -1,4 +1,9 @@
 # -*- coding: utf-8 -*-
+#
+# DPD Calculation Engine, utilities for working with DAB signals.
+#
+# http://www.opendigitalradio.org
+# Licence: The MIT License, see notice at the end of this file
 
 import datetime
 import os

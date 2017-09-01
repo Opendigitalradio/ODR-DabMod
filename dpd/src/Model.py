@@ -1,4 +1,9 @@
 # -*- coding: utf-8 -*-
+#
+# DPD Calculation Engine, model implementation.
+#
+# http://www.opendigitalradio.org
+# Licence: The MIT License, see notice at the end of this file
 
 import datetime
 import os
