@@ -10,7 +10,6 @@ import os
 import logging
 logging_path = os.path.dirname(logging.getLoggerClass().root.handlers[0].baseFilename)
 
-from pynverse import inversefunc
 import numpy as np
 import matplotlib
 matplotlib.use('agg')
