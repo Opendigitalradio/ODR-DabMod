@@ -118,9 +118,15 @@ class Dab_Util:
             fig.savefig(fig_path)
             fig.clf()
 
-        logging.debug("Sig1_orig: %d %s, Sig2_orig: %d %s" % (len(sig_tx), sig_tx.dtype, len(sig_rx), sig_rx.dtype))
         off_meas = self.lag_upsampling(sig_rx, sig_tx, n_up=1)
         off = int(abs(off_meas))
+
+        logging.debug("sig_tx_orig: {} {}, sig_rx_orig: {} {}, offset {}".format(
+                       len(sig_tx),
+                       sig_tx.dtype,
+                       len(sig_rx),
+                       sig_rx.dtype,
+                       off_meas))
 
         if off_meas > 0:
             sig_tx = sig_tx[:-off]
