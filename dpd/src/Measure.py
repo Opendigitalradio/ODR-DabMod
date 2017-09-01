@@ -12,6 +12,11 @@ import struct
 import numpy as np
 import logging
 import src.Dab_Util as DU
+import os
+import datetime
+
+import logging
+logging_path = os.path.dirname(logging.getLoggerClass().root.handlers[0].baseFilename)
 
 class Measure:
     """Collect Measurement from DabMod"""
@@ -98,7 +103,10 @@ class Measure:
         """
 
         txframe, tx_ts, rxframe, rx_ts = self.receive_tcp()
-        txframe_end = txframe[-100:]
+
+        if logging.getLogger().getEffectiveLevel() == logging.DEBUG:
+            dt = datetime.datetime.now().isoformat()
+            txframe.tofile(logging_path + "/txframe_" + dt + ".iq")
 
         # Normalize received signal with sent signal
         rx_median = np.median(np.abs(rxframe))
