@@ -23,6 +23,16 @@ logging.basicConfig(format='%(asctime)s - %(module)s - %(levelname)s - %(message
                     filemode='w',
                     level=logging.DEBUG)
 
+# also log up to INFO to console
+console = logging.StreamHandler()
+console.setLevel(logging.INFO)
+# set a format which is simpler for console use
+formatter = logging.Formatter('%(name)-12s: %(levelname)-8s %(message)s')
+# tell the handler to use this format
+console.setFormatter(formatter)
+# add the handler to the root logger
+logging.getLogger('').addHandler(console)
+
 import traceback
 import src.Measure as Measure
 import src.Model as Model
