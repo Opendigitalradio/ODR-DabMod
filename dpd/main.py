@@ -14,8 +14,9 @@ import datetime
 import os
 
 import logging
+
 dt = datetime.datetime.now().isoformat()
-logging_path = "/tmp/dpd_{}".format(dt).replace(".","_").replace(":","-")
+logging_path = "/tmp/dpd_{}".format(dt).replace(".", "_").replace(":", "-")
 os.makedirs(logging_path)
 logging.basicConfig(format='%(asctime)s - %(module)s - %(levelname)s - %(message)s',
                     datefmt='%Y-%m-%d %H:%M:%S',
@@ -38,21 +39,25 @@ import src.Measure as Measure
 import src.Model as Model
 import src.Adapt as Adapt
 import src.Agc as Agc
+import src.Symbol_align
+import src.const
+import src.MER
 import argparse
 
-parser = argparse.ArgumentParser(description="DPD Computation Engine for ODR-DabMod")
+parser = argparse.ArgumentParser(
+    description="DPD Computation Engine for ODR-DabMod")
 parser.add_argument('--port', default='50055',
-        help='port of DPD server to connect to (default: 50055)',
-        required=False)
+                    help='port of DPD server to connect to (default: 50055)',
+                    required=False)
 parser.add_argument('--rc-port', default='9400',
-        help='port of ODR-DabMod ZMQ Remote Control to connect to (default: 9400)',
-        required=False)
+                    help='port of ODR-DabMod ZMQ Remote Control to connect to (default: 9400)',
+                    required=False)
 parser.add_argument('--samplerate', default='8192000',
-        help='Sample rate',
-        required=False)
+                    help='Sample rate',
+                    required=False)
 parser.add_argument('--coefs', default='poly.coef',
-        help='File with DPD coefficients, which will be read by ODR-DabMod',
-        required=False)
+                    help='File with DPD coefficients, which will be read by ODR-DabMod',
+                    required=False)
 parser.add_argument('--txgain', default=65,
                     help='TX Gain',
                     required=False,
@@ -62,14 +67,14 @@ parser.add_argument('--rxgain', default=30,
                     required=False,
                     type=int)
 parser.add_argument('--samps', default='20480',
-        help='Number of samples to request from ODR-DabMod',
-        required=False)
+                    help='Number of samples to request from ODR-DabMod',
+                    required=False)
 parser.add_argument('-i', '--iterations', default='1',
-        help='Number of iterations to run',
-        required=False)
+                    help='Number of iterations to run',
+                    required=False)
 parser.add_argument('-l', '--load-poly',
-        help='Load existing polynomial',
-        action="store_true")
+                    help='Load existing polynomial',
+                    action="store_true")
 
 cli_args = parser.parse_args()
 
@@ -82,6 +87,10 @@ num_req = int(cli_args.samps)
 samplerate = int(cli_args.samplerate)
 num_iter = int(cli_args.iterations)
 
+SA = src.Symbol_align.Symbol_align(samplerate)
+MER = src.MER.MER(samplerate)
+c = src.const.const(samplerate)
+
 meas = Measure.Measure(samplerate, port, num_req)
 
 adapt = Adapt.Adapt(port_rc, coef_path)
@@ -92,6 +101,7 @@ else:
     model = Model.Model([1, 0, 0, 0, 0], [0, 0, 0, 0, 0])
 adapt.set_txgain(txgain)
 adapt.set_rxgain(rxgain)
+adapt.set_coefs(model.coefs_am, model.coefs_pm)
 
 tx_gain = adapt.get_txgain()
 rx_gain = adapt.get_rxgain()
@@ -112,6 +122,12 @@ for i in range(num_iter):
         logging.debug("tx_ts {}, rx_ts {}".format(tx_ts, rx_ts))
         coefs_am, coefs_pm = model.get_next_coefs(txframe_aligned, rxframe_aligned)
         adapt.set_coefs(coefs_am, coefs_pm)
+
+        off = SA.calc_offset(txframe_aligned)
+        tx_mer = MER.calc_mer(txframe_aligned[off:off + c.T_U])
+        rx_mer = MER.calc_mer(rxframe_aligned[off:off + c.T_U])
+        logging.info("MER with lag in it. {}: TX {}, RX {}".
+                     format(i, tx_mer, rx_mer))
     except Exception as e:
         logging.warning("Iteration {} failed.".format(i))
         logging.warning(traceback.format_exc())
