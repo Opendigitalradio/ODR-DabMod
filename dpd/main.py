@@ -66,7 +66,7 @@ parser.add_argument('--rxgain', default=30,
                     help='TX Gain',
                     required=False,
                     type=int)
-parser.add_argument('--samps', default='20480',
+parser.add_argument('--samps', default='81920',
                     help='Number of samples to request from ODR-DabMod',
                     required=False)
 parser.add_argument('-i', '--iterations', default='1',
@@ -96,9 +96,9 @@ meas = Measure.Measure(samplerate, port, num_req)
 adapt = Adapt.Adapt(port_rc, coef_path)
 coefs_am, coefs_pm = adapt.get_coefs()
 if cli_args.load_poly:
-    model = Model.Model(coefs_am, coefs_pm)
+    model = Model.Model(coefs_am, coefs_pm, plot=True)
 else:
-    model = Model.Model([1, 0, 0, 0, 0], [0, 0, 0, 0, 0])
+    model = Model.Model([1, 0, 0, 0, 0], [0, 0, 0, 0, 0], plot=True)
 adapt.set_txgain(txgain)
 adapt.set_rxgain(rxgain)
 adapt.set_coefs(model.coefs_am, model.coefs_pm)
@@ -125,7 +125,7 @@ for i in range(num_iter):
 
         off = SA.calc_offset(txframe_aligned)
         tx_mer = MER.calc_mer(txframe_aligned[off:off + c.T_U])
-        rx_mer = MER.calc_mer(rxframe_aligned[off:off + c.T_U])
+        rx_mer = MER.calc_mer(rxframe_aligned[off:off + c.T_U], debug=True)
         logging.info("MER with lag in it. {}: TX {}, RX {}".
                      format(i, tx_mer, rx_mer))
     except Exception as e:

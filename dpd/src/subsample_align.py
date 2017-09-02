@@ -29,7 +29,7 @@ def gen_omega(length):
 
     return omega
 
-def subsample_align(sig, ref_sig):
+def subsample_align(sig, ref_sig, plot=False):
     """Do subsample alignment for sig relative to the reference signal
     ref_sig. The delay between the two must be less than sample
 
@@ -68,7 +68,7 @@ def subsample_align(sig, ref_sig):
     if optim_result.success:
         best_tau = optim_result.x
 
-        if 1:
+        if plot:
             corr = np.vectorize(correlate_for_delay)
             ixs = np.linspace(-1, 1, 100)
             taus = corr(ixs)

@@ -15,7 +15,7 @@ import sys
 import matplotlib.pyplot as plt
 
 
-def phase_align(sig, ref_sig):
+def phase_align(sig, ref_sig, plot=False):
     """Do phase alignment for sig relative to the reference signal
     ref_sig.
 
@@ -26,7 +26,7 @@ def phase_align(sig, ref_sig):
     real_diffs = np.cos(angle_diff)
     imag_diffs = np.sin(angle_diff)
 
-    if logging.getLogger().getEffectiveLevel() == logging.DEBUG:
+    if logging.getLogger().getEffectiveLevel() == logging.DEBUG and plot:
         dt = datetime.datetime.now().isoformat()
         fig_path = logging_path + "/" + dt + "_phase_align.pdf"
 
@@ -66,7 +66,7 @@ def phase_align(sig, ref_sig):
     ))
     sig = sig * np.exp(1j * -angle)
 
-    if logging.getLogger().getEffectiveLevel() == logging.DEBUG:
+    if logging.getLogger().getEffectiveLevel() == logging.DEBUG and plot:
         plt.subplot(515)
         plt.plot(np.angle(ref_sig[:128]), label="ref_sig")
         plt.plot(np.angle(sig[:128]), label="sig")

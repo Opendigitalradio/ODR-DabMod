@@ -75,8 +75,9 @@ class MER:
 
         spectrum = self._calc_spectrum(tx)
 
-        dt = datetime.datetime.now().isoformat()
-        fig_path = logging_path + "/" + dt + "_MER.pdf"
+        if debug:
+            dt = datetime.datetime.now().isoformat()
+            fig_path = logging_path + "/" + dt + "_MER.pdf"
 
         MERs = []
         for i, (x, y) in enumerate(self._split_in_carrier(

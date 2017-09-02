@@ -24,7 +24,7 @@ class Adapt:
     """
 
     def __init__(self, port, coef_path):
-        logging.info("Instantiate Adapt object")
+        logging.debug("Instantiate Adapt object")
         self.port = port
         self.coef_path = coef_path
         self.host = "localhost"

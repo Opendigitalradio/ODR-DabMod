@@ -23,13 +23,15 @@ class Dab_Util:
     """Collection of methods that can be applied to an array
      complex IQ samples of a DAB signal
      """
-    def __init__(self, sample_rate):
+    def __init__(self, sample_rate, plot=False):
         """
         :param sample_rate: sample rate [sample/sec] to use for calculations
         """
         self.sample_rate = sample_rate
         self.dab_bandwidth = 1536000 #Bandwidth of a dab signal
         self.frame_ms = 96           #Duration of a Dab frame
+
+        self.plot=plot
 
     def lag(self, sig_orig, sig_rec):
         """
@@ -41,7 +43,7 @@ class Dab_Util:
         off = sig_rec.shape[0]
         c = np.abs(signal.correlate(sig_orig, sig_rec))
 
-        if logging.getLogger().getEffectiveLevel() == logging.DEBUG:
+        if logging.getLogger().getEffectiveLevel() == logging.DEBUG and self.plot:
             dt = datetime.datetime.now().isoformat()
             corr_path = (logging_path + "/" + dt + "_tx_rx_corr.pdf")
             plt.plot(c, label="corr")
@@ -95,7 +97,7 @@ class Dab_Util:
         Returns an aligned version of sig_tx and sig_rx by cropping and subsample alignment
         """
 
-        if logging.getLogger().getEffectiveLevel() == logging.DEBUG:
+        if logging.getLogger().getEffectiveLevel() == logging.DEBUG and self.plot:
             dt = datetime.datetime.now().isoformat()
             fig_path = logging_path + "/" + dt + "_sync_raw.pdf"
 
@@ -139,7 +141,7 @@ class Dab_Util:
             sig_tx = sig_tx[:-1]
             sig_rx = sig_rx[:-1]
 
-        if logging.getLogger().getEffectiveLevel() == logging.DEBUG:
+        if logging.getLogger().getEffectiveLevel() == logging.DEBUG and self.plot:
             dt = datetime.datetime.now().isoformat()
             fig_path = logging_path + "/" + dt + "_sync_sample_aligned.pdf"
 

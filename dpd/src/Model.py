@@ -20,7 +20,7 @@ class Model:
     """Calculates new coefficients using the measurement and the old
     coefficients"""
 
-    def __init__(self, coefs_am, coefs_pm):
+    def __init__(self, coefs_am, coefs_pm, plot=False):
         self.coefs_am = coefs_am
         self.coefs_history = [coefs_am, ]
         self.mses = [0, ]
@@ -29,6 +29,8 @@ class Model:
         self.coefs_pm = coefs_pm
         self.coefs_pm_history = [coefs_pm, ]
         self.errs_phase = [0, ]
+
+        self.plot=plot
 
     def sample_uniformly(self, txframe_aligned, rxframe_aligned, n_bins=4):
         """This function returns tx and rx samples in a way
@@ -144,19 +146,19 @@ class Model:
         rx_range = rx_range[(rx_range_dpd > 0) & (rx_range_dpd < 2)]
         rx_range_dpd = rx_range_dpd[(rx_range_dpd > 0) & (rx_range_dpd < 2)]
 
-        if logging.getLogger().getEffectiveLevel() == logging.DEBUG:
-            logging.debug("txframe: min %f, max %f, median %f" %
-                          (np.min(np.abs(txframe_aligned)),
-                           np.max(np.abs(txframe_aligned)),
-                           np.median(np.abs(txframe_aligned))
-                           ))
+        logging.debug("txframe: min %f, max %f, median %f" %
+                      (np.min(np.abs(txframe_aligned)),
+                       np.max(np.abs(txframe_aligned)),
+                       np.median(np.abs(txframe_aligned))
+                       ))
 
-            logging.debug("rxframe: min %f, max %f, median %f" %
-                          (np.min(np.abs(rx_choice)),
-                           np.max(np.abs(rx_choice)),
-                           np.median(np.abs(rx_choice))
-                           ))
+        logging.debug("rxframe: min %f, max %f, median %f" %
+                      (np.min(np.abs(rx_choice)),
+                       np.max(np.abs(rx_choice)),
+                       np.median(np.abs(rx_choice))
+                       ))
 
+        if logging.getLogger().getEffectiveLevel() == logging.DEBUG and self.plot:
             dt = datetime.datetime.now().isoformat()
             fig_path = logging_path + "/" + dt + "_Model.pdf"
 
