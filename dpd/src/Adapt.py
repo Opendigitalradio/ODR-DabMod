@@ -60,7 +60,7 @@ class Adapt:
             The message string that will be sent to the receiver.
         """
         sock = self._connect()
-        logging.info("Send message: %s" % message)
+        logging.debug("Send message: %s" % message)
         msg_parts = message.split(" ")
         for i, part in enumerate(msg_parts):
             if i == len(msg_parts) - 1:
@@ -71,7 +71,7 @@ class Adapt:
             sock.send(part.encode(), flags=f)
 
         data = [el.decode() for el in sock.recv_multipart()]
-        logging.info("Received message: %s" % message)
+        logging.debug("Received message: %s" % message)
         return data
 
     def set_txgain(self, gain):
@@ -90,7 +90,7 @@ class Adapt:
     def get_txgain(self):
         """Get the txgain value in dB for the ODR-DabMod."""
         # TODO handle failure
-        return self.send_receive("get uhd txgain")
+        return int(self.send_receive("get uhd txgain")[0])
 
     def set_rxgain(self, gain):
         """Set a new rxgain for the ODR-DabMod.
@@ -108,7 +108,22 @@ class Adapt:
     def get_rxgain(self):
         """Get the rxgain value in dB for the ODR-DabMod."""
         # TODO handle failure
-        return self.send_receive("get uhd rxgain")
+        return int(self.send_receive("get uhd rxgain")[0])
+
+    def set_digital_gain(self, gain):
+        """Set a new rxgain for the ODR-DabMod.
+
+        Parameters
+        ----------
+        gain : int
+            new RX gain, in the same format as ODR-DabMod's config file
+        """
+        return self.send_receive("set gain digital %.5f" % gain)
+
+    def get_digital_gain(self):
+        """Get the rxgain value in dB for the ODR-DabMod."""
+        # TODO handle failure
+        return float(self.send_receive("get gain digital")[0])
 
     def _read_coef_file(self, path):
         """Load the coefficients from the file in the format given in the README,
