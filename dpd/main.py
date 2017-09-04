@@ -12,6 +12,7 @@ predistortion module of ODR-DabMod."""
 
 import datetime
 import os
+import time
 
 import logging
 
@@ -34,11 +35,13 @@ console.setFormatter(formatter)
 # add the handler to the root logger
 logging.getLogger('').addHandler(console)
 
+import numpy as np
 import traceback
 import src.Measure as Measure
 import src.Model as Model
 import src.Adapt as Adapt
 import src.Agc as Agc
+import src.TX_Agc as TX_Agc
 import src.Symbol_align
 import src.const
 import src.MER
@@ -66,6 +69,10 @@ parser.add_argument('--rxgain', default=30,
                     help='TX Gain',
                     required=False,
                     type=int)
+parser.add_argument('--digital_gain', default=1.0,
+                    help='Digital Gain',
+                    required=False,
+                    type=float)
 parser.add_argument('--samps', default='81920',
                     help='Number of samples to request from ODR-DabMod',
                     required=False)
@@ -81,6 +88,7 @@ cli_args = parser.parse_args()
 port = int(cli_args.port)
 port_rc = int(cli_args.rc_port)
 coef_path = cli_args.coefs
+digital_gain = cli_args.digital_gain
 txgain = cli_args.txgain
 rxgain = cli_args.rxgain
 num_req = int(cli_args.samps)
@@ -99,6 +107,7 @@ if cli_args.load_poly:
     model = Model.Model(coefs_am, coefs_pm, plot=True)
 else:
     model = Model.Model([1, 0, 0, 0, 0], [0, 0, 0, 0, 0], plot=True)
+adapt.set_txgain(digital_gain)
 adapt.set_txgain(txgain)
 adapt.set_rxgain(rxgain)
 adapt.set_coefs(model.coefs_am, model.coefs_pm)
@@ -112,6 +121,8 @@ logging.info(
     )
 )
 
+tx_agc = TX_Agc.TX_Agc(adapt)
+
 # Automatic Gain Control
 agc = Agc.Agc(meas, adapt)
 agc.run()
@@ -120,6 +131,10 @@ for i in range(num_iter):
     try:
         txframe_aligned, tx_ts, rxframe_aligned, rx_ts, rx_median = meas.get_samples()
         logging.debug("tx_ts {}, rx_ts {}".format(tx_ts, rx_ts))
+        assert tx_ts - rx_ts < 1e-5, "Time Stamps do not match."
+        if tx_agc.adapt_if_necessary(txframe_aligned):
+            continue
+
         coefs_am, coefs_pm = model.get_next_coefs(txframe_aligned, rxframe_aligned)
         adapt.set_coefs(coefs_am, coefs_pm)
 
