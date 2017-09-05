@@ -90,7 +90,7 @@ class Adapt:
     def get_txgain(self):
         """Get the txgain value in dB for the ODR-DabMod."""
         # TODO handle failure
-        return int(self.send_receive("get uhd txgain")[0])
+        return float(self.send_receive("get uhd txgain")[0])
 
     def set_rxgain(self, gain):
         """Set a new rxgain for the ODR-DabMod.

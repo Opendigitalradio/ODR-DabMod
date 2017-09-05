@@ -61,7 +61,7 @@ parser.add_argument('--samplerate', default='8192000',
 parser.add_argument('--coefs', default='poly.coef',
                     help='File with DPD coefficients, which will be read by ODR-DabMod',
                     required=False)
-parser.add_argument('--txgain', default=65,
+parser.add_argument('--txgain', default=60,
                     help='TX Gain',
                     required=False,
                     type=int)
@@ -69,7 +69,7 @@ parser.add_argument('--rxgain', default=30,
                     help='TX Gain',
                     required=False,
                     type=int)
-parser.add_argument('--digital_gain', default=1.0,
+parser.add_argument('--digital_gain', default=0.2,
                     help='Digital Gain',
                     required=False,
                     type=float)
@@ -106,7 +106,7 @@ coefs_am, coefs_pm = adapt.get_coefs()
 if cli_args.load_poly:
     model = Model.Model(coefs_am, coefs_pm, plot=True)
 else:
-    model = Model.Model([1, 0, 0, 0, 0], [0, 0, 0, 0, 0], plot=True)
+    model = Model.Model([1.0, 0, 0, 0, 0], [0, 0, 0, 0, 0], plot=True)
 adapt.set_txgain(digital_gain)
 adapt.set_txgain(txgain)
 adapt.set_rxgain(rxgain)
