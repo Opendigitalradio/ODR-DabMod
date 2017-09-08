@@ -11,20 +11,23 @@ import logging
 logging_path = os.path.dirname(logging.getLoggerClass().root.handlers[0].baseFilename)
 
 import numpy as np
-import matplotlib
-matplotlib.use('agg')
 import matplotlib.pyplot as plt
-from sklearn.linear_model import Ridge
 
 class Model:
     """Calculates new coefficients using the measurement and the old
     coefficients"""
 
-    def __init__(self, coefs_am, coefs_pm, plot=False):
+    def __init__(self, c, SA, MER, coefs_am, coefs_pm, plot=False):
+        self.c = c
+        self.SA = SA
+        self.MER = MER
+
         self.coefs_am = coefs_am
         self.coefs_history = [coefs_am, ]
-        self.mses = [0, ]
-        self.errs = [0, ]
+        self.mses = []
+        self.errs = []
+        self.tx_mers = []
+        self.rx_mers = []
 
         self.coefs_pm = coefs_pm
         self.coefs_pm_history = [coefs_pm, ]
@@ -57,10 +60,10 @@ class Model:
     def amplitude_predistortion(self, sig):
         sig_abs = np.abs(sig)
         A_sig = np.vstack([np.ones(sig_abs.shape),
+                          sig_abs ** 1,
                           sig_abs ** 2,
+                          sig_abs ** 3,
                           sig_abs ** 4,
-                          sig_abs ** 6,
-                          sig_abs ** 8,
                           ]).T
         sig_dpd = sig * np.sum(A_sig * self.coefs_am, axis=1)
         return sig_dpd, A_sig
@@ -118,6 +121,13 @@ class Model:
             np.median(np.abs(rx_choice)),
             a_delta,
             new_coefs))
+
+        if logging.getLogger().getEffectiveLevel() == logging.DEBUG and self.plot:
+            off = self.SA.calc_offset(tx_dpd)
+            tx_mer = self.MER.calc_mer(tx_dpd[off:off + self.c.T_U])
+            rx_mer = self.MER.calc_mer(rx_received[off:off + self.c.T_U], debug=True)
+            self.tx_mers.append(tx_mer)
+            self.rx_mers.append(rx_mer)
 
         if logging.getLogger().getEffectiveLevel() == logging.DEBUG and self.plot:
             dt = datetime.datetime.now().isoformat()
@@ -182,15 +192,12 @@ class Model:
             ax.set_ylabel("Coefficient Value")
 
             ax = plt.subplot(2,3,5)
-            coefs_history = np.array(self.coefs_pm_history)
-            for idx, coef_hist in enumerate(coefs_history.T):
-                ax.plot(coef_hist,
-                        label="Coef {}".format(idx),
-                        linewidth=0.5)
+            ax.plot(self.tx_mers, label="TX MER")
+            ax.plot(self.rx_mers, label="RX MER")
             ax.legend(loc=4)
-            ax.set_title("AM/PM Coefficient History")
+            ax.set_title("MER History")
             ax.set_xlabel("Iterations")
-            ax.set_ylabel("Coefficient Value")
+            ax.set_ylabel("MER")
 
             ax = plt.subplot(2,3,6)
             ax.plot(self.mses, label="MSE")

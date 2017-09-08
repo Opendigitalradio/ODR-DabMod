@@ -14,6 +14,9 @@ import datetime
 import os
 import time
 
+import matplotlib
+matplotlib.use('GTKAgg')
+
 import logging
 
 dt = datetime.datetime.now().isoformat()
@@ -61,7 +64,7 @@ parser.add_argument('--samplerate', default='8192000',
 parser.add_argument('--coefs', default='poly.coef',
                     help='File with DPD coefficients, which will be read by ODR-DabMod',
                     required=False)
-parser.add_argument('--txgain', default=70,
+parser.add_argument('--txgain', default=74,
                     help='TX Gain',
                     required=False,
                     type=int)
@@ -104,9 +107,9 @@ meas = Measure.Measure(samplerate, port, num_req)
 adapt = Adapt.Adapt(port_rc, coef_path)
 coefs_am, coefs_pm = adapt.get_coefs()
 if cli_args.load_poly:
-    model = Model.Model(coefs_am, coefs_pm, plot=True)
+    model = Model.Model(c, SA, MER, coefs_am, coefs_pm, plot=True)
 else:
-    model = Model.Model([1.0, 0, 0, 0, 0], [0, 0, 0, 0, 0], plot=True)
+    model = Model.Model(c, SA, MER, [1.0, 0, 0, 0, 0], [0, 0, 0, 0, 0], plot=True)
 adapt.set_coefs(model.coefs_am, model.coefs_pm)
 adapt.set_digital_gain(digital_gain)
 adapt.set_txgain(txgain)

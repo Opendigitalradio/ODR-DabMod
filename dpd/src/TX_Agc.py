@@ -24,10 +24,10 @@ import src.Adapt as Adapt
 class TX_Agc:
     def __init__(self,
                  adapt,
-                 max_txgain=85,
-                 tx_median_target=0.04,
-                 tx_median_threshold_max=0.07,
-                 tx_median_threshold_min=0.02):
+                 max_txgain=89,
+                 tx_median_target=0.1,
+                 tx_median_threshold_max=0.12,
+                 tx_median_threshold_min=0.08):
         """
         In order to avoid digital clipping, this class increases the
         TX gain and reduces the digital gain. Digital clipping happens
