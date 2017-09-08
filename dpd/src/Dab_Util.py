@@ -163,10 +163,9 @@ class Dab_Util:
             fig.savefig(fig_path)
             fig.clf()
 
-
         sig_rx = sa.subsample_align(sig_rx, sig_tx)
 
-        if logging.getLogger().getEffectiveLevel() == logging.DEBUG:
+        if logging.getLogger().getEffectiveLevel() == logging.DEBUG and self.plot:
             dt = datetime.datetime.now().isoformat()
             fig_path = logging_path + "/" + dt + "_sync_subsample_aligned.svg"
 
@@ -190,7 +189,7 @@ class Dab_Util:
 
         sig_rx = pa.phase_align(sig_rx, sig_tx)
 
-        if logging.getLogger().getEffectiveLevel() == logging.DEBUG:
+        if logging.getLogger().getEffectiveLevel() == logging.DEBUG and self.plot:
             dt = datetime.datetime.now().isoformat()
             fig_path = logging_path + "/" + dt + "_sync_phase_aligned.svg"
 
