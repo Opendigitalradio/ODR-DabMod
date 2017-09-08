@@ -47,7 +47,7 @@ class Agc:
     def run(self):
         self.adapt.set_rxgain(self.rxgain)
 
-        for i in range(3):
+        for i in range(2):
             # Measure
             txframe_aligned, tx_ts, rxframe_aligned, rx_ts, rx_median= \
                 self.measure.get_samples()
@@ -65,7 +65,7 @@ class Agc:
             ))
 
             self.adapt.set_rxgain(self.rxgain)
-            time.sleep(1)
+            time.sleep(0.5)
 
     def plot_estimates(self):
         """Plots the estimate of for Max, Median, Mean for different
@@ -74,7 +74,7 @@ class Agc:
         time.sleep(1)
 
         dt = datetime.datetime.now().isoformat()
-        fig_path = logging_path + "/" + dt + "_agc.pdf"
+        fig_path = logging_path + "/" + dt + "_agc.svg"
         fig, axs = plt.subplots(2, 2, figsize=(3*6,1*6))
         axs = axs.ravel()
 

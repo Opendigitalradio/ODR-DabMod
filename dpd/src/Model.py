@@ -32,11 +32,11 @@ class Model:
 
         self.plot=plot
 
-    def sample_uniformly(self, txframe_aligned, rxframe_aligned, n_bins=4):
+    def sample_uniformly(self, tx_dpd, rx_received, n_bins=4):
         """This function returns tx and rx samples in a way
         that the tx amplitudes have an approximate uniform 
-        distribution with respect to the txframe_aligned amplitudes"""
-        txframe_aligned_abs = np.abs(txframe_aligned)
+        distribution with respect to the tx_dpd amplitudes"""
+        txframe_aligned_abs = np.abs(tx_dpd)
         ccdf_min = 0
         ccdf_max = np.max(txframe_aligned_abs)
         tx_hist, ccdf_edges = np.histogram(txframe_aligned_abs,
@@ -50,219 +50,111 @@ class Model:
             indices = np.where((txframe_aligned_abs >= ccdf_edges[idx]) &
                                (txframe_aligned_abs <= ccdf_edges[idx+1]))[0]
             indices_choise = np.random.choice(indices, n_choise, replace=False)
-            rx_choice[idx*n_choise:(idx+1)*n_choise] = rxframe_aligned[indices_choise]
-            tx_choice[idx*n_choise:(idx+1)*n_choise] = txframe_aligned[indices_choise]
+            rx_choice[idx*n_choise:(idx+1)*n_choise] = rx_received[indices_choise]
+            tx_choice[idx*n_choise:(idx+1)*n_choise] = tx_dpd[indices_choise]
         return tx_choice, rx_choice
 
-    def get_next_coefs(self, txframe_aligned, rxframe_aligned):
-        tx_choice, rx_choice = self.sample_uniformly(txframe_aligned, rxframe_aligned)
+    def amplitude_predistortion(self, sig):
+        sig_abs = np.abs(sig)
+        A_sig = np.vstack([np.ones(sig_abs.shape),
+                          sig_abs ** 2,
+                          sig_abs ** 4,
+                          sig_abs ** 6,
+                          sig_abs ** 8,
+                          ]).T
+        sig_dpd = sig * np.sum(A_sig * self.coefs_am, axis=1)
+        return sig_dpd, A_sig
+
+    def dpd_phase(self, tx):
+        tx_abs = np.abs(tx)
+        tx_A_complex = np.vstack([tx,
+                                  tx * tx_abs ** 1,
+                                  tx * tx_abs ** 2,
+                                  tx * tx_abs ** 3,
+                                  tx * tx_abs ** 4,
+                                  ]).T
+        tx_dpd = np.sum(tx_A_complex * self.coefs_pm, axis=1)
+        return tx_dpd
+
+    def get_next_coefs(self, tx_dpd, rx_received):
+        normalization_error = np.abs(np.median(np.abs(tx_dpd)) - np.median(np.abs(rx_received)))/(np.median(np.abs(tx_dpd)) + np.median(np.abs(rx_received)))
+        assert normalization_error < 0.01, "Non normalized signals"
+        tx_choice, rx_choice = self.sample_uniformly(tx_dpd, rx_received)
 
         # Calculate new coefficients for AM/AM correction
-        rx_abs = np.abs(rx_choice)
-        rx_A = np.vstack([rx_abs,
-                          rx_abs ** 3,
-                          rx_abs ** 5,
-                          rx_abs ** 7,
-                          rx_abs ** 9,
-                          ]).T
-        rx_dpd = np.sum(rx_A * self.coefs_am, axis=1)
+        rx_dpd, rx_A = self.amplitude_predistortion(rx_choice)
         rx_dpd = rx_dpd * (
-            np.median(np.abs(tx_choice)) / np.median(np.abs(rx_dpd)))
+            np.median(np.abs(tx_choice)) /
+            np.median(np.abs(rx_dpd)))
 
-        err = rx_dpd - np.abs(tx_choice)
+        err = np.abs(rx_dpd) - np.abs(tx_choice)
         self.errs.append(np.mean(np.abs(err ** 2)))
+
+        mse = np.mean(np.abs((rx_dpd - tx_choice)**2))
+        self.mses.append(mse)
 
         a_delta = np.linalg.lstsq(rx_A, err)[0]
         new_coefs = self.coefs_am - 0.1 * a_delta
         new_coefs = new_coefs * (self.coefs_am[0] / new_coefs[0])
+        assert np.abs(self.coefs_am[0] / new_coefs[0] - 1) < 0.1, \
+            "Too large change in first " \
+            "coefficient. {}, {}".format(self.coefs_am[0], new_coefs[0])
         logging.debug("a_delta {}".format(a_delta))
         logging.debug("new coefs_am {}".format(new_coefs))
 
-        # Calculate new coefficients for AM/PM correction
-        phase_diff_rad = ((
-                              (np.angle(tx_choice) -
-                               np.angle(rx_choice) +
-                               np.pi) % (2 * np.pi)) -
-                          np.pi
-                          )
-
-        tx_abs = np.abs(tx_choice)
-        tx_abs_A = np.vstack([tx_abs,
-                             tx_abs ** 2,
-                             tx_abs ** 3,
-                             tx_abs ** 4,
-                             tx_abs ** 5,
-                             ]).T
-        phase_dpd = np.sum(tx_abs_A * self.coefs_pm, axis=1)
-
-        err_phase = phase_dpd - phase_diff_rad
-        self.errs_phase.append(np.mean(np.abs(err_phase ** 2)))
-        a_delta = np.linalg.lstsq(tx_abs_A, err_phase)[0]
-        new_coefs_pm = self.coefs_pm - 0.1 * a_delta
-        logging.debug("a_delta {}".format(a_delta))
-        logging.debug("new new_coefs_pm {}".format(new_coefs_pm))
-
-        def dpd_phase(tx):
-            tx_abs = np.abs(tx)
-            tx_A_complex = np.vstack([tx,
-                                      tx * tx_abs ** 1,
-                                      tx * tx_abs ** 2,
-                                      tx * tx_abs ** 3,
-                                      tx * tx_abs ** 4,
-                                      ]).T
-            tx_dpd = np.sum(tx_A_complex * self.coefs_pm, axis=1)
-            return tx_dpd
-
-        tx_range = np.linspace(0, 2)
-        phase_range_dpd = dpd_phase(tx_range)
-
-        rx_A_complex = np.vstack([rx_choice,
-                                  rx_choice * rx_abs ** 2,
-                                  rx_choice * rx_abs ** 4,
-                                  rx_choice * rx_abs ** 6,
-                                  rx_choice * rx_abs ** 8,
-                                  ]).T
-        rx_post_distored = np.sum(rx_A_complex * self.coefs_am, axis=1)
-        rx_post_distored = rx_post_distored * (
-            np.median(np.abs(tx_choice)) /
-            np.median(np.abs(rx_post_distored)))
-        mse = np.mean(np.abs((tx_choice - rx_post_distored) ** 2))
-        logging.debug("MSE: {}".format(mse))
-        self.mses.append(mse)
-
-        def dpd(tx):
-            tx_abs = np.abs(tx)
-            tx_A_complex = np.vstack([tx,
-                                      tx * tx_abs ** 2,
-                                      tx * tx_abs ** 4,
-                                      tx * tx_abs ** 6,
-                                      tx * tx_abs ** 8,
-                                      ]).T
-            tx_dpd = np.sum(tx_A_complex * self.coefs_am, axis=1)
-            return tx_dpd
-
         rx_range = np.linspace(0, 1, num=100)
-        rx_range_dpd = dpd(rx_range)
+        rx_range_dpd = self.amplitude_predistortion(rx_range)[0]
         rx_range = rx_range[(rx_range_dpd > 0) & (rx_range_dpd < 2)]
         rx_range_dpd = rx_range_dpd[(rx_range_dpd > 0) & (rx_range_dpd < 2)]
 
-        logging.debug("txframe: min %f, max %f, median %f" %
-                      (np.min(np.abs(txframe_aligned)),
-                       np.max(np.abs(txframe_aligned)),
-                       np.median(np.abs(txframe_aligned))
-                       ))
-
-        logging.debug("rxframe: min %f, max %f, median %f" %
-                      (np.min(np.abs(rx_choice)),
-                       np.max(np.abs(rx_choice)),
-                       np.median(np.abs(rx_choice))
-                       ))
+        logging.debug('txframe: min {:.2f}, max {:.2f}, ' \
+                      'median {:.2f}; rxframe: min {:.2f}, max {:.2f}, ' \
+                      'median {:.2f}; a_delta {}; new coefs_am {}'.format(
+            np.min(np.abs(tx_dpd)),
+            np.max(np.abs(tx_dpd)),
+            np.median(np.abs(tx_dpd)),
+            np.min(np.abs(rx_choice)),
+            np.max(np.abs(rx_choice)),
+            np.median(np.abs(rx_choice)),
+            a_delta,
+            new_coefs))
 
         if logging.getLogger().getEffectiveLevel() == logging.DEBUG and self.plot:
             dt = datetime.datetime.now().isoformat()
-            fig_path = logging_path + "/" + dt + "_Model.pdf"
+            fig_path = logging_path + "/" + dt + "_Model.svg"
 
-            fig = plt.figure(figsize=(3*6, 1.5 * 6))
+            fig = plt.figure(figsize=(3*6, 6))
 
-            ax = plt.subplot(3,3,1)
-            ax.plot(np.abs(txframe_aligned[:128]),
+            ax = plt.subplot(2,3,1)
+            ax.plot(np.abs(tx_dpd[:128]),
                     label="TX sent",
                     linestyle=":")
-            ax.plot(np.abs(rxframe_aligned[:128]),
+            ax.plot(np.abs(rx_received[:128]),
                     label="RX received",
                     color="red")
             ax.set_title("Synchronized Signals of Iteration {}".format(len(self.coefs_history)))
             ax.set_xlabel("Samples")
             ax.set_ylabel("Amplitude")
             ax.text(0, 0, "TX (max {:01.3f}, mean {:01.3f}, median {:01.3f})".format(
-                np.max(np.abs(txframe_aligned)),
-                np.mean(np.abs(txframe_aligned)),
-                np.median(np.abs(txframe_aligned))
+                np.max(np.abs(tx_dpd)),
+                np.mean(np.abs(tx_dpd)),
+                np.median(np.abs(tx_dpd))
             ), size = 8)
             ax.legend(loc=4)
 
-            ax = plt.subplot(3,3,2)
-            ax.plot(np.real(txframe_aligned[:128]),
-                    label="TX sent",
-                    linestyle=":")
-            ax.plot(np.real(rxframe_aligned[:128]),
-                    label="RX received",
-                    color="red")
-            ax.set_title("Synchronized Signals")
-            ax.set_xlabel("Samples")
-            ax.set_ylabel("Real Part")
-            ax.legend(loc=4)
-
-            ax = plt.subplot(3,3,3)
-            ax.plot(np.abs(txframe_aligned[:128]),
-                    label="TX Frame",
-                    linestyle=":",
-                    linewidth=0.5)
-            ax.plot(np.abs(rxframe_aligned[:128]),
-                    label="RX Frame",
-                    linestyle="--",
-                    linewidth=0.5)
-
-            rx_abs = np.abs(rxframe_aligned)
-            rx_A = np.vstack([rx_abs,
-                              rx_abs ** 3,
-                              rx_abs ** 5,
-                              rx_abs ** 7,
-                              rx_abs ** 9,
-                              ]).T
-            rx_dpd = np.sum(rx_A * self.coefs_am, axis=1)
-            rx_dpd = rx_dpd * (
-                np.median(np.abs(tx_choice)) / np.median(np.abs(rx_dpd)))
-
-            ax.plot(np.abs(rx_dpd[:128]),
-                    label="RX DPD Frame",
-                    linestyle="-.",
-                    linewidth=0.5)
-
-            tx_abs = np.abs(np.abs(txframe_aligned[:128]))
-            tx_A = np.vstack([tx_abs,
-                              tx_abs ** 3,
-                              tx_abs ** 5,
-                              tx_abs ** 7,
-                              tx_abs ** 9,
-                              ]).T
-            tx_dpd = np.sum(tx_A * new_coefs, axis=1)
-            tx_dpd_norm = tx_dpd * (
-                np.median(np.abs(tx_choice)) / np.median(np.abs(tx_dpd)))
-
-            ax.plot(np.abs(tx_dpd_norm[:128]),
-                    label="TX DPD Frame Norm",
-                    linestyle="-.",
-                    linewidth=0.5)
-            ax.legend(loc=4)
-            ax.set_title("RX DPD")
-            ax.set_xlabel("Samples")
-            ax.set_ylabel("Amplitude")
-
-            ax = plt.subplot(3,3,4)
+            ax = plt.subplot(2,3,2)
             ax.scatter(
-                np.abs(tx_choice[:1024]),
-                np.abs(rx_choice[:1024]),
+                np.abs(tx_choice),
+                np.abs(rx_choice),
                 s=0.1)
             ax.plot(rx_range_dpd / self.coefs_am[0], rx_range, linewidth=0.25)
             ax.set_title("Amplifier Characteristic")
             ax.set_xlabel("TX Amplitude")
             ax.set_ylabel("RX Amplitude")
 
-            ax = plt.subplot(3,3,5)
-            ax.scatter(
-                np.abs(tx_choice[:1024]),
-                phase_diff_rad[:1024] * 180 / np.pi,
-                s=0.1
-            )
-            ax.plot(tx_range, phase_range_dpd * 180 / np.pi, linewidth=0.25)
-            ax.set_title("Amplifier Characteristic")
-            ax.set_xlabel("TX Amplitude")
-            ax.set_ylabel("Phase Difference [deg]")
-
-            ax = plt.subplot(3,3,6)
+            ax = plt.subplot(2,3,3)
             ccdf_min, ccdf_max = 0, 1
-            tx_hist, ccdf_edges = np.histogram(np.abs(txframe_aligned),
+            tx_hist, ccdf_edges = np.histogram(np.abs(tx_dpd),
                                       bins=60,
                                       range=(ccdf_min, ccdf_max))
             tx_hist_normalized = tx_hist.astype(float)/np.sum(tx_hist)
@@ -278,7 +170,7 @@ class Model:
             ax.set_xlabel("TX Amplitude")
             ax.set_ylabel("Ratio of Samples larger than x")
 
-            ax = plt.subplot(3,3,7)
+            ax = plt.subplot(2,3,4)
             coefs_history = np.array(self.coefs_history)
             for idx, coef_hist in enumerate(coefs_history.T):
                 ax.plot(coef_hist,
@@ -289,7 +181,7 @@ class Model:
             ax.set_xlabel("Iterations")
             ax.set_ylabel("Coefficient Value")
 
-            ax = plt.subplot(3,3,8)
+            ax = plt.subplot(2,3,5)
             coefs_history = np.array(self.coefs_pm_history)
             for idx, coef_hist in enumerate(coefs_history.T):
                 ax.plot(coef_hist,
@@ -300,8 +192,7 @@ class Model:
             ax.set_xlabel("Iterations")
             ax.set_ylabel("Coefficient Value")
 
-            ax = plt.subplot(3,3,9)
-            coefs_history = np.array(self.coefs_history)
+            ax = plt.subplot(2,3,6)
             ax.plot(self.mses, label="MSE")
             ax.plot(self.errs, label="ERR")
             ax.legend(loc=4)
@@ -315,8 +206,6 @@ class Model:
 
         self.coefs_am = new_coefs
         self.coefs_history.append(self.coefs_am)
-        self.coefs_pm = new_coefs_pm
-        self.coefs_pm_history.append(self.coefs_pm)
         return self.coefs_am, self.coefs_pm
 
 # The MIT License (MIT)

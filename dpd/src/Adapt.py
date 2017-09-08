@@ -85,7 +85,7 @@ class Adapt:
         # TODO this is specific to the B200
         if gain < 0 or gain > 89:
             raise ValueError("Gain has to be in [0,89]")
-        return self.send_receive("set uhd txgain %d" % gain)
+        return self.send_receive("set uhd txgain %.4f" % float(gain))
 
     def get_txgain(self):
         """Get the txgain value in dB for the ODR-DabMod."""
@@ -103,12 +103,12 @@ class Adapt:
         # TODO this is specific to the B200
         if gain < 0 or gain > 89:
             raise ValueError("Gain has to be in [0,89]")
-        return self.send_receive("set uhd rxgain %d" % gain)
+        return self.send_receive("set uhd rxgain %.4f" % float(gain))
 
     def get_rxgain(self):
         """Get the rxgain value in dB for the ODR-DabMod."""
         # TODO handle failure
-        return int(self.send_receive("get uhd rxgain")[0])
+        return float(self.send_receive("get uhd rxgain")[0])
 
     def set_digital_gain(self, gain):
         """Set a new rxgain for the ODR-DabMod.
@@ -118,7 +118,8 @@ class Adapt:
         gain : int
             new RX gain, in the same format as ODR-DabMod's config file
         """
-        return self.send_receive("set gain digital %.5f" % gain)
+        msg = "set gain digital %.5f" % gain
+        return self.send_receive(msg)
 
     def get_digital_gain(self):
         """Get the rxgain value in dB for the ODR-DabMod."""

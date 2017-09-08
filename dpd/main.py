@@ -61,7 +61,7 @@ parser.add_argument('--samplerate', default='8192000',
 parser.add_argument('--coefs', default='poly.coef',
                     help='File with DPD coefficients, which will be read by ODR-DabMod',
                     required=False)
-parser.add_argument('--txgain', default=60,
+parser.add_argument('--txgain', default=70,
                     help='TX Gain',
                     required=False,
                     type=int)
@@ -69,7 +69,7 @@ parser.add_argument('--rxgain', default=30,
                     help='TX Gain',
                     required=False,
                     type=int)
-parser.add_argument('--digital_gain', default=0.2,
+parser.add_argument('--digital_gain', default=1,
                     help='Digital Gain',
                     required=False,
                     type=float)
@@ -107,17 +107,19 @@ if cli_args.load_poly:
     model = Model.Model(coefs_am, coefs_pm, plot=True)
 else:
     model = Model.Model([1.0, 0, 0, 0, 0], [0, 0, 0, 0, 0], plot=True)
-adapt.set_txgain(digital_gain)
+adapt.set_coefs(model.coefs_am, model.coefs_pm)
+adapt.set_digital_gain(digital_gain)
 adapt.set_txgain(txgain)
 adapt.set_rxgain(rxgain)
-adapt.set_coefs(model.coefs_am, model.coefs_pm)
 
 tx_gain = adapt.get_txgain()
 rx_gain = adapt.get_rxgain()
+digital_gain = adapt.get_digital_gain()
 dpd_coefs_am, dpd_coefs_pm = adapt.get_coefs()
 logging.info(
-    "TX gain {}, RX gain {}, dpd_coefs_am {}, dpd_coefs_pm {}".format(
-        tx_gain, rx_gain, dpd_coefs_am, dpd_coefs_pm
+    "TX gain {}, RX gain {}, dpd_coefs_am {},"
+    " dpd_coefs_pm {}, digital_gain {}".format(
+        tx_gain, rx_gain, dpd_coefs_am, dpd_coefs_pm, digital_gain
     )
 )
 
@@ -131,7 +133,8 @@ for i in range(num_iter):
     try:
         txframe_aligned, tx_ts, rxframe_aligned, rx_ts, rx_median = meas.get_samples()
         logging.debug("tx_ts {}, rx_ts {}".format(tx_ts, rx_ts))
-        assert tx_ts - rx_ts < 1e-5, "Time Stamps do not match."
+        assert tx_ts - rx_ts < 1e-5, "Time stamps do not match."
+
         if tx_agc.adapt_if_necessary(txframe_aligned):
             continue
 

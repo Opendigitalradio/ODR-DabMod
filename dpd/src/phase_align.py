@@ -28,7 +28,7 @@ def phase_align(sig, ref_sig, plot=False):
 
     if logging.getLogger().getEffectiveLevel() == logging.DEBUG and plot:
         dt = datetime.datetime.now().isoformat()
-        fig_path = logging_path + "/" + dt + "_phase_align.pdf"
+        fig_path = logging_path + "/" + dt + "_phase_align.svg"
 
         plt.subplot(511)
         plt.hist(angle_diff, bins=60, label="Angle Diff")

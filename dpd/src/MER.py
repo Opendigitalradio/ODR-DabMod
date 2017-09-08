@@ -77,7 +77,7 @@ class MER:
 
         if debug:
             dt = datetime.datetime.now().isoformat()
-            fig_path = logging_path + "/" + dt + "_MER.pdf"
+            fig_path = logging_path + "/" + dt + "_MER.svg"
 
         MERs = []
         for i, (x, y) in enumerate(self._split_in_carrier(

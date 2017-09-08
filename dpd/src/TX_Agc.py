@@ -24,10 +24,10 @@ import src.Adapt as Adapt
 class TX_Agc:
     def __init__(self,
                  adapt,
-                 max_txgain=80,
-                 tx_median_target=0.1,
-                 tx_median_threshold_max=0.15,
-                 tx_median_threshold_min=0.05):
+                 max_txgain=85,
+                 tx_median_target=0.04,
+                 tx_median_threshold_max=0.07,
+                 tx_median_threshold_min=0.02):
         """
         In order to avoid digital clipping, this class increases the
         TX gain and reduces the digital gain. Digital clipping happens
@@ -62,8 +62,7 @@ class TX_Agc:
         tx_median = np.median(np.abs(tx))
         if tx_median > self.tx_median_threshold_tolerate_max or\
            tx_median < self.tx_median_threshold_tolerate_min:
-            delta_db = \
-                np.floor(20 * np.log10(self.tx_median_target / tx_median)).astype(int)
+            delta_db = 20 * np.log10(self.tx_median_target / tx_median)
             new_txgain = self.adapt.get_txgain() - delta_db
             assert new_txgain < self.max_txgain,\
                 "TX_Agc failed. New TX gain of {} is too large.".format(
@@ -77,8 +76,8 @@ class TX_Agc:
             self.adapt.set_digital_gain(digital_gain)
 
             logging.info(
-                "digital_gain = {}, txgain_new = {}, " \
-                "delta_db = {}, tx_median {}, " \
+                "digital_gain = {}, txgain_new = {}, "\
+                "delta_db = {}, tx_median {}, "\
                 "digital_gain_factor = {}".
                     format(digital_gain, txgain, delta_db,
                            tx_median, digital_gain_factor))

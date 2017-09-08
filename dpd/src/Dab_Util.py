@@ -45,7 +45,7 @@ class Dab_Util:
 
         if logging.getLogger().getEffectiveLevel() == logging.DEBUG and self.plot:
             dt = datetime.datetime.now().isoformat()
-            corr_path = (logging_path + "/" + dt + "_tx_rx_corr.pdf")
+            corr_path = (logging_path + "/" + dt + "_tx_rx_corr.svg")
             plt.plot(c, label="corr")
             plt.legend()
             plt.savefig(corr_path)
@@ -99,7 +99,7 @@ class Dab_Util:
 
         if logging.getLogger().getEffectiveLevel() == logging.DEBUG and self.plot:
             dt = datetime.datetime.now().isoformat()
-            fig_path = logging_path + "/" + dt + "_sync_raw.pdf"
+            fig_path = logging_path + "/" + dt + "_sync_raw.svg"
 
             fig, axs = plt.subplots(2)
             axs[0].plot(np.abs(sig_tx[:128]), label="TX Frame")
@@ -143,7 +143,7 @@ class Dab_Util:
 
         if logging.getLogger().getEffectiveLevel() == logging.DEBUG and self.plot:
             dt = datetime.datetime.now().isoformat()
-            fig_path = logging_path + "/" + dt + "_sync_sample_aligned.pdf"
+            fig_path = logging_path + "/" + dt + "_sync_sample_aligned.svg"
 
             fig, axs = plt.subplots(2)
             axs[0].plot(np.abs(sig_tx[:128]), label="TX Frame")
@@ -168,7 +168,7 @@ class Dab_Util:
 
         if logging.getLogger().getEffectiveLevel() == logging.DEBUG:
             dt = datetime.datetime.now().isoformat()
-            fig_path = logging_path + "/" + dt + "_sync_subsample_aligned.pdf"
+            fig_path = logging_path + "/" + dt + "_sync_subsample_aligned.svg"
 
             fig, axs = plt.subplots(2)
             axs[0].plot(np.abs(sig_tx[:128]), label="TX Frame")
@@ -192,7 +192,7 @@ class Dab_Util:
 
         if logging.getLogger().getEffectiveLevel() == logging.DEBUG:
             dt = datetime.datetime.now().isoformat()
-            fig_path = logging_path + "/" + dt + "_sync_phase_aligned.pdf"
+            fig_path = logging_path + "/" + dt + "_sync_phase_aligned.svg"
 
             fig, axs = plt.subplots(2)
             axs[0].plot(np.abs(sig_tx[:128]), label="TX Frame")
