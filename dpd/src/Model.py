@@ -13,7 +13,7 @@ logging_path = os.path.dirname(logging.getLoggerClass().root.handlers[0].baseFil
 
 import numpy as np
 import matplotlib.pyplot as plt
-
+from sklearn import linear_model
 
 class Model:
     """Calculates new coefficients using the measurement and the old
@@ -25,8 +25,8 @@ class Model:
                  MER,
                  coefs_am,
                  coefs_pm,
-                 learning_rate_am=0.1,
-                 learning_rate_pm=0.1,
+                 learning_rate_am=1.,
+                 learning_rate_pm=1.,
                  plot=False):
         self.c = c
         self.SA = SA
@@ -124,7 +124,9 @@ class Model:
         self.mses_am.append(mse)
         self.errs_am.append(np.mean(err**2))
 
-        a_delta = np.linalg.lstsq(rx_A, err)[0]
+        reg = linear_model.Ridge(alpha=0.00001)
+        reg.fit(rx_A, err)
+        a_delta = reg.coef_
         new_coefs_am = self.coefs_am - self.learning_rate_am * a_delta
         new_coefs_am = new_coefs_am * (self.coefs_am[0] / new_coefs_am[0])
         return new_coefs_am
@@ -143,7 +145,9 @@ class Model:
         err_phase = phase_diff_est - phase_diff_choice
         self.errs_pm.append(np.mean(np.abs(err_phase ** 2)))
 
-        p_delta = np.linalg.lstsq(phase_A, err_phase)[0]
+        reg = linear_model.Ridge(alpha=0.00001)
+        reg.fit(phase_A, err_phase)
+        p_delta = reg.coef_
         new_coefs_pm = self.coefs_pm - self.learning_rate_pm * p_delta
 
         return new_coefs_pm, phase_diff_choice
