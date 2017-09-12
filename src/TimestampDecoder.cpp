@@ -38,10 +38,10 @@
 #define MDEBUG(fmt, args...) PDEBUG(fmt, ## args)
 
 
-void TimestampDecoder::calculateTimestamp(struct frame_timestamp& ts)
+void TimestampDecoder::calculateTimestamp(frame_timestamp& ts)
 {
-    std::shared_ptr<struct frame_timestamp> ts_queued =
-        std::make_shared<struct frame_timestamp>();
+    std::shared_ptr<frame_timestamp> ts_queued =
+        std::make_shared<frame_timestamp>();
 
     /* Push new timestamp into queue */
     ts_queued->timestamp_valid = full_timestamp_received;
@@ -115,7 +115,10 @@ void TimestampDecoder::pushMNSCData(int framephase, uint16_t mnsc)
             mnsc0 = (struct eti_MNSC_TIME_0*)&mnsc;
             enableDecode = (mnsc0->type == 0) &&
                 (mnsc0->identifier == 0);
-            gmtime_r(0, &temp_time);
+            {
+                const time_t timep = 0;
+                gmtime_r(&timep, &temp_time);
+            }
             break;
 
         case 1:
