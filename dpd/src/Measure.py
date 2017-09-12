@@ -104,10 +104,6 @@ class Measure:
 
         txframe, tx_ts, rxframe, rx_ts = self.receive_tcp()
 
-        if logging.getLogger().getEffectiveLevel() == logging.DEBUG:
-            dt = datetime.datetime.now().isoformat()
-            txframe.tofile(logging_path + "/txframe_" + dt + ".iq")
-
         # Normalize received signal with sent signal
         rx_median = np.median(np.abs(rxframe))
         rxframe = rxframe / rx_median * np.median(np.abs(txframe))
