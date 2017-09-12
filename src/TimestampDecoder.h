@@ -46,7 +46,9 @@ struct frame_timestamp
     bool timestamp_valid;
     bool timestamp_refresh;
 
-    struct frame_timestamp operator=(const struct frame_timestamp &rhs)
+    frame_timestamp() = default;
+    frame_timestamp(const frame_timestamp& other) = default;
+    frame_timestamp operator=(const frame_timestamp &rhs)
     {
         if (this != &rhs) {
             this->timestamp_sec = rhs.timestamp_sec;
@@ -59,7 +61,7 @@ struct frame_timestamp
         return *this;
     }
 
-    struct frame_timestamp& operator+=(const double& diff)
+    frame_timestamp& operator+=(const double& diff)
     {
         double offset_pps, offset_secs;
         offset_pps = modf(diff, &offset_secs);
@@ -75,9 +77,9 @@ struct frame_timestamp
         return *this;
     }
 
-    const struct frame_timestamp operator+(const double diff)
+    const frame_timestamp operator+(const double diff)
     {
-        struct frame_timestamp ts = *this;
+        frame_timestamp ts = *this;
         ts += diff;
         return ts;
     }
@@ -89,7 +91,7 @@ struct frame_timestamp
     void print(const char* t)
     {
         fprintf(stderr,
-                "%s <struct frame_timestamp(%s, %d, %.9f, %d)>\n",
+                "%s <frame_timestamp(%s, %d, %.9f, %d)>\n",
                 t, this->timestamp_valid ? "valid" : "invalid",
                  this->timestamp_sec, pps_offset(),
                  this->fct);
@@ -122,8 +124,12 @@ class TimestampDecoder : public RemoteControllable
             latestFCT = 0;
             enableDecode = false;
             full_timestamp_received = false;
-            bzero(&temp_time, sizeof(temp_time));
-            gmtime_r(0, &temp_time);
+
+            // Properly initialise temp_time
+            memset(&temp_time, 0, sizeof(temp_time));
+            const time_t timep = 0;
+            gmtime_r(&timep, &temp_time);
+
             offset_changed = false;
 
             RC_ADD_PARAMETER(offset, "TIST offset [s]");
@@ -135,7 +141,7 @@ class TimestampDecoder : public RemoteControllable
         };
 
         /* Calculate the timestamp for the current frame. */
-        void calculateTimestamp(struct frame_timestamp& ts);
+        void calculateTimestamp(frame_timestamp& ts);
 
         /* Update timestamp data from ETI */
         void updateTimestampEti(
@@ -206,7 +212,7 @@ class TimestampDecoder : public RemoteControllable
          * synchronise two modulators if only one uses (for instance) the
          * FIRFilter (1 stage pipeline)
          */
-        std::queue<std::shared_ptr<struct frame_timestamp> > queue_timestamps;
+        std::queue<std::shared_ptr<frame_timestamp> > queue_timestamps;
 
 };
 
