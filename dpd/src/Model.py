@@ -15,6 +15,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from sklearn import linear_model
 
+
 class Model:
     """Calculates new coefficients using the measurement and the old
     coefficients"""
@@ -25,8 +26,8 @@ class Model:
                  MER,
                  coefs_am,
                  coefs_pm,
-                 learning_rate_am=1.,
-                 learning_rate_pm=1.,
+                 learning_rate_am=0.1,
+                 learning_rate_pm=0.1,
                  plot=False):
         self.c = c
         self.SA = SA
@@ -122,11 +123,9 @@ class Model:
         err = np.abs(rx_dpd) - np.abs(tx_choice)
         mse = np.mean(np.abs((rx_dpd - tx_choice) ** 2))
         self.mses_am.append(mse)
-        self.errs_am.append(np.mean(err**2))
+        self.errs_am.append(np.mean(err ** 2))
 
-        reg = linear_model.Ridge(alpha=0.00001)
-        reg.fit(rx_A, err)
-        a_delta = reg.coef_
+        a_delta = np.linalg.lstsq(rx_A, err)[0]
         new_coefs_am = self.coefs_am - self.learning_rate_am * a_delta
         new_coefs_am = new_coefs_am * (self.coefs_am[0] / new_coefs_am[0])
         return new_coefs_am
@@ -139,15 +138,13 @@ class Model:
             (np.abs(rx_choice) * np.abs(tx_choice))
         )
         plt.hist(phase_diff_choice)
-        plt.savefig('/tmp/hist_' + str(np.random.randint(0,1000)) + '.svg')
+        plt.savefig('/tmp/hist_' + str(np.random.randint(0, 1000)) + '.svg')
         plt.clf()
         phase_diff_est, phase_A = self.dpd_phase(rx_choice)
         err_phase = phase_diff_est - phase_diff_choice
         self.errs_pm.append(np.mean(np.abs(err_phase ** 2)))
 
-        reg = linear_model.Ridge(alpha=0.00001)
-        reg.fit(phase_A, err_phase)
-        p_delta = reg.coef_
+        p_delta = np.linalg.lstsq(phase_A, err_phase)[0]
         new_coefs_pm = self.coefs_pm - self.learning_rate_pm * p_delta
 
         return new_coefs_pm, phase_diff_choice
@@ -163,6 +160,11 @@ class Model:
                                      np.median(np.abs(rx_received))) / (
                                   np.median(np.abs(tx_dpd)) + np.median(np.abs(rx_received)))
         assert normalization_error < 0.01, "Non normalized signals"
+
+        if logging.getLogger().getEffectiveLevel() == logging.DEBUG:
+            dt = datetime.datetime.now().isoformat()
+            tx_dpd.tofile(logging_path + "/tx_dpd_" + dt + ".iq")
+            rx_received.tofile(logging_path + "/rx_received_" + dt + ".iq")
 
         tx_choice, rx_choice = self.sample_uniformly(tx_dpd, rx_received)
         new_coefs_am = self._next_am_coefficent(tx_choice, rx_choice)
@@ -303,7 +305,7 @@ class Model:
                 np.rad2deg(phase_range_dpd_new),
                 linewidth=0.25,
                 label="next")
-            ax.set_ylim(-60, 60)
+            ax.set_ylim(-180, 180)
             ax.set_xlim(0, 1)
             ax.legend()
             ax.set_title("Amplifier Characteristic")
