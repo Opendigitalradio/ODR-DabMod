@@ -230,6 +230,12 @@ void OutputUHDFeedback::ServeFeedback()
     addr.sin_port = htons(m_port);
     addr.sin_addr.s_addr = htonl(INADDR_ANY);
 
+    const int reuse = 1;
+    if (setsockopt(m_server_sock, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(reuse))
+            < 0) {
+        throw std::runtime_error("Can't reuse address for TCP socket");
+    }
+
     if (bind(m_server_sock, (struct sockaddr*)&addr, sizeof(addr)) < 0) {
         close(m_server_sock);
         throw std::runtime_error("Can't bind TCP socket");
