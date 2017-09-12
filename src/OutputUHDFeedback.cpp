@@ -378,8 +378,14 @@ void OutputUHDFeedback::ServeFeedbackThread()
         try {
             ServeFeedback();
         }
-        catch (runtime_error &e) {
-            etiLog.level(error) << "DPD Feedback Server fault: " << e.what();
+        catch (const runtime_error &e) {
+            etiLog.level(error) << "DPD Feedback Server runtime error: " << e.what();
+        }
+        catch (const std::exception &e) {
+            etiLog.level(error) << "DPD Feedback Server exception: " << e.what();
+        }
+        catch (...) {
+            etiLog.level(error) << "DPD Feedback Server unknown exception!";
         }
 
         boost::this_thread::sleep(boost::posix_time::seconds(5));
