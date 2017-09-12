@@ -67,7 +67,51 @@ private:
     int internal_process(Buffer* const dataIn, Buffer* dataOut);
     void load_coefficients(const std::string &coefFile);
 
-    unsigned int m_num_threads;
+    struct worker_t {
+        struct input_data_t {
+            bool terminate = false;
+
+            const float *coefs_am = nullptr;
+            const float *coefs_pm = nullptr;
+            const complexf *in = nullptr;
+            size_t start = 0;
+            size_t stop = 0;
+            complexf *out = nullptr;
+        };
+
+        worker_t() {}
+        worker_t(const worker_t& other) = delete;
+        worker_t operator=(const worker_t& other) = delete;
+        worker_t operator=(worker_t&& other) = delete;
+
+        // The move constructor creates a new in_queue and out_queue,
+        // because ThreadsafeQueue is neither copy- nor move-constructible.
+        // Not an issue because creating the workers happens at startup, before
+        // the first work item.
+        worker_t(worker_t&& other) :
+            in_queue(),
+            out_queue(),
+            thread(std::move(other.thread)) {}
+
+        ~worker_t() {
+            if (thread.joinable()) {
+                input_data_t terminate_tag;
+                terminate_tag.terminate = true;
+                in_queue.push(terminate_tag);
+                thread.join();
+            }
+        }
+
+        ThreadsafeQueue<input_data_t> in_queue;
+        ThreadsafeQueue<int> out_queue;
+
+        std::thread thread;
+    };
+
+    std::vector<worker_t> m_workers;
+
+    static void worker_thread(worker_t *workerdata);
+
     std::vector<float> m_coefs_am; // AM/AM coefficients
     std::vector<float> m_coefs_pm; // AM/PM coefficients
     std::string m_coefs_file;
