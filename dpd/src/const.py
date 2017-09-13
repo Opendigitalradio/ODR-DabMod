@@ -36,3 +36,9 @@ class const:
         # frequency per bin = 1kHz
         # phase difference per sample offset = delta_t * 2 * pi * delta_freq
         self.phase_offset_per_sample = 1. / sample_rate * 2 * np.pi * 1000
+
+        # Constants for ExtractStatistic
+        self.ES_start = 0.0
+        self.ES_end = 1.0
+        self.ES_n_bins = 64
+        self.ES_n_per_bin = 1024
