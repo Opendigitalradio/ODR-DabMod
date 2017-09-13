@@ -17,7 +17,7 @@ from sklearn import linear_model
 
 
 class Model:
-    """Calculates new coefficients using the measurement and the old
+    """Calculates new coefficients using the measurement and the previous
     coefficients"""
 
     def __init__(self,
