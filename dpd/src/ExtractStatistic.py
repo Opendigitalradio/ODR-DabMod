@@ -51,6 +51,7 @@ class ExtractStatistic:
             self.tx_values_lists.append([])
 
         self.tx_values = self._tx_value_per_bin()
+
         self.rx_values = []
         for i in range(c.ES_n_bins):
             self.rx_values.append(None)
@@ -59,9 +60,12 @@ class ExtractStatistic:
 
     def _plot_and_log(self):
         if logging.getLogger().getEffectiveLevel() == logging.DEBUG and self.plot:
+            phase_diffs_values_lists = self._phase_diff_list_per_bin()
+            phase_diffs_values = self._phase_diff_value_per_bin(phase_diffs_values_lists)
+
             dt = datetime.datetime.now().isoformat()
             fig_path = logging_path + "/" + dt + "_ExtractStatistic.png"
-            sub_rows = 2
+            sub_rows = 3
             sub_cols = 1
             fig = plt.figure(figsize=(sub_cols * 6, sub_rows / 2. * 6))
             i_sub = 0
@@ -81,6 +85,23 @@ class ExtractStatistic:
             ax.set_xlabel("TX Amplitude")
             ax.set_ylabel("RX Amplitude")
             ax.set_ylim(0, 0.8)
+            ax.set_xlim(0, 1.1)
+            ax.legend(loc=4)
+
+            i_sub += 1
+            ax = plt.subplot(sub_rows, sub_cols, i_sub)
+            ax.plot(self.tx_values, np.rad2deg(phase_diffs_values),
+                    label="Estimated Values",
+                    color="red")
+            for i, tx_value in enumerate(self.tx_values):
+                phase_diff = phase_diffs_values_lists[i]
+                ax.scatter(np.ones(len(phase_diff)) * tx_value,
+                           np.rad2deg(phase_diff),
+                           s=0.1,
+                           color="black")
+            ax.set_xlabel("TX Amplitude")
+            ax.set_ylabel("Phase Difference")
+            ax.set_ylim(-60,60)
             ax.set_xlim(0, 1.1)
             ax.legend(loc=4)
 
@@ -114,6 +135,21 @@ class ExtractStatistic:
             tx_values.append(np.mean((start, end)))
         return tx_values
 
+    def _phase_diff_list_per_bin(self):
+        phase_values_lists = []
+        for tx_list, rx_list in zip(self.tx_values_lists, self.rx_values_lists):
+            phase_diffs = []
+            for tx, rx in zip(tx_list, rx_list):
+                phase_diffs.append(np.angle(rx * tx.conjugate()))
+            phase_values_lists.append(phase_diffs)
+        return phase_values_lists
+
+    def _phase_diff_value_per_bin(self, phase_diffs_values_lists):
+        phase_list = []
+        for values in phase_diffs_values_lists:
+            phase_list.append(np.mean(values))
+        return phase_list
+
     def extract(self, tx_dpd, rx):
         _check_input_extract(tx_dpd, rx)
 
@@ -133,7 +169,9 @@ class ExtractStatistic:
 
         n_per_bin = [len(values) for values in self.rx_values_lists]
 
-        return np.array(self.tx_values, dtype=np.float32), np.array(self.rx_values, dtype=np.float32), n_per_bin
+        return np.array(self.tx_values,  dtype=np.float32), \
+               np.array(self.rx_values, dtype=np.float32), \
+               n_per_bin
 
 # The MIT License (MIT)
 #
