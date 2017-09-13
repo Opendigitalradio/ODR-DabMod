@@ -42,6 +42,8 @@ import numpy as np
 import traceback
 import src.Measure as Measure
 import src.Model as Model
+import src.Model_AM as Model_AM
+import src.ExtractStatistic as ExtractStatistic
 import src.Adapt as Adapt
 import src.Agc as Agc
 import src.TX_Agc as TX_Agc
@@ -64,7 +66,7 @@ parser.add_argument('--samplerate', default='8192000',
 parser.add_argument('--coefs', default='poly.coef',
                     help='File with DPD coefficients, which will be read by ODR-DabMod',
                     required=False)
-parser.add_argument('--txgain', default=71,
+parser.add_argument('--txgain', default=73,
                     help='TX Gain',
                     required=False,
                     type=int)
@@ -103,17 +105,21 @@ MER = src.MER.MER(samplerate)
 c = src.const.const(samplerate)
 
 meas = Measure.Measure(samplerate, port, num_req)
-
+extStat = ExtractStatistic.ExtractStatistic(c, plot=True)
 adapt = Adapt.Adapt(port_rc, coef_path)
-coefs_am, coefs_pm = adapt.get_coefs()
+
 if cli_args.load_poly:
+    coefs_am, coefs_pm = adapt.get_coefs()
     model = Model.Model(c, SA, MER, coefs_am, coefs_pm, plot=True)
 else:
-    model = Model.Model(c, SA, MER, [1.0, 0, 0, 0, 0], [0, 0, 0, 0, 0], plot=True)
+    coefs_am, coefs_pm = [[1.0, 0, 0, 0, 0], [0, 0, 0, 0, 0]]
+    model = Model.Model(c, SA, MER, coefs_am, coefs_pm, plot=True)
+model_am = Model_AM.Model_AM(c, plot=True)
 adapt.set_coefs(model.coefs_am, model.coefs_pm)
 adapt.set_digital_gain(digital_gain)
 adapt.set_txgain(txgain)
 adapt.set_rxgain(rxgain)
+print(coefs_am)
 
 tx_gain = adapt.get_txgain()
 rx_gain = adapt.get_rxgain()
@@ -132,23 +138,36 @@ tx_agc = TX_Agc.TX_Agc(adapt)
 agc = Agc.Agc(meas, adapt)
 agc.run()
 
-for i in range(num_iter):
+state = "measure"
+i = 0
+while i < num_iter:
     try:
-        txframe_aligned, tx_ts, rxframe_aligned, rx_ts, rx_median = meas.get_samples()
-        logging.debug("tx_ts {}, rx_ts {}".format(tx_ts, rx_ts))
-        assert tx_ts - rx_ts < 1e-5, "Time stamps do not match."
+        # Measure
+        if state == "measure":
+            txframe_aligned, tx_ts, rxframe_aligned, rx_ts, rx_median = meas.get_samples()
+            tx, rx, n_per_bin = extStat.extract(txframe_aligned, rxframe_aligned)
+            n_use = int(len(n_per_bin) * 0.6)
+            tx = tx[:n_use]
+            rx = rx[:n_use]
+            if all(c.ES_n_per_bin == np.array(n_per_bin)[0:n_use]):
+                state = "model"
+            else:
+                state = "measure"
 
-        if tx_agc.adapt_if_necessary(txframe_aligned):
-            continue
+        # Model
+        elif state == "model":
+            coefs_am = model_am.get_next_coefs(tx, rx, coefs_am)
+            del extStat
+            extStat = ExtractStatistic.ExtractStatistic(c, plot=True)
+            state = "adapt"
 
-        coefs_am, coefs_pm = model.get_next_coefs(txframe_aligned, rxframe_aligned)
-        adapt.set_coefs(coefs_am, coefs_pm)
+        # Adapt
+        elif state == "adapt":
+            print(coefs_am)
+            adapt.set_coefs(coefs_am, coefs_pm)
+            state = "measure"
+            i += 1
 
-        off = SA.calc_offset(txframe_aligned)
-        tx_mer = MER.calc_mer(txframe_aligned[off:off + c.T_U])
-        rx_mer = MER.calc_mer(rxframe_aligned[off:off + c.T_U], debug=True)
-        logging.info("MER with lag in it. {}: TX {}, RX {}".
-                     format(i, tx_mer, rx_mer))
     except Exception as e:
         logging.warning("Iteration {} failed.".format(i))
         logging.warning(traceback.format_exc())
