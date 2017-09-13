@@ -13,6 +13,10 @@ import zmq
 import logging
 import numpy as np
 
+LUT_LEN=32
+FORMAT_POLY=1
+FORMAT_LUT=2
+
 class Adapt:
     """Uses the ZMQ remote control to change parameters of the DabMod
 
@@ -126,45 +130,74 @@ class Adapt:
         # TODO handle failure
         return float(self.send_receive("get gain digital")[0])
 
-    def _read_coef_file(self, path):
+    def get_predistorter(self):
         """Load the coefficients from the file in the format given in the README,
-        return ([AM coef], [PM coef])"""
-        coefs_am_out = []
-        coefs_pm_out = []
-        f = open(path, 'r')
+        return ("poly", [AM coef], [PM coef]) or ("lut", scalefactor, [LUT entries])"""
+        f = open(self.coef_path, 'r')
         lines = f.readlines()
-        n_coefs = int(lines[0])
-        coefs = [float(l) for l in lines[1:]]
-        i = 0
-        for c in coefs:
-            if i < n_coefs:
-                coefs_am_out.append(c)
-            elif i < 2*n_coefs:
-                coefs_pm_out.append(c)
-            else:
-                raise ValueError(
-                    "Incorrect coef file format: too many coefficients in {}, should be {}, coefs are {}"
-                        .format(path, n_coefs, coefs))
-            i += 1
-        f.close()
-        return (coefs_am_out, coefs_pm_out)
+        predistorter_format = int(lines[0])
+        if predistorter_format == FORMAT_POLY:
+            coefs_am_out = []
+            coefs_pm_out = []
+            n_coefs = int(lines[1])
+            coefs = [float(l) for l in lines[2:]]
+            i = 0
+            for c in coefs:
+                if i < n_coefs:
+                    coefs_am_out.append(c)
+                elif i < 2*n_coefs:
+                    coefs_pm_out.append(c)
+                else:
+                    raise ValueError(
+                        "Incorrect coef file format: too many coefficients in {}, should be {}, coefs are {}"
+                            .format(path, n_coefs, coefs))
+                i += 1
+            f.close()
+            return ("poly", coefs_am_out, coefs_pm_out)
+        elif predistorter_format == FORMAT_LUT:
+            scalefactor = int(lines[1])
+            coefs = np.array([float(l) for l in lines[2:]], dtype=np.float32)
+            coefs = coefs.reshape((-1, 2))
+            lut = coefs[..., 0] + 1j * coefs[..., 1]
+            if len(lut) != LUT_LEN:
+                raise ValueError("Incorrect number of LUT entries ({} expected {})".format(len(lut), LUT_LEN))
+            return ("lut", scalefactor, lut)
+        else:
+            raise ValueError("Unknown predistorter format {}".format(predistorter_format))
 
-    def get_coefs(self):
-        return self._read_coef_file(self.coef_path)
-
-    def _write_coef_file(self, coefs_am, coefs_pm, path):
+    def _write_poly_coef_file(self, coefs_am, coefs_pm, path):
         assert(len(coefs_am) == len(coefs_pm))
 
         f = open(path, 'w')
-        f.write("{}\n".format(len(coefs_am)))
+        f.write("{}\n{}\n".format(FORMAT_POLY, len(coefs_am)))
         for coef in coefs_am:
             f.write("{}\n".format(coef))
         for coef in coefs_pm:
             f.write("{}\n".format(coef))
         f.close()
 
-    def set_coefs(self, coefs_am, coefs_pm):
-        self._write_coef_file(coefs_am, coefs_pm, self.coef_path)
+    def _write_lut_file(self, scalefactor, lut, path):
+        assert(len(lut) == LUT_LEN)
+
+        f = open(path, 'w')
+        f.write("{}\n{}\n".format(FORMAT_LUT, scalefactor))
+        for coef in lut:
+            f.write("{}\n{}\n".format(coef.real, coef.imag))
+        f.close()
+
+    def set_predistorter(self, dpddata):
+        """Update the predistorter data in the modulator. Takes the same
+        tuple format as argument than the one returned get_predistorter()"""
+        if dpddata[0] == "poly":
+            coefs_am = dpddata[1]
+            coefs_pm = dpddata[2]
+            self._write_poly_coef_file(coefs_am, coefs_pm, self.coef_path)
+        elif dpddata[0] == "lut":
+            scalefactor = dpddata[1]
+            lut = dpddata[2]
+            self._write_lut_file(scalefactor, lut, self.coef_path)
+        else:
+            raise ValueError("Unknown predistorter '{}'".format(dpddata[0]))
         self.send_receive("set memlesspoly coeffile {}".format(self.coef_path))
 
 # The MIT License (MIT)

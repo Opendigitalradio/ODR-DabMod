@@ -49,6 +49,12 @@
 
 typedef std::complex<float> complexf;
 
+enum class dpd_type_t {
+    odd_only_poly,
+    lookup_table
+};
+
+
 class MemlessPoly : public PipelinedModCodec, public RemoteControllable
 {
 public:
@@ -71,8 +77,16 @@ private:
         struct input_data_t {
             bool terminate = false;
 
+            dpd_type_t dpd_type;
+
+            // Valid for polynomial types
             const float *coefs_am = nullptr;
             const float *coefs_pm = nullptr;
+
+            // Valid for LUT
+            float lut_scalefactor = 0.0f;
+            const complexf *lut = nullptr;
+
             const complexf *in = nullptr;
             size_t start = 0;
             size_t stop = 0;
@@ -112,8 +126,16 @@ private:
 
     static void worker_thread(worker_t *workerdata);
 
+    bool m_dpd_settings_valid = false;
+    dpd_type_t m_dpd_type;
     std::vector<float> m_coefs_am; // AM/AM coefficients
     std::vector<float> m_coefs_pm; // AM/PM coefficients
+
+    float m_lut_scalefactor; // Scale value applied before looking up in LUT
+
+    static constexpr size_t lut_entries = 32;
+    std::array<complexf, lut_entries> m_lut; // Lookup table correction factors
+
     std::string m_coefs_file;
     mutable std::mutex m_coefs_mutex;
 };

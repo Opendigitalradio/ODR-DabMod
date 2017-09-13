@@ -13,7 +13,7 @@ predistortion module of ODR-DabMod."""
 import datetime
 import os
 import time
-
+import sys
 import matplotlib
 matplotlib.use('GTKAgg')
 
@@ -82,8 +82,8 @@ parser.add_argument('--samps', default='81920',
 parser.add_argument('-i', '--iterations', default='1',
                     help='Number of iterations to run',
                     required=False)
-parser.add_argument('-l', '--load-poly',
-                    help='Load existing polynomial',
+parser.add_argument('-L', '--lut',
+                    help='Use lookup table instead of polynomial predistorter',
                     action="store_true")
 
 cli_args = parser.parse_args()
@@ -105,12 +105,13 @@ c = src.const.const(samplerate)
 meas = Measure.Measure(samplerate, port, num_req)
 
 adapt = Adapt.Adapt(port_rc, coef_path)
-coefs_am, coefs_pm = adapt.get_coefs()
-if cli_args.load_poly:
-    model = Model.Model(c, SA, MER, coefs_am, coefs_pm, plot=True)
+dpddata = adapt.get_predistorter()
+
+if cli_args.lut:
+    model = Model.LutModel(c, SA, MER, plot=True)
 else:
-    model = Model.Model(c, SA, MER, [1.0, 0, 0, 0, 0], [0, 0, 0, 0, 0], plot=True)
-adapt.set_coefs(model.coefs_am, model.coefs_pm)
+    model = Model.PolyModel(c, SA, MER, None, None, plot=True)
+adapt.set_predistorter(model.get_dpd_data())
 adapt.set_digital_gain(digital_gain)
 adapt.set_txgain(txgain)
 adapt.set_rxgain(rxgain)
@@ -118,13 +119,28 @@ adapt.set_rxgain(rxgain)
 tx_gain = adapt.get_txgain()
 rx_gain = adapt.get_rxgain()
 digital_gain = adapt.get_digital_gain()
-dpd_coefs_am, dpd_coefs_pm = adapt.get_coefs()
-logging.info(
-    "TX gain {}, RX gain {}, dpd_coefs_am {},"
-    " dpd_coefs_pm {}, digital_gain {}".format(
-        tx_gain, rx_gain, dpd_coefs_am, dpd_coefs_pm, digital_gain
+
+dpddata = adapt.get_coefs()
+if dpddata[0] == "poly":
+    coefs_am = dpddata[1]
+    coefs_pm = dpddata[2]
+    logging.info(
+        "TX gain {}, RX gain {}, dpd_coefs_am {},"
+        " dpd_coefs_pm {}, digital_gain {}".format(
+            tx_gain, rx_gain, coefs_am, coefs_pm, digital_gain
+        )
     )
-)
+elif dpddata[0] == "lut":
+    scalefactor = dpddata[1]
+    lut = dpddata[2]
+    logging.info(
+        "TX gain {}, RX gain {}, LUT scalefactor {},"
+        " LUT {}, digital_gain {}".format(
+            tx_gain, rx_gain, scalefactor, lut, digital_gain
+        )
+    )
+else:
+    logging.error("Unknown dpd data format {}".format(dpddata[0]))
 
 tx_agc = TX_Agc.TX_Agc(adapt)
 
@@ -141,8 +157,8 @@ for i in range(num_iter):
         if tx_agc.adapt_if_necessary(txframe_aligned):
             continue
 
-        coefs_am, coefs_pm = model.get_next_coefs(txframe_aligned, rxframe_aligned)
-        adapt.set_coefs(coefs_am, coefs_pm)
+        model.train(txframe_aligned, rxframe_aligned)
+        adapt.set_predistorter(model.get_dpd_data())
 
         off = SA.calc_offset(txframe_aligned)
         tx_mer = MER.calc_mer(txframe_aligned[off:off + c.T_U])
@@ -155,7 +171,8 @@ for i in range(num_iter):
 
 # The MIT License (MIT)
 #
-# Copyright (c) 2017 Andreas Steger, Matthias P. Braendli
+# Copyright (c) 2017 Andreas Steger
+# Copyright (c) 2017 Matthias P. Braendli
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal

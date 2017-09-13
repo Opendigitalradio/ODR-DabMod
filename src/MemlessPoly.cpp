@@ -8,7 +8,8 @@
 
     http://opendigitalradio.org
 
-   This block implements a memoryless polynom for digital predistortion.
+   This block implements both a memoryless polynom for digital predistortion,
+   and a lookup table predistorter.
    For better performance, multiplying is done in another thread, leading
    to a pipeline delay of two calls to MemlessPoly::process
  */
@@ -67,7 +68,7 @@ MemlessPoly::MemlessPoly(const std::string& coefs_file, unsigned int num_threads
 
     if (num_threads == 0) {
         const unsigned int hw_concurrency = std::thread::hardware_concurrency();
-        etiLog.level(info) << "Polynomial Predistorter will use " <<
+        etiLog.level(info) << "Digital Predistorter will use " <<
             hw_concurrency << " threads (auto detected)";
 
         for (size_t i = 0; i < hw_concurrency; i++) {
@@ -80,7 +81,7 @@ MemlessPoly::MemlessPoly(const std::string& coefs_file, unsigned int num_threads
         }
     }
     else {
-        etiLog.level(info) << "Polynomial Predistorter will use " <<
+        etiLog.level(info) << "Digital Predistorter will use " <<
             num_threads << " threads (set in config file)";
 
         for (size_t i = 0; i < num_threads; i++) {
@@ -100,54 +101,93 @@ MemlessPoly::MemlessPoly(const std::string& coefs_file, unsigned int num_threads
 
 void MemlessPoly::load_coefficients(const std::string &coefFile)
 {
-    std::vector<float> coefs_am;
-    std::vector<float> coefs_pm;
     std::ifstream coef_fstream(coefFile.c_str());
     if (!coef_fstream) {
         throw std::runtime_error("MemlessPoly: Could not open file with coefs!");
     }
-    int n_coefs;
-    coef_fstream >> n_coefs;
 
-    if (n_coefs <= 0) {
-        throw std::runtime_error("MemlessPoly: coefs file has invalid format.");
-    }
-    else if (n_coefs != NUM_COEFS) {
-        throw std::runtime_error("MemlessPoly: invalid number of coefs: " +
-                std::to_string(n_coefs) + " expected " + std::to_string(NUM_COEFS));
-    }
+    uint32_t file_format_indicator;
+    const uint8_t file_format_odd_poly = 1;
+    const uint8_t file_format_lut = 2;
+    coef_fstream >> file_format_indicator;
 
-    const int n_entries = 2 * n_coefs;
+    if (file_format_indicator == file_format_odd_poly) {
+        int n_coefs;
+        coef_fstream >> n_coefs;
 
-    etiLog.log(debug, "MemlessPoly: Reading %d coefs...", n_entries);
-
-    coefs_am.resize(n_coefs);
-    coefs_pm.resize(n_coefs);
-
-    for (int n = 0; n < n_entries; n++) {
-        float a;
-        coef_fstream >> a;
-
-        if (n < n_coefs) {
-            coefs_am[n] = a;
+        if (n_coefs <= 0) {
+            throw std::runtime_error("MemlessPoly: coefs file has invalid format.");
         }
-        else {
-            coefs_pm[n - n_coefs] = a;
+        else if (n_coefs != NUM_COEFS) {
+            throw std::runtime_error("MemlessPoly: invalid number of coefs: " +
+                    std::to_string(n_coefs) + " expected " + std::to_string(NUM_COEFS));
         }
 
-        if (coef_fstream.eof()) {
-            etiLog.log(error, "MemlessPoly: file %s should contains %d coefs, "
-                    "but EOF reached after %d coefs !",
-                    coefFile.c_str(), n_entries, n);
-            throw std::runtime_error("MemlessPoly: coefs file invalid !");
+        const int n_entries = 2 * n_coefs;
+
+        std::vector<float> coefs_am;
+        std::vector<float> coefs_pm;
+        coefs_am.resize(n_coefs);
+        coefs_pm.resize(n_coefs);
+
+        for (int n = 0; n < n_entries; n++) {
+            float a;
+            coef_fstream >> a;
+
+            if (n < n_coefs) {
+                coefs_am[n] = a;
+            }
+            else {
+                coefs_pm[n - n_coefs] = a;
+            }
+
+            if (coef_fstream.eof()) {
+                etiLog.log(error, "MemlessPoly: file %s should contains %d coefs, "
+                        "but EOF reached after %d coefs !",
+                        coefFile.c_str(), n_entries, n);
+                throw std::runtime_error("MemlessPoly: coefs file invalid !");
+            }
         }
+
+        {
+            std::lock_guard<std::mutex> lock(m_coefs_mutex);
+
+            m_dpd_type = dpd_type_t::odd_only_poly;
+            m_coefs_am = coefs_am;
+            m_coefs_pm = coefs_pm;
+            m_dpd_settings_valid = true;
+        }
+        etiLog.log(info, "MemlessPoly loaded %zu poly coefs",
+                m_coefs_am.size() + m_coefs_pm.size());
     }
+    else if (file_format_indicator == file_format_lut) {
+        float scalefactor;
+        coef_fstream >> scalefactor;
 
-    {
-        std::lock_guard<std::mutex> lock(m_coefs_mutex);
+        std::array<complexf, lut_entries> lut;
 
-        m_coefs_am = coefs_am;
-        m_coefs_pm = coefs_pm;
+        for (size_t n = 0; n < lut_entries; n++) {
+            float a;
+            coef_fstream >> a;
+
+            lut[n] = a;
+        }
+
+        {
+            std::lock_guard<std::mutex> lock(m_coefs_mutex);
+
+            m_dpd_type = dpd_type_t::lookup_table;
+            m_lut_scalefactor = scalefactor;
+            m_lut = lut;
+            m_dpd_settings_valid = true;
+        }
+
+        etiLog.log(info, "MemlessPoly loaded %zu LUT entries", m_lut.size());
+    }
+    else {
+        etiLog.log(error, "MemlessPoly: coef file has unknown format %d",
+                file_format_indicator);
+        m_dpd_settings_valid = false;
     }
 }
 
@@ -195,6 +235,39 @@ static void apply_coeff(
     }
 }
 
+static void apply_lut(
+        const complexf *__restrict lut, const float scalefactor,
+        const complexf *__restrict in,
+        size_t start, size_t stop, complexf *__restrict out)
+{
+    for (size_t i = start; i < stop; i++) {
+        const float in_mag = std::abs(in[i]);
+
+        // The scalefactor is chosen so as to map the input magnitude
+        // to the range of uint32_t
+        const uint32_t scaled_in = lrintf(in_mag * scalefactor);
+
+        // lut_ix contains the number of leading 0-bits of the
+        // scaled value, starting at the most significant bit position.
+        //
+        // This partitions the range 0 -- 0xFFFFFFFF into 32 bins.
+        //
+        // 0x00000000 to 0x07FFFFFF go into bin 0
+        // 0x08000000 to 0x0FFFFFFF go into bin 1
+        // 0x10000000 to 0x17FFFFFF go into bin 2
+        // ...
+        // 0xF0000000 to 0xF7FFFFFF go into bin 30
+        // 0xF8000000 to 0xFFFFFFFF go into bin 31
+        //
+        // The high 5 bits are therefore used as index.
+        const uint8_t lut_ix = (scaled_in >> 27);
+
+        // The LUT contains a complex correction factor that is close to
+        // 1 + 0j
+        out[i] = in[i] * lut[lut_ix];
+    }
+}
+
 void MemlessPoly::worker_thread(MemlessPoly::worker_t *workerdata)
 {
     while (true) {
@@ -205,9 +278,18 @@ void MemlessPoly::worker_thread(MemlessPoly::worker_t *workerdata)
             break;
         }
 
-        apply_coeff(in_data.coefs_am, in_data.coefs_pm,
-                in_data.in, in_data.start, in_data.stop,
-                in_data.out);
+        switch (in_data.dpd_type) {
+            case dpd_type_t::odd_only_poly:
+                apply_coeff(in_data.coefs_am, in_data.coefs_pm,
+                        in_data.in, in_data.start, in_data.stop,
+                        in_data.out);
+                break;
+            case dpd_type_t::lookup_table:
+                apply_lut(in_data.lut, in_data.lut_scalefactor,
+                        in_data.in, in_data.start, in_data.stop,
+                        in_data.out);
+                break;
+        }
 
         workerdata->out_queue.push(1);
     }
@@ -221,6 +303,7 @@ int MemlessPoly::internal_process(Buffer* const dataIn, Buffer* dataOut)
     complexf* out = reinterpret_cast<complexf*>(dataOut->getData());
     size_t sizeOut = dataOut->getLength() / sizeof(complexf);
 
+    if (m_dpd_settings_valid)
     {
         std::lock_guard<std::mutex> lock(m_coefs_mutex);
         const size_t num_threads = m_workers.size();
@@ -232,6 +315,9 @@ int MemlessPoly::internal_process(Buffer* const dataIn, Buffer* dataOut)
             for (auto& worker : m_workers) {
                 worker_t::input_data_t dat;
                 dat.terminate = false;
+                dat.dpd_type = m_dpd_type;
+                dat.lut_scalefactor = m_lut_scalefactor;
+                dat.lut = m_lut.data();
                 dat.coefs_am = m_coefs_am.data();
                 dat.coefs_pm = m_coefs_pm.data();
                 dat.in = in;
@@ -245,8 +331,16 @@ int MemlessPoly::internal_process(Buffer* const dataIn, Buffer* dataOut)
             }
 
             // Do the last in this thread
-            apply_coeff(m_coefs_am.data(), m_coefs_pm.data(),
-                    in, start, sizeOut, out);
+            switch (m_dpd_type) {
+                case dpd_type_t::odd_only_poly:
+                    apply_coeff(m_coefs_am.data(), m_coefs_pm.data(),
+                            in, start, sizeOut, out);
+                    break;
+                case dpd_type_t::lookup_table:
+                    apply_lut(m_lut.data(), m_lut_scalefactor,
+                            in, start, sizeOut, out);
+                    break;
+            }
 
             // Wait for completion of the tasks
             for (auto& worker : m_workers) {
@@ -255,9 +349,20 @@ int MemlessPoly::internal_process(Buffer* const dataIn, Buffer* dataOut)
             }
         }
         else {
-            apply_coeff(m_coefs_am.data(), m_coefs_pm.data(),
-                    in, 0, sizeOut, out);
+            switch (m_dpd_type) {
+                case dpd_type_t::odd_only_poly:
+                    apply_coeff(m_coefs_am.data(), m_coefs_pm.data(),
+                            in, 0, sizeOut, out);
+                    break;
+                case dpd_type_t::lookup_table:
+                    apply_lut(m_lut.data(), m_lut_scalefactor,
+                            in, 0, sizeOut, out);
+                    break;
+            }
         }
+    }
+    else {
+        memcpy(dataOut->getData(), dataIn->getData(), sizeOut);
     }
 
     return dataOut->getLength();

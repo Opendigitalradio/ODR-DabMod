@@ -15,7 +15,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from sklearn import linear_model
 
-class Model:
+class PolyModel:
     """Calculates new coefficients using the measurement and the old
     coefficients"""
 
@@ -28,6 +28,7 @@ class Model:
                  learning_rate_am=1.,
                  learning_rate_pm=1.,
                  plot=False):
+        logging.debug("Initialising Poly Model")
         self.c = c
         self.SA = SA
         self.MER = MER
@@ -35,7 +36,10 @@ class Model:
         self.learning_rate_am = learning_rate_am
         self.learning_rate_pm = learning_rate_pm
 
-        self.coefs_am = coefs_am
+        if coefs_am is None:
+            self.coefs_am = [1.0, 0, 0, 0, 0]
+        else:
+            self.coefs_am = coefs_am
         self.coefs_am_history = [coefs_am, ]
         self.mses_am = []
         self.errs_am = []
@@ -43,116 +47,17 @@ class Model:
         self.tx_mers = []
         self.rx_mers = []
 
-        self.coefs_pm = coefs_pm
+        if coefs_pm is None:
+            self.coefs_pm = [0, 0, 0, 0, 0]
+        else:
+            self.coefs_pm = coefs_pm
         self.coefs_pm_history = [coefs_pm, ]
         self.errs_pm = []
 
         self.plot = plot
 
-    def sample_uniformly(self, tx_dpd, rx_received, n_bins=5):
-        """This function returns tx and rx samples in a way
-        that the tx amplitudes have an approximate uniform 
-        distribution with respect to the tx_dpd amplitudes"""
-        mask = np.logical_and((np.abs(tx_dpd) > 0.01), (np.abs(rx_received) > 0.01))
-        tx_dpd = tx_dpd[mask]
-        rx_received = rx_received[mask]
-
-        txframe_aligned_abs = np.abs(tx_dpd)
-        ccdf_min = 0
-        ccdf_max = np.max(txframe_aligned_abs)
-        tx_hist, ccdf_edges = np.histogram(txframe_aligned_abs,
-                                           bins=n_bins,
-                                           range=(ccdf_min, ccdf_max))
-        n_choise = np.min(tx_hist)
-        tx_choice = np.zeros(n_choise * n_bins, dtype=np.complex64)
-        rx_choice = np.zeros(n_choise * n_bins, dtype=np.complex64)
-
-        for idx, bin in enumerate(tx_hist):
-            indices = np.where((txframe_aligned_abs >= ccdf_edges[idx]) &
-                               (txframe_aligned_abs <= ccdf_edges[idx + 1]))[0]
-            indices_choise = np.random.choice(indices,
-                                              n_choise,
-                                              replace=False)
-            rx_choice[idx * n_choise:(idx + 1) * n_choise] = \
-                rx_received[indices_choise]
-            tx_choice[idx * n_choise:(idx + 1) * n_choise] = \
-                tx_dpd[indices_choise]
-
-        assert isinstance(rx_choice[0], np.complex64), \
-            "rx_choice is not complex64 but {}".format(rx_choice[0].dtype)
-        assert isinstance(tx_choice[0], np.complex64), \
-            "tx_choice is not complex64 but {}".format(tx_choice[0].dtype)
-
-        return tx_choice, rx_choice
-
-    def dpd_amplitude(self, sig, coefs=None):
-        if coefs is None:
-            coefs = self.coefs_am
-        assert isinstance(sig[0], np.complex64), "Sig is not complex64 but {}".format(sig[0].dtype)
-        sig_abs = np.abs(sig)
-        A_sig = np.vstack([np.ones(sig_abs.shape),
-                           sig_abs ** 1,
-                           sig_abs ** 2,
-                           sig_abs ** 3,
-                           sig_abs ** 4,
-                           ]).T
-        sig_dpd = sig * np.sum(A_sig * coefs, axis=1)
-        return sig_dpd, A_sig
-
-    def dpd_phase(self, sig, coefs=None):
-        if coefs is None:
-            coefs = self.coefs_pm
-        assert isinstance(sig[0], np.complex64), "Sig is not complex64 but {}".format(sig[0].dtype)
-        sig_abs = np.abs(sig)
-        A_phase = np.vstack([np.ones(sig_abs.shape),
-                             sig_abs ** 1,
-                             sig_abs ** 2,
-                             sig_abs ** 3,
-                             sig_abs ** 4,
-                             ]).T
-        phase_diff_est = np.sum(A_phase * coefs, axis=1)
-        return phase_diff_est, A_phase
-
-    def _next_am_coefficent(self, tx_choice, rx_choice):
-        """Calculate new coefficients for AM/AM correction"""
-        rx_dpd, rx_A = self.dpd_amplitude(rx_choice)
-        rx_dpd = rx_dpd * (
-            np.median(np.abs(tx_choice)) /
-            np.median(np.abs(rx_dpd)))
-        err = np.abs(rx_dpd) - np.abs(tx_choice)
-        mse = np.mean(np.abs((rx_dpd - tx_choice) ** 2))
-        self.mses_am.append(mse)
-        self.errs_am.append(np.mean(err**2))
-
-        reg = linear_model.Ridge(alpha=0.00001)
-        reg.fit(rx_A, err)
-        a_delta = reg.coef_
-        new_coefs_am = self.coefs_am - self.learning_rate_am * a_delta
-        new_coefs_am = new_coefs_am * (self.coefs_am[0] / new_coefs_am[0])
-        return new_coefs_am
-
-    def _next_pm_coefficent(self, tx_choice, rx_choice):
-        """Calculate new coefficients for AM/PM correction
-        Assuming deviations smaller than pi/2"""
-        phase_diff_choice = np.angle(
-            (rx_choice * tx_choice.conjugate()) /
-            (np.abs(rx_choice) * np.abs(tx_choice))
-        )
-        plt.hist(phase_diff_choice)
-        plt.savefig('/tmp/hist_' + str(np.random.randint(0,1000)) + '.svg')
-        plt.clf()
-        phase_diff_est, phase_A = self.dpd_phase(rx_choice)
-        err_phase = phase_diff_est - phase_diff_choice
-        self.errs_pm.append(np.mean(np.abs(err_phase ** 2)))
-
-        reg = linear_model.Ridge(alpha=0.00001)
-        reg.fit(phase_A, err_phase)
-        p_delta = reg.coef_
-        new_coefs_pm = self.coefs_pm - self.learning_rate_pm * p_delta
-
-        return new_coefs_pm, phase_diff_choice
-
-    def get_next_coefs(self, tx_dpd, rx_received):
+    def train(self, tx_dpd, rx_received):
+        """Give new training data to the model"""
         # Check data type
         assert tx_dpd[0].dtype == np.complex64, \
             "tx_dpd is not complex64 but {}".format(tx_dpd[0].dtype)
@@ -164,7 +69,7 @@ class Model:
                                   np.median(np.abs(tx_dpd)) + np.median(np.abs(rx_received)))
         assert normalization_error < 0.01, "Non normalized signals"
 
-        tx_choice, rx_choice = self.sample_uniformly(tx_dpd, rx_received)
+        tx_choice, rx_choice = self._sample_uniformly(tx_dpd, rx_received)
         new_coefs_am = self._next_am_coefficent(tx_choice, rx_choice)
         new_coefs_pm, phase_diff_choice = self._next_pm_coefficent(tx_choice, rx_choice)
 
@@ -255,8 +160,8 @@ class Model:
 
             ax = plt.subplot(4, 2, i_sub)
             rx_range = np.linspace(0, 1, num=100, dtype=np.complex64)
-            rx_range_dpd = self.dpd_amplitude(rx_range)[0]
-            rx_range_dpd_new = self.dpd_amplitude(rx_range, new_coefs_am)[0]
+            rx_range_dpd = self._dpd_amplitude(rx_range)[0]
+            rx_range_dpd_new = self._dpd_amplitude(rx_range, new_coefs_am)[0]
             i_sub += 1
             ax.scatter(
                 np.abs(tx_choice),
@@ -284,8 +189,8 @@ class Model:
             ax.set_ylabel("Coefficient Value")
 
             phase_range = np.linspace(0, 1, num=100, dtype=np.complex64)
-            phase_range_dpd = self.dpd_phase(phase_range)[0]
-            phase_range_dpd_new = self.dpd_phase(phase_range,
+            phase_range_dpd = self._dpd_phase(phase_range)[0]
+            phase_range_dpd_new = self._dpd_phase(phase_range,
                                                  coefs=new_coefs_pm)[0]
             ax = plt.subplot(4, 2, i_sub)
             i_sub += 1
@@ -330,11 +235,139 @@ class Model:
         self.coefs_am_history.append(self.coefs_am)
         self.coefs_pm = new_coefs_pm
         self.coefs_pm_history.append(self.coefs_pm)
-        return self.coefs_am, self.coefs_pm
+
+    def get_dpd_data(self):
+        return "poly", self.coefs_am, self.coefs_pm
+
+    def _sample_uniformly(self, tx_dpd, rx_received, n_bins=5):
+        """This function returns tx and rx samples in a way
+        that the tx amplitudes have an approximate uniform 
+        distribution with respect to the tx_dpd amplitudes"""
+        mask = np.logical_and((np.abs(tx_dpd) > 0.01), (np.abs(rx_received) > 0.01))
+        tx_dpd = tx_dpd[mask]
+        rx_received = rx_received[mask]
+
+        txframe_aligned_abs = np.abs(tx_dpd)
+        ccdf_min = 0
+        ccdf_max = np.max(txframe_aligned_abs)
+        tx_hist, ccdf_edges = np.histogram(txframe_aligned_abs,
+                                           bins=n_bins,
+                                           range=(ccdf_min, ccdf_max))
+        n_choise = np.min(tx_hist)
+        tx_choice = np.zeros(n_choise * n_bins, dtype=np.complex64)
+        rx_choice = np.zeros(n_choise * n_bins, dtype=np.complex64)
+
+        for idx, bin in enumerate(tx_hist):
+            indices = np.where((txframe_aligned_abs >= ccdf_edges[idx]) &
+                               (txframe_aligned_abs <= ccdf_edges[idx + 1]))[0]
+            indices_choise = np.random.choice(indices,
+                                              n_choise,
+                                              replace=False)
+            rx_choice[idx * n_choise:(idx + 1) * n_choise] = \
+                rx_received[indices_choise]
+            tx_choice[idx * n_choise:(idx + 1) * n_choise] = \
+                tx_dpd[indices_choise]
+
+        assert isinstance(rx_choice[0], np.complex64), \
+            "rx_choice is not complex64 but {}".format(rx_choice[0].dtype)
+        assert isinstance(tx_choice[0], np.complex64), \
+            "tx_choice is not complex64 but {}".format(tx_choice[0].dtype)
+
+        return tx_choice, rx_choice
+
+    def _dpd_amplitude(self, sig, coefs=None):
+        if coefs is None:
+            coefs = self.coefs_am
+        assert isinstance(sig[0], np.complex64), "Sig is not complex64 but {}".format(sig[0].dtype)
+        sig_abs = np.abs(sig)
+        A_sig = np.vstack([np.ones(sig_abs.shape),
+                           sig_abs ** 1,
+                           sig_abs ** 2,
+                           sig_abs ** 3,
+                           sig_abs ** 4,
+                           ]).T
+        sig_dpd = sig * np.sum(A_sig * coefs, axis=1)
+        return sig_dpd, A_sig
+
+    def _dpd_phase(self, sig, coefs=None):
+        if coefs is None:
+            coefs = self.coefs_pm
+        assert isinstance(sig[0], np.complex64), "Sig is not complex64 but {}".format(sig[0].dtype)
+        sig_abs = np.abs(sig)
+        A_phase = np.vstack([np.ones(sig_abs.shape),
+                             sig_abs ** 1,
+                             sig_abs ** 2,
+                             sig_abs ** 3,
+                             sig_abs ** 4,
+                             ]).T
+        phase_diff_est = np.sum(A_phase * coefs, axis=1)
+        return phase_diff_est, A_phase
+
+    def _next_am_coefficent(self, tx_choice, rx_choice):
+        """Calculate new coefficients for AM/AM correction"""
+        rx_dpd, rx_A = self._dpd_amplitude(rx_choice)
+        rx_dpd = rx_dpd * (
+            np.median(np.abs(tx_choice)) /
+            np.median(np.abs(rx_dpd)))
+        err = np.abs(rx_dpd) - np.abs(tx_choice)
+        mse = np.mean(np.abs((rx_dpd - tx_choice) ** 2))
+        self.mses_am.append(mse)
+        self.errs_am.append(np.mean(err**2))
+
+        reg = linear_model.Ridge(alpha=0.00001)
+        reg.fit(rx_A, err)
+        a_delta = reg.coef_
+        new_coefs_am = self.coefs_am - self.learning_rate_am * a_delta
+        new_coefs_am = new_coefs_am * (self.coefs_am[0] / new_coefs_am[0])
+        return new_coefs_am
+
+    def _next_pm_coefficent(self, tx_choice, rx_choice):
+        """Calculate new coefficients for AM/PM correction
+        Assuming deviations smaller than pi/2"""
+        phase_diff_choice = np.angle(
+            (rx_choice * tx_choice.conjugate()) /
+            (np.abs(rx_choice) * np.abs(tx_choice))
+        )
+        plt.hist(phase_diff_choice)
+        plt.savefig('/tmp/hist_' + str(np.random.randint(0,1000)) + '.svg')
+        plt.clf()
+        phase_diff_est, phase_A = self._dpd_phase(rx_choice)
+        err_phase = phase_diff_est - phase_diff_choice
+        self.errs_pm.append(np.mean(np.abs(err_phase ** 2)))
+
+        reg = linear_model.Ridge(alpha=0.00001)
+        reg.fit(phase_A, err_phase)
+        p_delta = reg.coef_
+        new_coefs_pm = self.coefs_pm - self.learning_rate_pm * p_delta
+
+        return new_coefs_pm, phase_diff_choice
+
+class LutModel:
+    """Implements a model that calculates lookup table coefficients"""
+
+    def __init__(self,
+                 c,
+                 SA,
+                 MER,
+                 learning_rate=1.,
+                 plot=False):
+        logging.debug("Initialising LUT Model")
+        self.c = c
+        self.SA = SA
+        self.MER = MER
+        self.learning_rate = learning_rate
+        self.plot = plot
+
+    def train(self, tx_dpd, rx_received):
+        pass
+
+    def get_dpd_data(self):
+        return ("lut", np.ones(32, dtype=np.complex64))
 
 # The MIT License (MIT)
 #
 # Copyright (c) 2017 Andreas Steger
+# Copyright (c) 2017 Matthias P. Braendli
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal

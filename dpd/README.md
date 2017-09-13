@@ -8,7 +8,9 @@ Concept
 
 ODR-DabMod makes outgoing TX samples and feedback RX samples available for an external tool. This
 external tool can request a buffer of samples for analysis, can calculate coefficients for the
-polynomial predistorter in ODR-DabMod and load the new coefficients using the remote control.
+predistorter in ODR-DabMod and load the new coefficients using the remote control.
+
+The predistorter in ODR-DabMod supports two modes: polynomial and lookup table.
 
 The *dpd/main.py* script is the entry point for the *DPD Calculation Engine* into which these
 features will be implemented. The tool uses modules from the *dpd/src/* folder:
@@ -43,10 +45,21 @@ The coef file contains the polynomial coefficients used in the predistorter. The
 very similar to the filtertaps file used in the FIR filter. It is a text-based format that can
 easily be inspected and edited in a text editor.
 
-The first line contains the number of coefficients as an integer. The second and third lines contain
-the real, respectively the imaginary parts of the first coefficient. Fourth and fifth lines give the
-second coefficient, and so on. The file therefore contains 2xN + 1 lines if it contains N
-coefficients.
+The first line contains an integer that defines the predistorter to be used:
+1 for polynomial, 2 for lookup table.
+
+For the polynomial, the subsequent line contains the number of coefficients
+as an integer. The second and third lines contain the real, respectively the
+imaginary parts of the first coefficient. Fourth and fifth lines give the
+second coefficient, and so on. The file therefore contains 1 + 1 + 2xN lines if
+it contains N coefficients.
+
+For the lookup table, the subsequent line contains a float scalefactor that is
+applied to the samples in order to bring them into the range of 32-bit unsigned
+integer. Then, the next pair of lines contains real and imaginary part of the first
+lookup-table entry, which is multiplied to samples in first range. Then it's
+followed by 31 other pairs. The entries are complex values close to 1 + 0j.
+The file therefore contains 1 + 1 + 2xN lines if it contains N coefficients.
 
 TODO
 ----
