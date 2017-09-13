@@ -139,7 +139,7 @@ class Model:
         )
         plt.hist(phase_diff_choice)
         plt.savefig('/tmp/hist_' + str(np.random.randint(0, 1000)) + '.svg')
-        plt.clf()
+        plt.close()
         phase_diff_est, phase_A = self.dpd_phase(rx_choice)
         err_phase = phase_diff_est - phase_diff_choice
         self.errs_pm.append(np.mean(np.abs(err_phase ** 2)))
@@ -326,7 +326,7 @@ class Model:
 
             fig.tight_layout()
             fig.savefig(fig_path)
-            fig.clf()
+            plt.close(fig)
 
         self.coefs_am = new_coefs_am
         self.coefs_am_history.append(self.coefs_am)

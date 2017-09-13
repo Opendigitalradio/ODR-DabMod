@@ -75,7 +75,7 @@ def phase_align(sig, ref_sig, plot=False):
         plt.legend(loc=4)
         plt.tight_layout()
         plt.savefig(fig_path)
-        plt.clf()
+        plt.close()
 
     return sig
 

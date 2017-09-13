@@ -106,7 +106,7 @@ class MER:
             plt.tight_layout()
             plt.savefig(fig_path)
             plt.show()
-            plt.clf()
+            plt.close()
 
         MER_res = 20 * np.log10(np.mean([10 ** (MER / 20) for MER in MERs]))
         return MER_res

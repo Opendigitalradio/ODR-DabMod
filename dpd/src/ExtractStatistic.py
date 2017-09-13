@@ -118,7 +118,7 @@ class ExtractStatistic:
 
             fig.tight_layout()
             fig.savefig(fig_path)
-            fig.clf()
+            plt.close(fig)
 
             pickle.dump(self.rx_values_lists, open("/tmp/rx_values", "wb"))
             pickle.dump(self.tx_values, open("/tmp/tx_values", "wb"))

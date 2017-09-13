@@ -71,7 +71,7 @@ class Model_AM:
 
             fig.tight_layout()
             fig.savefig(fig_path)
-            fig.clf()
+            plt.close(fig)
 
     def poly(self, sig):
         return np.array([sig ** i for i in range(1, 6)]).T

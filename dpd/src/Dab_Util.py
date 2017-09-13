@@ -49,7 +49,7 @@ class Dab_Util:
             plt.plot(c, label="corr")
             plt.legend()
             plt.savefig(corr_path)
-            plt.clf()
+            plt.close()
 
         return np.argmax(c) - off + 1
 
@@ -118,7 +118,7 @@ class Dab_Util:
 
             fig.tight_layout()
             fig.savefig(fig_path)
-            fig.clf()
+            plt.close(fig)
 
         off_meas = self.lag_upsampling(sig_rx, sig_tx, n_up=1)
         off = int(abs(off_meas))
@@ -161,7 +161,7 @@ class Dab_Util:
 
             fig.tight_layout()
             fig.savefig(fig_path)
-            fig.clf()
+            plt.close(fig)
 
         sig_rx = sa.subsample_align(sig_rx, sig_tx)
 
@@ -185,7 +185,7 @@ class Dab_Util:
 
             fig.tight_layout()
             fig.savefig(fig_path)
-            fig.clf()
+            plt.close(fig)
 
         sig_rx = pa.phase_align(sig_rx, sig_tx)
 
@@ -209,7 +209,7 @@ class Dab_Util:
 
             fig.tight_layout()
             fig.savefig(fig_path)
-            fig.clf()
+            plt.close(fig)
 
         logging.debug("Sig1_cut: %d %s, Sig2_cut: %d %s, off: %d" % (len(sig_tx), sig_tx.dtype, len(sig_rx), sig_rx.dtype, off))
         return sig_tx, sig_rx
