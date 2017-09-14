@@ -26,11 +26,12 @@ class Symbol_align:
     Find the phase offset to the start of the DAB symbols in an
     unaligned dab signal.
     """
-    def __init__(self, sample_rate):
+    def __init__(self, sample_rate, plot=False):
         self.c = src.const.const(sample_rate)
+        self.plot = plot
         pass
 
-    def _calc_offset_to_first_symbol_without_prefix(self, tx, debug=False):
+    def _calc_offset_to_first_symbol_without_prefix(self, tx):
         tx_orig = tx[0:-self.c.T_U]
         tx_cut_prefix = tx[self.c.T_U:]
 
@@ -48,7 +49,10 @@ class Symbol_align:
 
         offset = peaks[np.argmin([tx_product_avg[peak] for peak in peaks])]
 
-        if debug:
+        if logging.getLogger().getEffectiveLevel() == logging.DEBUG and self.plot:
+            dt = datetime.datetime.now().isoformat()
+            fig_path = logging_path + "/" + dt + "_Symbol_align.svg"
+
             fig = plt.figure(figsize=(9, 9))
 
             ax = fig.add_subplot(4, 1, 1)
@@ -99,7 +103,10 @@ class Symbol_align:
             ax.set_xlabel("Sample")
             ax.set_ylabel("Conj. Product")
             ax.set_title("Difference with shifted self")
+
             fig.tight_layout()
+            fig.savefig(fig_path)
+            plt.close(fig)
 
         # "offset" measures where the shifted signal matches the
         # original signal. Therefore we have to subtract the size
@@ -112,7 +119,7 @@ class Symbol_align:
         x = x[inlier_idxs]
         return x
 
-    def _calc_delta_angle(self, fft, debug=False):
+    def _calc_delta_angle(self, fft):
         # Introduce invariance against carrier
         angles = np.angle(fft) % (np.pi / 2.)
 
@@ -125,12 +132,7 @@ class Symbol_align:
         deltas_angle = self._remove_outliers(deltas_angle)
 
         delta_angle = np.mean(deltas_angle)
-        delta_angle_std = np.std(deltas_angle)
-        if debug:
-            plt.subplot(211)
-            plt.plot(angles, 'p')
-            plt.subplot(212)
-            plt.plot(deltas_angle, 'p')
+
         return delta_angle
 
     def _delta_angle_to_samples(self, angle):
@@ -142,7 +144,7 @@ class Symbol_align:
 
         fft = np.fft.fftshift(np.fft.fft(sig))
         fft_crop = np.delete(fft[self.c.FFT_start:self.c.FFT_end], self.c.FFT_delete)
-        delta_angle = self._calc_delta_angle(fft_crop, debug=debug)
+        delta_angle = self._calc_delta_angle(fft_crop)
         delta_sample = self._delta_angle_to_samples(delta_angle)
         delta_sample_int = np.round(delta_sample).astype(int)
         error = np.abs(delta_sample_int - delta_sample)
@@ -153,7 +155,7 @@ class Symbol_align:
 
     def calc_offset(self, tx):
         off_sym = self._calc_offset_to_first_symbol_without_prefix(
-            tx, debug=False)
+            tx)
         off_sam = self._calc_sample_offset(
             tx[off_sym:off_sym + self.c.T_U])
         off = (off_sym + off_sam) % self.c.T_S
