@@ -65,8 +65,8 @@ class Model_AM:
                        color="blue",
                        s=0.1)
             ax.set_title("Model_AM")
-            ax.set_xlabel("RX Amplitude")
-            ax.set_ylabel("TX Amplitude")
+            ax.set_xlabel("TX Amplitude")
+            ax.set_ylabel("RX Amplitude")
             ax.legend(loc=4)
 
             fig.tight_layout()
