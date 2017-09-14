@@ -42,9 +42,8 @@ import numpy as np
 import traceback
 import src.Measure as Measure
 import src.Model as Model
-import src.Model_AM as Model_AM
-import src.Model_PM as Model_PM
 import src.ExtractStatistic as ExtractStatistic
+import src.Model_Poly
 import src.Adapt as Adapt
 import src.Agc as Agc
 import src.TX_Agc as TX_Agc
@@ -91,15 +90,15 @@ parser.add_argument('-l', '--load-poly',
 
 cli_args = parser.parse_args()
 
-port = int(cli_args.port)
-port_rc = int(cli_args.rc_port)
+port = cli_args.port
+port_rc = cli_args.rc_port
 coef_path = cli_args.coefs
 digital_gain = cli_args.digital_gain
 txgain = cli_args.txgain
 rxgain = cli_args.rxgain
-num_req = int(cli_args.samps)
-samplerate = int(cli_args.samplerate)
-num_iter = int(cli_args.iterations)
+num_req = cli_args.samps
+samplerate = cli_args.samplerate
+num_iter = cli_args.iterations
 
 SA = src.Symbol_align.Symbol_align(samplerate)
 MER = src.MER.MER(samplerate)
@@ -109,19 +108,15 @@ meas = Measure.Measure(samplerate, port, num_req)
 extStat = ExtractStatistic.ExtractStatistic(c, plot=True)
 adapt = Adapt.Adapt(port_rc, coef_path)
 
-if cli_args.load_poly:
-    coefs_am, coefs_pm = adapt.get_coefs()
-    model = Model.Model(c, SA, MER, coefs_am, coefs_pm, plot=True)
-else:
-    coefs_am, coefs_pm = [[1.0, 0, 0, 0, 0], [0, 0, 0, 0, 0]]
-    model = Model.Model(c, SA, MER, coefs_am, coefs_pm, plot=True)
-model_am = Model_AM.Model_AM(c, plot=True)
-model_pm = Model_PM.Model_PM(c, plot=True)
-adapt.set_coefs(model.coefs_am, model.coefs_pm)
+coefs_am, coefs_pm = adapt.get_coefs()
+model_poly = src.Model_Poly.Model_Poly(c, coefs_am, coefs_pm, plot=True)
+if not cli_args.load_poly:
+    coefs_am, coefs_pm = model_poly.get_default_coefs()
+
+adapt.set_coefs(model_poly.coefs_am, model_poly.coefs_pm)
 adapt.set_digital_gain(digital_gain)
 adapt.set_txgain(txgain)
 adapt.set_rxgain(rxgain)
-print(coefs_am)
 
 tx_gain = adapt.get_txgain()
 rx_gain = adapt.get_rxgain()
@@ -159,15 +154,13 @@ while i < num_iter:
 
         # Model
         elif state == "model":
-            coefs_am = model_am.get_next_coefs(tx, rx, coefs_am)
-            coefs_pm = model_pm.get_next_coefs(tx, phase_diff, coefs_pm)
+            coefs_am, coefs_pm = model_poly.get_next_coefs(tx, rx, phase_diff)
             del extStat
             extStat = ExtractStatistic.ExtractStatistic(c, plot=True)
             state = "adapt"
 
         # Adapt
         elif state == "adapt":
-            print(coefs_am)
             adapt.set_coefs(coefs_am, coefs_pm)
             state = "measure"
             i += 1
