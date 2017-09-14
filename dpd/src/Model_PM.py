@@ -66,7 +66,7 @@ class Model_PM:
             ax.scatter(tx_dpd, phase_diff,
                        label="Binned Data",
                        color="blue",
-                       s=0.1)
+                       s=1)
             ax.set_title("Model_PM")
             ax.set_xlabel("TX Amplitude")
             ax.set_ylabel("Phase DIff")
@@ -75,6 +75,10 @@ class Model_PM:
             fig.tight_layout()
             fig.savefig(fig_path)
             plt.close(fig)
+
+    def _discard_small_values(self, tx_dpd, phase_diff):
+        mask = tx_dpd > self.c.MPM_tx_min
+        return tx_dpd[mask], phase_diff[mask]
 
     def poly(self, sig):
         return np.array([sig ** i for i in range(0, 5)]).T
@@ -88,6 +92,7 @@ class Model_PM:
         return tx_range, phase_diff
 
     def get_next_coefs(self, tx_dpd, phase_diff, coefs_pm):
+        tx_dpd, phase_diff = self._discard_small_values(tx_dpd, phase_diff)
         check_input_get_next_coefs(tx_dpd, phase_diff)
 
         coefs_pm_new = self.fit_poly(tx_dpd, phase_diff)
