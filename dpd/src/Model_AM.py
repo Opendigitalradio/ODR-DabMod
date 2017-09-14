@@ -63,7 +63,7 @@ class Model_AM:
             ax.scatter(tx_dpd, rx_received,
                        label="Binned Data",
                        color="blue",
-                       s=0.1)
+                       s=1)
             ax.set_title("Model_AM")
             ax.set_xlabel("TX Amplitude")
             ax.set_ylabel("RX Amplitude")

@@ -157,6 +157,7 @@ while i < num_iter:
         if state == "measure":
             txframe_aligned, tx_ts, rxframe_aligned, rx_ts, rx_median = meas.get_samples()
             rxframe_aligned.tofile("/tmp/rxframe_aligned.np")
+            txframe_aligned.tofile("/tmp/txframe_aligned.np")
             if tx_agc.adapt_if_necessary(txframe_aligned):
                 continue
 
@@ -190,19 +191,25 @@ while i < num_iter:
                 tx_mer = MER.calc_mer(txframe_aligned[off:off+c.T_U], debug=True)
                 rx_mer = MER.calc_mer(rxframe_aligned[off:off+c.T_U], debug=True)
                 mse = np.mean(np.abs((txframe_aligned - rxframe_aligned)**2))
+                tx_gain = adapt.get_txgain()
+                rx_gain = adapt.get_rxgain()
+                digital_gain = adapt.get_digital_gain()
+                tx_median = np.median(np.abs(txframe_aligned))
 
+                logging.info(list((name, eval(name)) for name in
+                                  ['i', 'tx_mer', 'rx_mer', 'mse', 'tx_gain',
+                                   'digital_gain', 'rx_gain', 'rx_median',
+                                   'tx_median']))
                 if dpddata[0] == "poly":
                     coefs_am = dpddata[1]
                     coefs_pm = dpddata[2]
-                    logging.info("It {}: TX_MER {}, RX_MER {}," \
-                                 " MSE {}, coefs_am {}, coefs_pm {}".
-                                 format(i, tx_mer, rx_mer, mse, coefs_am, coefs_pm))
+                    logging.info("It {}: coefs_am {}, coefs_pm {}".
+                                 format(i, coefs_am, coefs_pm))
                 if dpddata[0] == "lut":
                     scalefactor = dpddata[1]
                     lut = dpddata[2]
-                    logging.info("It {}: TX_MER {}, RX_MER {}," \
-                                 " MSE {}, LUT scalefactor {}, LUT {}".
-                                 format(i, tx_mer, rx_mer, mse, scalefactor, lut))
+                    logging.info("It {}: LUT scalefactor {}, LUT {}".
+                                 format(i, scalefactor, lut))
                 state = "measure"
             except:
                 logging.warning("Iteration {}: Report failed.".format(i))
