@@ -55,13 +55,13 @@ import argparse
 
 parser = argparse.ArgumentParser(
     description="DPD Computation Engine for ODR-DabMod")
-parser.add_argument('--port', default='50055',
+parser.add_argument('--port', default=50055, type=int,
                     help='port of DPD server to connect to (default: 50055)',
                     required=False)
-parser.add_argument('--rc-port', default='9400',
+parser.add_argument('--rc-port', default=9400, type=int,
                     help='port of ODR-DabMod ZMQ Remote Control to connect to (default: 9400)',
                     required=False)
-parser.add_argument('--samplerate', default='8192000',
+parser.add_argument('--samplerate', default=8192000, type=int,
                     help='Sample rate',
                     required=False)
 parser.add_argument('--coefs', default='poly.coef',
@@ -79,10 +79,10 @@ parser.add_argument('--digital_gain', default=1,
                     help='Digital Gain',
                     required=False,
                     type=float)
-parser.add_argument('--samps', default='81920',
+parser.add_argument('--samps', default='81920', type=int,
                     help='Number of samples to request from ODR-DabMod',
                     required=False)
-parser.add_argument('-i', '--iterations', default='1',
+parser.add_argument('-i', '--iterations', default=1, type=int,
                     help='Number of iterations to run',
                     required=False)
 parser.add_argument('-l', '--load-poly',
