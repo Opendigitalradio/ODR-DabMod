@@ -16,36 +16,39 @@ import matplotlib.pyplot as plt
 from sklearn import linear_model
 
 
-def check_input_get_next_coefs(tx_dpd, rx_received):
+def check_input_get_next_coefs(tx_dpd, phase_diff):
     is_float32 = lambda x: (isinstance(x, np.ndarray) and
                         x.dtype == np.float32 and
                         x.flags.contiguous)
     assert is_float32(tx_dpd), \
            "tx_dpd is not float32 but {}".format(tx_dpd[0].dtype)
-    assert is_float32(rx_received), \
-            "rx_received is not float32 but {}".format(tx_dpd[0].dtype)
+    assert is_float32(phase_diff), \
+            "phase_diff is not float32 but {}".format(tx_dpd[0].dtype)
+    assert tx_dpd.shape == phase_diff.shape, \
+        "tx_dpd.shape {}, phase_diff.shape {}".format(
+        tx_dpd.shape, phase_diff.shape)
 
 
-class Model_AM:
+class Model_PM:
     """Calculates new coefficients using the measurement and the previous
     coefficients"""
 
     def __init__(self,
                  c,
-                 learning_rate_am=0.1,
+                 learning_rate_pm=0.1,
                  plot=False):
         self.c = c
 
-        self.learning_rate_am = learning_rate_am
+        self.learning_rate_pm = learning_rate_pm
         self.plot = plot
 
-    def _plot(self, tx_dpd, rx_received, coefs_am, coefs_am_new):
+    def _plot(self, tx_dpd, phase_diff, coefs_pm, coefs_pm_new):
         if logging.getLogger().getEffectiveLevel() == logging.DEBUG and self.plot:
-            tx_range, rx_est = self.calc_line(coefs_am, 0, 0.6)
-            tx_range_new, rx_est_new = self.calc_line(coefs_am_new, 0, 0.6)
+            tx_range, phase_diff_est = self.calc_line(coefs_pm, 0, 0.6)
+            tx_range_new, phase_diff_est_new = self.calc_line(coefs_pm_new, 0, 0.6)
 
             dt = datetime.datetime.now().isoformat()
-            fig_path = logging_path + "/" + dt + "_Model_AM.svg"
+            fig_path = logging_path + "/" + dt + "_Model_PM.svg"
             sub_rows = 1
             sub_cols = 1
             fig = plt.figure(figsize=(sub_cols * 6, sub_rows / 2. * 6))
@@ -53,20 +56,20 @@ class Model_AM:
 
             i_sub += 1
             ax = plt.subplot(sub_rows, sub_cols, i_sub)
-            ax.plot(tx_range, rx_est,
-                    label="Estimated TX",
+            ax.plot(tx_range, phase_diff_est,
+                    label="Estimated Phase Diff",
                     alpha=0.3,
                     color="gray")
-            ax.plot(tx_range_new, rx_est_new,
-                    label="New Estimated TX",
+            ax.plot(tx_range_new, phase_diff_est_new,
+                    label="New Estimated Phase Diff",
                     color="red")
-            ax.scatter(tx_dpd, rx_received,
+            ax.scatter(tx_dpd, phase_diff,
                        label="Binned Data",
                        color="blue",
                        s=0.1)
-            ax.set_title("Model_AM")
-            ax.set_xlabel("RX Amplitude")
-            ax.set_ylabel("TX Amplitude")
+            ax.set_title("Model_PM")
+            ax.set_xlabel("TX Amplitude")
+            ax.set_ylabel("Phase DIff")
             ax.legend(loc=4)
 
             fig.tight_layout()
@@ -74,23 +77,23 @@ class Model_AM:
             plt.close(fig)
 
     def poly(self, sig):
-        return np.array([sig ** i for i in range(1, 6)]).T
+        return np.array([sig ** i for i in range(0, 5)]).T
 
-    def fit_poly(self, tx_abs, rx_abs):
-        return np.linalg.lstsq(self.poly(rx_abs), tx_abs)[0]
+    def fit_poly(self, tx_abs, phase_diff):
+        return np.linalg.lstsq(self.poly(tx_abs), phase_diff)[0]
 
     def calc_line(self, coefs, min_amp, max_amp):
-        rx_range = np.linspace(min_amp, max_amp)
-        tx_est = np.sum(self.poly(rx_range) * coefs, axis=1)
-        return tx_est, rx_range
+        tx_range = np.linspace(min_amp, max_amp)
+        phase_diff = np.sum(self.poly(tx_range) * coefs, axis=1)
+        return tx_range, phase_diff
 
-    def get_next_coefs(self, tx_dpd, rx_received, coefs_am):
-        check_input_get_next_coefs(tx_dpd, rx_received)
+    def get_next_coefs(self, tx_dpd, phase_diff, coefs_pm):
+        check_input_get_next_coefs(tx_dpd, phase_diff)
 
-        coefs_am_new = self.fit_poly(tx_dpd, rx_received)
-        self._plot(tx_dpd, rx_received, coefs_am, coefs_am_new)
+        coefs_pm_new = self.fit_poly(tx_dpd, phase_diff)
+        self._plot(tx_dpd, phase_diff, coefs_pm, coefs_pm_new)
 
-        return coefs_am_new
+        return coefs_pm_new
 
 # The MIT License (MIT)
 #

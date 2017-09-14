@@ -169,8 +169,13 @@ class ExtractStatistic:
 
         n_per_bin = [len(values) for values in self.rx_values_lists]
 
+        # TODO cleanup
+        phase_diffs_values_lists = self._phase_diff_list_per_bin()
+        phase_diffs_values = self._phase_diff_value_per_bin(phase_diffs_values_lists)
+
         return np.array(self.tx_values,  dtype=np.float32), \
                np.array(self.rx_values, dtype=np.float32), \
+               np.array(phase_diffs_values, dtype=np.float32), \
                n_per_bin
 
 # The MIT License (MIT)

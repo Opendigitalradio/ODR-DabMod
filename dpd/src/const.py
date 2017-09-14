@@ -41,4 +41,4 @@ class const:
         self.ES_start = 0.0
         self.ES_end = 1.0
         self.ES_n_bins = 64
-        self.ES_n_per_bin = 1024
+        self.ES_n_per_bin = 256

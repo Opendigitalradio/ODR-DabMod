@@ -43,6 +43,7 @@ import traceback
 import src.Measure as Measure
 import src.Model as Model
 import src.Model_AM as Model_AM
+import src.Model_PM as Model_PM
 import src.ExtractStatistic as ExtractStatistic
 import src.Adapt as Adapt
 import src.Agc as Agc
@@ -115,6 +116,7 @@ else:
     coefs_am, coefs_pm = [[1.0, 0, 0, 0, 0], [0, 0, 0, 0, 0]]
     model = Model.Model(c, SA, MER, coefs_am, coefs_pm, plot=True)
 model_am = Model_AM.Model_AM(c, plot=True)
+model_pm = Model_PM.Model_PM(c, plot=True)
 adapt.set_coefs(model.coefs_am, model.coefs_pm)
 adapt.set_digital_gain(digital_gain)
 adapt.set_txgain(txgain)
@@ -145,10 +147,11 @@ while i < num_iter:
         # Measure
         if state == "measure":
             txframe_aligned, tx_ts, rxframe_aligned, rx_ts, rx_median = meas.get_samples()
-            tx, rx, n_per_bin = extStat.extract(txframe_aligned, rxframe_aligned)
+            tx, rx, phase_diff, n_per_bin = extStat.extract(txframe_aligned, rxframe_aligned)
             n_use = int(len(n_per_bin) * 0.6)
             tx = tx[:n_use]
             rx = rx[:n_use]
+            phase_diff = phase_diff[:n_use]
             if all(c.ES_n_per_bin == np.array(n_per_bin)[0:n_use]):
                 state = "model"
             else:
@@ -157,6 +160,7 @@ while i < num_iter:
         # Model
         elif state == "model":
             coefs_am = model_am.get_next_coefs(tx, rx, coefs_am)
+            coefs_pm = model_pm.get_next_coefs(tx, phase_diff, coefs_pm)
             del extStat
             extStat = ExtractStatistic.ExtractStatistic(c, plot=True)
             state = "adapt"
