@@ -156,8 +156,12 @@ while i < num_iter:
         # Measure
         if state == "measure":
             txframe_aligned, tx_ts, rxframe_aligned, rx_ts, rx_median = meas.get_samples()
+            rxframe_aligned.tofile("/tmp/rxframe_aligned.np")
+            if tx_agc.adapt_if_necessary(txframe_aligned):
+                continue
+
             tx, rx, phase_diff, n_per_bin = extStat.extract(txframe_aligned, rxframe_aligned)
-            n_use = int(len(n_per_bin) * 0.6)
+            n_use = int(len(n_per_bin) * 0.35)
             tx = tx[:n_use]
             rx = rx[:n_use]
             phase_diff = phase_diff[:n_use]
