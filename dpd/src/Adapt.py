@@ -147,7 +147,8 @@ class Adapt:
                         .format(path, n_coefs, coefs))
             i += 1
         f.close()
-        return (coefs_am_out, coefs_pm_out)
+        return (np.array(coefs_am_out, dtype=np.float32),
+                np.array(coefs_pm_out, dtype=np.float32))
 
     def get_coefs(self):
         return self._read_coef_file(self.coef_path)
