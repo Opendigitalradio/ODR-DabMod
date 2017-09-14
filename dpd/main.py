@@ -162,8 +162,24 @@ while i < num_iter:
         # Adapt
         elif state == "adapt":
             adapt.set_coefs(coefs_am, coefs_pm)
-            state = "measure"
+            state = "report"
             i += 1
+
+        # Report
+        elif state == "report":
+            try:
+                off = SA.calc_offset(txframe_aligned)
+                tx_mer = MER.calc_mer(txframe_aligned[off:off+c.T_U], debug=True)
+                rx_mer = MER.calc_mer(rxframe_aligned[off:off+c.T_U], debug=True)
+                mse = np.mean(np.abs((txframe_aligned - rxframe_aligned)**2))
+                logging.info("It {}: TX_MER {}, RX_MER {}," \
+                             " MSE {}, coefs_am {}, coefs_pm {}".
+                             format(i, tx_mer, rx_mer, mse, coefs_am, coefs_pm))
+                state = "measure"
+            except:
+                logging.warning("Iteration {}: Report failed.".format(i))
+                logging.warning(traceback.format_exc())
+                state = "measure"
 
     except Exception as e:
         logging.warning("Iteration {} failed.".format(i))
