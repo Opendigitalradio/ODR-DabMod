@@ -139,7 +139,7 @@ class Agc:
 
         fig.tight_layout()
         fig.savefig(fig_path)
-        fig.clf()
+        plt.close(fig)
 
 
 # The MIT License (MIT)

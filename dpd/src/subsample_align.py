@@ -78,7 +78,7 @@ def subsample_align(sig, ref_sig, plot=False):
             plt.plot(ixs, taus)
             plt.title("Subsample correlation, minimum is best: {}".format(best_tau))
             plt.savefig(tau_path)
-            plt.clf()
+            plt.close()
 
         # Prepare rotate_vec = fft_sig with rotated phase
         rotate_vec = np.exp(1j * best_tau * omega)

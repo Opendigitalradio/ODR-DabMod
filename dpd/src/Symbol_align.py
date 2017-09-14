@@ -147,7 +147,8 @@ class Symbol_align:
         delta_sample_int = np.round(delta_sample).astype(int)
         error = np.abs(delta_sample_int - delta_sample)
         if error > 0.1:
-            raise RuntimeError("Could not calculate sample offset")
+            raise RuntimeError("Could not calculate " \
+                               "sample offset. Error {}".format(error))
         return delta_sample_int
 
     def calc_offset(self, tx):
