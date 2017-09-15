@@ -173,8 +173,8 @@ while i < num_iter:
 
         # Model
         elif state == "model":
-            dpddata = model_poly.get_dpd_data(tx, rx, phase_diff)
-            del extStat
+            dpddata = model.train(tx, rx, phase_diff)
+            dpddata = model.get_dpd_data()
             extStat = ExtractStatistic.ExtractStatistic(c, plot=True)
             state = "adapt"
 
