@@ -45,3 +45,17 @@ class const:
 
         # Constants for Model_PM
         self.MPM_tx_min = 0.1
+
+        # Constants for Measure_Shoulder
+        assert sample_rate==8192000
+        meas_offset = 976 # Offset from center frequency to measure shoulder [kHz]
+        meas_width = 100 # Size of frequency delta to measure shoulder [kHz]
+        shoulder_offset_edge = np.abs(meas_offset - self.FFT_delta)
+        self.MS_shoulder_left_start = self.FFT_start - shoulder_offset_edge - meas_width / 2
+        self.MS_shoulder_left_end = self.FFT_start - shoulder_offset_edge + meas_width / 2
+        self.MS_shoulder_right_start = self.FFT_end + shoulder_offset_edge - meas_width / 2
+        self.MS_shoulder_right_end = self.FFT_end + shoulder_offset_edge + meas_width / 2
+        self.MS_peak_start = self.FFT_start + 100 # Ignore region near edges
+        self.MS_peak_end = self.FFT_end - 100
+
+        self.MS_FFT_size = 8192
