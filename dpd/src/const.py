@@ -59,3 +59,5 @@ class const:
         self.MS_peak_end = self.FFT_end - 100
 
         self.MS_FFT_size = 8192
+        self.MS_averaging_size = 4 * self.MS_FFT_size
+        self.MS_n_averaging = 40

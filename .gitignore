@@ -138,3 +138,17 @@ Session.vim
 tags
 
 # End of https://www.gitignore.io/api/vim,python
+*.ipynb
+
+.directory
+.idea/
+.ycm_extra_conf.py
+coef_83
+doc/.directory
+dpd.zip
+dpd/.idea/
+dpd/bin/
+dpd/run.sh
+dpd/test.csv
+dpd/test_data/
+dpd/dpdpoly.coef

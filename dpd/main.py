@@ -49,6 +49,7 @@ import src.TX_Agc as TX_Agc
 import src.Symbol_align
 import src.const
 import src.MER
+import src.Measure_Shoulders
 import argparse
 
 parser = argparse.ArgumentParser(
@@ -65,7 +66,7 @@ parser.add_argument('--samplerate', default=8192000, type=int,
 parser.add_argument('--coefs', default='poly.coef',
                     help='File with DPD coefficients, which will be read by ODR-DabMod',
                     required=False)
-parser.add_argument('--txgain', default=73,
+parser.add_argument('--txgain', default=70,
                     help='TX Gain',
                     required=False,
                     type=int)
@@ -99,9 +100,10 @@ num_req = cli_args.samps
 samplerate = cli_args.samplerate
 num_iter = cli_args.iterations
 
+c = src.const.const(samplerate)
 SA = src.Symbol_align.Symbol_align(samplerate)
 MER = src.MER.MER(samplerate)
-c = src.const.const(samplerate)
+MS = src.Measure_Shoulders.Measure_Shoulder(c, plot=True)
 
 meas = Measure.Measure(samplerate, port, num_req)
 extStat = ExtractStatistic.ExtractStatistic(c, plot=True)
@@ -195,9 +197,12 @@ while i < num_iter:
                 rx_gain = adapt.get_rxgain()
                 digital_gain = adapt.get_digital_gain()
                 tx_median = np.median(np.abs(txframe_aligned))
+                rx_shoulders = MS.average_shoulders(rxframe_aligned)
+                tx_shoulders = MS.average_shoulders(txframe_aligned)
 
                 logging.info(list((name, eval(name)) for name in
-                                  ['i', 'tx_mer', 'rx_mer', 'mse', 'tx_gain',
+                                  ['i', 'tx_mer', 'tx_shoulders', 'rx_mer',
+                                   'rx_shoulders', 'mse', 'tx_gain',
                                    'digital_gain', 'rx_gain', 'rx_median',
                                    'tx_median']))
                 if dpddata[0] == "poly":
