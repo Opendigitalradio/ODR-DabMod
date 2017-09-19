@@ -65,6 +65,9 @@ class Measure_Shoulder:
         return peak - shoulder
 
     def _plot(self, signal):
+        dt = datetime.datetime.now().isoformat()
+        fig_path = logging_path + "/" + dt + "_sync_subsample_aligned.svg"
+
         fft = self.calc_fft_db(signal, 100)
         peak, idxs_peak = self._calc_peak(fft)
         shoulder, idxs_sh = self._calc_shoulder_hight(fft)
@@ -87,6 +90,8 @@ class Measure_Shoulder:
 
         ax.set_ylim(-20, 30)
         fig.tight_layout()
+        fig.savefig(fig_path)
+        plt.close(fig)
 
     def average_shoulders(self, signal, n_avg=None):
         assert signal.shape[0] > 4 * self.c.MS_FFT_size
