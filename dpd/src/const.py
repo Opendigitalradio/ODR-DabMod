@@ -61,3 +61,4 @@ class const:
         self.MS_FFT_size = 8192
         self.MS_averaging_size = 4 * self.MS_FFT_size
         self.MS_n_averaging = 40
+        self.MS_n_proc = 4

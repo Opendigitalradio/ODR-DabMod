@@ -8,6 +8,7 @@
 import datetime
 import os
 import logging
+import multiprocessing
 
 logging_path = os.path.dirname(logging.getLoggerClass().root.handlers[0].baseFilename)
 
@@ -25,6 +26,40 @@ def plt_annotate(ax, x,y,title=None,legend_loc=None):
     if title is not None: ax.set_title(title)
     if legend_loc is not None: ax.legend(loc=legend_loc)
 
+def calc_fft_db(signal, offset, c):
+    fft = np.fft.fftshift(np.fft.fft(signal[offset:offset + c.MS_FFT_size]))
+    fft_db = 20 * np.log10(np.abs(fft))
+    return fft_db
+
+def _calc_peak(fft, c):
+    assert fft.shape == (c.MS_FFT_size,), fft.shape
+    idxs = (c.MS_peak_start, c.MS_peak_end)
+    peak = np.mean(fft[idxs[0]:idxs[1]])
+    return peak, idxs
+
+def _calc_shoulder_hight(fft_db, c):
+    assert fft_db.shape == (c.MS_FFT_size,), fft_db.shape
+    idxs_left = (c.MS_shoulder_left_start, c.MS_shoulder_left_end)
+    idxs_right = (c.MS_shoulder_right_start, c.MS_shoulder_right_end)
+
+    shoulder_left = np.mean(fft_db[idxs_left[0]:idxs_left[1]])
+    shoulder_right = np.mean(fft_db[idxs_right[0]:idxs_right[1]])
+
+    shoulder = np.mean((shoulder_left, shoulder_right))
+    return shoulder, (idxs_left, idxs_right)
+
+def calc_shoulder(fft, c):
+    peak = _calc_peak(fft, c)[0]
+    shoulder = _calc_shoulder_hight(fft, c)[0]
+    assert (peak >= shoulder), (peak, shoulder)
+    return peak - shoulder
+
+def shoulder_from_sig_offset(arg):
+    signal, offset, c = arg
+    fft_db = calc_fft_db(signal, offset, c)
+    shoulder = calc_shoulder(fft_db, c)
+    return shoulder
+
 
 class Measure_Shoulder:
     """Calculate difference between the DAB signal and the shoulder hight in the
@@ -36,41 +71,13 @@ class Measure_Shoulder:
         self.c = c
         self.plot = plot
 
-    def calc_fft_db(self, signal, offset=0):
-        fft = np.fft.fftshift(np.fft.fft(signal[offset:offset + self.c.MS_FFT_size]))
-        fft_db = 20 * np.log10(np.abs(fft))
-        return fft_db
-
-    def _calc_peak(self, fft):
-        assert fft.shape == (self.c.MS_FFT_size,), fft.shape
-        idxs = (self.c.MS_peak_start, self.c.MS_peak_end)
-        peak = np.mean(fft[idxs[0]:idxs[1]])
-        return peak, idxs
-
-    def _calc_shoulder_hight(self, fft_db):
-        assert fft_db.shape == (self.c.MS_FFT_size,), fft_db.shape
-        idxs_left = (self.c.MS_shoulder_left_start, self.c.MS_shoulder_left_end)
-        idxs_right = (self.c.MS_shoulder_right_start, self.c.MS_shoulder_right_end)
-
-        shoulder_left = np.mean(fft_db[idxs_left[0]:idxs_left[1]])
-        shoulder_right = np.mean(fft_db[idxs_right[0]:idxs_right[1]])
-
-        shoulder = np.mean((shoulder_left, shoulder_right))
-        return shoulder, (idxs_left, idxs_right)
-
-    def calc_shoulder(self, fft):
-        peak = self._calc_peak(fft)[0]
-        shoulder = self._calc_shoulder_hight(fft)[0]
-        assert (peak >= shoulder), (peak, shoulder)
-        return peak - shoulder
-
     def _plot(self, signal):
         dt = datetime.datetime.now().isoformat()
         fig_path = logging_path + "/" + dt + "_sync_subsample_aligned.svg"
 
         fft = self.calc_fft_db(signal, 100)
         peak, idxs_peak = self._calc_peak(fft)
-        shoulder, idxs_sh = self._calc_shoulder_hight(fft)
+        shoulder, idxs_sh = self._calc_shoulder_hight(fft, self.c)
 
         sub_rows = 1
         sub_cols = 1
@@ -86,7 +93,7 @@ class Measure_Shoulder:
         ax.plot(idxs_sh[1], (shoulder, shoulder), color='blue')
         plt_annotate(ax, "Frequency", "Magnitude [dB]", None, 4)
 
-        ax.text(100, -17, str(self.calc_shoulder(fft)))
+        ax.text(100, -17, str(self.calc_shoulder(fft, self.c)))
 
         ax.set_ylim(-20, 30)
         fig.tight_layout()
@@ -102,9 +109,16 @@ class Measure_Shoulder:
         offsets = np.linspace(off_min, off_max, num=n_avg, dtype=int)
 
         shoulders = []
-        for offset in offsets:
-            fft_db = self.calc_fft_db(signal, offset)
-            shoulders.append(self.calc_shoulder(fft_db))
+
+        args = zip(
+            [signal, ] * offsets.shape[0],
+            offsets,
+            [self.c, ] * offsets.shape[0]
+        )
+
+        pool = multiprocessing.Pool(self.c.MS_n_proc)
+        shoulders = pool.map(shoulder_from_sig_offset, args)
+
         shoulder = np.mean(shoulders)
 
         if logging.getLogger().getEffectiveLevel() == logging.DEBUG and self.plot:
