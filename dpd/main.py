@@ -103,7 +103,7 @@ num_iter = cli_args.iterations
 c = src.const.const(samplerate)
 SA = src.Symbol_align.Symbol_align(samplerate)
 MER = src.MER.MER(samplerate)
-MS = src.Measure_Shoulders.Measure_Shoulder(c, plot=True)
+MS = src.Measure_Shoulders.Measure_Shoulder(c, plot=False)
 
 meas = Measure.Measure(samplerate, port, num_req)
 extStat = ExtractStatistic.ExtractStatistic(c, plot=True)
