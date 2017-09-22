@@ -39,6 +39,8 @@ class ExtractStatistic:
                  plot=False):
         self.c = c
 
+        self.n_meas = 0
+
         self.tx_boundaries = np.linspace(c.ES_start, c.ES_end, c.ES_n_bins + 1)
         self.n_per_bin = c.ES_n_per_bin
 
@@ -152,6 +154,7 @@ class ExtractStatistic:
 
     def extract(self, tx_dpd, rx):
         _check_input_extract(tx_dpd, rx)
+        self.n_meas += 1
 
         tx_abs = np.abs(tx_dpd)
         for i, (tx_start, tx_end) in enumerate(zip(self.tx_boundaries, self.tx_boundaries[1:])):
@@ -167,15 +170,17 @@ class ExtractStatistic:
 
         self._plot_and_log()
 
-        n_per_bin = [len(values) for values in self.rx_values_lists]
+        n_per_bin = np.array([len(values) for values in self.rx_values_lists])
+        # Index of first not filled bin, assumes that never all bins are filled
+        idx_end = np.argmin(n_per_bin == self.c.ES_n_per_bin)
 
         # TODO cleanup
         phase_diffs_values_lists = self._phase_diff_list_per_bin()
         phase_diffs_values = self._phase_diff_value_per_bin(phase_diffs_values_lists)
 
-        return np.array(self.tx_values,  dtype=np.float32), \
-               np.array(self.rx_values, dtype=np.float32), \
-               np.array(phase_diffs_values, dtype=np.float32), \
+        return np.array(self.tx_values,  dtype=np.float32)[:idx_end], \
+               np.array(self.rx_values, dtype=np.float32)[:idx_end], \
+               np.array(phase_diffs_values, dtype=np.float32)[:idx_end], \
                n_per_bin
 
 # The MIT License (MIT)
