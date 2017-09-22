@@ -77,8 +77,10 @@ class Model_PM:
             plt.close(fig)
 
     def _discard_small_values(self, tx_dpd, phase_diff):
-        mask = tx_dpd > self.c.MPM_tx_min
-        return tx_dpd[mask], phase_diff[mask]
+        """ Assumes that the phase for small tx amplitudes is zero"""
+        mask = tx_dpd < self.c.MPM_tx_min
+        phase_diff[mask] = 0
+        return tx_dpd, phase_diff
 
     def poly(self, sig):
         return np.array([sig ** i for i in range(0, 5)]).T
