@@ -66,7 +66,7 @@ parser.add_argument('--samplerate', default=8192000, type=int,
 parser.add_argument('--coefs', default='poly.coef',
                     help='File with DPD coefficients, which will be read by ODR-DabMod',
                     required=False)
-parser.add_argument('--txgain', default=70,
+parser.add_argument('--txgain', default=78,
                     help='TX Gain',
                     required=False,
                     type=int)
@@ -164,11 +164,8 @@ while i < num_iter:
                 continue
 
             tx, rx, phase_diff, n_per_bin = extStat.extract(txframe_aligned, rxframe_aligned)
-            n_use = int(len(n_per_bin) * 0.35)
-            tx = tx[:n_use]
-            rx = rx[:n_use]
-            phase_diff = phase_diff[:n_use]
-            if all(c.ES_n_per_bin == np.array(n_per_bin)[0:n_use]):
+
+            if extStat.n_meas >= 15:
                 state = "model"
             else:
                 state = "measure"
@@ -189,6 +186,8 @@ while i < num_iter:
         # Report
         elif state == "report":
             try:
+                path = adapt.dump()
+
                 off = SA.calc_offset(txframe_aligned)
                 tx_mer = MER.calc_mer(txframe_aligned[off:off+c.T_U], debug=True)
                 rx_mer = MER.calc_mer(rxframe_aligned[off:off+c.T_U], debug=True)
@@ -208,13 +207,24 @@ while i < num_iter:
                 if dpddata[0] == "poly":
                     coefs_am = dpddata[1]
                     coefs_pm = dpddata[2]
-                    logging.info("It {}: coefs_am {}, coefs_pm {}".
-                                 format(i, coefs_am, coefs_pm))
+                    logging.info("It {}: coefs_am {}".
+                                 format(i, coefs_am))
+                    logging.info("It {}: coefs_pm {}".
+                                 format(i, coefs_pm))
                 if dpddata[0] == "lut":
                     scalefactor = dpddata[1]
                     lut = dpddata[2]
                     logging.info("It {}: LUT scalefactor {}, LUT {}".
                                  format(i, scalefactor, lut))
+
+                model.reset_coefs()
+                dpd_data = model.get_dpd_data()
+                adapt.set_predistorter(dpd_data)
+                tx_gain = tx_gain - 1
+                if tx_gain < 89:
+                    adapt.set_txgain(tx_gain)
+                else:
+                    break
                 state = "measure"
             except:
                 logging.warning("Iteration {}: Report failed.".format(i))

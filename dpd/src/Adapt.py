@@ -12,6 +12,11 @@ the ZMQ remote control socket.
 import zmq
 import logging
 import numpy as np
+import os
+import datetime
+import pickle
+
+logging_path = os.path.dirname(logging.getLoggerClass().root.handlers[0].baseFilename)
 
 LUT_LEN=32
 FORMAT_POLY=1
@@ -199,6 +204,31 @@ class Adapt:
         else:
             raise ValueError("Unknown predistorter '{}'".format(dpddata[0]))
         self.send_receive("set memlesspoly coeffile {}".format(self.coef_path))
+
+    def dump(self, path=None):
+        if path is None:
+            dt = datetime.datetime.now().isoformat()
+        path = logging_path + "/" + dt + "_adapt.pkl"
+        d = {
+            "txgain":self.get_txgain(),
+            "rxgain":self.get_rxgain(),
+            "digital_gain":self.get_digital_gain(),
+            "predistorter":self.get_predistorter()
+        }
+        with open(path, "w") as f:
+            pickle.dump(d,f)
+
+        return path
+
+    def load(self, path):
+        with open(path, "r") as f:
+            d = pickle.load(f)
+
+        self.set_txgain(d["txgain"])
+        self.set_digital_gain(d["digital_gain"])
+        self.set_rxgain(d["rxgain"])
+        self.set_predistorter(d["predistorter"])
+
 
 # The MIT License (MIT)
 #
