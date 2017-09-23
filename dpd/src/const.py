@@ -43,6 +43,16 @@ class const:
         self.ES_n_bins = 64
         self.ES_n_per_bin = 128
 
+        # Constants for TX_Agc
+        self.TAGC_max_txgain = 89
+        self.TAGC_tx_median_target = 0.1
+        self.TAGC_tx_median_max = self.TAGC_tx_median_target*1.4
+        self.TAGC_tx_median_min = self.TAGC_tx_median_target/1.4
+
+        # Constants for Agc
+        self.RAGC_min_rxgain = 25
+        self.RAGC_rx_median_target = self.TAGC_tx_median_target
+
         # Constants for Model_PM
         self.MPM_tx_min = 0.1
 

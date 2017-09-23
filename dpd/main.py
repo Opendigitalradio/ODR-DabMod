@@ -145,10 +145,10 @@ elif dpddata[0] == "lut":
 else:
     logging.error("Unknown dpd data format {}".format(dpddata[0]))
 
-tx_agc = TX_Agc.TX_Agc(adapt)
+tx_agc = TX_Agc.TX_Agc(adapt, c)
 
 # Automatic Gain Control
-agc = Agc.Agc(meas, adapt)
+agc = Agc.Agc(meas, adapt, c)
 agc.run()
 
 state = "measure"
@@ -165,7 +165,7 @@ while i < num_iter:
 
             tx, rx, phase_diff, n_per_bin = extStat.extract(txframe_aligned, rxframe_aligned)
 
-            if extStat.n_meas >= 15:
+            if extStat.n_meas >= 200:
                 state = "model"
             else:
                 state = "measure"
@@ -181,11 +181,11 @@ while i < num_iter:
         elif state == "adapt":
             adapt.set_predistorter(dpddata)
             state = "report"
-            i += 1
 
         # Report
         elif state == "report":
             try:
+                i += 1
                 path = adapt.dump()
 
                 off = SA.calc_offset(txframe_aligned)
@@ -196,12 +196,12 @@ while i < num_iter:
                 rx_gain = adapt.get_rxgain()
                 digital_gain = adapt.get_digital_gain()
                 tx_median = np.median(np.abs(txframe_aligned))
-                rx_shoulders = MS.average_shoulders(rxframe_aligned)
-                tx_shoulders = MS.average_shoulders(txframe_aligned)
+                rx_shoulder_tuple = MS.average_shoulders(rxframe_aligned)
+                tx_shoulder_tuple = MS.average_shoulders(txframe_aligned)
 
                 logging.info(list((name, eval(name)) for name in
-                                  ['i', 'tx_mer', 'tx_shoulders', 'rx_mer',
-                                   'rx_shoulders', 'mse', 'tx_gain',
+                                  ['i', 'tx_mer', 'tx_shoulder_tuple', 'rx_mer',
+                                   'rx_shoulder_tuple', 'mse', 'tx_gain',
                                    'digital_gain', 'rx_gain', 'rx_median',
                                    'tx_median']))
                 if dpddata[0] == "poly":
@@ -216,11 +216,6 @@ while i < num_iter:
                     lut = dpddata[2]
                     logging.info("It {}: LUT scalefactor {}, LUT {}".
                                  format(i, scalefactor, lut))
-
-                model.reset_coefs()
-                dpd_data = model.get_dpd_data()
-                adapt.set_predistorter(dpd_data)
-                tx_gain = tx_gain - 1
                 if tx_gain < 89:
                     adapt.set_txgain(tx_gain)
                 else:

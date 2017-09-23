@@ -24,10 +24,7 @@ import src.Adapt as Adapt
 class TX_Agc:
     def __init__(self,
                  adapt,
-                 max_txgain=89,
-                 tx_median_target=0.16,
-                 tx_median_threshold_max=0.18,
-                 tx_median_threshold_min=0.14):
+                 c):
         """
         In order to avoid digital clipping, this class increases the
         TX gain and reduces the digital gain. Digital clipping happens
@@ -47,16 +44,16 @@ class TX_Agc:
         :param tx_median_target: The digital gain is reduced in a way that
                 the median TX value is expected to be lower than this value.
         """
+
+
         assert isinstance(adapt, Adapt.Adapt)
         self.adapt = adapt
-        self.max_txgain = max_txgain
+        self.max_txgain = c.TAGC_max_txgain
         self.txgain = self.max_txgain
 
-        assert tx_median_threshold_max > tx_median_target,\
-            "The tolerated tx_median has to be larger then the goal tx_median"
-        self.tx_median_threshold_tolerate_max = tx_median_threshold_max
-        self.tx_median_threshold_tolerate_min = tx_median_threshold_min
-        self.tx_median_target = tx_median_target
+        self.tx_median_threshold_tolerate_max = c.TAGC_tx_median_max
+        self.tx_median_threshold_tolerate_min = c.TAGC_tx_median_min
+        self.tx_median_target = c.TAGC_tx_median_target
 
     def adapt_if_necessary(self, tx):
         tx_median = np.median(np.abs(tx))

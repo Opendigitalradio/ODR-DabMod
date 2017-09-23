@@ -35,14 +35,14 @@ class Agc:
     received signal fulfills our desired property, of having 
     all amplitudes properly quantized."""
 
-    def __init__(self, measure, adapt, min_rxgain=25, peak_to_median=20):
+    def __init__(self, measure, adapt, c):
         assert isinstance(measure, Measure.Measure)
         assert isinstance(adapt, Adapt.Adapt)
         self.measure = measure
         self.adapt = adapt
-        self.min_rxgain = min_rxgain
+        self.min_rxgain = c.RAGC_min_rxgain
         self.rxgain = self.min_rxgain
-        self.peak_to_median = peak_to_median
+        self.peak_to_median = 1./c.RAGC_rx_median_target
 
     def run(self):
         self.adapt.set_rxgain(self.rxgain)
