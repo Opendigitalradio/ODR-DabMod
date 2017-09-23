@@ -52,13 +52,13 @@ def calc_shoulder(fft, c):
     peak = _calc_peak(fft, c)[0]
     shoulder = _calc_shoulder_hight(fft, c)[0]
     assert (peak >= shoulder), (peak, shoulder)
-    return peak - shoulder
+    return peak, shoulder
 
 def shoulder_from_sig_offset(arg):
     signal, offset, c = arg
     fft_db = calc_fft_db(signal, offset, c)
-    shoulder = calc_shoulder(fft_db, c)
-    return shoulder
+    peak, shoulder = calc_shoulder(fft_db, c)
+    return peak-shoulder, peak, shoulder
 
 
 class Measure_Shoulder:
@@ -117,14 +117,13 @@ class Measure_Shoulder:
         )
 
         pool = multiprocessing.Pool(self.c.MS_n_proc)
-        shoulders = pool.map(shoulder_from_sig_offset, args)
-
-        shoulder = np.mean(shoulders)
+        res = pool.map(shoulder_from_sig_offset, args)
+        shoulders_diff, shoulders, peaks = zip(*res)
 
         if logging.getLogger().getEffectiveLevel() == logging.DEBUG and self.plot:
             self._plot(signal)
 
-        return shoulder
+        return np.mean(shoulders_diff), np.mean(shoulders), np.mean(peaks)
 
 
 # The MIT License (MIT)
