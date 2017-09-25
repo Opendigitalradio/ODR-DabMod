@@ -69,7 +69,7 @@ class MER:
 
         return x_mean, y_mean, U_RMS, U_ERR, MER
 
-    def calc_mer(self, tx, debug=False):
+    def calc_mer(self, tx, debug=False, debug_name=""):
         assert tx.shape[0] == self.c.T_U,\
                 "Wrong input length"
 
@@ -77,7 +77,7 @@ class MER:
 
         if debug:
             dt = datetime.datetime.now().isoformat()
-            fig_path = logging_path + "/" + dt + "_MER.svg"
+            fig_path = logging_path + "/" + dt + "_MER" + debug_name + ".svg"
 
         MERs = []
         for i, (x, y) in enumerate(self._split_in_carrier(

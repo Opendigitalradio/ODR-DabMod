@@ -205,8 +205,8 @@ while i < num_iter:
                 path = adapt.dump()
 
                 off = SA.calc_offset(txframe_aligned)
-                tx_mer = MER.calc_mer(txframe_aligned[off:off+c.T_U], debug=True)
-                rx_mer = MER.calc_mer(rxframe_aligned[off:off+c.T_U], debug=True)
+                tx_mer = MER.calc_mer(txframe_aligned[off:off+c.T_U], debug=True, debug_name="TX")
+                rx_mer = MER.calc_mer(rxframe_aligned[off:off+c.T_U], debug=True, deubg_name="RX")
                 mse = np.mean(np.abs((txframe_aligned - rxframe_aligned)**2))
                 tx_gain = adapt.get_txgain()
                 rx_gain = adapt.get_rxgain()
