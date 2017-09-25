@@ -20,8 +20,8 @@ matplotlib.use('agg')
 import matplotlib.pyplot as plt
 
 class MER:
-    def __init__(self, sample_rate):
-        self.c = src.const.const(sample_rate)
+    def __init__(self, c):
+        self.c = c
 
     def _calc_spectrum(self, tx):
         fft = np.fft.fftshift(np.fft.fft(tx))

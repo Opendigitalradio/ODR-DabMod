@@ -6,7 +6,7 @@
 import numpy as np
 
 class const:
-    def __init__(self, sample_rate):
+    def __init__(self, sample_rate, target_median):
         self.sample_rate = sample_rate
 
         # Time domain

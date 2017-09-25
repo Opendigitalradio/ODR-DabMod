@@ -26,8 +26,8 @@ class Symbol_align:
     Find the phase offset to the start of the DAB symbols in an
     unaligned dab signal.
     """
-    def __init__(self, sample_rate, plot=False):
-        self.c = src.const.const(sample_rate)
+    def __init__(self, c, plot=False):
+        self.c = c
         self.plot = plot
         pass
 
