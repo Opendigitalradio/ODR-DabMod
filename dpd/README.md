@@ -43,8 +43,8 @@ a constellation diagram.
 Hardware Setup
 --------------
 
-![setup diagram](doc/img/setup_diagram.svg)
-![setup photo](doc/img/setup_photo.svg)
+![setup diagram](img/setup_diagram.svg)
+![setup photo](img/setup_photo.svg)
 
 Our setup is depicted in the Figure above. We used components with the following properties:
  1. USRP TX (max +20dBm)
@@ -105,11 +105,11 @@ After the run you should be able to observe that the peak-shoulder difference de
 
 Before digital predistortion:
 
-![shoulder_measurement_before](doc/img/shoulder_measurement_after.png)
+![shoulder_measurement_before](img/shoulder_measurement_after.png)
 
 After digital predistortion:
 
-![shoulder_measurement_after](doc/img/shoulder_measurement_after.png)
+![shoulder_measurement_after](img/shoulder_measurement_after.png)
 
 Now see what happens if you apply the pre-distortions for different TX gains. You can either set the TX gain before you start the pre-distortion or using the command line option `--txgain gain`. You can also try to adjust other parameters. To see their documentation run `python main.py --help`.
 
