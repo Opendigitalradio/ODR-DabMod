@@ -156,7 +156,6 @@ tx_agc = TX_Agc.TX_Agc(adapt, c)
 agc = Agc.Agc(meas, adapt, c)
 agc.run()
 
-import os
 paths = natsort.natsorted(glob.glob(searchpath + "/*.pkl"))
 print(paths)
 

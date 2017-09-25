@@ -75,7 +75,7 @@ class Measure_Shoulder:
         dt = datetime.datetime.now().isoformat()
         fig_path = logging_path + "/" + dt + "_sync_subsample_aligned.svg"
 
-        fft = self.calc_fft_db(signal, 100)
+        fft = calc_fft_db(signal, 100)
         peak, idxs_peak = self._calc_peak(fft)
         shoulder, idxs_sh = self._calc_shoulder_hight(fft, self.c)
 

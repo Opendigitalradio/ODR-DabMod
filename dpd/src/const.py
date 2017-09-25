@@ -45,7 +45,7 @@ class const:
 
         # Constants for TX_Agc
         self.TAGC_max_txgain = 89
-        self.TAGC_tx_median_target = 0.1
+        self.TAGC_tx_median_target = target_median
         self.TAGC_tx_median_max = self.TAGC_tx_median_target*1.4
         self.TAGC_tx_median_min = self.TAGC_tx_median_target/1.4
 

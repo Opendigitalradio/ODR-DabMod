@@ -1,7 +1,8 @@
 Digital Predistortion Calculation Engine for ODR-DabMod
 =======================================================
 
-This folder contains work in progress for digital predistortion.
+This folder contains a prototype to do digital predistortion. It was tested on
+the development system only.
 
 Concept
 -------
@@ -38,6 +39,79 @@ See dpd/dpd.ini for an example.
 
 The DPD server port can be tested with the *dpd/show_spectrum.py* helper tool, which can also display
 a constellation diagram.
+
+Hardware Setup
+--------------
+
+![setup diagram](doc/img/setup_diagram.svg)
+![setup photo](doc/img/setup_photo.svg)
+
+Our setup is depicted in the Figure above. We used components with the following properties:
+ 1. USRP TX (max +20dBm)
+ 2. Filter (190-250MHz, -3.5dB)
+ 3. Power amplifier (max +15dBm, +10 dB)
+ 4. Directional coupler (approx. -25dB @ 223MHz)
+ 5. Attenuator (-20 dB)
+ 6. Attenuator (-30 dB)
+ 7. USRP RX (max -15dBm)
+ 8. Spectrum analyzer (max +30dBm)
+
+It is important to make sure, that the USRP RX port does not receive too much power. Otherwise the USRP will break. Here is an example of how we calculated the maximal USRP RX input power for our case. As this is only a rough calculation to protect the port, the pre-distortion software will later automatically apply a normalization for the RX input by adapting the USRP RX gain.
+
+
+![P_{TX} + P_{PA} - P_{SP} - P_{AT} = 20dBm + 10dB -25dB -50dB = -45dBm](http://www.sciweavers.org/tex2img.php?eq=P_%7BTX%7D+%2B+P_%7BPA%7D+-+P_%7BSP%7D+-+P_%7BAT%7D+%3D+20dBm+%2B+10dB+-25dB+-50dB+%3D+-45dBm&bc=White&fc=Black&im=jpg&fs=12&ff=arev&edit=)
+
+Thus we have a margin of about 30dB for the input power of the USRP RX port.
+
+
+Software Setup
+--------------
+
+We assume that you already installed *ODR-DabMux* and *ODR-DabMod*. In order to satisfy dependencies for the pre-distortion, you can install all required python modules using conda. Alternatively you can also install the packages specified in the environment file via your preferred method. To install and use the environment via conda do following:
+
+```
+conda env create -f dpd/environment.yml
+source activate dab
+```
+
+Use the pre-distortion
+----------------------
+
+Run the multiplexer and the modulator:
+
+```
+ODR-DabMux/src/odr-dabmux ../simple.mux
+ODR-DabMod/odr-dabmod dpd/dpd.ini
+```
+
+The script uses automatic gain control for both TX and RX gain, to get both a high quantization quality for the most frequent amplitude regions and a high enough back-off so the peaks are also quantized correctly. This means that the output power will stay at the same level, but the script may change TX gain to trade it with digital gain and also change RX gain.
+
+As a first test you can run the main script without parameters. It preserves the output power and generates all available visualization plots in the newly created logging directory `/tmp/dpd_<time_stamp>`. To run it do following:
+
+```
+cd dpd
+python main.py
+```
+
+Each plot is stored to the logging directory under a filename containing its time stamp and its label. Following plots are generated chronologically:
+
+ - ExtractStatistic: Extracted information from one or multiple measurements.
+ - Model\_AM: Fitted function for the amplitudes of the power amplifier against the TX amplitude.
+ - Model\_PM: Fitted function for the phase difference of the power amplifier against the TX amplitude.
+ - adapt.pkl: Contains the settings for the pre-distortion. To load them again without further measurements, you can use `apply_adapt_dumps.py`.
+ - MER: Constellation diagram used to calculate the modulation error rate.
+
+After the run you should be able to observe that the peak-shoulder difference decrease on your spectrum analyzer, similar to Figure below.
+
+Before digital predistortion:
+
+![shoulder_measurement_before](doc/img/shoulder_measurement_after.png)
+
+After digital predistortion:
+
+![shoulder_measurement_after](doc/img/shoulder_measurement_after.png)
+
+Now see what happens if you apply the pre-distortions for different TX gains. You can either set the TX gain before you start the pre-distortion or using the command line option `--txgain gain`. You can also try to adjust other parameters. To see their documentation run `python main.py --help`.
 
 File format for coefficients
 ----------------------------
