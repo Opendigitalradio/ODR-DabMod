@@ -66,16 +66,20 @@ parser.add_argument('--samplerate', default=8192000, type=int,
 parser.add_argument('--coefs', default='poly.coef',
                     help='File with DPD coefficients, which will be read by ODR-DabMod',
                     required=False)
-parser.add_argument('--txgain', default=78,
-                    help='TX Gain',
+parser.add_argument('--txgain', default=-1,
+                    help='TX Gain, -1 to leave unchanged',
                     required=False,
                     type=int)
 parser.add_argument('--rxgain', default=30,
-                    help='TX Gain',
+                    help='TX Gain, -1 to leave unchanged',
                     required=False,
                     type=int)
 parser.add_argument('--digital_gain', default=1,
                     help='Digital Gain',
+                    required=False,
+                    type=float)
+parser.add_argument('--target_median', default=0.1,
+                    help='target_median',
                     required=False,
                     type=float)
 parser.add_argument('--samps', default='81920', type=int,
@@ -89,21 +93,23 @@ parser.add_argument('-L', '--lut',
                     action="store_true")
 
 cli_args = parser.parse_args()
+logging.info(cli_args)
 
 port = cli_args.port
 port_rc = cli_args.rc_port
 coef_path = cli_args.coefs
 digital_gain = cli_args.digital_gain
-txgain = cli_args.txgain
-rxgain = cli_args.rxgain
 num_req = cli_args.samps
 samplerate = cli_args.samplerate
 num_iter = cli_args.iterations
+target_median = cli_args.target_median
+rxgain = cli_args.rxgain
+txgain = cli_args.txgain
 
-c = src.const.const(samplerate)
-SA = src.Symbol_align.Symbol_align(samplerate)
-MER = src.MER.MER(samplerate)
-MS = src.Measure_Shoulders.Measure_Shoulder(c, plot=False)
+c = src.const.const(samplerate, target_median)
+SA = src.Symbol_align.Symbol_align(c)
+MER = src.MER.MER(c)
+MS = src.Measure_Shoulders.Measure_Shoulder(c, plot=True)
 
 meas = Measure.Measure(samplerate, port, num_req)
 extStat = ExtractStatistic.ExtractStatistic(c, plot=True)
@@ -116,8 +122,18 @@ else:
     model = Model.Poly(c, plot=True)
 adapt.set_predistorter(model.get_dpd_data())
 adapt.set_digital_gain(digital_gain)
-adapt.set_txgain(txgain)
-adapt.set_rxgain(rxgain)
+
+# Set RX Gain
+if rxgain == -1:
+    rxgain = adapt.get_rxgain()
+else:
+    adapt.set_rxgain(rxgain)
+
+# Set TX Gain
+if txgain == -1:
+    txgain = adapt.get_txgain()
+else:
+    adapt.set_txgain(txgain)
 
 tx_gain = adapt.get_txgain()
 rx_gain = adapt.get_rxgain()
@@ -165,7 +181,7 @@ while i < num_iter:
 
             tx, rx, phase_diff, n_per_bin = extStat.extract(txframe_aligned, rxframe_aligned)
 
-            if extStat.n_meas >= 200:
+            if extStat.n_meas >= 100:
                 state = "model"
             else:
                 state = "measure"
