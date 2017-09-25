@@ -80,6 +80,10 @@ parser.add_argument('--digital_gain', default=1,
 parser.add_argument('--samps', default='81920', type=int,
                     help='Number of samples to request from ODR-DabMod',
                     required=False)
+parser.add_argument('--target_median', default=0.1,
+                    help='target_median',
+                    required=False,
+                    type=float)
 parser.add_argument('--searchpath', default='./stored', type=str,
                     help='Path to search .pkl files with stored configuration'
                          'for adapt',
@@ -99,10 +103,11 @@ rxgain = cli_args.rxgain
 num_req = cli_args.samps
 samplerate = cli_args.samplerate
 searchpath = cli_args.searchpath
+target_median = cli_args.target_median
 
-c = src.const.const(samplerate)
-SA = src.Symbol_align.Symbol_align(samplerate)
-MER = src.MER.MER(samplerate)
+c = src.const.const(samplerate, target_median)
+SA = src.Symbol_align.Symbol_align(c)
+MER = src.MER.MER(c)
 MS = src.Measure_Shoulders.Measure_Shoulder(c, plot=False)
 
 meas = Measure.Measure(samplerate, port, num_req)
