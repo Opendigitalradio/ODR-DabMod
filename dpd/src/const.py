@@ -38,6 +38,7 @@ class const:
         self.phase_offset_per_sample = 1. / sample_rate * 2 * np.pi * 1000
 
         # Constants for ExtractStatistic
+        self.ES_plot = True
         self.ES_start = 0.0
         self.ES_end = 1.0
         self.ES_n_bins = 64
@@ -53,10 +54,17 @@ class const:
         self.RAGC_min_rxgain = 25
         self.RAGC_rx_median_target = self.TAGC_tx_median_target
 
+        # Constants for Model
+        self.MDL_plot = True
+
+        # Constants for MER
+        self.MER_plot = True
+
         # Constants for Model_PM
         self.MPM_tx_min = 0.1
 
         # Constants for Measure_Shoulder
+        self.MS_plot = True
         assert sample_rate==8192000
         meas_offset = 976 # Offset from center frequency to measure shoulder [kHz]
         meas_width = 100 # Size of frequency delta to measure shoulder [kHz]

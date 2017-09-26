@@ -69,7 +69,7 @@ class Measure_Shoulder:
                  c,
                  plot=False):
         self.c = c
-        self.plot = plot
+        self.plot = c.MS_plot
 
     def _plot(self, signal):
         dt = datetime.datetime.now().isoformat()

@@ -109,17 +109,17 @@ txgain = cli_args.txgain
 c = src.const.const(samplerate, target_median)
 SA = src.Symbol_align.Symbol_align(c)
 MER = src.MER.MER(c)
-MS = src.Measure_Shoulders.Measure_Shoulder(c, plot=True)
+MS = src.Measure_Shoulders.Measure_Shoulder(c)
 
 meas = Measure.Measure(samplerate, port, num_req)
-extStat = ExtractStatistic.ExtractStatistic(c, plot=True)
+extStat = ExtractStatistic.ExtractStatistic(c)
 adapt = Adapt.Adapt(port_rc, coef_path)
 dpddata = adapt.get_predistorter()
 
 if cli_args.lut:
-    model = Model.Lut(c, plot=True)
+    model = Model.Lut(c)
 else:
-    model = Model.Poly(c, plot=True)
+    model = Model.Poly(c)
 adapt.set_predistorter(model.get_dpd_data())
 adapt.set_digital_gain(digital_gain)
 
@@ -190,7 +190,7 @@ while i < num_iter:
         elif state == "model":
             dpddata = model.train(tx, rx, phase_diff)
             dpddata = model.get_dpd_data()
-            extStat = ExtractStatistic.ExtractStatistic(c, plot=True)
+            extStat = ExtractStatistic.ExtractStatistic(c)
             state = "adapt"
 
         # Adapt
@@ -205,8 +205,8 @@ while i < num_iter:
                 path = adapt.dump()
 
                 off = SA.calc_offset(txframe_aligned)
-                tx_mer = MER.calc_mer(txframe_aligned[off:off+c.T_U], debug=True, debug_name="TX")
-                rx_mer = MER.calc_mer(rxframe_aligned[off:off+c.T_U], debug=True, debug_name="RX")
+                tx_mer = MER.calc_mer(txframe_aligned[off:off+c.T_U], debug_name="TX")
+                rx_mer = MER.calc_mer(rxframe_aligned[off:off+c.T_U], debug_name="RX")
                 mse = np.mean(np.abs((txframe_aligned - rxframe_aligned)**2))
                 tx_gain = adapt.get_txgain()
                 rx_gain = adapt.get_rxgain()

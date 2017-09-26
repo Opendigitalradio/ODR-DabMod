@@ -44,8 +44,7 @@ class Poly:
     def __init__(self,
                  c,
                  learning_rate_am=1.0,
-                 learning_rate_pm=1.0,
-                 plot=False):
+                 learning_rate_pm=1.0):
         self.c = c
 
         self.learning_rate_am = learning_rate_am
@@ -56,7 +55,7 @@ class Poly:
         self.model_am = Model_AM.Model_AM(c, plot=True)
         self.model_pm = Model_PM.Model_PM(c, plot=True)
 
-        self.plot = plot
+        self.plot = c.MDL_plot
 
     def reset_coefs(self):
         self.coefs_am = np.zeros(5, dtype=np.float32)

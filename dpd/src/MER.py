@@ -23,6 +23,8 @@ class MER:
     def __init__(self, c):
         self.c = c
 
+        self.plot = c.MER_plot
+
     def _calc_spectrum(self, tx):
         fft = np.fft.fftshift(np.fft.fft(tx))
         return np.delete(fft[self.c.FFT_start:self.c.FFT_end],
@@ -69,13 +71,13 @@ class MER:
 
         return x_mean, y_mean, U_RMS, U_ERR, MER
 
-    def calc_mer(self, tx, debug=False, debug_name=""):
+    def calc_mer(self, tx, debug_name=""):
         assert tx.shape[0] == self.c.T_U,\
                 "Wrong input length"
 
         spectrum = self._calc_spectrum(tx)
 
-        if debug:
+        if self.plot:
             dt = datetime.datetime.now().isoformat()
             fig_path = logging_path + "/" + dt + "_MER" + debug_name + ".svg"
 
@@ -91,7 +93,7 @@ class MER:
             x_err = U_ERR * np.sin(tau) + x_mean
             y_err = U_ERR * np.cos(tau) + y_mean
 
-            if debug:
+            if self.plot:
                 ax = plt.subplot(221 + i)
                 ax.scatter(x, y, s=0.2, color='black')
                 ax.plot(x_mean, y_mean, 'p', color='red')
@@ -102,7 +104,7 @@ class MER:
                 ylim = ax.get_ylim()
                 ax.set_ylim(ylim[0] - (ylim[1] - ylim[0]) * 0.1, ylim[1])
 
-        if debug:
+        if self.plot:
             plt.tight_layout()
             plt.savefig(fig_path)
             plt.show()
