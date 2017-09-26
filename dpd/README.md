@@ -56,7 +56,7 @@ Our setup is depicted in the Figure above. We used components with the following
  7. USRP RX (max -15dBm)
  8. Spectrum analyzer (max +30dBm)
 
-It is important to make sure, that the USRP RX port does not receive too much power. Otherwise the USRP will break. Here is an example of how we calculated the maximal USRP RX input power for our case. As this is only a rough calculation to protect the port, the pre-distortion software will later automatically apply a normalization for the RX input by adapting the USRP RX gain.
+It is important to make sure, that the USRP RX port does not receive too much power. Otherwise the USRP will break. Here is an example of how we calculated the maximal USRP RX input power for our case. As this is only a rough calculation to protect the port, the predistortion software will later automatically apply a normalization for the RX input by adapting the USRP RX gain.
 
 
 ![P_{TX} + P_{PA} - P_{SP} - P_{AT} = 20dBm + 10dB -25dB -50dB = -45dBm](http://www.sciweavers.org/tex2img.php?eq=P_%7BTX%7D+%2B+P_%7BPA%7D+-+P_%7BSP%7D+-+P_%7BAT%7D+%3D+20dBm+%2B+10dB+-25dB+-50dB+%3D+-45dBm&bc=White&fc=Black&im=jpg&fs=12&ff=arev&edit=)
@@ -67,14 +67,14 @@ Thus we have a margin of about 30dB for the input power of the USRP RX port.
 Software Setup
 --------------
 
-We assume that you already installed *ODR-DabMux* and *ODR-DabMod*. In order to satisfy dependencies for the pre-distortion, you can install all required python modules using conda. Alternatively you can also install the packages specified in the environment file via your preferred method. To install and use the environment via conda do following:
+We assume that you already installed *ODR-DabMux* and *ODR-DabMod*. In order to satisfy dependencies for the predistortion, you can install all required python modules using conda. Alternatively you can also install the packages specified in the environment file via your preferred method. To install and use the environment via conda do following:
 
 ```
 conda env create -f dpd/environment.yml
 source activate dab
 ```
 
-Use the pre-distortion
+Use the predistortion
 ----------------------
 
 Run the multiplexer and the modulator:
@@ -98,20 +98,20 @@ Each plot is stored to the logging directory under a filename containing its tim
  - ExtractStatistic: Extracted information from one or multiple measurements.
  - Model\_AM: Fitted function for the amplitudes of the power amplifier against the TX amplitude.
  - Model\_PM: Fitted function for the phase difference of the power amplifier against the TX amplitude.
- - adapt.pkl: Contains the settings for the pre-distortion. To load them again without further measurements, you can use `apply_adapt_dumps.py`.
+ - adapt.pkl: Contains the settings for the predistortion. To load them again without further measurements, you can use `apply_adapt_dumps.py`.
  - MER: Constellation diagram used to calculate the modulation error rate.
 
 After the run you should be able to observe that the peak-shoulder difference decrease on your spectrum analyzer, similar to Figure below.
 
 Before digital predistortion:
 
-![shoulder_measurement_before](img/shoulder_measurement_after.png)
+![shoulder_measurement_before](img/shoulder_measurement_before.png)
 
 After digital predistortion:
 
 ![shoulder_measurement_after](img/shoulder_measurement_after.png)
 
-Now see what happens if you apply the pre-distortions for different TX gains. You can either set the TX gain before you start the pre-distortion or using the command line option `--txgain gain`. You can also try to adjust other parameters. To see their documentation run `python main.py --help`.
+Now see what happens if you apply the predistortions for different TX gains. You can either set the TX gain before you start the predistortion or using the command line option `--txgain gain`. You can also try to adjust other parameters. To see their documentation run `python main.py --help`.
 
 File format for coefficients
 ----------------------------
@@ -138,6 +138,7 @@ The file therefore contains 1 + 1 + 2xN lines if it contains N coefficients.
 TODO
 ----
 
-Implement a PA model.
-Implement cases for different oversampling for FFT bin choice.
-Fix loads of missing and buggy aspects of the implementation.
+ - Implement a Volterra polynomial to model the PA. Compared to the current model this would also capture the time dependent behaviour of the PA.
+ - Make the predistortion more robust. At the moment the shoulders sometimes increase instead of decrease after applying newly calculated predistortion parameters. Can this behaviour be predicted from the measurement? This would make it possible to filter out bad predistortion settings.
+ - Find a better measurement for the quality of the predistortion. The peak-shoulder difference might be too large to be captured with the USRP, as the ADC has 12 bit and DAB signals have a large crest factor.
+ - Implement cases for different oversampling for FFT bin choice.
