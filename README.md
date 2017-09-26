@@ -42,6 +42,8 @@ configuration file.
 The lib/ directory contains source code of libraries needed to build
 ODR-DabMod.
 
+The dpd/ directory contains the digital predistortion project. It's goal is to reduce distortion that is caused by the non-linearity of the PA.
+
 INSTALL
 =======
 See the INSTALL file for installation instructions.
