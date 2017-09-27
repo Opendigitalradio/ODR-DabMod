@@ -234,7 +234,7 @@ while i < num_iter:
                                   ['i', 'tx_mer', 'tx_shoulder_tuple', 'rx_mer',
                                    'rx_shoulder_tuple', 'mse', 'tx_gain',
                                    'digital_gain', 'rx_gain', 'rx_median',
-                                   'tx_median']))
+                                   'tx_median', 'lr', 'n_meas']))
 
                 # Model specific logging
                 if dpddata[0] == 'poly':

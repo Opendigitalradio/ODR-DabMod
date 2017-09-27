@@ -67,7 +67,7 @@ class Model_AM:
             ax.set_xlabel("TX Amplitude")
             ax.set_ylabel("RX Amplitude")
             xlim = ax.get_xlim()
-            ax.set_xlim(max(xlim[0], -1), min(xlim[1], 2))
+            ax.set_xlim(-0.5, 1.5)
             ax.legend(loc=4)
 
             fig.tight_layout()
