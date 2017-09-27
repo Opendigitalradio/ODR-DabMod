@@ -12,8 +12,6 @@ predistortion module of ODR-DabMod."""
 
 import datetime
 import os
-import time
-import sys
 import matplotlib
 matplotlib.use('GTKAgg')
 
@@ -46,10 +44,10 @@ import src.ExtractStatistic as ExtractStatistic
 import src.Adapt as Adapt
 import src.Agc as Agc
 import src.TX_Agc as TX_Agc
-import src.Symbol_align
-import src.const
-import src.MER
-import src.Measure_Shoulders
+from src.Symbol_align import Symbol_align
+from src.Const import Const
+from src.MER import MER
+from src.Measure_Shoulders import Measure_Shoulders
 import argparse
 
 parser = argparse.ArgumentParser(
@@ -91,6 +89,13 @@ parser.add_argument('-i', '--iterations', default=1, type=int,
 parser.add_argument('-L', '--lut',
                     help='Use lookup table instead of polynomial predistorter',
                     action="store_true")
+parser.add_argument('--n_bins', default='64', type=int,
+                    required=False)
+parser.add_argument('--n_per_bin', default='128', type=int,
+                    required=False)
+parser.add_argument('--n_meas', default='20', type=int,
+                    help='Number of samples to request from ODR-DabMod',
+                    required=False)
 
 cli_args = parser.parse_args()
 logging.info(cli_args)
@@ -106,10 +111,14 @@ target_median = cli_args.target_median
 rxgain = cli_args.rxgain
 txgain = cli_args.txgain
 
-c = src.const.const(samplerate, target_median)
-SA = src.Symbol_align.Symbol_align(c)
-MER = src.MER.MER(c)
-MS = src.Measure_Shoulders.Measure_Shoulder(c)
+n_bins = cli_args.n_bins
+n_per_bin = cli_args.n_per_bin
+n_meas = cli_args.n_meas
+
+c = Const(samplerate, target_median, n_bins, n_per_bin, n_meas)
+SA = Symbol_align(c)
+MER = MER(c)
+MS = Measure_Shoulders(c)
 
 meas = Measure.Measure(samplerate, port, num_req)
 extStat = ExtractStatistic.ExtractStatistic(c)
@@ -181,7 +190,7 @@ while i < num_iter:
 
             tx, rx, phase_diff, n_per_bin = extStat.extract(txframe_aligned, rxframe_aligned)
 
-            if extStat.n_meas >= 100:
+            if extStat.n_meas >= c.n_meas:
                 state = "model"
             else:
                 state = "measure"
@@ -212,8 +221,8 @@ while i < num_iter:
                 rx_gain = adapt.get_rxgain()
                 digital_gain = adapt.get_digital_gain()
                 tx_median = np.median(np.abs(txframe_aligned))
-                rx_shoulder_tuple = MS.average_shoulders(rxframe_aligned)
-                tx_shoulder_tuple = MS.average_shoulders(txframe_aligned)
+                rx_shoulder_tuple = MS.average_shoulders(rxframe_aligned) if c.MS_enable else None
+                tx_shoulder_tuple = MS.average_shoulders(txframe_aligned) if c.MS_enable else None
 
                 logging.info(list((name, eval(name)) for name in
                                   ['i', 'tx_mer', 'tx_shoulder_tuple', 'rx_mer',
