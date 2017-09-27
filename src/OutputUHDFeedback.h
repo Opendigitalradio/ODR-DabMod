@@ -109,7 +109,6 @@ class OutputUHDFeedback {
         UHDReceiveBurstRequest burstRequest;
 
         std::atomic_bool m_running;
-        int m_server_sock = -1;
         uint16_t m_port = 0;
         uint32_t m_sampleRate = 0;
         uhd::usrp::multi_usrp::sptr m_usrp;

@@ -46,6 +46,7 @@ DESCRIPTION:
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include "OutputUHDFeedback.h"
 #include "Utils.h"
+#include "Socket.h"
 
 using namespace std;
 typedef std::complex<float> complexf;
@@ -87,7 +88,9 @@ void OutputUHDFeedback::set_tx_frame(
 {
     boost::mutex::scoped_lock lock(burstRequest.mutex);
 
-    assert(buf.size() % sizeof(complexf) == 0);
+    if (buf.size() % sizeof(complexf) != 0) {
+        throw std::logic_error("Buffer for tx frame has incorrect size");
+    }
 
     if (burstRequest.state == BurstRequestState::SaveTransmitFrame) {
         const size_t n = std::min(
@@ -183,85 +186,23 @@ void OutputUHDFeedback::ReceiveBurstThread()
     }
 }
 
-static int accept_with_timeout(int server_socket, int timeout_ms, struct sockaddr_in *client)
-{
-    struct pollfd fds[1];
-    fds[0].fd = server_socket;
-    fds[0].events = POLLIN | POLLOUT;
-
-    int retval = poll(fds, 1, timeout_ms);
-
-    if (retval == -1) {
-        throw std::runtime_error("TCP Socket accept error: " + to_string(errno));
-    }
-    else if (retval) {
-        socklen_t client_len = sizeof(struct sockaddr_in);
-        return accept(server_socket, (struct sockaddr*)&client, &client_len);
-    }
-    else {
-        return -2;
-    }
-}
-
-static ssize_t sendall(int socket, const void *buffer, size_t buflen)
-{
-    uint8_t *buf = (uint8_t*)buffer;
-    while (buflen > 0) {
-        ssize_t sent = send(socket, buf, buflen, 0);
-        if (sent < 0) {
-            return -1;
-        }
-        else {
-            buf += sent;
-            buflen -= sent;
-        }
-    }
-    return buflen;
-}
-
 void OutputUHDFeedback::ServeFeedback()
 {
-    if ((m_server_sock = socket(PF_INET, SOCK_STREAM, 0)) < 0) {
-        throw std::runtime_error("Can't create TCP socket");
-    }
-
-    struct sockaddr_in addr;
-    addr.sin_family = AF_INET;
-    addr.sin_port = htons(m_port);
-    addr.sin_addr.s_addr = htonl(INADDR_ANY);
-
-    const int reuse = 1;
-    if (setsockopt(m_server_sock, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(reuse))
-            < 0) {
-        throw std::runtime_error("Can't reuse address for TCP socket");
-    }
-
-    if (bind(m_server_sock, (struct sockaddr*)&addr, sizeof(addr)) < 0) {
-        close(m_server_sock);
-        throw std::runtime_error("Can't bind TCP socket");
-    }
-
-    if (listen(m_server_sock, 1) < 0) {
-        close(m_server_sock);
-        throw std::runtime_error("Can't listen TCP socket");
-    }
+    TCPSocket m_server_sock;
+    m_server_sock.listen(m_port);
 
     etiLog.level(info) << "DPD Feedback server listening on port " << m_port;
 
     while (m_running) {
         struct sockaddr_in client;
-        int client_sock = accept_with_timeout(m_server_sock, 1000, &client);
+        TCPSocket client_sock = m_server_sock.accept_with_timeout(1000, &client);
 
-        if (client_sock == -1) {
-            close(m_server_sock);
+        if (not client_sock.valid()) {
             throw runtime_error("Could not establish new connection");
-        }
-        else if (client_sock == -2) {
-            continue;
         }
 
         uint8_t request_version = 0;
-        ssize_t read = recv(client_sock, &request_version, 1, 0);
+        ssize_t read = client_sock.recv(&request_version, 1, 0);
         if (!read) break; // done reading
         if (read < 0) {
             etiLog.level(info) <<
@@ -275,7 +216,7 @@ void OutputUHDFeedback::ServeFeedback()
         }
 
         uint32_t num_samples = 0;
-        read = recv(client_sock, &num_samples, 4, 0);
+        read = client_sock.recv(&num_samples, 4, 0);
         if (!read) break; // done reading
         if (read < 0) {
             etiLog.level(info) <<
@@ -308,13 +249,13 @@ void OutputUHDFeedback::ServeFeedback()
                     burstRequest.rx_samples.size() / sizeof(complexf)));
 
         uint32_t num_samples_32 = burstRequest.num_samples;
-        if (sendall(client_sock, &num_samples_32, sizeof(num_samples_32)) < 0) {
+        if (client_sock.sendall(&num_samples_32, sizeof(num_samples_32)) < 0) {
             etiLog.level(info) <<
                 "DPD Feedback Server Client send num_samples failed";
             break;
         }
 
-        if (sendall(client_sock,
+        if (client_sock.sendall(
                     &burstRequest.tx_second,
                     sizeof(burstRequest.tx_second)) < 0) {
             etiLog.level(info) <<
@@ -322,7 +263,7 @@ void OutputUHDFeedback::ServeFeedback()
             break;
         }
 
-        if (sendall(client_sock,
+        if (client_sock.sendall(
                     &burstRequest.tx_pps,
                     sizeof(burstRequest.tx_pps)) < 0) {
             etiLog.level(info) <<
@@ -332,8 +273,11 @@ void OutputUHDFeedback::ServeFeedback()
 
         const size_t frame_bytes = burstRequest.num_samples * sizeof(complexf);
 
-        assert(burstRequest.tx_samples.size() >= frame_bytes);
-        if (sendall(client_sock,
+        if (burstRequest.tx_samples.size() < frame_bytes) {
+            throw logic_error("DPD Feedback burstRequest invalid: not enough TX samples");
+        }
+
+        if (client_sock.sendall(
                     &burstRequest.tx_samples[0],
                     frame_bytes) < 0) {
             etiLog.level(info) <<
@@ -341,7 +285,7 @@ void OutputUHDFeedback::ServeFeedback()
             break;
         }
 
-        if (sendall(client_sock,
+        if (client_sock.sendall(
                     &burstRequest.rx_second,
                     sizeof(burstRequest.rx_second)) < 0) {
             etiLog.level(info) <<
@@ -349,7 +293,7 @@ void OutputUHDFeedback::ServeFeedback()
             break;
         }
 
-        if (sendall(client_sock,
+        if (client_sock.sendall(
                     &burstRequest.rx_pps,
                     sizeof(burstRequest.rx_pps)) < 0) {
             etiLog.level(info) <<
@@ -357,16 +301,17 @@ void OutputUHDFeedback::ServeFeedback()
             break;
         }
 
-        assert(burstRequest.rx_samples.size() >= frame_bytes);
-        if (sendall(client_sock,
+        if (burstRequest.rx_samples.size() < frame_bytes) {
+            throw logic_error("DPD Feedback burstRequest invalid: not enough RX samples");
+        }
+
+        if (client_sock.sendall(
                     &burstRequest.rx_samples[0],
                     frame_bytes) < 0) {
             etiLog.level(info) <<
                 "DPD Feedback Server Client send rx_frame failed";
             break;
         }
-
-        close(client_sock);
     }
 }
 
@@ -392,11 +337,6 @@ void OutputUHDFeedback::ServeFeedbackThread()
     }
 
     m_running = false;
-
-    if (m_server_sock != -1) {
-        close(m_server_sock);
-        m_server_sock = -1;
-    }
 }
 
 #endif
