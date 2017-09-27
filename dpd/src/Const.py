@@ -58,7 +58,7 @@ class Const:
         self.RAGC_rx_median_target = self.TAGC_tx_median_target
 
         # Constants for Model
-        self.MDL_plot = False
+        self.MDL_plot = True
 
         # Constants for MER
         self.MER_plot = False

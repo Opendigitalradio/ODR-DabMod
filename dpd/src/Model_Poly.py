@@ -62,13 +62,18 @@ class Poly:
         self.coefs_pm = np.zeros(5, dtype=np.float32)
         return self.coefs_am, self.coefs_pm
 
-    def train(self, tx_abs, rx_abs, phase_diff):
+    def train(self, tx_abs, rx_abs, phase_diff, lr=None):
         """
         :type tx_abs: np.ndarray
         :type rx_abs: np.ndarray
         :type phase_diff: np.ndarray
+        :type lr: float
         """
         _check_input_get_next_coefs(tx_abs, rx_abs, phase_diff)
+
+        if not lr is None:
+            self.model_am.learning_rate_am = lr
+            self.model_pm.learning_rate_pm = lr
 
         coefs_am_new = self.model_am.get_next_coefs(tx_abs, rx_abs, self.coefs_am)
         coefs_pm_new = self.model_pm.get_next_coefs(tx_abs, phase_diff, self.coefs_pm)

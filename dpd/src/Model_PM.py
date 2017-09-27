@@ -34,7 +34,7 @@ class Model_PM:
 
     def __init__(self,
                  c,
-                 learning_rate_pm=0.1,
+                 learning_rate_pm=1,
                  plot=False):
         self.c = c
 
@@ -97,6 +97,8 @@ class Model_PM:
         check_input_get_next_coefs(tx_dpd, phase_diff)
 
         coefs_pm_new = self.fit_poly(tx_dpd, phase_diff)
+
+        coefs_pm_new = coefs_pm + self.learning_rate_pm * (coefs_pm_new - coefs_pm)
         self._plot(tx_dpd, phase_diff, coefs_pm, coefs_pm_new)
 
         return coefs_pm_new
