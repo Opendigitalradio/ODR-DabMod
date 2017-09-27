@@ -67,7 +67,7 @@ Thus we have a margin of about 30dB for the input power of the USRP RX port.
 Software Setup
 --------------
 
-We assume that you already installed *ODR-DabMux* and *ODR-DabMod*. In order to satisfy dependencies for the predistortion, you can install all required python modules using conda. Alternatively you can also install the packages specified in the environment file via your preferred method. To install and use the environment via conda do following:
+We assume that you already installed *ODR-DabMux* and *ODR-DabMod*. In order to satisfy dependencies for the predistortion, you can install all required python modules using conda. To obtain the conda commandline tool, install [miniconda](https://conda.io/docs/user-guide/install/linux.html). It helps you keep the global python environment clean and install the exact same package versions as we used for development. Alternatively you can also install the packages specified in the environment file via your preferred method.
 
 ```
 conda env create -f dpd/environment.yml
