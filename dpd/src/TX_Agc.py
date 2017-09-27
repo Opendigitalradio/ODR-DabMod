@@ -20,7 +20,8 @@ import matplotlib.pyplot as plt
 
 import src.Adapt as Adapt
 
-#TODO fix for float tx_gain
+
+# TODO fix for float tx_gain
 class TX_Agc:
     def __init__(self,
                  adapt,
@@ -45,7 +46,6 @@ class TX_Agc:
                 the median TX value is expected to be lower than this value.
         """
 
-
         assert isinstance(adapt, Adapt.Adapt)
         self.adapt = adapt
         self.max_txgain = c.TAGC_max_txgain
@@ -55,31 +55,59 @@ class TX_Agc:
         self.tx_median_threshold_tolerate_min = c.TAGC_tx_median_min
         self.tx_median_target = c.TAGC_tx_median_target
 
+    def _calc_new_tx_gain(self, tx_median):
+        delta_db = 20 * np.log10(self.tx_median_target / tx_median)
+        new_txgain = self.adapt.get_txgain() - delta_db
+        assert new_txgain < self.max_txgain, \
+            "TX_Agc failed. New TX gain of {} is too large.".format(
+                new_txgain
+            )
+        return new_txgain, delta_db
+
+    def _calc_digital_gain(self, delta_db):
+        digital_gain_factor = 10 ** (delta_db / 20.)
+        digital_gain = self.adapt.get_digital_gain() * digital_gain_factor
+        return digital_gain, digital_gain_factor
+
+    def _set_tx_gain(self, new_txgain):
+        self.adapt.set_txgain(new_txgain)
+        txgain = self.adapt.get_txgain()
+        return txgain
+
+    def _have_to_adapt(self, tx_median):
+        too_large = tx_median > self.tx_median_threshold_tolerate_max
+        too_small = tx_median < self.tx_median_threshold_tolerate_min
+        return too_large or too_small
+
     def adapt_if_necessary(self, tx):
         tx_median = np.median(np.abs(tx))
-        if tx_median > self.tx_median_threshold_tolerate_max or\
-           tx_median < self.tx_median_threshold_tolerate_min:
-            delta_db = 20 * np.log10(self.tx_median_target / tx_median)
-            new_txgain = self.adapt.get_txgain() - delta_db
-            assert new_txgain < self.max_txgain,\
-                "TX_Agc failed. New TX gain of {} is too large.".format(
-                    new_txgain
-                )
-            self.adapt.set_txgain(new_txgain)
-            txgain = self.adapt.get_txgain()
 
-            digital_gain_factor = 10 ** (delta_db / 20.)
-            digital_gain = self.adapt.get_digital_gain() * digital_gain_factor
-            self.adapt.set_digital_gain(digital_gain)
+        if self._have_to_adapt(tx_median):
+            # Calculate new values
+            new_txgain, delta_db = self._calc_new_tx_gain(tx_median)
+            digital_gain, digital_gain_factor = \
+                self._calc_digital_gain(delta_db)
+
+            # Set new values.
+            # Avoid temorary increase of output power with correct order
+            if digital_gain_factor < 0:
+                self.adapt.set_digital_gain(digital_gain)
+                time.sleep(0.5)
+                txgain = self._set_tx_gain(new_txgain)
+                time.sleep(1)
+            else:
+                txgain = self._set_tx_gain(new_txgain)
+                time.sleep(1)
+                self.adapt.set_digital_gain(digital_gain)
+                time.sleep(0.5)
 
             logging.info(
-                "digital_gain = {}, txgain_new = {}, "\
-                "delta_db = {}, tx_median {}, "\
+                "digital_gain = {}, txgain_new = {}, " \
+                "delta_db = {}, tx_median {}, " \
                 "digital_gain_factor = {}".
                     format(digital_gain, txgain, delta_db,
                            tx_median, digital_gain_factor))
 
-            time.sleep(1)
             return True
         return False
 
