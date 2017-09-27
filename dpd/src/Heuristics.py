@@ -19,7 +19,7 @@ def get_learning_rate(idx_run):
 def get_n_meas(idx_run):
     idx_max = 10.0
     n_meas_min = 10
-    n_meas_max = 50
+    n_meas_max = 20
     n_meas_delta = n_meas_max - n_meas_min
     idx_run = min(idx_run, idx_max)
     learning_rate = n_meas_delta * idx_run/idx_max + n_meas_min
