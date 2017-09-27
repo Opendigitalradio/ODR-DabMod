@@ -86,7 +86,7 @@ ODR-DabMod/odr-dabmod dpd/dpd.ini
 
 The script uses automatic gain control for both TX and RX gain, to get both a high quantization quality for the most frequent amplitude regions and a high enough back-off so the peaks are also quantized correctly. This means that the output power will stay at the same level, but the script may change TX gain to trade it with digital gain and also change RX gain.
 
-As a first test you can run the main script without parameters. It preserves the output power and generates all available visualization plots in the newly created logging directory `/tmp/dpd_<time_stamp>`. To run it do following:
+As a first test you can run the main script without parameters. It preserves the output power and generates all available visualization plots in the newly created logging directory `/tmp/dpd_<time_stamp>`. As the script should increase the preak to shoulder ratio, tune the txgain in a way to be able to see a the change. For example to a ratio of -30dB. You can do this using the telnet remote control from `odr-dabmod`. To run it do following:
 
 ```
 cd dpd
