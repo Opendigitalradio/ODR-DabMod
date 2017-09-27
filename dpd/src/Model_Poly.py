@@ -44,14 +44,15 @@ class Poly:
                  learning_rate_am=1.0,
                  learning_rate_pm=1.0):
         self.c = c
+        self.plot = c.MDL_plot
 
         self.learning_rate_am = learning_rate_am
         self.learning_rate_pm = learning_rate_pm
 
         self.reset_coefs()
 
-        self.model_am = Model_AM.Model_AM(c, plot=True)
-        self.model_pm = Model_PM.Model_PM(c, plot=True)
+        self.model_am = Model_AM.Model_AM(c, plot=self.plot)
+        self.model_pm = Model_PM.Model_PM(c, plot=self.plot)
 
         self.plot = c.MDL_plot
 
