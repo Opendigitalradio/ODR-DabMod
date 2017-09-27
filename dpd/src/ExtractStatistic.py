@@ -34,9 +34,7 @@ class ExtractStatistic:
     """Calculate a low variance RX value for equally spaced tx values
     of a predefined range"""
 
-    def __init__(self,
-                 c,
-                 plot=False):
+    def __init__(self, c):
         self.c = c
 
         self.n_meas = 0
@@ -58,7 +56,7 @@ class ExtractStatistic:
         for i in range(c.ES_n_bins):
             self.rx_values.append(None)
 
-        self.plot = plot
+        self.plot = c.ES_plot
 
     def _plot_and_log(self):
         if logging.getLogger().getEffectiveLevel() == logging.DEBUG and self.plot:

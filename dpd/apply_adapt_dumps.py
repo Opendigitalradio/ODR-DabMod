@@ -46,7 +46,7 @@ import src.Agc as Agc
 import src.TX_Agc as TX_Agc
 import argparse
 
-import src.const
+import src.Const
 import src.Symbol_align
 import src.Measure_Shoulders
 import src.MER
@@ -105,20 +105,20 @@ samplerate = cli_args.samplerate
 searchpath = cli_args.searchpath
 target_median = cli_args.target_median
 
-c = src.const.const(samplerate, target_median)
+c = src.Const.Const(samplerate, target_median, -1, -1, -1)
 SA = src.Symbol_align.Symbol_align(c)
 MER = src.MER.MER(c)
-MS = src.Measure_Shoulders.Measure_Shoulder(c, plot=False)
+MS = src.Measure_Shoulders.Measure_Shoulders(c)
 
 meas = Measure.Measure(samplerate, port, num_req)
-extStat = ExtractStatistic.ExtractStatistic(c, plot=True)
+extStat = ExtractStatistic.ExtractStatistic(c)
 adapt = Adapt.Adapt(port_rc, coef_path)
 dpddata = adapt.get_predistorter()
 
 if cli_args.lut:
-    model = Model.Lut(c, plot=True)
+    model = Model.Lut(c)
 else:
-    model = Model.Poly(c, plot=True)
+    model = Model.Poly(c)
 adapt.set_predistorter(model.get_dpd_data())
 adapt.set_digital_gain(digital_gain)
 adapt.set_txgain(txgain)

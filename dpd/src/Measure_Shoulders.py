@@ -61,7 +61,7 @@ def shoulder_from_sig_offset(arg):
     return peak-shoulder, peak, shoulder
 
 
-class Measure_Shoulder:
+class Measure_Shoulders:
     """Calculate difference between the DAB signal and the shoulder hight in the
     power spectrum"""
 
@@ -75,7 +75,7 @@ class Measure_Shoulder:
         dt = datetime.datetime.now().isoformat()
         fig_path = logging_path + "/" + dt + "_sync_subsample_aligned.svg"
 
-        fft = calc_fft_db(signal, 100)
+        fft = calc_fft_db(signal, 100, 10)
         peak, idxs_peak = self._calc_peak(fft)
         shoulder, idxs_sh = self._calc_shoulder_hight(fft, self.c)
 

@@ -5,15 +5,12 @@
 # http://www.opendigitalradio.org
 # Licence: The MIT License, see notice at the end of this file
 
-import datetime
 import os
 import logging
 
 logging_path = os.path.dirname(logging.getLoggerClass().root.handlers[0].baseFilename)
 
 import numpy as np
-import matplotlib.pyplot as plt
-from sklearn import linear_model
 
 import src.Model_AM as Model_AM
 import src.Model_PM as Model_PM
@@ -23,6 +20,7 @@ def assert_np_float32(x):
     assert isinstance(x, np.ndarray)
     assert x.dtype == np.float32
     assert x.flags.contiguous
+
 
 def _check_input_get_next_coefs(tx_abs, rx_abs, phase_diff):
     assert_np_float32(tx_abs)
@@ -64,6 +62,7 @@ class Poly:
         return self.coefs_am, self.coefs_pm
 
     def train(self, tx_abs, rx_abs, phase_diff):
+        # type: (np.ndarray, np.ndarray, np.ndarray) -> (str, np.ndarray, np.ndarray)
         _check_input_get_next_coefs(tx_abs, rx_abs, phase_diff)
 
         coefs_am_new = self.model_am.get_next_coefs(tx_abs, rx_abs, self.coefs_am)

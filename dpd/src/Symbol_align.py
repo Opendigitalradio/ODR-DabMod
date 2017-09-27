@@ -15,7 +15,7 @@ except:
     logging_path = "/tmp/"
 
 import numpy as np
-import src.const
+import src.Const
 import scipy
 import matplotlib
 matplotlib.use('agg')

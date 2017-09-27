@@ -14,7 +14,7 @@ try:
 except:
     logging_path = "/tmp/"
 
-import src.const
+import src.Const
 import src.Dab_Util
 import numpy as np
 import matplotlib
@@ -40,7 +40,7 @@ class Test_data:
         plt.plot(np.angle(np.fft.fftshift(np.fft.fft(tx_orig))), 'p')
         """
 
-        self.c = src.const.const(sample_rate)
+        self.c = src.Const.Const(sample_rate)
         self.du = src.Dab_Util.Dab_Util(sample_rate)
 
         self.file_paths = {
