@@ -13,7 +13,6 @@ logging_path = os.path.dirname(logging.getLoggerClass().root.handlers[0].baseFil
 
 import numpy as np
 import matplotlib.pyplot as plt
-from sklearn import linear_model
 
 
 def check_input_get_next_coefs(tx_dpd, phase_diff):

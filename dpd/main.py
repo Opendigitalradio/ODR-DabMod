@@ -123,7 +123,6 @@ MS = Measure_Shoulders(c)
 meas = Measure.Measure(samplerate, port, num_req)
 extStat = ExtractStatistic.ExtractStatistic(c)
 adapt = Adapt.Adapt(port_rc, coef_path)
-dpddata = adapt.get_predistorter()
 
 if cli_args.lut:
     model = Model.Lut(c)
@@ -181,41 +180,43 @@ i = 0
 while i < num_iter:
     try:
         # Measure
-        if state == "measure":
+        if state == 'measure':
+            # Get Samples and check gain
             txframe_aligned, tx_ts, rxframe_aligned, rx_ts, rx_median = meas.get_samples()
-            rxframe_aligned.tofile("/tmp/rxframe_aligned.np")
-            txframe_aligned.tofile("/tmp/txframe_aligned.np")
             if tx_agc.adapt_if_necessary(txframe_aligned):
                 continue
 
+            # Extract usable data from measurement
             tx, rx, phase_diff, n_per_bin = extStat.extract(txframe_aligned, rxframe_aligned)
 
             if extStat.n_meas >= c.n_meas:
-                state = "model"
+                state = 'model'
             else:
-                state = "measure"
+                state = 'measure'
 
         # Model
-        elif state == "model":
-            dpddata = model.train(tx, rx, phase_diff)
+        elif state == 'model':
+            # Calculate new model parameters and delete old measurements
+            model.train(tx, rx, phase_diff)
             dpddata = model.get_dpd_data()
             extStat = ExtractStatistic.ExtractStatistic(c)
-            state = "adapt"
+            state = 'adapt'
 
         # Adapt
-        elif state == "adapt":
+        elif state == 'adapt':
             adapt.set_predistorter(dpddata)
-            state = "report"
+            state = 'report'
 
         # Report
-        elif state == "report":
+        elif state == 'report':
             try:
-                i += 1
-                path = adapt.dump()
+                # Store all settings for pre-distortion, tx and rx
+                adapt.dump()
 
+                # Collect logging data
                 off = SA.calc_offset(txframe_aligned)
-                tx_mer = MER.calc_mer(txframe_aligned[off:off+c.T_U], debug_name="TX")
-                rx_mer = MER.calc_mer(rxframe_aligned[off:off+c.T_U], debug_name="RX")
+                tx_mer = MER.calc_mer(txframe_aligned[off:off+c.T_U], debug_name='TX')
+                rx_mer = MER.calc_mer(rxframe_aligned[off:off+c.T_U], debug_name='RX')
                 mse = np.mean(np.abs((txframe_aligned - rxframe_aligned)**2))
                 tx_gain = adapt.get_txgain()
                 rx_gain = adapt.get_rxgain()
@@ -224,36 +225,35 @@ while i < num_iter:
                 rx_shoulder_tuple = MS.average_shoulders(rxframe_aligned) if c.MS_enable else None
                 tx_shoulder_tuple = MS.average_shoulders(txframe_aligned) if c.MS_enable else None
 
+                # Generic logging
                 logging.info(list((name, eval(name)) for name in
                                   ['i', 'tx_mer', 'tx_shoulder_tuple', 'rx_mer',
                                    'rx_shoulder_tuple', 'mse', 'tx_gain',
                                    'digital_gain', 'rx_gain', 'rx_median',
                                    'tx_median']))
-                if dpddata[0] == "poly":
+
+                # Model specific logging
+                if dpddata[0] == 'poly':
                     coefs_am = dpddata[1]
                     coefs_pm = dpddata[2]
-                    logging.info("It {}: coefs_am {}".
+                    logging.info('It {}: coefs_am {}'.
                                  format(i, coefs_am))
-                    logging.info("It {}: coefs_pm {}".
+                    logging.info('It {}: coefs_pm {}'.
                                  format(i, coefs_pm))
-                if dpddata[0] == "lut":
+                elif dpddata[0] == 'lut':
                     scalefactor = dpddata[1]
                     lut = dpddata[2]
-                    logging.info("It {}: LUT scalefactor {}, LUT {}".
+                    logging.info('It {}: LUT scalefactor {}, LUT {}'.
                                  format(i, scalefactor, lut))
-                if tx_gain < 89:
-                    adapt.set_txgain(tx_gain)
-                else:
-                    break
-                state = "measure"
             except:
-                logging.warning("Iteration {}: Report failed.".format(i))
-                logging.warning(traceback.format_exc())
-                state = "measure"
+                logging.error('Iteration {}: Report failed.'.format(i))
+                logging.error(traceback.format_exc())
+            i += 1
+            state = 'measure'
 
     except Exception as e:
-        logging.warning("Iteration {} failed.".format(i))
-        logging.warning(traceback.format_exc())
+        logging.error('Iteration {} failed.'.format(i))
+        logging.error(traceback.format_exc())
 
 # The MIT License (MIT)
 #

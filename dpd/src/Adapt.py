@@ -137,7 +137,8 @@ class Adapt:
 
     def get_predistorter(self):
         """Load the coefficients from the file in the format given in the README,
-        return ("poly", [AM coef], [PM coef]) or ("lut", scalefactor, [LUT entries])"""
+        return ("poly", [AM coef], [PM coef]) or ("lut", scalefactor, [LUT entries])
+        """
         f = open(self.coef_path, 'r')
         lines = f.readlines()
         predistorter_format = int(lines[0])
@@ -155,7 +156,7 @@ class Adapt:
                 else:
                     raise ValueError(
                         "Incorrect coef file format: too many coefficients in {}, should be {}, coefs are {}"
-                            .format(path, n_coefs, coefs))
+                            .format(self.coef_path, n_coefs, coefs))
                 i += 1
             f.close()
             return ("poly", coefs_am_out, coefs_pm_out)
@@ -206,8 +207,7 @@ class Adapt:
         self.send_receive("set memlesspoly coeffile {}".format(self.coef_path))
 
     def dump(self, path=None):
-        if path is None:
-            dt = datetime.datetime.now().isoformat()
+        dt = datetime.datetime.now().isoformat()
         path = logging_path + "/" + dt + "_adapt.pkl"
         d = {
             "txgain":self.get_txgain(),

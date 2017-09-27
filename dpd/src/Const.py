@@ -10,6 +10,8 @@ class Const:
         self.sample_rate = sample_rate
         self.n_meas = n_meas
 
+        self.tx_gain_max = 89
+
         # Time domain
         self.T_F = sample_rate / 2048000 * 196608  # Transmission frame duration
         self.T_NULL = sample_rate / 2048000 * 2656  # Null symbol duration
