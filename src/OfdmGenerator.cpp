@@ -36,7 +36,9 @@
 #include <stdexcept>
 #include <assert.h>
 #include <string>
+#include <numeric>
 
+static const size_t MAX_CLIP_STATS = 10;
 
 OfdmGenerator::OfdmGenerator(size_t nbSymbols,
                              size_t nbCarriers,
@@ -68,6 +70,7 @@ OfdmGenerator::OfdmGenerator(size_t nbSymbols,
     RC_ADD_PARAMETER(cfr, "Enable crest factor reduction");
     RC_ADD_PARAMETER(clip, "CFR: Clip to amplitude");
     RC_ADD_PARAMETER(errorclip, "CFR: Limit error");
+    RC_ADD_PARAMETER(clip_stats, "CFR: statistics (clip ratio, errorclip ratio)");
 
     if (inverse) {
         myPosDst = (nbCarriers & 1 ? 0 : 1);
@@ -170,12 +173,12 @@ int OfdmGenerator::process(Buffer* const dataIn, Buffer* dataOut)
                 "OfdmGenerator::process output size not valid!");
     }
 
-    myNumClip = 0;
-    myNumErrorClip = 0;
-
     // It is not guaranteed that fftw keeps the FFT input vector intact.
     // That's why we copy it to the reference.
     std::vector<complexf> reference;
+
+    size_t num_clip = 0;
+    size_t num_error_clip = 0;
 
     for (size_t i = 0; i < myNbSymbols; ++i) {
         myFftIn[0][0] = 0;
@@ -196,7 +199,9 @@ int OfdmGenerator::process(Buffer* const dataIn, Buffer* dataOut)
 
         if (myCfr) {
             complexf *symbol = reinterpret_cast<complexf*>(myFftOut);
-            cfr_one_iteration(symbol, reference.data());
+            const auto stat = cfr_one_iteration(symbol, reference.data());
+            num_clip += stat.clip_count;
+            num_error_clip += stat.errclip_count;
         }
 
         memcpy(out, myFftOut, mySpacing * sizeof(FFT_TYPE));
@@ -206,18 +211,34 @@ int OfdmGenerator::process(Buffer* const dataIn, Buffer* dataOut)
     }
 
     if (myCfr) {
-        etiLog.level(debug) << "CFR: " << myNumClip << " clipped, " <<
-            myNumErrorClip << " err clipped";
+        std::lock_guard<std::mutex> lock(myCfrRcMutex);
+
+        const double num_samps = myNbSymbols * mySpacing;
+        const double clip_ratio = (double)num_clip / num_samps;
+
+        myClipRatios.push_back(clip_ratio);
+        while (myClipRatios.size() > MAX_CLIP_STATS) {
+            myClipRatios.pop_front();
+        }
+
+        const double errclip_ratio = (double)num_error_clip / num_samps;
+        myErrorClipRatios.push_back(errclip_ratio);
+        while (myErrorClipRatios.size() > MAX_CLIP_STATS) {
+            myErrorClipRatios.pop_front();
+        }
     }
 
     return sizeOut;
 }
 
-void OfdmGenerator::cfr_one_iteration(complexf *symbol, const complexf *reference)
+OfdmGenerator::cfr_iter_stat_t OfdmGenerator::cfr_one_iteration(
+        complexf *symbol, const complexf *reference)
 {
     // use std::norm instead of std::abs to avoid calculating the
     // square roots
     const float clip_squared = myCfrClip * myCfrClip;
+
+    OfdmGenerator::cfr_iter_stat_t ret;
 
     // Clip
     for (size_t i = 0; i < mySpacing; i++) {
@@ -228,7 +249,7 @@ void OfdmGenerator::cfr_one_iteration(complexf *symbol, const complexf *referenc
             //           = x * sqrt(clip_squared) / sqrt(mag_squared)
             //           = x * sqrt(clip_squared / mag_squared)
             symbol[i] *= std::sqrt(clip_squared / mag_squared);
-            myNumClip++;
+            ret.clip_count++;
         }
     }
 
@@ -245,8 +266,8 @@ void OfdmGenerator::cfr_one_iteration(complexf *symbol, const complexf *referenc
     std::vector<float> error_norm(mySpacing);
 
     for (size_t i = 0; i < mySpacing; i++) {
-        // FFTW computes an unnormalised trasform, i.e. a FFT-IFFT pair
-        // or vice-versa give back the original vector scaled by a factor
+        // FFTW computes an unnormalised transform, i.e. a FFT-IFFT pair
+        // or vice-versa gives back the original vector scaled by a factor
         // FFT-size. Because we're comparing our constellation point
         // (calculated with IFFT-clip-FFT) against reference (input to
         // the IFFT), we need to divide by our FFT size.
@@ -260,7 +281,7 @@ void OfdmGenerator::cfr_one_iteration(complexf *symbol, const complexf *referenc
 
         if (mag_squared > err_clip_squared) {
             error *= std::sqrt(err_clip_squared / mag_squared);
-            myNumErrorClip++;
+            ret.errclip_count++;
         }
 
         // Update the input to the FFT directly to avoid another copy for the
@@ -269,12 +290,10 @@ void OfdmGenerator::cfr_one_iteration(complexf *symbol, const complexf *referenc
         fft_in[i] = constellation_point + error;
     }
 
-    auto minmax = std::minmax_element(error_norm.begin(), error_norm.end());
-    etiLog.level(debug) << "err min: " << std::sqrt(*minmax.first)
-                        << " max: " << std::sqrt(*minmax.second);
-
     // Run our error-compensated symbol through the IFFT again
     fftwf_execute(myFftPlan); // IFFT from myFftIn to myFftOut
+
+    return ret;
 }
 
 
@@ -293,6 +312,9 @@ void OfdmGenerator::set_parameter(const std::string& parameter,
     }
     else if (parameter == "errorclip") {
         ss >> myCfrErrorClip;
+    }
+    else if (parameter == "clip_stats") {
+        throw ParameterError("Parameter 'clip_stats' is read-only");
     }
     else {
         stringstream ss;
@@ -314,6 +336,25 @@ const std::string OfdmGenerator::get_parameter(const std::string& parameter) con
     }
     else if (parameter == "errorclip") {
         ss << std::fixed << myCfrErrorClip;
+    }
+    else if (parameter == "clip_stats") {
+        std::lock_guard<std::mutex> lock(myCfrRcMutex);
+        if (myClipRatios.empty() or myErrorClipRatios.empty()) {
+            ss << "No stats available";
+        }
+        else {
+            const double avg_clip_ratio =
+                std::accumulate(myClipRatios.begin(), myClipRatios.end(), 0.0) /
+                myClipRatios.size();
+
+            const double avg_errclip_ratio =
+                std::accumulate(myErrorClipRatios.begin(), myErrorClipRatios.end(), 0.0) /
+                myErrorClipRatios.size();
+
+            ss << "Statistics : " << std::fixed <<
+                avg_clip_ratio * 100 << "%"" samples clipped, " <<
+                avg_errclip_ratio * 100 << "%"" errors clipped";
+        }
     }
     else {
         ss << "Parameter '" << parameter <<

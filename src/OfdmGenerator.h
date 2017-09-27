@@ -68,7 +68,13 @@ class OfdmGenerator : public ModCodec, public RemoteControllable
                 const std::string& parameter) const override;
 
     protected:
-        void cfr_one_iteration(complexf *symbol, const complexf *reference);
+        struct cfr_iter_stat_t {
+            size_t clip_count = 0;
+            size_t errclip_count = 0;
+        };
+
+        cfr_iter_stat_t cfr_one_iteration(
+                complexf *symbol, const complexf *reference);
 
         fftwf_plan myFftPlan;
         fftwf_complex *myFftIn, *myFftOut;
@@ -85,14 +91,16 @@ class OfdmGenerator : public ModCodec, public RemoteControllable
         unsigned myZeroSize;
 
         bool myCfr; // Whether to enable crest factor reduction
+        mutable std::mutex myCfrRcMutex;
         float myCfrClip;
         float myCfrErrorClip;
         fftwf_plan myCfrFft;
         fftwf_complex *myCfrPostClip;
         fftwf_complex *myCfrPostFft;
 
-        size_t myNumClip;
-        size_t myNumErrorClip;
+        // Statistics for CFR
+        std::deque<double> myClipRatios;
+        std::deque<double> myErrorClipRatios;
 };
 
 
