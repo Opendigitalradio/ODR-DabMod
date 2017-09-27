@@ -1,22 +1,37 @@
+# -*- coding: utf-8 -*-
+#
+# DPD Calculation Engine, model implementation using polynomial
+#
+# http://www.opendigitalradio.org
+# Licence: The MIT License, see notice at the end of this file
+
+import os
+import logging
+
+logging_path = os.path.dirname(logging.getLoggerClass().root.handlers[0].baseFilename)
+
+import numpy as np
+
+
 class Lut:
     """Implements a model that calculates lookup table coefficients"""
 
     def __init__(self,
                  c,
-                 SA,
-                 MER,
                  learning_rate=1.,
                  plot=False):
+        """
+
+        :rtype: 
+        """
         logging.debug("Initialising LUT Model")
         self.c = c
-        self.SA = SA
-        self.MER = MER
         self.learning_rate = learning_rate
         self.plot = plot
         self.reset_coefs()
 
     def reset_coefs(self):
-        self.scalefactor = 0xFFFFFFFF # max uint32_t value
+        self.scalefactor = 0xFFFFFFFF  # max uint32_t value
         self.lut = np.ones(32, dtype=np.complex64)
 
     def train(self, tx_abs, rx_abs, phase_diff):
@@ -47,4 +62,3 @@ class Lut:
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-
