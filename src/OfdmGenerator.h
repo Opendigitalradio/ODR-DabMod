@@ -101,6 +101,9 @@ class OfdmGenerator : public ModCodec, public RemoteControllable
         // Statistics for CFR
         std::deque<double> myClipRatios;
         std::deque<double> myErrorClipRatios;
+
+        size_t myLastMERCalc = 0;
+        std::deque<double> myMERs;
 };
 
 

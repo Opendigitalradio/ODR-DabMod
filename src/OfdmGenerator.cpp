@@ -177,8 +177,13 @@ int OfdmGenerator::process(Buffer* const dataIn, Buffer* dataOut)
     // That's why we copy it to the reference.
     std::vector<complexf> reference;
 
+    std::vector<complexf> before_cfr;
+
     size_t num_clip = 0;
     size_t num_error_clip = 0;
+
+    // For performance reasons, do not calculate MER for every symbols.
+    myLastMERCalc = (myLastMERCalc + 1) % myNbSymbols;
 
     for (size_t i = 0; i < myNbSymbols; ++i) {
         myFftIn[0][0] = 0;
@@ -198,8 +203,40 @@ int OfdmGenerator::process(Buffer* const dataIn, Buffer* dataOut)
         fftwf_execute(myFftPlan); // IFFT from myFftIn to myFftOut
 
         if (myCfr) {
+            if (myLastMERCalc == i) {
+                before_cfr.resize(mySpacing);
+                memcpy(before_cfr.data(), myFftOut, mySpacing * sizeof(FFT_TYPE));
+            }
+
             complexf *symbol = reinterpret_cast<complexf*>(myFftOut);
+            /* cfr_one_iteration runs the myFftPlan again at the end, and
+             * therefore writes the output data to myFftOut.
+             */
             const auto stat = cfr_one_iteration(symbol, reference.data());
+
+            if (myLastMERCalc == i) {
+                /* MER definition, ETSI ETR 290, Annex C
+                 *
+                 *                       \sum I^2 Q^2
+                 * MER[dB] = 10 log_10( -------------- )
+                 *                      \sum dI^2 dQ^2
+                 * Where I and Q are the ideal coordinates, and dI and dQ are the errors
+                 * in the received datapoints.
+                 *
+                 * In our case, we consider the constellation points given to the
+                 * OfdmGenerator as "ideal", and we compare the CFR output to it.
+                 */
+
+                double sum_iq = 0;
+                double sum_delta = 0;
+                for (size_t i = 0; i < mySpacing; i++) {
+                    sum_iq += std::norm(before_cfr[i]);
+                    sum_delta += std::norm(symbol[i] - before_cfr[i]);
+                }
+                const double mer = 10.0 * std::log10(sum_iq / sum_delta);
+                myMERs.push_back(mer);
+            }
+
             num_clip += stat.clip_count;
             num_error_clip += stat.errclip_count;
         }
@@ -225,6 +262,10 @@ int OfdmGenerator::process(Buffer* const dataIn, Buffer* dataOut)
         myErrorClipRatios.push_back(errclip_ratio);
         while (myErrorClipRatios.size() > MAX_CLIP_STATS) {
             myErrorClipRatios.pop_front();
+        }
+
+        while (myMERs.size() > MAX_CLIP_STATS) {
+            myMERs.pop_front();
         }
     }
 
@@ -339,7 +380,7 @@ const std::string OfdmGenerator::get_parameter(const std::string& parameter) con
     }
     else if (parameter == "clip_stats") {
         std::lock_guard<std::mutex> lock(myCfrRcMutex);
-        if (myClipRatios.empty() or myErrorClipRatios.empty()) {
+        if (myClipRatios.empty() or myErrorClipRatios.empty() or myMERs.empty()) {
             ss << "No stats available";
         }
         else {
@@ -351,9 +392,14 @@ const std::string OfdmGenerator::get_parameter(const std::string& parameter) con
                 std::accumulate(myErrorClipRatios.begin(), myErrorClipRatios.end(), 0.0) /
                 myErrorClipRatios.size();
 
+            const double avg_mer =
+                std::accumulate(myMERs.begin(), myMERs.end(), 0.0) /
+                myMERs.size();
+
             ss << "Statistics : " << std::fixed <<
                 avg_clip_ratio * 100 << "%"" samples clipped, " <<
-                avg_errclip_ratio * 100 << "%"" errors clipped";
+                avg_errclip_ratio * 100 << "%"" errors clipped. " <<
+                "MER after CFR: " << avg_mer << " dB";
         }
     }
     else {
