@@ -2,7 +2,7 @@
    Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010, 2011 Her Majesty
    the Queen in Right of Canada (Communications Research Center Canada)
 
-   Copyright (C) 2016
+   Copyright (C) 2017
    Matthias P. Braendli, matthias.braendli@mpb.li
 
     http://opendigitalradio.org
@@ -26,6 +26,8 @@
 
 #include "OfdmGenerator.h"
 #include "PcDebug.h"
+
+#include <complex>
 #include "fftw3.h"
 #define FFT_TYPE fftwf_complex
 
@@ -33,20 +35,28 @@
 #include <string.h>
 #include <stdexcept>
 #include <assert.h>
-#include <complex>
-typedef std::complex<float> complexf;
+#include <string>
+#include <numeric>
 
+static const size_t MAX_CLIP_STATS = 10;
 
 OfdmGenerator::OfdmGenerator(size_t nbSymbols,
-        size_t nbCarriers,
-        size_t spacing,
-        bool inverse) :
-    ModCodec(),
-    myFftPlan(NULL),
-    myFftIn(NULL), myFftOut(NULL),
+                             size_t nbCarriers,
+                             size_t spacing,
+                             bool enableCfr,
+                             float cfrClip,
+                             float cfrErrorClip,
+                             bool inverse) :
+    ModCodec(), RemoteControllable("ofdm"),
+    myFftPlan(nullptr),
+    myFftIn(nullptr), myFftOut(nullptr),
     myNbSymbols(nbSymbols),
     myNbCarriers(nbCarriers),
-    mySpacing(spacing)
+    mySpacing(spacing),
+    myCfr(enableCfr),
+    myCfrClip(cfrClip),
+    myCfrErrorClip(cfrErrorClip),
+    myCfrFft(nullptr)
 {
     PDEBUG("OfdmGenerator::OfdmGenerator(%zu, %zu, %zu, %s) @ %p\n",
             nbSymbols, nbCarriers, spacing, inverse ? "true" : "false", this);
@@ -55,6 +65,12 @@ OfdmGenerator::OfdmGenerator(size_t nbSymbols,
         throw std::runtime_error(
                 "OfdmGenerator::OfdmGenerator nbCarriers > spacing!");
     }
+
+    /* register the parameters that can be remote controlled */
+    RC_ADD_PARAMETER(cfr, "Enable crest factor reduction");
+    RC_ADD_PARAMETER(clip, "CFR: Clip to amplitude");
+    RC_ADD_PARAMETER(errorclip, "CFR: Limit error");
+    RC_ADD_PARAMETER(clip_stats, "CFR: statistics (clip ratio, errorclip ratio)");
 
     if (inverse) {
         myPosDst = (nbCarriers & 1 ? 0 : 1);
@@ -91,6 +107,12 @@ OfdmGenerator::OfdmGenerator(size_t nbSymbols,
             myFftIn, myFftOut,
             FFTW_BACKWARD, FFTW_MEASURE);
 
+    myCfrPostClip = (FFT_TYPE*)fftwf_malloc(sizeof(FFT_TYPE) * N);
+    myCfrPostFft = (FFT_TYPE*)fftwf_malloc(sizeof(FFT_TYPE) * N);
+    myCfrFft = fftwf_plan_dft_1d(N,
+            myCfrPostClip, myCfrPostFft,
+            FFTW_FORWARD, FFTW_MEASURE);
+
     if (sizeof(complexf) != sizeof(FFT_TYPE)) {
         printf("sizeof(complexf) %zu\n", sizeof(complexf));
         printf("sizeof(FFT_TYPE) %zu\n", sizeof(FFT_TYPE));
@@ -114,6 +136,10 @@ OfdmGenerator::~OfdmGenerator()
 
     if (myFftPlan) {
         fftwf_destroy_plan(myFftPlan);
+    }
+
+    if (myCfrFft) {
+        fftwf_destroy_plan(myCfrFft);
     }
 }
 
@@ -147,6 +173,18 @@ int OfdmGenerator::process(Buffer* const dataIn, Buffer* dataOut)
                 "OfdmGenerator::process output size not valid!");
     }
 
+    // It is not guaranteed that fftw keeps the FFT input vector intact.
+    // That's why we copy it to the reference.
+    std::vector<complexf> reference;
+
+    std::vector<complexf> before_cfr;
+
+    size_t num_clip = 0;
+    size_t num_error_clip = 0;
+
+    // For performance reasons, do not calculate MER for every symbols.
+    myLastMERCalc = (myLastMERCalc + 1) % myNbSymbols;
+
     for (size_t i = 0; i < myNbSymbols; ++i) {
         myFftIn[0][0] = 0;
         myFftIn[0][1] = 0;
@@ -157,13 +195,217 @@ int OfdmGenerator::process(Buffer* const dataIn, Buffer* dataOut)
         memcpy(&myFftIn[myNegDst], &in[myNegSrc],
                 myNegSize * sizeof(FFT_TYPE));
 
-        fftwf_execute(myFftPlan);
+        if (myCfr) {
+            reference.resize(mySpacing);
+            memcpy(reference.data(), myFftIn, mySpacing * sizeof(FFT_TYPE));
+        }
+
+        fftwf_execute(myFftPlan); // IFFT from myFftIn to myFftOut
+
+        if (myCfr) {
+            if (myLastMERCalc == i) {
+                before_cfr.resize(mySpacing);
+                memcpy(before_cfr.data(), myFftOut, mySpacing * sizeof(FFT_TYPE));
+            }
+
+            complexf *symbol = reinterpret_cast<complexf*>(myFftOut);
+            /* cfr_one_iteration runs the myFftPlan again at the end, and
+             * therefore writes the output data to myFftOut.
+             */
+            const auto stat = cfr_one_iteration(symbol, reference.data());
+
+            if (myLastMERCalc == i) {
+                /* MER definition, ETSI ETR 290, Annex C
+                 *
+                 *                       \sum I^2 Q^2
+                 * MER[dB] = 10 log_10( -------------- )
+                 *                      \sum dI^2 dQ^2
+                 * Where I and Q are the ideal coordinates, and dI and dQ are the errors
+                 * in the received datapoints.
+                 *
+                 * In our case, we consider the constellation points given to the
+                 * OfdmGenerator as "ideal", and we compare the CFR output to it.
+                 */
+
+                double sum_iq = 0;
+                double sum_delta = 0;
+                for (size_t i = 0; i < mySpacing; i++) {
+                    sum_iq += std::norm(before_cfr[i]);
+                    sum_delta += std::norm(symbol[i] - before_cfr[i]);
+                }
+                const double mer = 10.0 * std::log10(sum_iq / sum_delta);
+                myMERs.push_back(mer);
+            }
+
+            num_clip += stat.clip_count;
+            num_error_clip += stat.errclip_count;
+        }
 
         memcpy(out, myFftOut, mySpacing * sizeof(FFT_TYPE));
 
         in += myNbCarriers;
         out += mySpacing;
     }
+
+    if (myCfr) {
+        std::lock_guard<std::mutex> lock(myCfrRcMutex);
+
+        const double num_samps = myNbSymbols * mySpacing;
+        const double clip_ratio = (double)num_clip / num_samps;
+
+        myClipRatios.push_back(clip_ratio);
+        while (myClipRatios.size() > MAX_CLIP_STATS) {
+            myClipRatios.pop_front();
+        }
+
+        const double errclip_ratio = (double)num_error_clip / num_samps;
+        myErrorClipRatios.push_back(errclip_ratio);
+        while (myErrorClipRatios.size() > MAX_CLIP_STATS) {
+            myErrorClipRatios.pop_front();
+        }
+
+        while (myMERs.size() > MAX_CLIP_STATS) {
+            myMERs.pop_front();
+        }
+    }
+
     return sizeOut;
 }
 
+OfdmGenerator::cfr_iter_stat_t OfdmGenerator::cfr_one_iteration(
+        complexf *symbol, const complexf *reference)
+{
+    // use std::norm instead of std::abs to avoid calculating the
+    // square roots
+    const float clip_squared = myCfrClip * myCfrClip;
+
+    OfdmGenerator::cfr_iter_stat_t ret;
+
+    // Clip
+    for (size_t i = 0; i < mySpacing; i++) {
+        const float mag_squared = std::norm(symbol[i]);
+        if (mag_squared > clip_squared) {
+            // normalise absolute value to myCfrClip:
+            // x_clipped = x * clip / |x|
+            //           = x * sqrt(clip_squared) / sqrt(mag_squared)
+            //           = x * sqrt(clip_squared / mag_squared)
+            symbol[i] *= std::sqrt(clip_squared / mag_squared);
+            ret.clip_count++;
+        }
+    }
+
+    // Take FFT of our clipped signal
+    memcpy(myCfrPostClip, symbol, mySpacing * sizeof(FFT_TYPE));
+    fftwf_execute(myCfrFft); // FFT from myCfrPostClip to myCfrPostFft
+
+    // Calculate the error in frequency domain by subtracting our reference
+    // and clip it to myCfrErrorClip. By adding this clipped error signal
+    // to our FFT output, we compensate the introduced error to some
+    // extent.
+    const float err_clip_squared = myCfrErrorClip * myCfrErrorClip;
+
+    std::vector<float> error_norm(mySpacing);
+
+    for (size_t i = 0; i < mySpacing; i++) {
+        // FFTW computes an unnormalised transform, i.e. a FFT-IFFT pair
+        // or vice-versa gives back the original vector scaled by a factor
+        // FFT-size. Because we're comparing our constellation point
+        // (calculated with IFFT-clip-FFT) against reference (input to
+        // the IFFT), we need to divide by our FFT size.
+        const complexf constellation_point =
+            reinterpret_cast<complexf*>(myCfrPostFft)[i] / (float)mySpacing;
+
+        complexf error = reference[i] - constellation_point;
+
+        const float mag_squared = std::norm(error);
+        error_norm[i] = mag_squared;
+
+        if (mag_squared > err_clip_squared) {
+            error *= std::sqrt(err_clip_squared / mag_squared);
+            ret.errclip_count++;
+        }
+
+        // Update the input to the FFT directly to avoid another copy for the
+        // subsequence IFFT
+        complexf *fft_in = reinterpret_cast<complexf*>(myFftIn);
+        fft_in[i] = constellation_point + error;
+    }
+
+    // Run our error-compensated symbol through the IFFT again
+    fftwf_execute(myFftPlan); // IFFT from myFftIn to myFftOut
+
+    return ret;
+}
+
+
+void OfdmGenerator::set_parameter(const std::string& parameter,
+                                  const std::string& value)
+{
+    using namespace std;
+    stringstream ss(value);
+    ss.exceptions ( stringstream::failbit | stringstream::badbit );
+
+    if (parameter == "cfr") {
+        ss >> myCfr;
+    }
+    else if (parameter == "clip") {
+        ss >> myCfrClip;
+    }
+    else if (parameter == "errorclip") {
+        ss >> myCfrErrorClip;
+    }
+    else if (parameter == "clip_stats") {
+        throw ParameterError("Parameter 'clip_stats' is read-only");
+    }
+    else {
+        stringstream ss;
+        ss << "Parameter '" << parameter
+            << "' is not exported by controllable " << get_rc_name();
+        throw ParameterError(ss.str());
+    }
+}
+
+const std::string OfdmGenerator::get_parameter(const std::string& parameter) const
+{
+    using namespace std;
+    stringstream ss;
+    if (parameter == "cfr") {
+        ss << myCfr;
+    }
+    else if (parameter == "clip") {
+        ss << std::fixed << myCfrClip;
+    }
+    else if (parameter == "errorclip") {
+        ss << std::fixed << myCfrErrorClip;
+    }
+    else if (parameter == "clip_stats") {
+        std::lock_guard<std::mutex> lock(myCfrRcMutex);
+        if (myClipRatios.empty() or myErrorClipRatios.empty() or myMERs.empty()) {
+            ss << "No stats available";
+        }
+        else {
+            const double avg_clip_ratio =
+                std::accumulate(myClipRatios.begin(), myClipRatios.end(), 0.0) /
+                myClipRatios.size();
+
+            const double avg_errclip_ratio =
+                std::accumulate(myErrorClipRatios.begin(), myErrorClipRatios.end(), 0.0) /
+                myErrorClipRatios.size();
+
+            const double avg_mer =
+                std::accumulate(myMERs.begin(), myMERs.end(), 0.0) /
+                myMERs.size();
+
+            ss << "Statistics : " << std::fixed <<
+                avg_clip_ratio * 100 << "%"" samples clipped, " <<
+                avg_errclip_ratio * 100 << "%"" errors clipped. " <<
+                "MER after CFR: " << avg_mer << " dB";
+        }
+    }
+    else {
+        ss << "Parameter '" << parameter <<
+            "' is not exported by controllable " << get_rc_name();
+        throw ParameterError(ss.str());
+    }
+    return ss.str();
+}

@@ -177,6 +177,13 @@ static void parse_configfile(
             pt.get<int>("poly.num_threads", 0);
     }
 
+    // Crest factor reduction
+    if (pt.get("cfr.enabled", 0) == 1) {
+        mod_settings.enableCfr = true;
+        mod_settings.cfrClip = pt.get<float>("cfr.clip");
+        mod_settings.cfrErrorClip = pt.get<float>("cfr.error_clip");
+    }
+
     // Output options
     std::string output_selected;
     try {

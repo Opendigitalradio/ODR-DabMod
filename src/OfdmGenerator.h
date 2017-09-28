@@ -2,7 +2,7 @@
    Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010, 2011 Her Majesty
    the Queen in Right of Canada (Communications Research Center Canada)
 
-   Copyright (C) 2016
+   Copyright (C) 2017
    Matthias P. Braendli, matthias.braendli@mpb.li
 
     http://opendigitalradio.org
@@ -32,38 +32,78 @@
 
 #include "porting.h"
 #include "ModPlugin.h"
-
+#include "RemoteControl.h"
 #include "fftw3.h"
-
 #include <sys/types.h>
+#include <vector>
+#include <complex>
 
+typedef std::complex<float> complexf;
 
-class OfdmGenerator : public ModCodec
+class OfdmGenerator : public ModCodec, public RemoteControllable
 {
-public:
-    OfdmGenerator(size_t nbSymbols, size_t nbCarriers, size_t spacing, bool inverse = true);
-    virtual ~OfdmGenerator();
-    OfdmGenerator(const OfdmGenerator&);
-    OfdmGenerator& operator=(const OfdmGenerator&);
+    public:
+        OfdmGenerator(size_t nbSymbols,
+                      size_t nbCarriers,
+                      size_t spacing,
+                      bool enableCfr,
+                      float cfrClip,
+                      float cfrErrorClip,
+                      bool inverse = true);
+        virtual ~OfdmGenerator();
+        OfdmGenerator(const OfdmGenerator&) = delete;
+        OfdmGenerator& operator=(const OfdmGenerator&) = delete;
 
+        int process(Buffer* const dataIn, Buffer* dataOut) override;
+        const char* name() override { return "OfdmGenerator"; }
 
-    int process(Buffer* const dataIn, Buffer* dataOut);
-    const char* name() { return "OfdmGenerator"; }
+        /* Functions for the remote control */
+        /* Base function to set parameters. */
+        virtual void set_parameter(
+                const std::string& parameter,
+                const std::string& value) override;
 
-protected:
-    fftwf_plan myFftPlan;
-    fftwf_complex *myFftIn, *myFftOut;
-    size_t myNbSymbols;
-    size_t myNbCarriers;
-    size_t mySpacing;
-    unsigned myPosSrc;
-    unsigned myPosDst;
-    unsigned myPosSize;
-    unsigned myNegSrc;
-    unsigned myNegDst;
-    unsigned myNegSize;
-    unsigned myZeroDst;
-    unsigned myZeroSize;
+        /* Getting a parameter always returns a string. */
+        virtual const std::string get_parameter(
+                const std::string& parameter) const override;
+
+    protected:
+        struct cfr_iter_stat_t {
+            size_t clip_count = 0;
+            size_t errclip_count = 0;
+        };
+
+        cfr_iter_stat_t cfr_one_iteration(
+                complexf *symbol, const complexf *reference);
+
+        fftwf_plan myFftPlan;
+        fftwf_complex *myFftIn, *myFftOut;
+        const size_t myNbSymbols;
+        const size_t myNbCarriers;
+        const size_t mySpacing;
+        unsigned myPosSrc;
+        unsigned myPosDst;
+        unsigned myPosSize;
+        unsigned myNegSrc;
+        unsigned myNegDst;
+        unsigned myNegSize;
+        unsigned myZeroDst;
+        unsigned myZeroSize;
+
+        bool myCfr; // Whether to enable crest factor reduction
+        mutable std::mutex myCfrRcMutex;
+        float myCfrClip;
+        float myCfrErrorClip;
+        fftwf_plan myCfrFft;
+        fftwf_complex *myCfrPostClip;
+        fftwf_complex *myCfrPostFft;
+
+        // Statistics for CFR
+        std::deque<double> myClipRatios;
+        std::deque<double> myErrorClipRatios;
+
+        size_t myLastMERCalc = 0;
+        std::deque<double> myMERs;
 };
 
 

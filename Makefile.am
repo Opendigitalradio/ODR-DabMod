@@ -44,6 +44,7 @@ odr_dabmod_CFLAGS   = -Wall -Isrc -Ilib \
 odr_dabmod_LDADD    = $(FFT_LDADD)
 odr_dabmod_SOURCES  = src/DabMod.cpp \
 					  src/PcDebug.h \
+					  src/Socket.h \
 					  src/porting.c \
 					  src/porting.h \
 					  src/DabModulator.cpp \
