@@ -18,9 +18,32 @@ import pickle
 
 logging_path = os.path.dirname(logging.getLoggerClass().root.handlers[0].baseFilename)
 
-LUT_LEN=32
-FORMAT_POLY=1
-FORMAT_LUT=2
+LUT_LEN = 32
+FORMAT_POLY = 1
+FORMAT_LUT = 2
+
+
+def _write_poly_coef_file(coefs_am, coefs_pm, path):
+    assert (len(coefs_am) == len(coefs_pm))
+
+    f = open(path, 'w')
+    f.write("{}\n{}\n".format(FORMAT_POLY, len(coefs_am)))
+    for coef in coefs_am:
+        f.write("{}\n".format(coef))
+    for coef in coefs_pm:
+        f.write("{}\n".format(coef))
+    f.close()
+
+
+def _write_lut_file(scalefactor, lut, path):
+    assert (len(lut) == LUT_LEN)
+
+    f = open(path, 'w')
+    f.write("{}\n{}\n".format(FORMAT_LUT, scalefactor))
+    for coef in lut:
+        f.write("{}\n{}\n".format(coef.real, coef.imag))
+    f.close()
+
 
 class Adapt:
     """Uses the ZMQ remote control to change parameters of the DabMod
@@ -51,8 +74,8 @@ class Adapt:
 
         if data != ['ok']:
             raise RuntimeError(
-                    "Could not ping server at %s %d: %s" %
-                    (self.host, self.port, data))
+                "Could not ping server at %s %d: %s" %
+                (self.host, self.port, data))
 
         return sock
 
@@ -151,15 +174,16 @@ class Adapt:
             for c in coefs:
                 if i < n_coefs:
                     coefs_am_out.append(c)
-                elif i < 2*n_coefs:
+                elif i < 2 * n_coefs:
                     coefs_pm_out.append(c)
                 else:
                     raise ValueError(
-                        "Incorrect coef file format: too many coefficients in {}, should be {}, coefs are {}"
+                        'Incorrect coef file format: too many'
+                        ' coefficients in {}, should be {}, coefs are {}'
                             .format(self.coef_path, n_coefs, coefs))
                 i += 1
             f.close()
-            return ("poly", coefs_am_out, coefs_pm_out)
+            return 'poly', coefs_am_out, coefs_pm_out
         elif predistorter_format == FORMAT_LUT:
             scalefactor = int(lines[1])
             coefs = np.array([float(l) for l in lines[2:]], dtype=np.float32)
@@ -167,29 +191,9 @@ class Adapt:
             lut = coefs[..., 0] + 1j * coefs[..., 1]
             if len(lut) != LUT_LEN:
                 raise ValueError("Incorrect number of LUT entries ({} expected {})".format(len(lut), LUT_LEN))
-            return ("lut", scalefactor, lut)
+            return 'lut', scalefactor, lut
         else:
             raise ValueError("Unknown predistorter format {}".format(predistorter_format))
-
-    def _write_poly_coef_file(self, coefs_am, coefs_pm, path):
-        assert(len(coefs_am) == len(coefs_pm))
-
-        f = open(path, 'w')
-        f.write("{}\n{}\n".format(FORMAT_POLY, len(coefs_am)))
-        for coef in coefs_am:
-            f.write("{}\n".format(coef))
-        for coef in coefs_pm:
-            f.write("{}\n".format(coef))
-        f.close()
-
-    def _write_lut_file(self, scalefactor, lut, path):
-        assert(len(lut) == LUT_LEN)
-
-        f = open(path, 'w')
-        f.write("{}\n{}\n".format(FORMAT_LUT, scalefactor))
-        for coef in lut:
-            f.write("{}\n{}\n".format(coef.real, coef.imag))
-        f.close()
 
     def set_predistorter(self, dpddata):
         """Update the predistorter data in the modulator. Takes the same
@@ -197,30 +201,33 @@ class Adapt:
         if dpddata[0] == "poly":
             coefs_am = dpddata[1]
             coefs_pm = dpddata[2]
-            self._write_poly_coef_file(coefs_am, coefs_pm, self.coef_path)
+            _write_poly_coef_file(coefs_am, coefs_pm, self.coef_path)
         elif dpddata[0] == "lut":
             scalefactor = dpddata[1]
             lut = dpddata[2]
-            self._write_lut_file(scalefactor, lut, self.coef_path)
+            _write_lut_file(scalefactor, lut, self.coef_path)
         else:
             raise ValueError("Unknown predistorter '{}'".format(dpddata[0]))
         self.send_receive("set memlesspoly coeffile {}".format(self.coef_path))
 
     def dump(self, path=None):
+        """Backup current settings to a file"""
         dt = datetime.datetime.now().isoformat()
-        path = logging_path + "/" + dt + "_adapt.pkl"
+        if path is None:
+            path = logging_path + "/" + dt + "_adapt.pkl"
         d = {
-            "txgain":self.get_txgain(),
-            "rxgain":self.get_rxgain(),
-            "digital_gain":self.get_digital_gain(),
-            "predistorter":self.get_predistorter()
+            "txgain": self.get_txgain(),
+            "rxgain": self.get_rxgain(),
+            "digital_gain": self.get_digital_gain(),
+            "predistorter": self.get_predistorter
         }
         with open(path, "w") as f:
-            pickle.dump(d,f)
+            pickle.dump(d, f)
 
         return path
 
     def load(self, path):
+        """Restore settings from a file"""
         with open(path, "r") as f:
             d = pickle.load(f)
 
@@ -228,7 +235,6 @@ class Adapt:
         self.set_digital_gain(d["digital_gain"])
         self.set_rxgain(d["rxgain"])
         self.set_predistorter(d["predistorter"])
-
 
 # The MIT License (MIT)
 #
