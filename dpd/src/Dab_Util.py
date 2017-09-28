@@ -8,30 +8,40 @@
 import datetime
 import os
 import logging
+
 logging_path = os.path.dirname(logging.getLoggerClass().root.handlers[0].baseFilename)
 
 import numpy as np
-import scipy
 import matplotlib
+
 matplotlib.use('agg')
 import matplotlib.pyplot as plt
 import src.subsample_align as sa
 import src.phase_align as pa
 from scipy import signal
 
+
+def fromfile(filename, offset=0, length=None):
+    if length is None:
+        return np.memmap(filename, dtype=np.complex64, mode='r', offset=64 / 8 * offset)
+    else:
+        return np.memmap(filename, dtype=np.complex64, mode='r', offset=64 / 8 * offset, shape=length)
+
+
 class Dab_Util:
     """Collection of methods that can be applied to an array
      complex IQ samples of a DAB signal
      """
+
     def __init__(self, sample_rate, plot=False):
         """
         :param sample_rate: sample rate [sample/sec] to use for calculations
         """
         self.sample_rate = sample_rate
-        self.dab_bandwidth = 1536000 #Bandwidth of a dab signal
-        self.frame_ms = 96           #Duration of a Dab frame
+        self.dab_bandwidth = 1536000  # Bandwidth of a dab signal
+        self.frame_ms = 96  # Duration of a Dab frame
 
-        self.plot=plot
+        self.plot = plot
 
     def lag(self, sig_orig, sig_rec):
         """
@@ -56,10 +66,10 @@ class Dab_Util:
     def lag_upsampling(self, sig_orig, sig_rec, n_up):
         if n_up != 1:
             sig_orig_up = signal.resample(sig_orig, sig_orig.shape[0] * n_up)
-            sig_rec_up  = signal.resample(sig_rec, sig_rec.shape[0] * n_up)
+            sig_rec_up = signal.resample(sig_rec, sig_rec.shape[0] * n_up)
         else:
             sig_orig_up = sig_orig
-            sig_rec_up  = sig_rec
+            sig_rec_up = sig_rec
         l = self.lag(sig_orig_up, sig_rec_up)
         l_orig = float(l) / n_up
         return l_orig
@@ -69,7 +79,7 @@ class Dab_Util:
         Returns an aligned version of sig_tx and sig_rx by cropping and subsample alignment
         Using upsampling
         """
-        assert(sig_tx.shape[0] == sig_rx.shape[0])
+        assert (sig_tx.shape[0] == sig_rx.shape[0])
 
         if sig_tx.shape[0] % 2 == 1:
             sig_tx = sig_tx[:-1]
@@ -124,11 +134,11 @@ class Dab_Util:
         off = int(abs(off_meas))
 
         logging.debug("sig_tx_orig: {} {}, sig_rx_orig: {} {}, offset {}".format(
-                       len(sig_tx),
-                       sig_tx.dtype,
-                       len(sig_rx),
-                       sig_rx.dtype,
-                       off_meas))
+            len(sig_tx),
+            sig_tx.dtype,
+            len(sig_rx),
+            sig_rx.dtype,
+            off_meas))
 
         if off_meas > 0:
             sig_tx = sig_tx[:-off]
@@ -211,15 +221,9 @@ class Dab_Util:
             fig.savefig(fig_path)
             plt.close(fig)
 
-        logging.debug("Sig1_cut: %d %s, Sig2_cut: %d %s, off: %d" % (len(sig_tx), sig_tx.dtype, len(sig_rx), sig_rx.dtype, off))
+        logging.debug(
+            "Sig1_cut: %d %s, Sig2_cut: %d %s, off: %d" % (len(sig_tx), sig_tx.dtype, len(sig_rx), sig_rx.dtype, off))
         return sig_tx, sig_rx
-
-    def fromfile(self, filename, offset=0, length=None):
-        if length is None:
-            return np.memmap(filename, dtype=np.complex64, mode='r', offset=64/8*offset)
-        else:
-            return np.memmap(filename, dtype=np.complex64, mode='r', offset=64/8*offset, shape=length)
-
 
 # The MIT License (MIT)
 #

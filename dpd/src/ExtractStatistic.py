@@ -1,13 +1,12 @@
 # -*- coding: utf-8 -*-
 #
 # DPD Calculation Engine,
-# Extract statistic from data to use in Model
+# Extract statistic from received TX and RX data to use in Model
 #
 # http://www.opendigitalradio.org
 # Licence: The MIT License, see notice at the end of this file
 
 import numpy as np
-import pickle
 import matplotlib.pyplot as plt
 
 import datetime
@@ -30,6 +29,14 @@ def _check_input_extract(tx_dpd, rx_received):
     assert normalization_error < 0.01, "Non normalized signals"
 
 
+def _phase_diff_value_per_bin(phase_diffs_values_lists):
+    phase_list = []
+    for values in phase_diffs_values_lists:
+        mean = np.mean(values) if len(values) > 0 else np.nan
+        phase_list.append(mean)
+    return phase_list
+
+
 class ExtractStatistic:
     """Calculate a low variance RX value for equally spaced tx values
     of a predefined range"""
@@ -37,31 +44,27 @@ class ExtractStatistic:
     def __init__(self, c):
         self.c = c
 
+        # Number of measurements used to extract the statistic
         self.n_meas = 0
 
+        # Boundaries for the bins
         self.tx_boundaries = np.linspace(c.ES_start, c.ES_end, c.ES_n_bins + 1)
         self.n_per_bin = c.ES_n_per_bin
 
+        # List of rx values for each bin
         self.rx_values_lists = []
         for i in range(c.ES_n_bins):
             self.rx_values_lists.append([])
 
+        # List of tx values for each bin
         self.tx_values_lists = []
         for i in range(c.ES_n_bins):
             self.tx_values_lists.append([])
 
-        self.tx_values = self._tx_value_per_bin()
-
-        self.rx_values = []
-        for i in range(c.ES_n_bins):
-            self.rx_values.append(None)
-
         self.plot = c.ES_plot
 
-    def _plot_and_log(self):
+    def _plot_and_log(self, tx_values, rx_values, phase_diffs_values, phase_diffs_values_lists):
         if logging.getLogger().getEffectiveLevel() == logging.DEBUG and self.plot:
-            phase_diffs_values_lists = self._phase_diff_list_per_bin()
-            phase_diffs_values = self._phase_diff_value_per_bin(phase_diffs_values_lists)
 
             dt = datetime.datetime.now().isoformat()
             fig_path = logging_path + "/" + dt + "_ExtractStatistic.png"
@@ -72,13 +75,13 @@ class ExtractStatistic:
 
             i_sub += 1
             ax = plt.subplot(sub_rows, sub_cols, i_sub)
-            ax.plot(self.tx_values, self.rx_values,
+            ax.plot(tx_values, rx_values,
                     label="Estimated Values",
                     color="red")
-            for i, tx_value in enumerate(self.tx_values):
-                rx_values = self.rx_values_lists[i]
-                ax.scatter(np.ones(len(rx_values)) * tx_value,
-                           np.abs(rx_values),
+            for i, tx_value in enumerate(tx_values):
+                rx_values_list = self.rx_values_lists[i]
+                ax.scatter(np.ones(len(rx_values_list)) * tx_value,
+                           np.abs(rx_values_list),
                            s=0.1,
                            color="black")
             ax.set_title("Extracted Statistic")
@@ -90,10 +93,10 @@ class ExtractStatistic:
 
             i_sub += 1
             ax = plt.subplot(sub_rows, sub_cols, i_sub)
-            ax.plot(self.tx_values, np.rad2deg(phase_diffs_values),
+            ax.plot(tx_values, np.rad2deg(phase_diffs_values),
                     label="Estimated Values",
                     color="red")
-            for i, tx_value in enumerate(self.tx_values):
+            for i, tx_value in enumerate(tx_values):
                 phase_diff = phase_diffs_values_lists[i]
                 ax.scatter(np.ones(len(phase_diff)) * tx_value,
                            np.rad2deg(phase_diff),
@@ -101,14 +104,14 @@ class ExtractStatistic:
                            color="black")
             ax.set_xlabel("TX Amplitude")
             ax.set_ylabel("Phase Difference")
-            ax.set_ylim(-60,60)
+            ax.set_ylim(-60, 60)
             ax.set_xlim(0, 1.1)
             ax.legend(loc=4)
 
             num = []
-            for i, tx_value in enumerate(self.tx_values):
-                rx_values = self.rx_values_lists[i]
-                num.append(len(rx_values))
+            for i, tx_value in enumerate(tx_values):
+                rx_values_list = self.rx_values_lists[i]
+                num.append(len(rx_values_list))
             i_sub += 1
             ax = plt.subplot(sub_rows, sub_cols, i_sub)
             ax.plot(num)
@@ -119,9 +122,6 @@ class ExtractStatistic:
             fig.tight_layout()
             fig.savefig(fig_path)
             plt.close(fig)
-
-            pickle.dump(self.rx_values_lists, open("/tmp/rx_values", "wb"))
-            pickle.dump(self.tx_values, open("/tmp/tx_values", "wb"))
 
     def _rx_value_per_bin(self):
         rx_values = []
@@ -145,14 +145,9 @@ class ExtractStatistic:
             phase_values_lists.append(phase_diffs)
         return phase_values_lists
 
-    def _phase_diff_value_per_bin(self, phase_diffs_values_lists):
-        phase_list = []
-        for values in phase_diffs_values_lists:
-            mean = np.mean(values) if len(values) > 0 else np.nan
-            phase_list.append(mean)
-        return phase_list
-
     def extract(self, tx_dpd, rx):
+        """Extract information from a new measurement and store them
+        in member variables."""
         _check_input_extract(tx_dpd, rx)
         self.n_meas += 1
 
@@ -165,23 +160,22 @@ class ExtractStatistic:
             self.tx_values_lists[i] += \
                 list(tx_dpd[mask][:n_add])
 
-        self.rx_values = self._rx_value_per_bin()
-        self.tx_values = self._tx_value_per_bin()
-
-        self._plot_and_log()
+        rx_values = self._rx_value_per_bin()
+        tx_values = self._tx_value_per_bin()
 
         n_per_bin = np.array([len(values) for values in self.rx_values_lists])
         # Index of first not filled bin, assumes that never all bins are filled
         idx_end = np.argmin(n_per_bin == self.c.ES_n_per_bin)
 
-        # TODO cleanup
         phase_diffs_values_lists = self._phase_diff_list_per_bin()
-        phase_diffs_values = self._phase_diff_value_per_bin(phase_diffs_values_lists)
+        phase_diffs_values = _phase_diff_value_per_bin(phase_diffs_values_lists)
 
-        return np.array(self.tx_values,  dtype=np.float32)[:idx_end], \
-               np.array(self.rx_values, dtype=np.float32)[:idx_end], \
-               np.array(phase_diffs_values, dtype=np.float32)[:idx_end], \
-               n_per_bin
+        self._plot_and_log(tx_values, rx_values, phase_diffs_values, phase_diffs_values_lists)
+
+        tx_values_crop = np.array(tx_values, dtype=np.float32)[:idx_end]
+        rx_values_crop = np.array(rx_values, dtype=np.float32)[:idx_end]
+        phase_diffs_values_crop = np.array(phase_diffs_values, dtype=np.float32)[:idx_end]
+        return tx_values_crop, rx_values_crop, phase_diffs_values_crop, n_per_bin
 
 # The MIT License (MIT)
 #

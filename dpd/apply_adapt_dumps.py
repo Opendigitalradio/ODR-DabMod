@@ -42,7 +42,7 @@ import src.Measure as Measure
 import src.Model as Model
 import src.ExtractStatistic as ExtractStatistic
 import src.Adapt as Adapt
-import src.Agc as Agc
+import src.RX_Agc as Agc
 import src.TX_Agc as TX_Agc
 import argparse
 
@@ -113,7 +113,7 @@ MS = src.Measure_Shoulders.Measure_Shoulders(c)
 meas = Measure.Measure(samplerate, port, num_req)
 extStat = ExtractStatistic.ExtractStatistic(c)
 adapt = Adapt.Adapt(port_rc, coef_path)
-dpddata = adapt.get_predistorter()
+dpddata = adapt.get_predistorter
 
 if cli_args.lut:
     model = Model.Lut(c)
@@ -128,7 +128,7 @@ tx_gain = adapt.get_txgain()
 rx_gain = adapt.get_rxgain()
 digital_gain = adapt.get_digital_gain()
 
-dpddata = adapt.get_predistorter()
+dpddata = adapt.get_predistorter
 if dpddata[0] == "poly":
     coefs_am = dpddata[1]
     coefs_pm = dpddata[2]
@@ -162,7 +162,7 @@ print(paths)
 for i, path in enumerate(paths):
     print(i, path)
     adapt.load(path)
-    dpddata_after = adapt.get_predistorter()
+    dpddata_after = adapt.get_predistorter
 
     coefs_am, coefs_pm = model.reset_coefs()
     adapt.set_predistorter(("poly", coefs_am, coefs_pm))

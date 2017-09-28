@@ -219,7 +219,7 @@ class Adapt:
             "txgain": self.get_txgain(),
             "rxgain": self.get_rxgain(),
             "digital_gain": self.get_digital_gain(),
-            "predistorter": self.get_predistorter
+            "predistorter": self.get_predistorter()
         }
         with open(path, "w") as f:
             pickle.dump(d, f)

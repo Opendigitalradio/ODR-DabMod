@@ -101,6 +101,10 @@ class Measure_Shoulders:
         plt.close(fig)
 
     def average_shoulders(self, signal, n_avg=None):
+        if not self.c.MS_enable:
+            logging.debug("Shoulder Measurement disabled")
+            return None
+
         assert signal.shape[0] > 4 * self.c.MS_FFT_size
         if n_avg is None: n_avg = self.c.MS_averaging_size
 

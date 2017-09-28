@@ -10,8 +10,6 @@ import logging
 logging_path = os.path.dirname(logging.getLoggerClass().root.handlers[0].baseFilename)
 
 import numpy as np
-from scipy import signal, optimize
-import sys
 import matplotlib.pyplot as plt
 
 

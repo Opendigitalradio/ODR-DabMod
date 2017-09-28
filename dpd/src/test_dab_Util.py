@@ -16,7 +16,7 @@ class TestDab_Util(TestCase):
     def test_subsample_align(self, sample_orig=r'../test_data/orig_rough_aligned.dat',
                              sample_rec =r'../test_data/recored_rough_aligned.dat',
                              length = 10240, max_size = 1000000):
-        du = DU.Dab_Util(8196000)
+        du = DU
         res1 = []
         res2 = []
         for i in range(10):

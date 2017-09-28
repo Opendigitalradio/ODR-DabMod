@@ -5,6 +5,7 @@
 #
 # http://www.opendigitalradio.org
 # Licence: The MIT License, see notice at the end of this file
+# noinspection PyBroadException
 
 """This Python script is the main file for ODR-DabMod's DPD Computation Engine.
 This engine calculates and updates the parameter of the digital
@@ -15,8 +16,7 @@ import os
 import argparse
 import matplotlib
 
-matplotlib.use('GTKAgg')
-
+matplotlib.use('Agg')
 
 parser = argparse.ArgumentParser(
     description="DPD Computation Engine for ODR-DabMod")
@@ -83,7 +83,8 @@ import logging
 
 dt = datetime.datetime.now().isoformat()
 logging_path = '/tmp/dpd_{}'.format(dt).replace('.', '_').replace(':', '-')
-if name: logging_path += '_' + name
+if name:
+    logging_path += '_' + name
 os.makedirs(logging_path)
 logging.basicConfig(format='%(asctime)s - %(module)s - %(levelname)s - %(message)s',
                     datefmt='%Y-%m-%d %H:%M:%S',
@@ -109,7 +110,7 @@ import src.Heuristics as Heuristics
 from src.Measure import Measure
 from src.ExtractStatistic import ExtractStatistic
 from src.Adapt import Adapt
-from src.Agc import Agc
+from src.RX_Agc import Agc
 from src.TX_Agc import TX_Agc
 from src.Symbol_align import Symbol_align
 from src.Const import Const
@@ -198,6 +199,11 @@ while i < num_iter:
         # Model
         elif state == 'model':
             # Calculate new model parameters and delete old measurements
+            if any([x is None for x in [tx, rx, phase_diff]]):
+                logging.error("No data to calculate model")
+                state = 'measure'
+                continue
+
             lr = Heuristics.get_learning_rate(i)
             model.train(tx, rx, phase_diff, lr=lr)
             dpddata = model.get_dpd_data()
@@ -224,8 +230,8 @@ while i < num_iter:
                 rx_gain = adapt.get_rxgain()
                 digital_gain = adapt.get_digital_gain()
                 tx_median = np.median(np.abs(txframe_aligned))
-                rx_shoulder_tuple = MS.average_shoulders(rxframe_aligned) if c.MS_enable else None
-                tx_shoulder_tuple = MS.average_shoulders(txframe_aligned) if c.MS_enable else None
+                rx_shoulder_tuple = MS.average_shoulders(rxframe_aligned)
+                tx_shoulder_tuple = MS.average_shoulders(txframe_aligned)
 
                 # Generic logging
                 logging.info(list((name, eval(name)) for name in
@@ -253,7 +259,7 @@ while i < num_iter:
             i += 1
             state = 'measure'
 
-    except Exception as e:
+    except:
         logging.error('Iteration {} failed.'.format(i))
         logging.error(traceback.format_exc())
 
