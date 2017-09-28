@@ -105,7 +105,7 @@ samplerate = cli_args.samplerate
 searchpath = cli_args.searchpath
 target_median = cli_args.target_median
 
-c = src.Const.Const(samplerate, target_median, -1, -1, -1)
+c = src.Const.Const(samplerate, target_median, False)
 SA = src.Symbol_align.Symbol_align(c)
 MER = src.MER.MER(c)
 MS = src.Measure_Shoulders.Measure_Shoulders(c)

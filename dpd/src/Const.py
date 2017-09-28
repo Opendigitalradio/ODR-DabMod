@@ -6,9 +6,8 @@
 import numpy as np
 
 class Const:
-    def __init__(self, sample_rate, target_median, n_bins, n_per_bin, n_meas):
+    def __init__(self, sample_rate, target_median, plot):
         self.sample_rate = sample_rate
-        self.n_meas = n_meas
 
         self.tx_gain_max = 89
 
@@ -41,11 +40,11 @@ class Const:
         self.phase_offset_per_sample = 1. / sample_rate * 2 * np.pi * 1000
 
         # Constants for ExtractStatistic
-        self.ES_plot = False
+        self.ES_plot = plot
         self.ES_start = 0.0
         self.ES_end = 1.0
-        self.ES_n_bins = n_bins
-        self.ES_n_per_bin = n_per_bin
+        self.ES_n_bins = 64
+        self.ES_n_per_bin = 128
 
         # Constants for TX_Agc
         self.TAGC_max_txgain = 89
@@ -53,22 +52,21 @@ class Const:
         self.TAGC_tx_median_max = self.TAGC_tx_median_target*1.4
         self.TAGC_tx_median_min = self.TAGC_tx_median_target/1.4
 
-
         self.RAGC_min_rxgain = 25
         self.RAGC_rx_median_target = self.TAGC_tx_median_target
 
         # Constants for Model
-        self.MDL_plot = True
+        self.MDL_plot = True or plot # Override default
 
         # Constants for MER
-        self.MER_plot = False
+        self.MER_plot = plot
 
         # Constants for Model_PM
         self.MPM_tx_min = 0.1
 
         # Constants for Measure_Shoulder
         self.MS_enable = False
-        self.MS_plot = False
+        self.MS_plot = plot
         assert sample_rate==8192000
         meas_offset = 976 # Offset from center frequency to measure shoulder [kHz]
         meas_width = 100 # Size of frequency delta to measure shoulder [kHz]

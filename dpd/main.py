@@ -91,13 +91,9 @@ parser.add_argument('-i', '--iterations', default=1, type=int,
 parser.add_argument('-L', '--lut',
                     help='Use lookup table instead of polynomial predistorter',
                     action="store_true")
-parser.add_argument('--n_bins', default='64', type=int,
-                    required=False)
-parser.add_argument('--n_per_bin', default='128', type=int,
-                    required=False)
-parser.add_argument('--n_meas', default='20', type=int,
-                    help='Number of samples to request from ODR-DabMod',
-                    required=False)
+parser.add_argument('--plot',
+                    help='Enable all plots, to be more selective choose plots in Const.py',
+                    action="store_true")
 
 cli_args = parser.parse_args()
 logging.info(cli_args)
@@ -112,12 +108,9 @@ num_iter = cli_args.iterations
 target_median = cli_args.target_median
 rxgain = cli_args.rxgain
 txgain = cli_args.txgain
+plot = cli_args.plot
 
-n_bins = cli_args.n_bins
-n_per_bin = cli_args.n_per_bin
-n_meas = cli_args.n_meas
-
-c = Const(samplerate, target_median, n_bins, n_per_bin, n_meas)
+c = Const(samplerate, target_median, plot)
 SA = Symbol_align(c)
 MER = MER(c)
 MS = Measure_Shoulders(c)
