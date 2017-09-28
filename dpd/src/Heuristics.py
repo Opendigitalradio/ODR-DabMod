@@ -10,7 +10,7 @@ import numpy as np
 def get_learning_rate(idx_run):
     idx_max = 10.0
     lr_min = 0.05
-    lr_max = 1
+    lr_max = 0.4
     lr_delta = lr_max - lr_min
     idx_run = min(idx_run, idx_max)
     learning_rate = lr_max - lr_delta * idx_run/idx_max
@@ -24,5 +24,3 @@ def get_n_meas(idx_run):
     idx_run = min(idx_run, idx_max)
     learning_rate = n_meas_delta * idx_run/idx_max + n_meas_min
     return int(np.round(learning_rate))
-
-
