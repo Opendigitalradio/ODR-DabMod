@@ -126,7 +126,8 @@ class ExtractStatistic:
     def _rx_value_per_bin(self):
         rx_values = []
         for values in self.rx_values_lists:
-            rx_values.append(np.mean(np.abs(values)))
+            mean = np.mean(np.abs(values)) if len(values) > 0 else np.nan
+            rx_values.append(mean)
         return rx_values
 
     def _tx_value_per_bin(self):
@@ -147,7 +148,8 @@ class ExtractStatistic:
     def _phase_diff_value_per_bin(self, phase_diffs_values_lists):
         phase_list = []
         for values in phase_diffs_values_lists:
-            phase_list.append(np.mean(values))
+            mean = np.mean(values) if len(values) > 0 else np.nan
+            phase_list.append(mean)
         return phase_list
 
     def extract(self, tx_dpd, rx):
