@@ -12,6 +12,7 @@ external tool can request a buffer of samples for analysis, can calculate coeffi
 predistorter in ODR-DabMod and load the new coefficients using the remote control.
 
 The predistorter in ODR-DabMod supports two modes: polynomial and lookup table.
+But at the moment only the polynomial model is implemented.
 
 The *dpd/main.py* script is the entry point for the *DPD Calculation Engine* into which these
 features will be implemented. The tool uses modules from the *dpd/src/* folder:
