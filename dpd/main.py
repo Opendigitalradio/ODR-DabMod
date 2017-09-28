@@ -12,45 +12,11 @@ predistortion module of ODR-DabMod."""
 
 import datetime
 import os
+import argparse
 import matplotlib
 
 matplotlib.use('GTKAgg')
 
-import logging
-
-dt = datetime.datetime.now().isoformat()
-logging_path = "/tmp/dpd_{}".format(dt).replace(".", "_").replace(":", "-")
-os.makedirs(logging_path)
-logging.basicConfig(format='%(asctime)s - %(module)s - %(levelname)s - %(message)s',
-                    datefmt='%Y-%m-%d %H:%M:%S',
-                    filename='{}/dpd.log'.format(logging_path),
-                    filemode='w',
-                    level=logging.DEBUG)
-
-# also log up to INFO to console
-console = logging.StreamHandler()
-console.setLevel(logging.INFO)
-# set a format which is simpler for console use
-formatter = logging.Formatter('%(asctime)s - %(module)s - %(levelname)s - %(message)s')
-# tell the handler to use this format
-console.setFormatter(formatter)
-# add the handler to the root logger
-logging.getLogger('').addHandler(console)
-
-import numpy as np
-import traceback
-import src.Measure as Measure
-import src.Model as Model
-import src.ExtractStatistic as ExtractStatistic
-import src.Adapt as Adapt
-import src.Agc as Agc
-import src.TX_Agc as TX_Agc
-from src.Symbol_align import Symbol_align
-from src.Const import Const
-from src.MER import MER
-from src.Measure_Shoulders import Measure_Shoulders
-import argparse
-import src.Heuristics as Heur
 
 parser = argparse.ArgumentParser(
     description="DPD Computation Engine for ODR-DabMod")
@@ -94,9 +60,10 @@ parser.add_argument('-L', '--lut',
 parser.add_argument('--plot',
                     help='Enable all plots, to be more selective choose plots in Const.py',
                     action="store_true")
+parser.add_argument('--name', default="", type=str,
+                    help='Name of the logging directory')
 
 cli_args = parser.parse_args()
-logging.info(cli_args)
 
 port = cli_args.port
 port_rc = cli_args.rc_port
@@ -108,21 +75,59 @@ num_iter = cli_args.iterations
 target_median = cli_args.target_median
 rxgain = cli_args.rxgain
 txgain = cli_args.txgain
+name = cli_args.name
 plot = cli_args.plot
+
+# Logging
+import logging
+
+dt = datetime.datetime.now().isoformat()
+logging_path = '/tmp/dpd_{}'.format(dt).replace('.', '_').replace(':', '-')
+if name: logging_path += '_' + name
+os.makedirs(logging_path)
+logging.basicConfig(format='%(asctime)s - %(module)s - %(levelname)s - %(message)s',
+                    datefmt='%Y-%m-%d %H:%M:%S',
+                    filename='{}/dpd.log'.format(logging_path),
+                    filemode='w',
+                    level=logging.DEBUG)
+# also log up to INFO to console
+console = logging.StreamHandler()
+console.setLevel(logging.INFO)
+# set a format which is simpler for console use
+formatter = logging.Formatter('%(asctime)s - %(module)s - %(levelname)s - %(message)s')
+# tell the handler to use this format
+console.setFormatter(formatter)
+# add the handler to the root logger
+logging.getLogger('').addHandler(console)
+
+logging.info(cli_args)
+
+import numpy as np
+import traceback
+from src.Model import Lut, Poly
+import src.Heuristics as Heuristics
+from src.Measure import Measure
+from src.ExtractStatistic import ExtractStatistic
+from src.Adapt import Adapt
+from src.Agc import Agc
+from src.TX_Agc import TX_Agc
+from src.Symbol_align import Symbol_align
+from src.Const import Const
+from src.MER import MER
+from src.Measure_Shoulders import Measure_Shoulders
 
 c = Const(samplerate, target_median, plot)
 SA = Symbol_align(c)
 MER = MER(c)
 MS = Measure_Shoulders(c)
-
-meas = Measure.Measure(samplerate, port, num_req)
-extStat = ExtractStatistic.ExtractStatistic(c)
-adapt = Adapt.Adapt(port_rc, coef_path)
+meas = Measure(samplerate, port, num_req)
+extStat = ExtractStatistic(c)
+adapt = Adapt(port_rc, coef_path)
 
 if cli_args.lut:
-    model = Model.Lut(c)
+    model = Lut(c)
 else:
-    model = Model.Poly(c)
+    model = Poly(c)
 adapt.set_predistorter(model.get_dpd_data())
 adapt.set_digital_gain(digital_gain)
 
@@ -164,10 +169,10 @@ elif dpddata[0] == "lut":
 else:
     logging.error("Unknown dpd data format {}".format(dpddata[0]))
 
-tx_agc = TX_Agc.TX_Agc(adapt, c)
+tx_agc = TX_Agc(adapt, c)
 
 # Automatic Gain Control
-agc = Agc.Agc(meas, adapt, c)
+agc = Agc(meas, adapt, c)
 agc.run()
 
 state = "measure"
@@ -184,7 +189,7 @@ while i < num_iter:
             # Extract usable data from measurement
             tx, rx, phase_diff, n_per_bin = extStat.extract(txframe_aligned, rxframe_aligned)
 
-            n_meas = Heur.get_n_meas(i)
+            n_meas = Heuristics.get_n_meas(i)
             if extStat.n_meas >= n_meas:  # Use as many measurements nr of runs
                 state = 'model'
             else:
@@ -193,10 +198,10 @@ while i < num_iter:
         # Model
         elif state == 'model':
             # Calculate new model parameters and delete old measurements
-            lr = Heur.get_learning_rate(i)
+            lr = Heuristics.get_learning_rate(i)
             model.train(tx, rx, phase_diff, lr=lr)
             dpddata = model.get_dpd_data()
-            extStat = ExtractStatistic.ExtractStatistic(c)
+            extStat = ExtractStatistic(c)
             state = 'adapt'
 
         # Adapt

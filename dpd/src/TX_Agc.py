@@ -90,7 +90,7 @@ class TX_Agc:
 
             # Set new values.
             # Avoid temorary increase of output power with correct order
-            if digital_gain_factor < 0:
+            if digital_gain_factor < 1:
                 self.adapt.set_digital_gain(digital_gain)
                 time.sleep(0.5)
                 txgain = self._set_tx_gain(new_txgain)
