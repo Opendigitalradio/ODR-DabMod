@@ -143,3 +143,4 @@ TODO
  - Make the predistortion more robust. At the moment the shoulders sometimes increase instead of decrease after applying newly calculated predistortion parameters. Can this behaviour be predicted from the measurement? This would make it possible to filter out bad predistortion settings.
  - Find a better measurement for the quality of the predistortion. The peak-shoulder difference might be too large to be captured with the USRP, as the ADC has 12 bit and DAB signals have a large crest factor.
  - Implement cases for different oversampling for FFT bin choice.
+ - Continuously observe DAB signal in frequency domain and make sure the power stays the same. At the moment only the power in the time domain is kept the same.
