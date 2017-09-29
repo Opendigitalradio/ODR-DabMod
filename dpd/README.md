@@ -144,3 +144,4 @@ TODO
  - Find a better measurement for the quality of the predistortion. The peak-shoulder difference might be too large to be captured with the USRP, as the ADC has 12 bit and DAB signals have a large crest factor.
  - Implement cases for different oversampling for FFT bin choice.
  - Continuously observe DAB signal in frequency domain and make sure the power stays the same. At the moment only the power in the time domain is kept the same.
+ - At the moment we assume that the USRP RX gain has to be larger than 30dB and the received signal should have a median absolute value of 0.05 in order to have a hight quality quantization. Do measurements to support or improve this heuristic.
