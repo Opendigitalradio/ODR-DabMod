@@ -51,7 +51,7 @@ parser.add_argument('--target_median', default=0.05,
 parser.add_argument('--samps', default='81920', type=int,
                     help='Number of samples to request from ODR-DabMod',
                     required=False)
-parser.add_argument('-i', '--iterations', default=1, type=int,
+parser.add_argument('-i', '--iterations', default=10, type=int,
                     help='Number of iterations to run',
                     required=False)
 parser.add_argument('-L', '--lut',
