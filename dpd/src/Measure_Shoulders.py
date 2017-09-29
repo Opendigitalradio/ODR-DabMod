@@ -109,7 +109,7 @@ class Measure_Shoulders:
 
     def average_shoulders(self, signal, n_avg=None):
         if not self.c.MS_enable:
-            logging.debug("Shoulder Measurement disabled")
+            logging.info("Shoulder Measurement disabled via Const.py")
             return None
 
         assert signal.shape[0] > 4 * self.c.MS_FFT_size
