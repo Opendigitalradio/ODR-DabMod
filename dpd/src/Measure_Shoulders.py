@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# DPD Calculation Engine, calculate peak to shoulder difference
+# DPD Calculation Engine, calculate peak to shoulder difference.
 #
 # http://www.opendigitalradio.org
 # Licence: The MIT License, see notice at the end of this file
@@ -15,27 +15,34 @@ logging_path = os.path.dirname(logging.getLoggerClass().root.handlers[0].baseFil
 import numpy as np
 import matplotlib.pyplot as plt
 
+
 def plt_next_axis(sub_rows, sub_cols, i_sub):
     i_sub += 1
     ax = plt.subplot(sub_rows, sub_cols, i_sub)
     return i_sub, ax
 
-def plt_annotate(ax, x,y,title=None,legend_loc=None):
+
+def plt_annotate(ax, x, y, title=None, legend_loc=None):
     ax.set_xlabel(x)
     ax.set_ylabel(y)
-    if title is not None: ax.set_title(title)
-    if legend_loc is not None: ax.legend(loc=legend_loc)
+    if title is not None:
+        ax.set_title(title)
+    if legend_loc is not None:
+        ax.legend(loc=legend_loc)
+
 
 def calc_fft_db(signal, offset, c):
     fft = np.fft.fftshift(np.fft.fft(signal[offset:offset + c.MS_FFT_size]))
     fft_db = 20 * np.log10(np.abs(fft))
     return fft_db
 
+
 def _calc_peak(fft, c):
     assert fft.shape == (c.MS_FFT_size,), fft.shape
     idxs = (c.MS_peak_start, c.MS_peak_end)
     peak = np.mean(fft[idxs[0]:idxs[1]])
     return peak, idxs
+
 
 def _calc_shoulder_hight(fft_db, c):
     assert fft_db.shape == (c.MS_FFT_size,), fft_db.shape
@@ -48,26 +55,26 @@ def _calc_shoulder_hight(fft_db, c):
     shoulder = np.mean((shoulder_left, shoulder_right))
     return shoulder, (idxs_left, idxs_right)
 
+
 def calc_shoulder(fft, c):
     peak = _calc_peak(fft, c)[0]
     shoulder = _calc_shoulder_hight(fft, c)[0]
     assert (peak >= shoulder), (peak, shoulder)
     return peak, shoulder
 
+
 def shoulder_from_sig_offset(arg):
     signal, offset, c = arg
     fft_db = calc_fft_db(signal, offset, c)
     peak, shoulder = calc_shoulder(fft_db, c)
-    return peak-shoulder, peak, shoulder
+    return peak - shoulder, peak, shoulder
 
 
 class Measure_Shoulders:
     """Calculate difference between the DAB signal and the shoulder hight in the
     power spectrum"""
 
-    def __init__(self,
-                 c,
-                 plot=False):
+    def __init__(self, c):
         self.c = c
         self.plot = c.MS_plot
 
@@ -75,9 +82,9 @@ class Measure_Shoulders:
         dt = datetime.datetime.now().isoformat()
         fig_path = logging_path + "/" + dt + "_sync_subsample_aligned.svg"
 
-        fft = calc_fft_db(signal, 100, 10)
-        peak, idxs_peak = self._calc_peak(fft)
-        shoulder, idxs_sh = self._calc_shoulder_hight(fft, self.c)
+        fft = calc_fft_db(signal, 100, self.c)
+        peak, idxs_peak = _calc_peak(fft, self.c)
+        shoulder, idxs_sh = _calc_shoulder_hight(fft, self.c)
 
         sub_rows = 1
         sub_cols = 1
@@ -93,7 +100,7 @@ class Measure_Shoulders:
         ax.plot(idxs_sh[1], (shoulder, shoulder), color='blue')
         plt_annotate(ax, "Frequency", "Magnitude [dB]", None, 4)
 
-        ax.text(100, -17, str(self.calc_shoulder(fft, self.c)))
+        ax.text(100, -17, str(calc_shoulder(fft, self.c)))
 
         ax.set_ylim(-20, 30)
         fig.tight_layout()
@@ -106,13 +113,12 @@ class Measure_Shoulders:
             return None
 
         assert signal.shape[0] > 4 * self.c.MS_FFT_size
-        if n_avg is None: n_avg = self.c.MS_averaging_size
+        if n_avg is None:
+            n_avg = self.c.MS_averaging_size
 
         off_min = 0
         off_max = signal.shape[0] - self.c.MS_FFT_size
         offsets = np.linspace(off_min, off_max, num=n_avg, dtype=int)
-
-        shoulders = []
 
         args = zip(
             [signal, ] * offsets.shape[0],
@@ -128,7 +134,6 @@ class Measure_Shoulders:
             self._plot(signal)
 
         return np.mean(shoulders_diff), np.mean(shoulders), np.mean(peaks)
-
 
 # The MIT License (MIT)
 #

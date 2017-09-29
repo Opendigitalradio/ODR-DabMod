@@ -6,14 +6,11 @@
 # http://www.opendigitalradio.org
 # Licence: The MIT License, see notice at the end of this file
 
-import sys
 import socket
 import struct
 import numpy as np
-import logging
 import src.Dab_Util as DU
 import os
-import datetime
 
 import logging
 logging_path = os.path.dirname(logging.getLoggerClass().root.handlers[0].baseFilename)
@@ -78,15 +75,15 @@ class Measure:
             rxframe = np.array([], dtype=np.complex64)
 
         if logging.getLogger().getEffectiveLevel() == logging.DEBUG:
-            logging.debug("txframe: min %f, max %f, median %f" %
-                          (np.min(np.abs(txframe)),
-                           np.max(np.abs(txframe)),
-                           np.median(np.abs(txframe))))
+            logging.debug('txframe: min {}, max {}, median {}'.format(
+                          np.min(np.abs(txframe)),
+                          np.max(np.abs(txframe)),
+                          np.median(np.abs(txframe))))
 
-            logging.debug("rxframe: min %f, max %f, median %f" %
-                          (np.min(np.abs(rxframe)),
-                           np.max(np.abs(rxframe)),
-                           np.median(np.abs(rxframe))))
+            logging.debug('rxframe: min {}, max {}, median {}'.format(
+                          np.min(np.abs(rxframe)),
+                          np.max(np.abs(rxframe)),
+                          np.median(np.abs(rxframe))))
 
         logging.debug("Disconnecting")
         s.close()

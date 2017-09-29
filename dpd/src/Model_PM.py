@@ -15,17 +15,16 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
+def is_npfloat32(array):
+    assert isinstance(array, np.ndarray), type(array)
+    assert array.dtype == np.float32, array.dtype
+    assert array.flags.contiguous
+    assert not any(np.isnan(array))
+
+
 def check_input_get_next_coefs(tx_dpd, phase_diff):
-    is_float32 = lambda x: (isinstance(x, np.ndarray) and
-                        x.dtype == np.float32 and
-                        x.flags.contiguous)
-    assert is_float32(tx_dpd), \
-           "tx_dpd is not float32 but {}".format(tx_dpd[0].dtype)
-    assert is_float32(phase_diff), \
-            "phase_diff is not float32 but {}".format(tx_dpd[0].dtype)
-    assert tx_dpd.shape == phase_diff.shape, \
-        "tx_dpd.shape {}, phase_diff.shape {}".format(
-        tx_dpd.shape, phase_diff.shape)
+    is_npfloat32(tx_dpd)
+    is_npfloat32(phase_diff)
 
 
 class Model_PM:
@@ -93,6 +92,8 @@ class Model_PM:
         return tx_range, phase_diff
 
     def get_next_coefs(self, tx_dpd, phase_diff, coefs_pm):
+        """Calculate the next AM/PM coefficients using the extracted
+        statistic of TX amplitude and phase difference"""
         tx_dpd, phase_diff = self._discard_small_values(tx_dpd, phase_diff)
         check_input_get_next_coefs(tx_dpd, phase_diff)
 

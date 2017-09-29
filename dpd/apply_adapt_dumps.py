@@ -128,7 +128,7 @@ tx_gain = adapt.get_txgain()
 rx_gain = adapt.get_rxgain()
 digital_gain = adapt.get_digital_gain()
 
-dpddata = adapt.get_predistorter
+dpddata = adapt.get_predistorter()
 if dpddata[0] == "poly":
     coefs_am = dpddata[1]
     coefs_pm = dpddata[2]
@@ -162,7 +162,7 @@ print(paths)
 for i, path in enumerate(paths):
     print(i, path)
     adapt.load(path)
-    dpddata_after = adapt.get_predistorter
+    dpddata_after = adapt.get_predistorter()
 
     coefs_am, coefs_pm = model.reset_coefs()
     adapt.set_predistorter(("poly", coefs_am, coefs_pm))

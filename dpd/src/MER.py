@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Modulation Error Rate
+# DPD Calculation Engine, Modulation Error Rate.
 #
 # http://www.opendigitalradio.org
 # Licence: The MIT License, see notice at the end of this file
@@ -13,7 +13,6 @@ try:
 except:
     logging_path = "/tmp/"
 
-import src.Const
 import numpy as np
 import matplotlib
 matplotlib.use('agg')
@@ -72,8 +71,8 @@ class MER:
         return x_mean, y_mean, U_RMS, U_ERR, MER
 
     def calc_mer(self, tx, debug_name=""):
-        assert tx.shape[0] == self.c.T_U,\
-                "Wrong input length"
+        """Calculate MER for input signal from a symbol aligned signal."""
+        assert tx.shape[0] == self.c.T_U, "Wrong input length"
 
         spectrum = self._calc_spectrum(tx)
 

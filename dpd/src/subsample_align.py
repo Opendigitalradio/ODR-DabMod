@@ -1,23 +1,25 @@
 # -*- coding: utf-8 -*-
 #
-# DPD Calculation Engine, utility to do subsample alignment
+# DPD Calculation Engine, utility to do subsample alignment.
 #
 # http://www.opendigitalradio.org
 # Licence: The MIT License, see notice at the end of this file
 import datetime
-import os
 import logging
+import os
+
 logging_path = os.path.dirname(logging.getLoggerClass().root.handlers[0].baseFilename)
 
 import numpy as np
-from scipy import signal, optimize
+from scipy import optimize
 import matplotlib.pyplot as plt
+
 
 def gen_omega(length):
     if (length % 2) == 1:
         raise ValueError("Needs an even length array.")
 
-    halflength = int(length/2)
+    halflength = int(length / 2)
     factor = 2.0 * np.pi / length
 
     omega = np.zeros(length, dtype=np.float)
@@ -29,6 +31,7 @@ def gen_omega(length):
 
     return omega
 
+
 def subsample_align(sig, ref_sig, plot=False):
     """Do subsample alignment for sig relative to the reference signal
     ref_sig. The delay between the two must be less than sample
@@ -38,7 +41,7 @@ def subsample_align(sig, ref_sig, plot=False):
     n = len(sig)
     if (n % 2) == 1:
         raise ValueError("Needs an even length signal.")
-    halflen = int(n/2)
+    halflen = int(n / 2)
 
     fft_sig = np.fft.fft(sig)
 
@@ -63,7 +66,8 @@ def subsample_align(sig, ref_sig, plot=False):
 
         return -np.abs(np.sum(np.conj(corr_sig) * ref_sig))
 
-    optim_result = optimize.minimize_scalar(correlate_for_delay, bounds=(-1,1), method='bounded', options={'disp': True})
+    optim_result = optimize.minimize_scalar(correlate_for_delay, bounds=(-1, 1), method='bounded',
+                                            options={'disp': True})
 
     if optim_result.success:
         best_tau = optim_result.x
@@ -85,9 +89,8 @@ def subsample_align(sig, ref_sig, plot=False):
         rotate_vec[halflen] = np.cos(np.pi * best_tau)
         return np.fft.ifft(rotate_vec * fft_sig).astype(np.complex64)
     else:
-        #print("Could not optimize: " + optim_result.message)
+        # print("Could not optimize: " + optim_result.message)
         return np.zeros(0, dtype=np.complex64)
-
 
 # The MIT License (MIT)
 #

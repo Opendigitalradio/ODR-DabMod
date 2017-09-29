@@ -176,8 +176,10 @@ tx_agc = TX_Agc(adapt, c)
 agc = Agc(meas, adapt, c)
 agc.run()
 
-state = "measure"
+state = 'report'
 i = 0
+lr = None
+n_meas = None
 while i < num_iter:
     try:
         # Measure
@@ -218,6 +220,8 @@ while i < num_iter:
         # Report
         elif state == 'report':
             try:
+                txframe_aligned, tx_ts, rxframe_aligned, rx_ts, rx_median = meas.get_samples()
+
                 # Store all settings for pre-distortion, tx and rx
                 adapt.dump()
 

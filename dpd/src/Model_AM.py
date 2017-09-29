@@ -90,6 +90,8 @@ class Model_AM:
             plt.close(fig)
 
     def get_next_coefs(self, tx_dpd, rx_received, coefs_am):
+        """Calculate the next AM/AM coefficients using the extracted
+        statistic of TX and RX amplitude"""
         check_input_get_next_coefs(tx_dpd, rx_received)
 
         coefs_am_new = fit_poly(tx_dpd, rx_received)
