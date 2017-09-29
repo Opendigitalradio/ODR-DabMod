@@ -93,6 +93,7 @@ As a first test you can run the main script with the *--plot* parameter. It pres
 cd dpd
 python main.py --plot
 ```
+The predistortion script now does 10 iterations to improve the signal quality. In each step the learning rate is decreased. The learning rate is the factor with which new coefficients are weighted in a weighted mean with the old coefficients. Moreover the nuber of measurements increases in each iteration. You find more information about that in *Heuristic.py*.
 
 Each plot is stored to the logging directory under a filename containing its time stamp and its label. Following plots are generated chronologically:
 
