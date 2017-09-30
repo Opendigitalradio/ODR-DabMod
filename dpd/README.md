@@ -20,13 +20,14 @@ efficient computation. Its sources reside in the *dpd* folder.
 The predistorter in ODR-DabMod supports two modes: polynomial and lookup table.
 In the DPDCE, only the polynomial model is implemented at the moment.
 
-The *dpd/main.py* script is the entry point for the *DPD Computation Engine* into which these
-features will be implemented. The tool uses modules from the *dpd/src/* folder:
+The *dpd/main.py* script is the entry point for the *DPD Computation Engine*
+into which these features will be implemented. The tool uses modules from the
+*dpd/src/* folder:
 
 - Sample transfer and time alignment with subsample accuracy is done by *Measure.py*
 - Estimating the effects of the PA using some model and calculation of the updated
-  polynomial coefficients is done in *Model.py*
-- Finally, *Adapt.py* loads them into ODR-DabMod.
+  polynomial coefficients is done in *Model.py* and other specific *Model_XXX.py* files
+- Finally, *Adapt.py* updates the ODR-DabMod predistortion setting and digital gain
 
 These modules themselves use additional helper scripts in the *dpd/src/* folder.
 
@@ -35,11 +36,12 @@ Requirements
 
 - USRP B200.
 - Power amplifier.
-- A feedback connection from the power amplifier output, at an appropriate power level for the B200.
+- A feedback connection from the power amplifier output, such that the average power level at
+  the USRP RX port is at -45dBm or lower.
   Usually this is done with a directional coupler and additional attenuators.
 - ODR-DabMod with enabled *dpd_port*, and with a samplerate of 8192000 samples per second.
 - Synchronous=1 so that the USRP has the timestamping set properly, internal refclk and pps
-  are sufficient for this example.
+  are sufficient (not GPSDO necessary).
 - A live mux source with TIST enabled.
 
 See dpd/dpd.ini for an example.
@@ -55,31 +57,45 @@ Hardware Setup
 
 Our setup is depicted in the Figure above. We used components with the following properties:
  1. USRP TX (max +20dBm)
- 2. Filter (190-250MHz, -3.5dB)
- 3. Power amplifier (max +15dBm, +10 dB)
+ 2. Band III Filter (Mini-Circuits RBP-220W+, 190-250MHz, -3.5dB)
+ 3. Power amplifier (Mini-Circuits, max +15dBm output, +10 dB gain at 200MHz)
  4. Directional coupler (approx. -25dB @ 223MHz)
  5. Attenuator (-20 dB)
  6. Attenuator (-30 dB)
- 7. USRP RX (max -15dBm)
- 8. Spectrum analyzer (max +30dBm)
+ 7. USRP RX (max -15dBm input allowed, max -45dBm desired)
+ 8. Spectrum analyzer (max +30dBm allowed)
 
-It is important to make sure, that the USRP RX port does not receive too much power. Otherwise the USRP will break. Here is an example of how we calculated the maximal USRP RX input power for our case. As this is only a rough calculation to protect the port, the predistortion software will later automatically apply a normalization for the RX input by adapting the USRP RX gain.
+It is important to make sure that the USRP RX port does not receive too much
+power. Otherwise the USRP will break. Here is an example of how we calculated
+the maximal USRP RX input power for our case. As this is only a rough
+calculation to protect the port, the predistortion software will later
+automatically apply a normalization for the RX input by adapting the USRP RX
+gain.
 
-
-![P_{TX} + P_{PA} - P_{SP} - P_{AT} = 20dBm + 10dB -25dB -50dB = -45dBm](http://www.sciweavers.org/tex2img.php?eq=P_%7BTX%7D+%2B+P_%7BPA%7D+-+P_%7BSP%7D+-+P_%7BAT%7D+%3D+20dBm+%2B+10dB+-25dB+-50dB+%3D+-45dBm&bc=White&fc=Black&im=jpg&fs=12&ff=arev&edit=)
+    TX Power + PA Gain - Coupling Factor - Attenuation = 20dBm + 10dB -25dB -50dB = -45dBm
 
 Thus we have a margin of about 30dB for the input power of the USRP RX port.
-
+Keep in mind we need to calculate using peak power, not average power, and it is
+essential that there is no nonlinearity in the RX path!
 
 Software Setup
 --------------
 
-We assume that you already installed *ODR-DabMux* and *ODR-DabMod*. In order to satisfy dependencies for the predistortion, you can install all required python modules using conda. To obtain the conda command line tool, install [miniconda](https://conda.io/docs/user-guide/install/linux.html) and do the beginners tutorial. It helps you keep the global python environment clean and install the exact same package versions as we used for development. Alternatively you can also install the packages specified in the environment file via your preferred method.
+We assume that you already installed *ODR-DabMux* and *ODR-DabMod*. In order to
+satisfy dependencies for the predistortion, you can install all required python
+modules using *conda*. To obtain the *conda* command line tool, install
+[miniconda](https://conda.io/docs/user-guide/install/linux.html) and do the
+beginners tutorial. It helps you keep the global python environment clean and
+install the exact same package versions as we used for development.
 
 ```
 conda env create -f dpd/environment.yml
 source activate dab
 ```
+
+Alternatively you can also install the dependencies from your distribution.
+You will need at least scipy, matplotlib and python-zeromq, and maybe more.
+
 
 Use the predistortion
 ----------------------
@@ -91,17 +107,32 @@ ODR-DabMux/src/odr-dabmux ../simple.mux
 ODR-DabMod/odr-dabmod dpd/dpd.ini
 ```
 
-The script uses automatic gain control for both TX and RX gain, to get both a high quantization quality for the most frequent amplitude regions and a high enough back-off so the peaks are also quantized correctly. This means that the output power will stay at the same level, but the script may change TX gain to trade it with digital gain and also change RX gain.
+The DPDCE uses automatic gain control for both TX and RX gain to get both a
+high quantisation quality for the most frequent amplitude regions and a high
+enough back-off so the peaks are also quantised correctly. This means that the
+output power will stay at the same level, but the DPDCE may change TX gain to
+trade it with digital gain and also change RX gain.
 
-As a first test you can run the main script with the *--plot* parameter. It preserves the output power and generates all available visualization plots in the newly created logging directory `/tmp/dpd_<time_stamp>`. As the script should increase the preak to shoulder ratio, tune the txgain in a way to be able to see a the change. For example to a ratio of -30dB. You can do this using the telnet remote control from `odr-dabmod`. To run it do following:
+As a first test you should run the DPDCE with the *--plot* parameter. It
+preserves the output power and generates all available visualisation plots in
+the newly created logging directory `/tmp/dpd_<time_stamp>`. As the predistortion
+should increase the peak to shoulder ratio, you should select a *txgain* in the
+ODR-DabMod configuration file such that the initial peak-to-soulder ratio
+visible on your spectrum analyser. This way, you will be able to see a the
+change.
 
 ```
 cd dpd
 python main.py --plot
 ```
-The predistortion script now does 10 iterations to improve the signal quality. In each step the learning rate is decreased. The learning rate is the factor with which new coefficients are weighted in a weighted mean with the old coefficients. Moreover the nuber of measurements increases in each iteration. You find more information about that in *Heuristic.py*.
+The DPDCE now does 10 iterations, and tries to improve the predistortion effectiveness.
+In each step the learning rate is decreased. The learning rate is the factor
+with which new coefficients are weighted in a weighted mean with the old
+coefficients. Moreover the nuber of measurements increases in each iteration.
+You find more information about that in *Heuristic.py*.
 
-Each plot is stored to the logging directory under a filename containing its time stamp and its label. Following plots are generated chronologically:
+Each plot is stored to the logging directory under a filename containing its
+time stamp and its label. Following plots are generated chronologically:
 
  - ExtractStatistic: Extracted information from one or multiple measurements.
  - Model\_AM: Fitted function for the amplitudes of the power amplifier against the TX amplitude.
@@ -109,23 +140,28 @@ Each plot is stored to the logging directory under a filename containing its tim
  - adapt.pkl: Contains the settings for the predistortion. To load them again without further measurements, you can use `apply_adapt_dumps.py`.
  - MER: Constellation diagram used to calculate the modulation error rate.
 
-After the run you should be able to observe that the peak-shoulder difference decrease on your spectrum analyzer, similar to Figure below.
+After the run you should be able to observe that the peak-to-shoulder
+difference has increased on your spectrum analyzer, similar to the figure below.
 
-Before digital predistortion:
+Without digital predistortion:
 
 ![shoulder_measurement_before](img/shoulder_measurement_before.png)
 
-After digital predistortion:
+With digital predistortion, computed by the DPDCE:
 
 ![shoulder_measurement_after](img/shoulder_measurement_after.png)
 
-Now see what happens if you apply the predistortions for different TX gains. You can either set the TX gain before you start the predistortion or using the command line option `--txgain gain`. You can also try to adjust other parameters. To see their documentation run `python main.py --help`.
+Now see what happens if you apply the predistortions for different TX gains.
+You can either set the TX gain before you start the predistortion or using the
+command line option `--txgain gain`. You can also try to adjust other
+parameters. To see their documentation run `python main.py --help`.
 
 File format for coefficients
 ----------------------------
-The coef file contains the polynomial coefficients used in the predistorter. The file format is
-very similar to the filtertaps file used in the FIR filter. It is a text-based format that can
-easily be inspected and edited in a text editor.
+The coef file contains the polynomial coefficients used in the predistorter.
+The file format is very similar to the filtertaps file used in the FIR filter.
+It is a text-based format that can easily be inspected and edited in a text
+editor.
 
 The first line contains an integer that defines the predistorter to be used:
 1 for polynomial, 2 for lookup table.
@@ -146,9 +182,21 @@ The file therefore contains 1 + 1 + 2xN lines if it contains N coefficients.
 TODO
 ----
 
- - Implement a Volterra polynomial to model the PA. Compared to the current model this would also capture the time dependent behaviour of the PA.
- - Make the predistortion more robust. At the moment the shoulders sometimes increase instead of decrease after applying newly calculated predistortion parameters. Can this behaviour be predicted from the measurement? This would make it possible to filter out bad predistortion settings.
- - Find a better measurement for the quality of the predistortion. The peak-shoulder difference might be too large to be captured with the USRP, as the ADC has 12 bit and DAB signals have a large crest factor.
- - Implement cases for different oversampling for FFT bin choice.
- - Continuously observe DAB signal in frequency domain and make sure the power stays the same. At the moment only the power in the time domain is kept the same.
- - At the moment we assume that the USRP RX gain has to be larger than 30dB and the received signal should have a median absolute value of 0.05 in order to have a hight quality quantization. Do measurements to support or improve this heuristic.
+ - Understand and fix occasional ODR-DabMod crashes when using DPDCE.
+ - Make the predistortion more robust. At the moment the shoulders sometimes
+   increase instead of decrease after applying newly calculated predistortion
+   parameters. Can this behaviour be predicted from the measurement? This would
+   make it possible to filter out bad predistortion settings.
+ - Find a better measurement for the quality of the predistortion. The USRP
+   might not be good enough to measure large peak-to-shoulder ratios, because
+   the ADC has 12 bits and DAB signals have a large crest factor.
+ - Implement a Volterra polynomial to model the PA. Compared to the current
+   model this would also capture the time dependent behaviour of the PA (memory
+   effects).
+ - Continuously observe DAB signal in frequency domain and make sure the power
+   stays the same. At the moment only the power in the time domain is kept the
+   same.
+ - At the moment we assume that the USRP RX gain has to be larger than 30dB and
+   the received signal should have a median absolute value of 0.05 in order to
+   have a hight quality quantization. Do measurements to support or improve
+   this heuristic.
