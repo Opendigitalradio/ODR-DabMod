@@ -33,6 +33,7 @@ Short list of features:
 - ZeroMQ PUB and REP output.
 - Ongoing work about digital predistortion for PA linearisation.
   See dpd/README.md
+- A prototype algorithm for crest factor reduction.
 
 The src/ directory contains the source code of ODR-DabMod.
 
