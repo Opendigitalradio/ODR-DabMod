@@ -198,7 +198,8 @@ void OutputUHDFeedback::ServeFeedback()
         TCPSocket client_sock = m_server_sock.accept_with_timeout(1000, &client);
 
         if (not client_sock.valid()) {
-            throw runtime_error("Could not establish new connection");
+            // No connection request received
+            continue;
         }
 
         uint8_t request_version = 0;
