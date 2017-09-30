@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# DPD Calculation Engine,  Automatic Gain Control.
+# DPD Computation Engine,  Automatic Gain Control.
 #
 # http://www.opendigitalradio.org
 # Licence: The MIT License, see notice at the end of this file

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# DPD Calculation Engine, model implementation using polynomial
+# DPD Computation Engine, model implementation using polynomial
 #
 # http://www.opendigitalradio.org
 # Licence: The MIT License, see notice at the end of this file

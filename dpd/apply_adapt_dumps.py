@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
-# DPD Calculation Engine, apply stored configuration.
+# DPD Computation Engine, apply stored configuration.
 #
 # http://www.opendigitalradio.org
 # Licence: The MIT License, see notice at the end of this file

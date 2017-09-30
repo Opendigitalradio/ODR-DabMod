@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# DPD Calculation Engine, utilities for working with DAB signals.
+# DPD Computation Engine, utilities for working with DAB signals.
 #
 # http://www.opendigitalradio.org
 # Licence: The MIT License, see notice at the end of this file

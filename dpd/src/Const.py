@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# DPD Calculation Engine, constants.
+# DPD Computation Engine, constants.
 #
 # Source for DAB standard: etsi_EN_300_401_v010401p p145
 #

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# DPD Calculation Engine, model implementation for Amplitude and not Phase
+# DPD Computation Engine, model implementation for Amplitude and not Phase
 #
 # http://www.opendigitalradio.org
 # Licence: The MIT License, see notice at the end of this file

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# DPD Calculation Engine,
+# DPD Computation Engine,
 # Extract statistic from received TX and RX data to use in Model
 #
 # http://www.opendigitalradio.org

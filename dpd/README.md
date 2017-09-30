@@ -1,20 +1,26 @@
-Digital Predistortion Calculation Engine for ODR-DabMod
+Digital Predistortion Computation Engine for ODR-DabMod
 =======================================================
 
-This folder contains a prototype to do digital predistortion. It was tested on
-the development system only.
+This folder contains a digital predistortion prototype.
+It was only tested in a laboratory system, and is not ready
+for production usage.
 
 Concept
 -------
 
-ODR-DabMod makes outgoing TX samples and feedback RX samples available for an external tool. This
-external tool can request a buffer of samples for analysis, can calculate coefficients for the
-predistorter in ODR-DabMod and load the new coefficients using the remote control.
+ODR-DabMod makes outgoing TX samples and feedback RX samples available to an
+external tool. This external tool can request a buffer of samples for analysis,
+can calculate coefficients for the predistorter in ODR-DabMod and load the new
+coefficients using the remote control.
+
+The external tool is called the Digital Predistortion Computation Engine (DPDCE).
+The DPDCE is written in python, and makes use of the numpy library for
+efficient computation. Its sources reside in the *dpd* folder.
 
 The predistorter in ODR-DabMod supports two modes: polynomial and lookup table.
-But at the moment only the polynomial model is implemented.
+In the DPDCE, only the polynomial model is implemented at the moment.
 
-The *dpd/main.py* script is the entry point for the *DPD Calculation Engine* into which these
+The *dpd/main.py* script is the entry point for the *DPD Computation Engine* into which these
 features will be implemented. The tool uses modules from the *dpd/src/* folder:
 
 - Sample transfer and time alignment with subsample accuracy is done by *Measure.py*

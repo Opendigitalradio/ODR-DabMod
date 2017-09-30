@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# DPD Calculation Engine, phase-align a signal against a reference.
+# DPD Computation Engine, phase-align a signal against a reference.
 #
 # http://www.opendigitalradio.org
 # Licence: The MIT License, see notice at the end of this file

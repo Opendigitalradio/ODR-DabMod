@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# DPD Calculation Engine: updates ODR-DabMod's settings
+# DPD Computation Engine: updates ODR-DabMod's settings
 #
 # http://www.opendigitalradio.org
 # Licence: The MIT License, see notice at the end of this file

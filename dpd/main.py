@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
-# DPD Calculation Engine main file.
+# DPD Computation Engine main file.
 #
 # http://www.opendigitalradio.org
 # Licence: The MIT License, see notice at the end of this file

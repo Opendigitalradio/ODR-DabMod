@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# DPD Calculation Engine, Measure signal using ODR-DabMod's
+# DPD Computation Engine, Measure signal using ODR-DabMod's
 # DPD Server.
 #
 # http://www.opendigitalradio.org

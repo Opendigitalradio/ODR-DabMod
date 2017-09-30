@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# DPD Calculation Engine, Modulation Error Rate.
+# DPD Computation Engine, Modulation Error Rate.
 #
 # http://www.opendigitalradio.org
 # Licence: The MIT License, see notice at the end of this file

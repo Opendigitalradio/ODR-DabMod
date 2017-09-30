@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# DPD Calculation Engine, utility to do subsample alignment.
+# DPD Computation Engine, utility to do subsample alignment.
 #
 # http://www.opendigitalradio.org
 # Licence: The MIT License, see notice at the end of this file

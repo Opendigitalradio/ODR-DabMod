@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# DPD Calculation Engine, heuristics we use to tune the parameters.
+# DPD Computation Engine, heuristics we use to tune the parameters.
 #
 # http://www.opendigitalradio.org
 # Licence: The MIT License, see notice at the end of this file
