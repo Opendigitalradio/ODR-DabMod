@@ -79,6 +79,16 @@ AC_ARG_ENABLE([output_uhd],
         [AS_HELP_STRING([--disable-output-uhd], [Disable UHD output])],
         [], [enable_output_uhd=yes])
 
+AX_CHECK_COMPILE_FLAG([-Wduplicated-cond], [CFLAGS="$CFLAGS -Wduplicated-cond"])
+AX_CHECK_COMPILE_FLAG([-Wduplicated-branches], [CFLAGS="$CFLAGS -Wduplicated-branches"])
+AX_CHECK_COMPILE_FLAG([-Wlogical-op], [CFLAGS="$CFLAGS -Wlogical-op"])
+AX_CHECK_COMPILE_FLAG([-Wrestrict], [CFLAGS="$CFLAGS -Wrestrict"])
+AX_CHECK_COMPILE_FLAG([-Wuseless-cast], [CFLAGS="$CFLAGS -Wuseless-cast"])
+AX_CHECK_COMPILE_FLAG([-Wdouble-precision], [CFLAGS="$CFLAGS -Wdouble-precision"])
+AX_CHECK_COMPILE_FLAG([-Wshadow], [CFLAGS="$CFLAGS -Wshadow"])
+AX_CHECK_COMPILE_FLAG(["-Wformat=2"], [CFLAGS="$CFLAGS -Wformat=2"])
+
+
 PKG_CHECK_MODULES([FFTW], [fftw3f], [], [AC_MSG_ERROR([FFTW is required])])
 
 echo "Checking zeromq"
