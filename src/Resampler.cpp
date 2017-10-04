@@ -83,7 +83,7 @@ Resampler::Resampler(size_t inputRate, size_t outputRate, size_t resolution) :
 
     myWindow = (float*)memalign(16, myFftSizeIn * sizeof(float));
     for (size_t i = 0; i < myFftSizeIn; ++i) {
-        myWindow[i] = 0.5f * (1.0f - cosf(2.0f * M_PI * i / (myFftSizeIn - 1)));
+        myWindow[i] = (float)(0.5 * (1.0 - cos(2.0 * M_PI * i / (myFftSizeIn - 1))));
         PDEBUG("Window[%zu] = %f\n", i, myWindow[i]);
     }
 

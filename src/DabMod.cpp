@@ -170,9 +170,9 @@ static void printModSettings(const mod_settings_t& mod_settings)
     fprintf(stderr, "  Sampling rate: ");
     if (mod_settings.outputRate > 1000) {
         if (mod_settings.outputRate > 1000000) {
-            fprintf(stderr, "%.4g MHz\n", mod_settings.outputRate / 1000000.0f);
+            fprintf(stderr, "%.4g MHz\n", mod_settings.outputRate / 1000000.0);
         } else {
-            fprintf(stderr, "%.4g kHz\n", mod_settings.outputRate / 1000.0f);
+            fprintf(stderr, "%.4g kHz\n", mod_settings.outputRate / 1000.0);
         }
     } else {
         fprintf(stderr, "%zu Hz\n", mod_settings.outputRate);
@@ -190,11 +190,11 @@ static shared_ptr<ModOutput> prepare_output(
         }
         if (s.fileOutputFormat == "complexf_normalised") {
             if (s.gainMode == GainMode::GAIN_FIX)
-                s.normalise = 1.0 / normalise_factor_file_fix;
+                s.normalise = 1.0f / normalise_factor_file_fix;
             else if (s.gainMode == GainMode::GAIN_MAX)
-                s.normalise = 1.0 / normalise_factor_file_max;
+                s.normalise = 1.0f / normalise_factor_file_max;
             else if (s.gainMode == GainMode::GAIN_VAR)
-                s.normalise = 1.0 / normalise_factor_file_var;
+                s.normalise = 1.0f / normalise_factor_file_var;
             output = make_shared<OutputFile>(s.outputName);
         }
         else if (s.fileOutputFormat == "s8" or

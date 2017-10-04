@@ -230,8 +230,8 @@ int OfdmGenerator::process(Buffer* const dataIn, Buffer* dataOut)
                 double sum_iq = 0;
                 double sum_delta = 0;
                 for (size_t i = 0; i < mySpacing; i++) {
-                    sum_iq += std::norm(before_cfr[i]);
-                    sum_delta += std::norm(symbol[i] - before_cfr[i]);
+                    sum_iq += (double)std::norm(before_cfr[i]);
+                    sum_delta += (double)std::norm(symbol[i] - before_cfr[i]);
                 }
                 const double mer = 10.0 * std::log10(sum_iq / sum_delta);
                 myMERs.push_back(mer);
