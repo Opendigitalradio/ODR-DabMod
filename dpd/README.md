@@ -200,3 +200,50 @@ TODO
    the received signal should have a median absolute value of 0.05 in order to
    have a hight quality quantization. Do measurements to support or improve
    this heuristic.
+ - Check if we need to measure MER differently (average over more symbols?)
+ - Is -45dBm the best RX feedback power level?
+
+REFERENCES
+----------
+
+Some papers:
+
+The paper Raich, Qian, Zhou, "Orthogonal Polynomials for Power Amplifier
+Modeling and Predistorter Design" proposes other base polynomials that have
+less numerical instability.
+
+Aladrén, Garcia, Carro, de Mingo, and Sanchez-Perez, "Digital Predistortion
+Based on Zernike Polynomial Functions for RF Nonlinear Power Amplifiers".
+
+Jiang and Wilford, "Digital predistortion for power amplifiers using separable functions"
+
+Changsoo Eun and Edward J. Powers, "A New Volterra Predistorter Based on the Indirect Learning Architecture"
+
+Raviv Raich, Hua Qian, and G. Tong Zhou, "Orthogonal Polynomials for Power Amplifier Modeling and Predistorter Design"
+
+
+Models without memory:
+
+Complex polynomial: y[i] = a1 x[i] + a2 x[i]^2 + a3 x[i]^3 + ...
+
+The complex polynomial corresponds to the input/output relationship that
+applies to the PA in passband (real-valued signal). According to several
+sources, this gets transformed to another representation if we consider complex
+baseband instead. In the following, all variables are complex.
+
+Odd-order baseband: y[i] = (b1 + b2 abs(x[i])^2 + b3 abs(x[i])^4) + ...) x[i]
+
+Complete baseband: y[i] = (b1 + b2 abs(x[i]) + b3 abs(x[i])^2) + ...) x[i]
+
+with
+    b_k = 2^{1-k} \binom{k}{(k-1)/2} a_k
+
+
+Models with memory:
+
+ - Hammerstein model: Nonlinearity followed by LTI filter
+ - Wiener model: LTI filter followed by NL
+ - Parallel Wiener: input goes to N delays, each delay goes to a NL, all NL outputs summed.
+
+Taken from slide 36 of [ECE218C Lecture 15](http://www.ece.ucsb.edu/Faculty/rodwell/Classes/ece218c/notes/Lecture15_Digital%20Predistortion_and_Future%20Challenges.pdf)
+
