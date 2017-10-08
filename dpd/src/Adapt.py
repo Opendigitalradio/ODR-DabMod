@@ -86,8 +86,8 @@ class Adapt:
         else:
             sock.close(linger=10)
             raise RuntimeError(
-                    "ZMQ RC does not respond to 'ping' at %s %d: %s" %
-                        (self.host, self.port, data))
+                    "ZMQ RC does not respond to 'ping' at %s %d" %
+                        (self.host, self.port))
 
         return sock
 
