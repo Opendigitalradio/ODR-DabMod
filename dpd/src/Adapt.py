@@ -67,15 +67,27 @@ class Adapt:
         a ZMQ socket that is in request mode (Client).
         Returns a socket"""
         sock = self._context.socket(zmq.REQ)
+        poller = zmq.Poller()
+        poller.register(sock, zmq.POLLIN)
+
         sock.connect("tcp://%s:%d" % (self.host, self.port))
 
         sock.send(b"ping")
-        data = [el.decode() for el in sock.recv_multipart()]
 
-        if data != ['ok']:
+        socks = dict(poller.poll(1000))
+        if socks:
+            if socks.get(sock) == zmq.POLLIN:
+                data = [el.decode() for el in sock.recv_multipart()]
+
+                if data != ['ok']:
+                    raise RuntimeError(
+                        "Invalid ZMQ RC answer to 'ping' at %s %d: %s" %
+                        (self.host, self.port, data))
+        else:
+            sock.close(linger=10)
             raise RuntimeError(
-                "Could not ping server at %s %d: %s" %
-                (self.host, self.port, data))
+                    "ZMQ RC does not respond to 'ping' at %s %d: %s" %
+                        (self.host, self.port, data))
 
         return sock
 
