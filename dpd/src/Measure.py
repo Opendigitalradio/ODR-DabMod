@@ -44,6 +44,7 @@ class Measure:
 
     def receive_tcp(self):
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.settimeout(4)
         s.connect(('localhost', self.port))
 
         logging.debug("Send version")
