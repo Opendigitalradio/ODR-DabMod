@@ -28,6 +28,7 @@
 #include "PcDebug.h"
 #include <memory>
 #include <algorithm>
+#include <sstream>
 
 #if HAVE_DECL__MM_MALLOC
 #   include <mm_malloc.h>
@@ -190,18 +191,26 @@ Flowgraph::~Flowgraph()
 {
     PDEBUG("Flowgraph::~Flowgraph() @ %p\n", this);
 
+    stringstream ss;
+
     if (myProcessTime) {
-        fprintf(stderr, "Process time:\n");
+        ss << "Process time:\n";
+
+        char node_time_sz[1024] = {};
 
         for (const auto &node : nodes) {
-            fprintf(stderr, "  %30s: %10lu us (%2.2f %%)\n",
+            snprintf(node_time_sz, 1023, "  %30s: %10lu us (%2.2f %%)\n",
                     node->plugin()->name(),
                     node->processTime(),
                     node->processTime() * 100.0 / myProcessTime);
+            ss << node_time_sz;
         }
 
-        fprintf(stderr, "  %30s: %10lu us (100.00 %%)\n", "total",
+        snprintf(node_time_sz, 1023, "  %30s: %10lu us (100.00 %%)\n", "total",
                 myProcessTime);
+        ss << node_time_sz;
+
+        fprintf(stderr, "%s", ss.str().c_str());
     }
 }
 
