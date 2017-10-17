@@ -177,13 +177,14 @@ int OfdmGenerator::process(Buffer* const dataIn, Buffer* dataOut)
     // That's why we copy it to the reference.
     std::vector<complexf> reference;
 
+    // IFFT output before CFR applied, for MER calc
     std::vector<complexf> before_cfr;
 
     size_t num_clip = 0;
     size_t num_error_clip = 0;
 
-    // For performance reasons, do not calculate MER for every symbols.
-    myLastMERCalc = (myLastMERCalc + 1) % myNbSymbols;
+    // For performance reasons, do not calculate MER for every symbol.
+    myMERCalcIndex = (myMERCalcIndex + 1) % myNbSymbols;
 
     for (size_t i = 0; i < myNbSymbols; ++i) {
         myFftIn[0][0] = 0;
@@ -203,7 +204,7 @@ int OfdmGenerator::process(Buffer* const dataIn, Buffer* dataOut)
         fftwf_execute(myFftPlan); // IFFT from myFftIn to myFftOut
 
         if (myCfr) {
-            if (myLastMERCalc == i) {
+            if (myMERCalcIndex == i) {
                 before_cfr.resize(mySpacing);
                 memcpy(before_cfr.data(), myFftOut, mySpacing * sizeof(FFT_TYPE));
             }
@@ -214,26 +215,29 @@ int OfdmGenerator::process(Buffer* const dataIn, Buffer* dataOut)
              */
             const auto stat = cfr_one_iteration(symbol, reference.data());
 
-            if (myLastMERCalc == i) {
+            // i == 0 always zero power, so the MER ends up being NaN
+            if (i > 0 and myMERCalcIndex == i) {
                 /* MER definition, ETSI ETR 290, Annex C
                  *
-                 *                       \sum I^2 Q^2
-                 * MER[dB] = 10 log_10( -------------- )
-                 *                      \sum dI^2 dQ^2
-                 * Where I and Q are the ideal coordinates, and dI and dQ are the errors
-                 * in the received datapoints.
+                 *                       \sum I^2 + Q^2
+                 * MER[dB] = 10 log_10( ---------------- )
+                 *                      \sum dI^2 + dQ^2
+                 * Where I and Q are the ideal coordinates, and dI and dQ are
+                 * the errors in the received datapoints.
                  *
                  * In our case, we consider the constellation points given to the
                  * OfdmGenerator as "ideal", and we compare the CFR output to it.
                  */
-
                 double sum_iq = 0;
                 double sum_delta = 0;
                 for (size_t i = 0; i < mySpacing; i++) {
                     sum_iq += (double)std::norm(before_cfr[i]);
                     sum_delta += (double)std::norm(symbol[i] - before_cfr[i]);
                 }
-                const double mer = 10.0 * std::log10(sum_iq / sum_delta);
+
+                // Clamp to 90dB, otherwise the MER average is going to be inf
+                const double mer = sum_delta > 0 ?
+                    10.0 * std::log10(sum_iq / sum_delta) : 90;
                 myMERs.push_back(mer);
             }
 
