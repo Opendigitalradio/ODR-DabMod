@@ -137,7 +137,8 @@ class TCPSocket {
         {
             uint8_t *buf = (uint8_t*)buffer;
             while (buflen > 0) {
-                ssize_t sent = send(m_sock, buf, buflen, 0);
+                // Set MSG_NOSIGNAL to avoid that this thread gets a SIGPIPE
+                ssize_t sent = send(m_sock, buf, buflen, MSG_NOSIGNAL);
                 if (sent < 0) {
                     return -1;
                 }
