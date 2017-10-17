@@ -165,7 +165,7 @@ class OutputUHD: public ModOutput, public RemoteControllable {
         std::shared_ptr<boost::barrier> mySyncBarrier;
         bool first_run = true;
         bool gps_fix_verified = false;
-        OutputUHDFeedback uhdFeedback;
+        std::shared_ptr<OutputUHDFeedback> uhdFeedback;
 
     private:
         // Resize the internal delay buffer according to the dabMode and

@@ -61,23 +61,23 @@ struct UHDReceiveBurstRequest {
     mutable boost::mutex mutex;
     boost::condition_variable mutex_notification;
 
-    BurstRequestState state;
+    BurstRequestState state = BurstRequestState::None;
 
     // In the SaveTransmit states, num_samples complexf samples are saved into
     // the vectors
-    size_t num_samples;
+    size_t num_samples = 0;
 
     // The timestamp of the first sample of the TX buffers
-    uint32_t tx_second;
-    uint32_t tx_pps; // in units of 1/16384000s
+    uint32_t tx_second = 0;
+    uint32_t tx_pps = 0; // in units of 1/16384000s
 
     // Samples contain complexf, but since our internal representation is uint8_t
     // we keep it like that
     std::vector<uint8_t> tx_samples;
 
     // The timestamp of the first sample of the RX buffers
-    uint32_t rx_second;
-    uint32_t rx_pps;
+    uint32_t rx_second = 0;
+    uint32_t rx_pps = 0;
 
     std::vector<uint8_t> rx_samples; // Also, actually complexf
 };
@@ -85,12 +85,13 @@ struct UHDReceiveBurstRequest {
 // Serve TX samples and RX feedback samples over a TCP connection
 class OutputUHDFeedback {
     public:
-        OutputUHDFeedback();
+        OutputUHDFeedback(
+                uhd::usrp::multi_usrp::sptr usrp,
+                uint16_t port,
+                uint32_t sampleRate);
         OutputUHDFeedback(const OutputUHDFeedback& other) = delete;
         OutputUHDFeedback& operator=(const OutputUHDFeedback& other) = delete;
         ~OutputUHDFeedback();
-
-        void setup(uhd::usrp::multi_usrp::sptr usrp, uint16_t port, uint32_t sampleRate);
 
         void set_tx_frame(const std::vector<uint8_t> &buf,
                 const struct frame_timestamp& ts);

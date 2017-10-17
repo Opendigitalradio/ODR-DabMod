@@ -281,7 +281,8 @@ OutputUHD::OutputUHD(
     myUsrp->set_rx_gain(myConf.rxgain);
     etiLog.log(debug, "OutputUHD:Actual RX Gain: %f", myUsrp->get_rx_gain());
 
-    uhdFeedback.setup(myUsrp, myConf.dpdFeedbackServerPort, myConf.sampleRate);
+    uhdFeedback = std::make_shared<OutputUHDFeedback>(
+            myUsrp, myConf.dpdFeedbackServerPort, myConf.sampleRate);
 
     MDEBUG("OutputUHD:UHD ready.\n");
 }
@@ -451,7 +452,7 @@ int OutputUHD::process(Buffer* dataIn)
             async_rx_thread.join();
             first_run = true;
 
-            etiLog.level(error) << "OutputUHD: Error, UHD worker failed";
+            etiLog.level(error) << "OutputUHD UHD worker failed";
             throw std::runtime_error("UHD worker failed");
         }
 
@@ -460,7 +461,16 @@ int OutputUHD::process(Buffer* dataIn)
                 "OutputUHD: dropping one frame with invalid FCT";
         }
         else {
-            uhdFeedback.set_tx_frame(frame.buf, frame.ts);
+            try {
+                uhdFeedback->set_tx_frame(frame.buf, frame.ts);
+            }
+            catch (const runtime_error& e) {
+                etiLog.level(warn) <<
+                    "OutputUHD: Feedback server failed, restarting...";
+
+                uhdFeedback = std::make_shared<OutputUHDFeedback>(
+                        myUsrp, myConf.dpdFeedbackServerPort, myConf.sampleRate);
+            }
 
             size_t num_frames = frames.push_wait_if_full(frame,
                     FRAMES_MAX_SIZE);
