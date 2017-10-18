@@ -15,15 +15,34 @@ However, when enabled, some receivers are not able to lock on the signal.
 Is the power of the TII too strong? Synchronisation wrong?
 
 
-EDI input
----------
-Add support for EDI input, so that more multiplexers can be interfaced
-to the modulator. Relevant spec: ETSI TS 102 693
+Rework Soapy and UHD outputs
+----------------------------
+Currently, all the frontend tuning and timestamping settings are UHD-specific.
+To make it possible to run with synchronised=1 using Soapy, refactoring the
+output to share the parts that are common.
 
-It would be beneficial to write and EDI decoding library that can be re-used in
-ODR-DabMux to add EDI input there too for encoders.
+This would enable SFN support with LimeSDR devices.
 
-Initial work started in http://git.mpb.li/git/odr-edilib/
+
+Finalise EDI input
+------------------
+The EDI input, based on work started in http://git.mpb.li/git/odr-edilib/
+is not complete:
+
+ * Add option to define max fill of input udp buffer.
+ * Flag and present errors in some way (packets missing, RS faults, sequence errors, etc)
+ * Detect and handle changes in mux composition
+ * Fix misbehaviours when packets are intentionnally interleaved
+ * Fix hangup where it tries to decode old PSEQs for too long
+
+
+Resampler improvements
+----------------------
+
+ * Assess quality of window currently used.
+ * Evaluate usefulness of other windows.
+ * Distribute energy of Fs bin equally to both negative and positive
+   frequencies in the back buffer.
 
 
 Review CicEq
