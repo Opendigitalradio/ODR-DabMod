@@ -14,14 +14,13 @@ ODR-mmbTools is available in the *guide*, available on the
 Short list of features:
 
 - Reads ETI and EDI, outputs compliant COFDM I/Q
-- Supports native DAB sample rate and can also
-  resample to other rates
-- supports all four DAB transmission modes
+- Supports native DAB sample rate and can also resample to other rates
+- Supports all four DAB transmission modes
 - Configuration file support, see doc/example.ini
 - Integrated UHD output for [USRP devices](https://www.ettus.com/product)
   - Tested for B200, B100, USRP2, USRP1
   - With WBX daughterboard (where appropriate)
-- Experimental [SoapySDR](https://github.com/pothosware/SoapySDR/wiki) output
+- [SoapySDR](https://github.com/pothosware/SoapySDR/wiki) output
   - Can be used to drive the [LimeSDR board](https://myriadrf.org/projects/limesdr/), the [HackRF](https://greatscottgadgets.com/hackrf/) and others.
 - Timestamping support required for SFN
 - GPSDO monitoring (both Ettus and [ODR LEA-M8F board](http://www.opendigitalradio.org/lea-m8f-gpsdo))
