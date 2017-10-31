@@ -202,11 +202,11 @@ int TII::process(Buffer* dataIn, Buffer* dataOut)
             // setting exactly the same phase of the signal for lower adjacent
             // frequency
             if (m_enabled_carriers[i]) {
-                out[i] = m_conf.old_variant ? in[i+1] : in[i];
+                out[i] = (m_conf.old_variant ? in[i+1] : in[i])/((float)48.0);
             }
 
             if (m_enabled_carriers[i+1]) {
-                out[i+1] = in[i+1];
+                out[i+1] = in[i+1]/((float)48.0);
             }
         }
     }
