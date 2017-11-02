@@ -36,11 +36,12 @@
 #include "InputMemory.h"
 #include "OutputFile.h"
 #include "FormatConverter.h"
+#include "output/SDR.h"
 #if defined(HAVE_OUTPUT_UHD)
 #   include "OutputUHD.h"
 #endif
 #if defined(HAVE_SOAPYSDR)
-#   include "OutputSoapy.h"
+#   include "output/Soapy.h"
 #endif
 #include "OutputZeroMQ.h"
 #include "InputReader.h"
@@ -155,8 +156,8 @@ static void printModSettings(const mod_settings_t& mod_settings)
         fprintf(stderr, " SoapySDR\n"
                         "  Device: %s\n"
                         "  master_clock_rate: %ld\n",
-                mod_settings.outputsoapy_conf.device.c_str(),
-                mod_settings.outputsoapy_conf.masterClockRate);
+                mod_settings.sdr_device_config.device.c_str(),
+                mod_settings.sdr_device_config.masterClockRate);
     }
 #endif
     else if (mod_settings.useZeroMQOutput) {
@@ -219,9 +220,10 @@ static shared_ptr<ModOutput> prepare_output(
     else if (s.useSoapyOutput) {
         /* We normalise the same way as for the UHD output */
         s.normalise = 1.0f / normalise_factor;
-        s.outputsoapy_conf.sampleRate = s.outputRate;
-        output = make_shared<OutputSoapy>(s.outputsoapy_conf);
-        rcs.enrol((OutputSoapy*)output.get());
+        s.sdr_device_config.sampleRate = s.outputRate;
+        auto soapydevice = make_shared<Output::Soapy>(s.sdr_device_config);
+        output = make_shared<Output::SDR>(s.sdr_device_config, soapydevice);
+        rcs.enrol((Output::SDR*)output.get());
     }
 #endif
 #if defined(HAVE_ZEROMQ)
@@ -334,7 +336,7 @@ int launch_modulator(int argc, char* argv[])
 #endif
 #if defined(HAVE_SOAPYSDR)
         if (mod_settings.useSoapyOutput) {
-            ((OutputSoapy*)output.get())->setETISource(modulator->getEtiSource());
+            ((Output::SDR*)output.get())->setETISource(modulator->getEtiSource());
         }
 #endif
 
@@ -428,7 +430,7 @@ int launch_modulator(int argc, char* argv[])
 #endif
 #if defined(HAVE_SOAPYSDR)
             if (mod_settings.useSoapyOutput) {
-                ((OutputSoapy*)output.get())->setETISource(modulator->getEtiSource());
+                ((Output::SDR*)output.get())->setETISource(modulator->getEtiSource());
             }
 #endif
 

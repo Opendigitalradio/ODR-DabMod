@@ -274,11 +274,12 @@ static void parse_configfile(
 #endif
 #if defined(HAVE_SOAPYSDR)
     else if (output_selected == "soapysdr") {
-        auto& outputsoapy_conf = mod_settings.outputsoapy_conf;
+        auto& outputsoapy_conf = mod_settings.sdr_device_config;
         outputsoapy_conf.device = pt.get("soapyoutput.device", "");
         outputsoapy_conf.masterClockRate = pt.get<long>("soapyoutput.master_clock_rate", 0);
 
         outputsoapy_conf.txgain = pt.get("soapyoutput.txgain", 0.0);
+        outputsoapy_conf.lo_offset = pt.get<double>("soapyoutput.lo_offset", 0.0);
         outputsoapy_conf.frequency = pt.get<double>("soapyoutput.frequency", 0);
         std::string chan = pt.get<std::string>("soapyoutput.channel", "");
         outputsoapy_conf.dabMode = mod_settings.dabMode;

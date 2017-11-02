@@ -43,7 +43,7 @@ struct frame_timestamp
 
     uint32_t timestamp_sec;
     uint32_t timestamp_pps; // In units of 1/16384000 s
-    bool timestamp_valid;
+    bool timestamp_valid = false;
     bool timestamp_refresh;
 
     frame_timestamp() = default;
@@ -86,6 +86,12 @@ struct frame_timestamp
 
     double pps_offset() const {
         return timestamp_pps / 16384000.0;
+    }
+
+    double get_real_secs() const {
+        double t = timestamp_sec;
+        t += timestamp_pps;
+        return t;
     }
 
     void print(const char* t)

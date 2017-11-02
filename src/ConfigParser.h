@@ -34,11 +34,12 @@
 #include <string>
 #include "GainControl.h"
 #include "TII.h"
+#include "output/SDR.h"
 #if defined(HAVE_OUTPUT_UHD)
 #   include "OutputUHD.h"
 #endif
 #if defined(HAVE_SOAPYSDR)
-#   include "OutputSoapy.h"
+#   include "output/Soapy.h"
 #endif
 
 #define ZMQ_INPUT_MAX_FRAME_QUEUE 500
@@ -88,7 +89,7 @@ struct mod_settings_t {
 #endif
 
 #if defined(HAVE_SOAPYSDR)
-    OutputSoapyConfig outputsoapy_conf;
+    Output::SDRDeviceConfig sdr_device_config;
 #endif
 
 };

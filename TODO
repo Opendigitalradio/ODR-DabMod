@@ -4,6 +4,10 @@ to some degree.
 
 Unless written, no activity has been started on the topics.
 
+Move staticdelay into another process block
+-------------------------------------------
+It is currently in OutputUHD.
+
 
 TII implementation incomplete
 -----------------------------
