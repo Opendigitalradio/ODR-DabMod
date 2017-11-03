@@ -4,9 +4,31 @@ to some degree.
 
 Unless written, no activity has been started on the topics.
 
-Move staticdelay into another process block
--------------------------------------------
-It is currently in OutputUHD.
+TODOs for ongoing SDR output refactoring
+----------------------------------------
+
+Clean up and separate GPS and refclk checks.
+
+Add antenna selection to config.
+
+Add refclk stuff and timestamps to Soapy.
+
+Make an abstraction for the DPD feedback server, use it for Soapy and UHD.
+
+Move staticdelay into a new process block
+
+
+Tests, both with B200 and LimeSDR:
+- No timestamps
+- with timestamps
+- LO offset
+- muting through RC
+- proper muting in absence of timestamps
+- GPS lock loss behaviour
+- All RC commands
+- Underrun recovery
+- Proper teardown
+- DPD server
 
 
 TII implementation incomplete
