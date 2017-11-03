@@ -37,12 +37,8 @@
 #include "OutputFile.h"
 #include "FormatConverter.h"
 #include "output/SDR.h"
-#if defined(HAVE_OUTPUT_UHD)
-#   include "OutputUHD.h"
-#endif
-#if defined(HAVE_SOAPYSDR)
-#   include "output/Soapy.h"
-#endif
+#include "output/UHD.h"
+#include "output/Soapy.h"
 #include "OutputZeroMQ.h"
 #include "InputReader.h"
 #include "PcDebug.h"
@@ -140,15 +136,15 @@ static void printModSettings(const mod_settings_t& mod_settings)
     else if (mod_settings.useUHDOutput) {
         fprintf(stderr, " UHD\n"
                         "  Device: %s\n"
-                        "  Type: %s\n"
+                        "  Subdevice: %s\n"
                         "  master_clock_rate: %ld\n"
                         "  refclk: %s\n"
                         "  pps source: %s\n",
-                mod_settings.outputuhd_conf.device.c_str(),
-                mod_settings.outputuhd_conf.usrpType.c_str(),
-                mod_settings.outputuhd_conf.masterClockRate,
-                mod_settings.outputuhd_conf.refclk_src.c_str(),
-                mod_settings.outputuhd_conf.pps_src.c_str());
+                mod_settings.sdr_device_config.device.c_str(),
+                mod_settings.sdr_device_config.subDevice.c_str(),
+                mod_settings.sdr_device_config.masterClockRate,
+                mod_settings.sdr_device_config.refclk_src.c_str(),
+                mod_settings.sdr_device_config.pps_src.c_str());
     }
 #endif
 #if defined(HAVE_SOAPYSDR)
@@ -211,9 +207,10 @@ static shared_ptr<ModOutput> prepare_output(
 #if defined(HAVE_OUTPUT_UHD)
     else if (s.useUHDOutput) {
         s.normalise = 1.0f / normalise_factor;
-        s.outputuhd_conf.sampleRate = s.outputRate;
-        output = make_shared<OutputUHD>(s.outputuhd_conf);
-        rcs.enrol((OutputUHD*)output.get());
+        s.sdr_device_config.sampleRate = s.outputRate;
+        auto uhddevice = make_shared<Output::UHD>(s.sdr_device_config);
+        output = make_shared<Output::SDR>(s.sdr_device_config, uhddevice);
+        rcs.enrol((Output::SDR*)output.get());
     }
 #endif
 #if defined(HAVE_SOAPYSDR)
@@ -329,16 +326,16 @@ int launch_modulator(int argc, char* argv[])
             flowgraph.connect(modulator, output);
         }
 
+        if (false
 #if defined(HAVE_OUTPUT_UHD)
-        if (mod_settings.useUHDOutput) {
-            ((OutputUHD*)output.get())->setETISource(modulator->getEtiSource());
-        }
+                or mod_settings.useUHDOutput
 #endif
 #if defined(HAVE_SOAPYSDR)
-        if (mod_settings.useSoapyOutput) {
+                or mod_settings.useSoapyOutput
+#endif
+           ) {
             ((Output::SDR*)output.get())->setETISource(modulator->getEtiSource());
         }
-#endif
 
         size_t framecount = 0;
 
@@ -423,16 +420,16 @@ int launch_modulator(int argc, char* argv[])
                 flowgraph.connect(modulator, output);
             }
 
+            if (false
 #if defined(HAVE_OUTPUT_UHD)
-            if (mod_settings.useUHDOutput) {
-                ((OutputUHD*)output.get())->setETISource(modulator->getEtiSource());
-            }
+                    or mod_settings.useUHDOutput
 #endif
 #if defined(HAVE_SOAPYSDR)
-            if (mod_settings.useSoapyOutput) {
+                    or mod_settings.useSoapyOutput
+#endif
+               ) {
                 ((Output::SDR*)output.get())->setETISource(modulator->getEtiSource());
             }
-#endif
 
             inputReader->PrintInfo();
 

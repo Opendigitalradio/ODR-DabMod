@@ -48,6 +48,7 @@ enum refclk_lock_loss_behaviour_t { CRASH, IGNORE };
  * they will get lost on a modulator restart. */
 struct SDRDeviceConfig {
     std::string device;
+    std::string subDevice; // For UHD
 
     long masterClockRate = 32768000;
     unsigned sampleRate = 2048000;

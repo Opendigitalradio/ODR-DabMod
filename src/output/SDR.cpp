@@ -63,6 +63,9 @@ SDR::SDR(SDRDeviceConfig& config, std::shared_ptr<SDRDevice> device) :
     m_running(false),
     m_device(device)
 {
+    // muting is remote-controllable, and reset by the GPS fix check
+    m_config.muting = true;
+
     m_device_thread = std::thread(&SDR::process_thread_entry, this);
 }
 

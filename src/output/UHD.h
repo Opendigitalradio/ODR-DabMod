@@ -40,8 +40,6 @@ DESCRIPTION:
 #include <uhd/utils/thread_priority.hpp>
 #include <uhd/utils/safe_main.hpp>
 #include <uhd/usrp/multi_usrp.hpp>
-#include <boost/thread.hpp>
-#include <deque>
 #include <chrono>
 #include <memory>
 #include <string>
@@ -70,105 +68,39 @@ DESCRIPTION:
 
 namespace Output {
 
-enum refclk_lock_loss_behaviour_t { CRASH, IGNORE };
-
-/* This structure is used as initial configuration for OutputUHD.
- * It must also contain all remote-controllable settings, otherwise
- * they will get lost on a modulator restart. */
-struct OutputUHDConfig {
-    std::string device;
-    std::string usrpType; // e.g. b100, b200, usrp2
-
-    // The USRP1 can accept two daughterboards
-    std::string subDevice; // e.g. A:0
-
-    long masterClockRate = 32768000;
-    unsigned sampleRate = 2048000;
-    double frequency = 0.0;
-    double lo_offset = 0.0;
-    double txgain = 0.0;
-    double rxgain = 0.0;
-    bool enableSync = false;
-
-    // When working with timestamps, mute the frames that
-    // do not have a timestamp
-    bool muteNoTimestamps = false;
-    unsigned dabMode = 0;
-    unsigned maxGPSHoldoverTime = 0;
-
-    /* allowed values : auto, int, sma, mimo */
-    std::string refclk_src;
-
-    /* allowed values : int, sma, mimo */
-    std::string pps_src;
-
-    /* allowed values : pos, neg */
-    std::string pps_polarity;
-
-    /* What to do when the reference clock PLL loses lock */
-    refclk_lock_loss_behaviour_t refclk_lock_loss_behaviour;
-
-    // muting can only be changed using the remote control
-    bool muting = false;
-
-    // TCP port on which to serve TX and RX samples for the
-    // digital pre distortion learning tool
-    uint16_t dpdFeedbackServerPort = 0;
-};
-
-class OutputUHD: public ModOutput, public RemoteControllable {
+class UHD : public Output::SDRDevice
+{
     public:
-        OutputUHD(OutputUHDConfig& config);
-        OutputUHD(const OutputUHD& other) = delete;
-        OutputUHD operator=(const OutputUHD& other) = delete;
-        ~OutputUHD();
+        UHD(SDRDeviceConfig& config);
+        UHD(const UHD& other) = delete;
+        UHD& operator=(const UHD& other) = delete;
+        ~UHD();
 
-        int process(Buffer* dataIn);
+        virtual void tune(double lo_offset, double frequency) override;
+        virtual double get_tx_freq(void) override;
+        virtual void set_txgain(double txgain) override;
+        virtual double get_txgain(void) override;
+        virtual void transmit_frame(const struct FrameData& frame) override;
+        virtual RunStatistics get_run_statistics(void) override;
+        virtual double get_real_secs(void) override;
 
-        const char* name() { return "OutputUHD"; }
-
-        void setETISource(EtiSource *etiSource);
-
-        /*********** REMOTE CONTROL ***************/
-
-        /* Base function to set parameters. */
-        virtual void set_parameter(const std::string& parameter,
-                const std::string& value);
-
-        /* Getting a parameter always returns a string. */
-        virtual const std::string get_parameter(
-                const std::string& parameter) const;
-
-    protected:
-        EtiSource *myEtiSource = nullptr;
-        OutputUHDConfig& myConf;
-        uhd::usrp::multi_usrp::sptr myUsrp;
-        std::shared_ptr<boost::barrier> mySyncBarrier;
-        bool first_run = true;
-        bool gps_fix_verified = false;
-        std::shared_ptr<OutputUHDFeedback> uhdFeedback;
+        // Return true if GPS and reference clock inputs are ok
+        virtual bool is_clk_source_ok(void) override;
+        virtual const char* device_name(void) override;
 
     private:
-        // Each frame contains one OFDM frame, and its
-        // associated timestamp
-        struct UHDWorkerFrameData {
-            // Buffer holding frame data
-            std::vector<uint8_t> buf;
+        SDRDeviceConfig& m_conf;
+        uhd::usrp::multi_usrp::sptr m_usrp;
+        uhd::tx_streamer::sptr m_tx_stream;
 
-            // A full timestamp contains a TIST according to standard
-            // and time information within MNSC with tx_second.
-            struct frame_timestamp ts;
-        };
+        size_t num_underflows = 0;
+        size_t num_overflows = 0;
+        size_t num_late_packets = 0;
+        size_t num_frames_modulated = 0; //TODO increment
+        size_t num_underflows_previous = 0;
+        size_t num_late_packets_previous = 0;
 
-        // Resize the internal delay buffer according to the dabMode and
-        // the sample rate.
-        void SetDelayBuffer(unsigned int dabMode);
-
-        // data
-        // The remote-controllable static delay is in the OutputUHDConfig
-        int myTFDurationMs; // TF duration in milliseconds
-        std::vector<complexf> myDelayBuf;
-        size_t lastLen = 0;
+        uhd::tx_metadata_t md;
 
         // GPS Fix check variables
         int num_checks_without_gps_fix = 1;
@@ -185,25 +117,8 @@ class OutputUHD: public ModOutput, public RemoteControllable {
         // Interval for checking the GPS at runtime
         static constexpr double gps_fix_check_interval = 10.0; // seconds
 
-        // Asynchronous message statistics
-        size_t num_underflows = 0;
-        size_t num_late_packets = 0;
-        size_t num_underflows_previous = 0;
-        size_t num_late_packets_previous = 0;
-
-        size_t num_frames_modulated = 0;
-
-        uhd::tx_metadata_t md;
-        bool     last_tx_time_initialised = false;
-        uint32_t last_tx_second = 0;
-        uint32_t last_tx_pps = 0;
-
         // Used to print statistics once a second
         std::chrono::steady_clock::time_point last_print_time;
-
-        bool sourceContainsTimestamp = false;
-
-        ThreadsafeQueue<UHDWorkerFrameData> frames;
 
         // Returns true if we want to verify loss of refclk
         bool refclk_loss_needs_check(void) const;
@@ -216,19 +131,10 @@ class OutputUHD: public ModOutput, public RemoteControllable {
         // LEA-M8F board is used
         bool gpsdo_is_ettus(void) const;
 
-        std::atomic<bool> running;
-        boost::thread uhd_thread;
-        boost::thread async_rx_thread;
-        void stop_threads(void);
-
-        uhd::tx_streamer::sptr myTxStream;
-
-        // The worker thread decouples the modulator from UHD
-        void workerthread();
-        void handle_frame(const struct UHDWorkerFrameData *frame);
-        void tx_frame(const struct UHDWorkerFrameData *frame, bool ts_update);
-
         // Poll asynchronous metadata from UHD
+        std::atomic<bool> m_running;
+        boost::thread m_async_rx_thread;
+        void stop_threads(void);
         void print_async_thread(void);
 
         void check_gps();
