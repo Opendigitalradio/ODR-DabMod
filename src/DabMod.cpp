@@ -258,10 +258,6 @@ int launch_modulator(int argc, char* argv[])
         return EXIT_FAILURE;
     }
 
-    // Set timezone to UTC
-    setenv("TZ", "", 1);
-    tzset();
-
     mod_settings_t mod_settings;
     parse_args(argc, argv, mod_settings);
 
