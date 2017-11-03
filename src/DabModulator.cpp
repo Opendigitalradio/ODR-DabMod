@@ -163,10 +163,13 @@ int DabModulator::process(Buffer* dataOut)
             }
         }
 
-        auto cifCicEq = make_shared<CicEqualizer>(
+        shared_ptr<CicEqualizer> cifCicEq;
+        if (useCicEq) {
+            cifCicEq = make_shared<CicEqualizer>(
                 myNbCarriers,
                 (float)mySpacing * (float)m_settings.outputRate / 2048000.0f,
                 cic_ratio);
+        }
 
         shared_ptr<TII> tii;
         shared_ptr<PhaseReference> tiiRef;
@@ -346,42 +349,23 @@ int DabModulator::process(Buffer* dataOut)
             myFlowgraph->connect(tii, cifSig);
         }
 
-        if (useCicEq) {
-            myFlowgraph->connect(cifSig, cifCicEq);
-            myFlowgraph->connect(cifCicEq, cifOfdm);
-        }
-        else {
-            myFlowgraph->connect(cifSig, cifOfdm);
-        }
-        myFlowgraph->connect(cifOfdm, cifGain);
-        myFlowgraph->connect(cifGain, cifGuard);
+        shared_ptr<ModPlugin> prev_plugin = static_pointer_cast<ModPlugin>(cifSig);
+        const std::list<shared_ptr<ModPlugin> > plugins({
+                static_pointer_cast<ModPlugin>(cifCicEq),
+                static_pointer_cast<ModPlugin>(cifOfdm),
+                static_pointer_cast<ModPlugin>(cifGain),
+                static_pointer_cast<ModPlugin>(cifGuard),
+                static_pointer_cast<ModPlugin>(cifFilter), // optional block
+                static_pointer_cast<ModPlugin>(cifRes),    // optional block
+                static_pointer_cast<ModPlugin>(cifPoly),   // optional block
+                static_pointer_cast<ModPlugin>(myOutput),
+                });
 
-        auto cifOut = cifPoly ?
-            static_pointer_cast<ModPlugin>(cifPoly) :
-            static_pointer_cast<ModPlugin>(myOutput);
-
-        if (cifFilter) {
-            myFlowgraph->connect(cifGuard, cifFilter);
-            if (cifRes) {
-                myFlowgraph->connect(cifFilter, cifRes);
-                myFlowgraph->connect(cifRes, cifOut);
+        for (auto& p : plugins) {
+            if (p) {
+                myFlowgraph->connect(prev_plugin, p);
+                prev_plugin = p;
             }
-            else {
-                myFlowgraph->connect(cifFilter, cifOut);
-            }
-        }
-        else {
-            if (cifRes) {
-                myFlowgraph->connect(cifGuard, cifRes);
-                myFlowgraph->connect(cifRes, cifOut);
-            }
-            else {
-                myFlowgraph->connect(cifGuard, cifOut);
-            }
-        }
-
-        if (cifPoly) {
-            myFlowgraph->connect(cifPoly, myOutput);
         }
     }
 
