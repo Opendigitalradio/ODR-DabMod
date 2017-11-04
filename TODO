@@ -15,7 +15,7 @@ This would enable SFN support with LimeSDR devices.
 
 Move dpd port from uhd section to somewhere else.
 
-Clean up and separate GPS and refclk checks.
+Clean up and separate GPS and refclk checks. Ensure muting is set properly at startup.
 
 Add antenna selection to config.
 
