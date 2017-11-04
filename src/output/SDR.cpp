@@ -67,6 +67,13 @@ SDR::SDR(SDRDeviceConfig& config, std::shared_ptr<SDRDevice> device) :
     m_config.muting = true;
 
     m_device_thread = std::thread(&SDR::process_thread_entry, this);
+
+    if (m_config.dpdFeedbackServerPort != 0) {
+        m_dpd_feedback_server = make_shared<DPDFeedbackServer>(
+                m_device,
+                m_config.dpdFeedbackServerPort,
+                m_config.sampleRate);
+    }
 }
 
 SDR::~SDR()
@@ -108,10 +115,21 @@ int SDR::process(Buffer *dataIn)
 
         if (frame.ts.fct == -1) {
             etiLog.level(info) <<
-                "OutputUHD: dropping one frame with invalid FCT";
+                "SDR output: dropping one frame with invalid FCT";
         }
         else {
-            // TODO setup Feedback and set tx_frame
+            try {
+                m_dpd_feedback_server->set_tx_frame(frame.buf, frame.ts);
+            }
+            catch (const runtime_error& e) {
+                etiLog.level(warn) <<
+                    "SDR output: Feedback server failed, restarting...";
+
+                m_dpd_feedback_server = std::make_shared<DPDFeedbackServer>(
+                        m_device,
+                        m_config.dpdFeedbackServerPort,
+                        m_config.sampleRate);
+            }
 
             size_t num_frames = m_queue.push_wait_if_full(frame,
                     FRAMES_MAX_SIZE);

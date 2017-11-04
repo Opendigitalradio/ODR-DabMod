@@ -94,6 +94,12 @@ struct frame_timestamp
         return t;
     }
 
+    long long int get_ns() const {
+        long long int ns = timestamp_sec * 1000000000ull;
+        ns += llrint((double)timestamp_pps / 0.016384);
+        return ns;
+    }
+
     void print(const char* t)
     {
         fprintf(stderr,

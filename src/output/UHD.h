@@ -84,6 +84,14 @@ class UHD : public Output::SDRDevice
         virtual RunStatistics get_run_statistics(void) override;
         virtual double get_real_secs(void) override;
 
+        virtual void set_rxgain(double rxgain) override;
+        virtual double get_rxgain(void) override;
+        virtual size_t receive_frame(
+                complexf *buf,
+                size_t num_samples,
+                struct frame_timestamp& ts,
+                double timeout_secs) override;
+
         // Return true if GPS and reference clock inputs are ok
         virtual bool is_clk_source_ok(void) override;
         virtual const char* device_name(void) override;
@@ -92,6 +100,7 @@ class UHD : public Output::SDRDevice
         SDRDeviceConfig& m_conf;
         uhd::usrp::multi_usrp::sptr m_usrp;
         uhd::tx_streamer::sptr m_tx_stream;
+        uhd::rx_streamer::sptr m_rx_stream;
 
         size_t num_underflows = 0;
         size_t num_overflows = 0;

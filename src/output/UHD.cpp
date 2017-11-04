@@ -235,6 +235,10 @@ UHD::UHD(
             m_usrp, m_conf.dpdFeedbackServerPort, m_conf.sampleRate);
     */
 
+    const uhd::stream_args_t stream_args("fc32"); //complex floats
+    m_rx_stream = m_usrp->get_rx_stream(stream_args);
+    m_tx_stream = m_usrp->get_tx_stream(stream_args);
+
     MDEBUG("OutputUHD:UHD ready.\n");
 }
 
@@ -340,6 +344,42 @@ SDRDevice::RunStatistics UHD::get_run_statistics(void)
 double UHD::get_real_secs(void)
 {
     return m_usrp->get_time_now().get_real_secs();
+}
+
+void UHD::set_rxgain(double rxgain)
+{
+    m_usrp->set_rx_gain(m_conf.rxgain);
+    m_conf.rxgain = m_usrp->get_rx_gain();
+}
+
+double UHD::get_rxgain()
+{
+    return m_usrp->get_rx_gain();
+}
+
+size_t UHD::receive_frame(
+        complexf *buf,
+        size_t num_samples,
+        struct frame_timestamp& ts,
+        double timeout_secs)
+{
+    uhd::stream_cmd_t cmd(
+            uhd::stream_cmd_t::stream_mode_t::STREAM_MODE_NUM_SAMPS_AND_DONE);
+    cmd.num_samps = num_samples;
+    cmd.stream_now = false;
+    cmd.time_spec = uhd::time_spec_t(ts.timestamp_sec, ts.pps_offset());
+
+    m_rx_stream->issue_stream_cmd(cmd);
+
+    uhd::rx_metadata_t md;
+
+    constexpr double timeout = 60;
+    size_t samples_read = m_rx_stream->recv(buf, num_samples, md, timeout);
+
+    // Update the ts with the effective receive TS
+    ts.timestamp_sec = md.time_spec.get_full_secs();
+    ts.timestamp_pps = md.time_spec.get_frac_secs() * 16384000.0;
+    return samples_read;
 }
 
 // Return true if GPS and reference clock inputs are ok

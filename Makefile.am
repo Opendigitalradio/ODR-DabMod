@@ -81,20 +81,21 @@ odr_dabmod_SOURCES  = src/DabMod.cpp \
 					  src/OutputZeroMQ.h \
 					  src/TimestampDecoder.h \
 					  src/TimestampDecoder.cpp \
-					  src/output/UHD.cpp \
-					  src/output/UHD.h \
-					  src/OutputUHDFeedback.cpp \
-					  src/OutputUHDFeedback.h \
+					  src/output/Feedback.cpp \
+					  src/output/Feedback.h \
+					  src/output/SDR.cpp \
+					  src/output/SDR.h \
+					  src/output/SDRDevice.h \
 					  src/output/Soapy.cpp \
 					  src/output/Soapy.h \
-					  src/output/SDR.h \
-					  src/output/SDR.cpp \
+					  src/output/UHD.cpp \
+					  src/output/UHD.h \
+					  src/InputFileReader.cpp \
 					  src/InputMemory.cpp \
 					  src/InputMemory.h \
-					  src/InputFileReader.cpp \
+					  src/InputReader.h \
 					  src/InputTcpReader.cpp \
 					  src/InputZeroMQReader.cpp \
-					  src/InputReader.h \
 					  src/OutputFile.cpp \
 					  src/OutputFile.h \
 					  src/FrameMultiplexer.cpp \

@@ -88,17 +88,18 @@ Soapy::Soapy(SDRDeviceConfig& config) :
     etiLog.level(info) << "SoapySDR:Actual tx gain: " <<
         m_device->getGain(SOAPY_SDR_TX, 0);
 
-    std::vector<size_t> channels;
-    channels.push_back(0);
-    m_stream = m_device->setupStream(SOAPY_SDR_TX, "CF32", channels);
-    m_device->activateStream(m_stream);
+    const std::vector<size_t> channels({0});
+    m_tx_stream = m_device->setupStream(SOAPY_SDR_TX, "CF32", channels);
+    m_device->activateStream(m_tx_stream);
+
+    m_rx_stream = m_device->setupStream(SOAPY_SDR_RX, "CF32", channels);
 }
 
 Soapy::~Soapy()
 {
     if (m_device != nullptr) {
-        if (m_stream != nullptr) {
-            m_device->closeStream(m_stream);
+        if (m_tx_stream != nullptr) {
+            m_device->closeStream(m_tx_stream);
         }
         SoapySDR::Device::unmake(m_device);
     }
@@ -156,6 +157,46 @@ double Soapy::get_real_secs(void)
     }
 }
 
+void Soapy::set_rxgain(double rxgain)
+{
+    m_device->setGain(SOAPY_SDR_RX, 0, m_conf.rxgain);
+    m_conf.rxgain = m_device->getGain(SOAPY_SDR_RX, 0);
+}
+
+double Soapy::get_rxgain(void)
+{
+    return m_device->getGain(SOAPY_SDR_RX, 0);
+}
+
+size_t Soapy::receive_frame(
+        complexf *buf,
+        size_t num_samples,
+        struct frame_timestamp& ts,
+        double timeout_secs)
+{
+    int flags = 0;
+    long long timeNs = ts.get_ns();
+    const size_t numElems = num_samples;
+
+    void *buffs[1];
+    buffs[0] = buf;
+
+    m_device->activateStream(m_rx_stream, flags, timeNs, numElems);
+
+    auto ret = m_device->readStream(m_tx_stream, buffs, num_samples, flags, timeNs);
+
+    m_device->deactivateStream(m_rx_stream);
+
+    // TODO update effective receive ts
+
+    if (ret < 0) {
+        throw runtime_error("Soapy readStream error: " + to_string(ret));
+    }
+
+    return ret;
+}
+
+
 bool Soapy::is_clk_source_ok()
 {
     // TODO
@@ -181,7 +222,7 @@ void Soapy::transmit_frame(const struct FrameData& frame)
     }
 
     // Stream MTU is in samples, not bytes.
-    const size_t mtu = m_device->getStreamMTU(m_stream);
+    const size_t mtu = m_device->getStreamMTU(m_tx_stream);
 
     size_t num_acc_samps = 0;
     while (num_acc_samps < numSamples) {
@@ -192,7 +233,7 @@ void Soapy::transmit_frame(const struct FrameData& frame)
 
         int flags = 0;
 
-        auto ret = m_device->writeStream(m_stream, buffs, samps_to_send, flags);
+        auto ret = m_device->writeStream(m_tx_stream, buffs, samps_to_send, flags);
 
         if (ret == SOAPY_SDR_TIMEOUT) {
             continue;

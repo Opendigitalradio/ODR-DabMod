@@ -68,6 +68,14 @@ class Soapy : public Output::SDRDevice
         virtual RunStatistics get_run_statistics(void) override;
         virtual double get_real_secs(void) override;
 
+        virtual void set_rxgain(double rxgain) override;
+        virtual double get_rxgain(void) override;
+        virtual size_t receive_frame(
+                complexf *buf,
+                size_t num_samples,
+                struct frame_timestamp& ts,
+                double timeout_secs) override;
+
         // Return true if GPS and reference clock inputs are ok
         virtual bool is_clk_source_ok(void) override;
         virtual const char* device_name(void) override;
@@ -75,7 +83,8 @@ class Soapy : public Output::SDRDevice
     private:
         SDRDeviceConfig& m_conf;
         SoapySDR::Device *m_device = nullptr;
-        SoapySDR::Stream *m_stream = nullptr;
+        SoapySDR::Stream *m_tx_stream = nullptr;
+        SoapySDR::Stream *m_rx_stream = nullptr;
 
         size_t underflows = 0;
         size_t overflows = 0;

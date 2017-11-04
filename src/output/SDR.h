@@ -36,91 +36,12 @@ DESCRIPTION:
 
 #include "ModPlugin.h"
 #include "EtiReader.h"
+#include "output/SDRDevice.h"
+#include "output/Feedback.h"
 
 namespace Output {
 
 using complexf = std::complex<float>;
-
-enum refclk_lock_loss_behaviour_t { CRASH, IGNORE };
-
-/* This structure is used as initial configuration for all SDR devices.
- * It must also contain all remote-controllable settings, otherwise
- * they will get lost on a modulator restart. */
-struct SDRDeviceConfig {
-    std::string device;
-    std::string subDevice; // For UHD
-
-    long masterClockRate = 32768000;
-    unsigned sampleRate = 2048000;
-    double frequency = 0.0;
-    double lo_offset = 0.0;
-    double txgain = 0.0;
-    double rxgain = 0.0;
-    bool enableSync = false;
-
-    // When working with timestamps, mute the frames that
-    // do not have a timestamp
-    bool muteNoTimestamps = false;
-    unsigned dabMode = 0;
-    unsigned maxGPSHoldoverTime = 0;
-
-    /* allowed values for UHD : auto, int, sma, mimo */
-    std::string refclk_src;
-
-    /* allowed values for UHD : int, sma, mimo */
-    std::string pps_src;
-
-    /* allowed values for UHD : pos, neg */
-    std::string pps_polarity;
-
-    /* What to do when the reference clock PLL loses lock */
-    refclk_lock_loss_behaviour_t refclk_lock_loss_behaviour;
-
-    // muting can only be changed using the remote control
-    bool muting = false;
-
-    // TCP port on which to serve TX and RX samples for the
-    // digital pre distortion learning tool
-    uint16_t dpdFeedbackServerPort = 0;
-};
-
-// Each frame contains one OFDM frame, and its
-// associated timestamp
-struct FrameData {
-    // Buffer holding frame data
-    std::vector<uint8_t> buf;
-
-    // A full timestamp contains a TIST according to standard
-    // and time information within MNSC with tx_second.
-    struct frame_timestamp ts;
-};
-
-
-// All SDR Devices must implement the SDRDevice interface
-class SDRDevice {
-    public:
-        struct RunStatistics {
-            size_t num_underruns;
-            size_t num_late_packets;
-            size_t num_overruns;
-            size_t num_frames_modulated; //TODO increment
-        };
-
-        // TODO make some functions const
-        virtual void tune(double lo_offset, double frequency) = 0;
-        virtual double get_tx_freq(void) = 0;
-        virtual void set_txgain(double txgain) = 0;
-        virtual double get_txgain(void) = 0;
-        virtual void transmit_frame(const struct FrameData& frame) = 0;
-        virtual RunStatistics get_run_statistics(void) = 0;
-        virtual double get_real_secs(void) = 0;
-
-
-        // Return true if GPS and reference clock inputs are ok
-        virtual bool is_clk_source_ok(void) = 0;
-
-        virtual const char* device_name(void) = 0;
-};
 
 class SDR : public ModOutput, public RemoteControllable {
     public:
@@ -158,6 +79,8 @@ class SDR : public ModOutput, public RemoteControllable {
 
         std::shared_ptr<SDRDevice> m_device;
         std::string m_name;
+
+        std::shared_ptr<DPDFeedbackServer> m_dpd_feedback_server;
 
         EtiSource *m_eti_source = nullptr;
         bool     sourceContainsTimestamp = false;

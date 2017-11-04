@@ -29,15 +29,17 @@
 #   include "config.h"
 #endif
 
+#include <cstdint>
+#include <boost/property_tree/ptree.hpp>
+#include <boost/property_tree/ini_parser.hpp>
+
 #include "ConfigParser.h"
 #include "porting.h"
 #include "Utils.h"
 #include "Log.h"
 #include "DabModulator.h"
+#include "output/SDR.h"
 
-#include <unistd.h>
-#include <boost/property_tree/ptree.hpp>
-#include <boost/property_tree/ini_parser.hpp>
 
 using namespace std;
 
