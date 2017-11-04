@@ -157,6 +157,8 @@ void SDR::process_thread_entry()
     size_t last_num_underflows = 0;
     size_t pop_prebuffering = FRAMES_MAX_SIZE;
 
+    m_running.store(true);
+
     while (m_running.load()) {
         struct FrameData frame;
         etiLog.log(trace, "SDR,wait");

@@ -239,6 +239,9 @@ UHD::UHD(
     m_rx_stream = m_usrp->get_rx_stream(stream_args);
     m_tx_stream = m_usrp->get_tx_stream(stream_args);
 
+    m_running.store(true);
+    m_async_rx_thread = boost::thread(&UHD::print_async_thread, this);
+
     MDEBUG("OutputUHD:UHD ready.\n");
 }
 
