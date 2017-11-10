@@ -69,7 +69,7 @@ struct frame_timestamp
         this->timestamp_sec += lrintf(offset_secs);
         this->timestamp_pps += lrintf(offset_pps * 16384000.0);
 
-        while (this->timestamp_pps > 16384000)
+        while (this->timestamp_pps >= 16384000)
         {
             this->timestamp_pps -= 16384000;
             this->timestamp_sec += 1;
@@ -215,5 +215,4 @@ class TimestampDecoder : public RemoteControllable
         std::queue<std::shared_ptr<frame_timestamp> > queue_timestamps;
 
 };
-
 
