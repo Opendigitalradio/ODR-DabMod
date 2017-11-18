@@ -5,16 +5,6 @@ to some degree.
 Unless written, no activity has been started on the topics.
 
 
-TII implementation incomplete
------------------------------
-The current TII implementation supports two TII variants:
-one according to spec, and the one that was implemented in early modulators
-that ended up being used a lot even if not compatible with the spec.
-
-However, when enabled, some receivers are not able to lock on the signal.
-Is the power of the TII too strong? Synchronisation wrong?
-
-
 Rework Soapy and UHD outputs
 ----------------------------
 Currently, all the frontend tuning and timestamping settings are UHD-specific.
@@ -38,7 +28,6 @@ is not complete:
 
 Resampler improvements
 ----------------------
-
  * Assess quality of window currently used.
  * Evaluate usefulness of other windows.
  * Distribute energy of Fs bin equally to both negative and positive

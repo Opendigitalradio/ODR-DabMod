@@ -25,6 +25,7 @@ Short list of features:
 - Timestamping support required for SFN
 - GPSDO monitoring (both Ettus and [ODR LEA-M8F board](http://www.opendigitalradio.org/lea-m8f-gpsdo))
 - A FIR filter for improved spectrum mask
+- TII insertion
 - Logging: log to file, to syslog
 - ETI sources: ETI-over-TCP, file (Raw, Framed and Streamed) and ZeroMQ
 - A Telnet and ZeroMQ remote-control that can be used to change
