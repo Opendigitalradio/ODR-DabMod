@@ -42,16 +42,6 @@ Tests, both with B200 and LimeSDR:
 - DPD server
 
 
-TII implementation incomplete
------------------------------
-The current TII implementation supports two TII variants:
-one according to spec, and the one that was implemented in early modulators
-that ended up being used a lot even if not compatible with the spec.
-
-However, when enabled, some receivers are not able to lock on the signal.
-Is the power of the TII too strong? Synchronisation wrong?
-
-
 Finalise EDI input
 ------------------
 The EDI input, based on work started in http://git.mpb.li/git/odr-edilib/
@@ -66,7 +56,6 @@ is not complete:
 
 Resampler improvements
 ----------------------
-
  * Assess quality of window currently used.
  * Evaluate usefulness of other windows.
  * Distribute energy of Fs bin equally to both negative and positive

@@ -197,16 +197,30 @@ int TII::process(Buffer* dataIn, Buffer* dataOut)
         complexf* in = reinterpret_cast<complexf*>(dataIn->getData());
         complexf* out = reinterpret_cast<complexf*>(dataOut->getData());
 
+        if ((m_enabled_carriers.size() % 2) != 0) {
+            throw std::logic_error("odd number of enabled carriers");
+        }
+
+        /* Normalise the TII carrier power according to ETSI TR 101 496-3
+         * Clause 5.4.2.2 Paragraph 7:
+         *
+         * > The ratio of carriers in a TII symbol to a normal DAB symbol
+         * > is 1:48 for all Modes, so that the signal power in a TII symbol is
+         * > 16 dB below the signal power of the other symbols.
+         *
+         * We need to normalise to the square root of 48 because we touch I and
+         * Q separately.
+         */
+        const float normalise_factor = 0.14433756729740644112f; // = 1/sqrt(48)
+
         for (size_t i = 0; i < m_enabled_carriers.size(); i+=2) {
-            //BAD implementation:
-            // setting exactly the same phase of the signal for lower adjacent
-            // frequency
+            // See header file for an explanation of the old variant
             if (m_enabled_carriers[i]) {
-                out[i] = m_conf.old_variant ? in[i+1] : in[i];
+                out[i] = normalise_factor * (m_conf.old_variant ? in[i+1] : in[i]);
             }
 
             if (m_enabled_carriers[i+1]) {
-                out[i+1] = in[i+1];
+                out[i+1] = normalise_factor * in[i+1];
             }
         }
     }

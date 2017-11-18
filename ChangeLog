@@ -1,6 +1,17 @@
 This file contains information about the changes done to
 ODR-DabMod in this repository
 
+2017-11-18: Matthias P. Braendli <matthias@mpb.li>
+	(v1.1.0):
+		Fix TII insertion power level.
+		Fix bug in parsing timestamps appearing in rare conditions.
+		Add Crest Factor Reduction prototype.
+		Cleanup console output of flowgraph statistics.
+		Add prototype for Digital Predistortion.
+		Enable some additional compiler warnings.
+		Add some useful UHD statistics to RC.
+		Add configure option to disable march=native.
+
 2017-06-05: Matthias P. Braendli <matthias@mpb.li>
 	(v1.0.1):
 		Move GainControl into a separate thread to make better use
