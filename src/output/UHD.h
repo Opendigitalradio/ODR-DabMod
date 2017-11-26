@@ -47,15 +47,13 @@ DESCRIPTION:
 
 #include "Log.h"
 #include "output/SDR.h"
+#include "output/USRPTime.h"
 #include "TimestampDecoder.h"
 #include "RemoteControl.h"
 #include "ThreadsafeQueue.h"
 
 #include <stdio.h>
 #include <sys/types.h>
-
-//#define MDEBUG(fmt, args...) fprintf(LOG, fmt , ## args)
-#define MDEBUG(fmt, args...)
 
 // If the timestamp is further in the future than
 // 100 seconds, abort
@@ -100,6 +98,7 @@ class UHD : public Output::SDRDevice
         uhd::usrp::multi_usrp::sptr m_usrp;
         uhd::tx_streamer::sptr m_tx_stream;
         uhd::rx_streamer::sptr m_rx_stream;
+        std::shared_ptr<USRPTime> m_device_time;
 
         size_t num_underflows = 0;
         size_t num_overflows = 0;
@@ -110,21 +109,6 @@ class UHD : public Output::SDRDevice
 
         uhd::tx_metadata_t md;
 
-        // GPS Fix check variables
-        int num_checks_without_gps_fix = 1;
-        struct timespec first_gps_fix_check;
-        struct timespec last_gps_fix_check;
-        struct timespec time_last_frame;
-        boost::packaged_task<bool> gps_fix_pt;
-        boost::unique_future<bool> gps_fix_future;
-        boost::thread gps_fix_task;
-
-        // Wait time in seconds to get fix
-        static const int initial_gps_fix_wait = 180;
-
-        // Interval for checking the GPS at runtime
-        static constexpr double gps_fix_check_interval = 10.0; // seconds
-
         // Used to print statistics once a second
         std::chrono::steady_clock::time_point last_print_time;
 
@@ -132,24 +116,11 @@ class UHD : public Output::SDRDevice
         bool refclk_loss_needs_check(void) const;
         bool suppress_refclk_loss_check = false;
 
-        // Returns true if we want to check for the gps_timelock sensor
-        bool gpsfix_needs_check(void) const;
-
-        // Return true if the gpsdo is from ettus, false if it is the ODR
-        // LEA-M8F board is used
-        bool gpsdo_is_ettus(void) const;
-
         // Poll asynchronous metadata from UHD
         std::atomic<bool> m_running;
         boost::thread m_async_rx_thread;
         void stop_threads(void);
         void print_async_thread(void);
-
-        void check_gps();
-
-        void set_usrp_time();
-
-        void initial_gps_check();
 };
 
 } // namespace Output

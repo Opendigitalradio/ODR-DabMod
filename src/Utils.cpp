@@ -210,3 +210,17 @@ double parseChannel(const std::string& chan)
     }
     return freq;
 }
+
+int transmission_frame_duration_ms(unsigned int dabMode)
+{
+    switch (dabMode) {
+        case 1: return 96;
+        case 2: return 24;
+        case 3: return 24;
+        case 4: return 48;
+        default:
+            throw std::runtime_error("invalid DAB mode");
+    }
+}
+
+

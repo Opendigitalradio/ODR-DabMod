@@ -67,3 +67,7 @@ void set_thread_name(const char *name);
 // Convert a channel like 10A to a frequency
 double parseChannel(const std::string& chan);
 
+// dabMode is either 1, 2, 3, 4, corresponding to TM I, TM II, TM III and TM IV.
+// throws a runtime_error if dabMode is not one of these values.
+int transmission_frame_duration_ms(unsigned int dabMode);
+

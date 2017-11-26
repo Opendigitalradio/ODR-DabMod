@@ -15,11 +15,13 @@ This would enable SFN support with LimeSDR devices.
 
 Move dpd port from uhd section to somewhere else.
 
-Clean up and separate GPS and refclk checks. Ensure muting is set properly at startup.
+Clean up and separate GPS and refclk checks.
+ * *done* handle UHD GPSDO and time
+ * handle SoapySDR time
+ * Add refclk stuff and timestamps to Soapy.
+ * Ensure muting is set properly at startup.
 
 Add antenna selection to config.
-
-Add refclk stuff and timestamps to Soapy.
 
 *done* Make an abstraction for the DPD feedback server, use it for Soapy and UHD.
 

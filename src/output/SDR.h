@@ -70,6 +70,7 @@ class SDR : public ModOutput, public RemoteControllable {
         void stop(void);
         void process_thread_entry(void);
         void handle_frame(struct FrameData &frame);
+        void sleep_through_frame(void);
 
         SDRDeviceConfig& m_config;
 
@@ -87,6 +88,9 @@ class SDR : public ModOutput, public RemoteControllable {
         bool     last_tx_time_initialised = false;
         uint32_t last_tx_second = 0;
         uint32_t last_tx_pps = 0;
+
+        struct timespec time_last_frame;
+
 };
 
 }

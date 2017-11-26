@@ -28,6 +28,9 @@
 
 #ifdef HAVE_OUTPUT_UHD
 
+//#define MDEBUG(fmt, args...) fprintf(LOG, fmt , ## args)
+#define MDEBUG(fmt, args...)
+
 #include "PcDebug.h"
 #include "Log.h"
 #include "RemoteControl.h"
@@ -81,46 +84,6 @@ static void uhd_msg_handler(uhd::msg::type_t type, const std::string &msg)
 }
 
 
-// Check function for GPS TIMELOCK sensor from the ODR LEA-M8F board GPSDO
-static bool check_gps_timelock(uhd::usrp::multi_usrp::sptr usrp)
-{
-    try {
-        std::string sensor_value(
-                usrp->get_mboard_sensor("gps_timelock", 0).to_pp_string());
-
-        if (sensor_value.find("TIME LOCKED") == std::string::npos) {
-            etiLog.level(warn) << "OutputUHD: gps_timelock " << sensor_value;
-            return false;
-        }
-
-        return true;
-    }
-    catch (uhd::lookup_error &e) {
-        etiLog.level(warn) << "OutputUHD: no gps_timelock sensor";
-        return false;
-    }
-}
-
-// Check function for GPS LOCKED sensor from the Ettus GPSDO
-static bool check_gps_locked(uhd::usrp::multi_usrp::sptr usrp)
-{
-    try {
-        uhd::sensor_value_t sensor_value(
-                usrp->get_mboard_sensor("gps_locked", 0));
-        if (not sensor_value.to_bool()) {
-            etiLog.level(warn) << "OutputUHD: gps_locked " <<
-                sensor_value.to_pp_string();
-            return false;
-        }
-
-        return true;
-    }
-    catch (uhd::lookup_error &e) {
-        etiLog.level(warn) << "OutputUHD: no gps_locked sensor";
-        return false;
-    }
-}
-
 
 UHD::UHD(
         SDRDeviceConfig& config) :
@@ -128,11 +91,6 @@ UHD::UHD(
     m_conf(config),
     m_running(false)
 {
-    // Variables needed for GPS fix check
-    first_gps_fix_check.tv_sec = 0;
-    last_gps_fix_check.tv_sec = 0;
-    time_last_frame.tv_sec = 0;
-
     std::stringstream device;
     device << m_conf.device;
 
@@ -182,6 +140,8 @@ UHD::UHD(
         m_usrp->set_clock_source(m_conf.refclk_src);
     }
     m_usrp->set_time_source(m_conf.pps_src);
+
+    m_device_time = std::make_shared<USRPTime>(m_usrp, m_conf);
 
     if (m_conf.subDevice != "") {
         m_usrp->set_tx_subdev_spec(uhd::usrp::subdev_spec_t(m_conf.subDevice),
@@ -388,8 +348,34 @@ size_t UHD::receive_frame(
 // Return true if GPS and reference clock inputs are ok
 bool UHD::is_clk_source_ok(void)
 {
-    //TODO
-    return true;
+    bool ok = true;
+
+    if (refclk_loss_needs_check()) {
+        try {
+            if (not m_usrp->get_mboard_sensor("ref_locked", 0).to_bool()) {
+                ok = false;
+
+                etiLog.level(alert) <<
+                    "OutputUHD: External reference clock lock lost !";
+
+                if (m_conf.refclk_lock_loss_behaviour == CRASH) {
+                    throw std::runtime_error(
+                            "OutputUHD: External reference clock lock lost.");
+                }
+            }
+        }
+        catch (uhd::lookup_error &e) {
+            suppress_refclk_loss_check = true;
+            etiLog.log(warn, "OutputUHD: This USRP does not have mboard "
+                    "sensor for ext clock loss. Check disabled.");
+        }
+    }
+
+    if (m_device_time) {
+        ok |= m_device_time->verify_time();
+    }
+
+    return ok;
 }
 
 const char* UHD::device_name(void)
@@ -406,27 +392,6 @@ bool UHD::refclk_loss_needs_check() const
     return m_conf.refclk_src != "internal";
 }
 
-bool UHD::gpsfix_needs_check() const
-{
-    if (m_conf.refclk_src == "internal") {
-        return false;
-    }
-    else if (m_conf.refclk_src == "gpsdo") {
-        return (m_conf.maxGPSHoldoverTime != 0);
-    }
-    else if (m_conf.refclk_src == "gpsdo-ettus") {
-        return (m_conf.maxGPSHoldoverTime != 0);
-    }
-    else {
-        return false;
-    }
-}
-
-bool UHD::gpsdo_is_ettus() const
-{
-    return (m_conf.refclk_src == "gpsdo-ettus");
-}
-
 void UHD::stop_threads()
 {
     m_running.store(false);
@@ -436,197 +401,6 @@ void UHD::stop_threads()
 }
 
 
-static int transmission_frame_duration_ms(unsigned int dabMode)
-{
-    switch (dabMode) {
-        // could happen when called from constructor and we take the mode from ETI
-        case 0: return 0;
-
-        case 1: return 96;
-        case 2: return 24;
-        case 3: return 24;
-        case 4: return 48;
-        default:
-            throw std::runtime_error("OutputUHD: invalid DAB mode");
-    }
-}
-
-
-void UHD::set_usrp_time()
-{
-    if (m_conf.enableSync and (m_conf.pps_src == "none")) {
-        etiLog.level(warn) <<
-            "OutputUHD: WARNING:"
-            " you are using synchronous transmission without PPS input!";
-
-        struct timespec now;
-        if (clock_gettime(CLOCK_REALTIME, &now)) {
-            perror("OutputUHD:Error: could not get time: ");
-            etiLog.level(error) << "OutputUHD: could not get time";
-        }
-        else {
-            m_usrp->set_time_now(uhd::time_spec_t(now.tv_sec));
-            etiLog.level(info) << "OutputUHD: Setting USRP time to " <<
-                std::fixed <<
-                uhd::time_spec_t(now.tv_sec).get_real_secs();
-        }
-    }
-
-    if (m_conf.pps_src != "none") {
-        /* handling time for synchronisation: wait until the next full
-         * second, and set the USRP time at next PPS */
-        struct timespec now;
-        time_t seconds;
-        if (clock_gettime(CLOCK_REALTIME, &now)) {
-            etiLog.level(error) << "OutputUHD: could not get time :" <<
-                strerror(errno);
-            throw std::runtime_error("OutputUHD: could not get time.");
-        }
-        else {
-            seconds = now.tv_sec;
-
-            MDEBUG("OutputUHD:sec+1: %ld ; now: %ld ...\n", seconds+1, now.tv_sec);
-            while (seconds + 1 > now.tv_sec) {
-                usleep(1);
-                if (clock_gettime(CLOCK_REALTIME, &now)) {
-                    etiLog.level(error) << "OutputUHD: could not get time :" <<
-                        strerror(errno);
-                    throw std::runtime_error("OutputUHD: could not get time.");
-                }
-            }
-            MDEBUG("OutputUHD:sec+1: %ld ; now: %ld ...\n", seconds+1, now.tv_sec);
-            /* We are now shortly after the second change. */
-
-            usleep(200000); // 200ms, we want the PPS to be later
-            m_usrp->set_time_unknown_pps(uhd::time_spec_t(seconds + 2));
-            etiLog.level(info) << "OutputUHD: Setting USRP time next pps to " <<
-                std::fixed <<
-                uhd::time_spec_t(seconds + 2).get_real_secs();
-        }
-
-        usleep(1e6);
-        etiLog.log(info,  "OutputUHD: USRP time %f\n",
-                m_usrp->get_time_now().get_real_secs());
-    }
-}
-
-void UHD::initial_gps_check()
-{
-    if (first_gps_fix_check.tv_sec == 0) {
-        etiLog.level(info) << "Waiting for GPS fix";
-
-        if (clock_gettime(CLOCK_MONOTONIC, &first_gps_fix_check) != 0) {
-            stringstream ss;
-            ss << "clock_gettime failure: " << strerror(errno);
-            throw std::runtime_error(ss.str());
-        }
-    }
-
-    check_gps();
-
-    if (last_gps_fix_check.tv_sec >
-            first_gps_fix_check.tv_sec + initial_gps_fix_wait) {
-        stringstream ss;
-        ss << "GPS did not show time lock in " <<
-            initial_gps_fix_wait << " seconds";
-        throw std::runtime_error(ss.str());
-    }
-
-    if (time_last_frame.tv_sec == 0) {
-        if (clock_gettime(CLOCK_MONOTONIC, &time_last_frame) != 0) {
-            stringstream ss;
-            ss << "clock_gettime failure: " << strerror(errno);
-            throw std::runtime_error(ss.str());
-        }
-    }
-
-    struct timespec now;
-    if (clock_gettime(CLOCK_MONOTONIC, &now) != 0) {
-        stringstream ss;
-        ss << "clock_gettime failure: " << strerror(errno);
-        throw std::runtime_error(ss.str());
-    }
-
-    long delta_us = timespecdiff_us(time_last_frame, now);
-    long wait_time_us = transmission_frame_duration_ms(m_conf.dabMode);
-
-    if (wait_time_us - delta_us > 0) {
-        usleep(wait_time_us - delta_us);
-    }
-
-    time_last_frame.tv_nsec += wait_time_us * 1000;
-    if (time_last_frame.tv_nsec >= 1000000000L) {
-        time_last_frame.tv_nsec -= 1000000000L;
-        time_last_frame.tv_sec++;
-    }
-}
-
-void UHD::check_gps()
-{
-    struct timespec time_now;
-    if (clock_gettime(CLOCK_MONOTONIC, &time_now) != 0) {
-        stringstream ss;
-        ss << "clock_gettime failure: " << strerror(errno);
-        throw std::runtime_error(ss.str());
-    }
-
-    // Divide interval by two because we alternate between
-    // launch and check
-    if (gpsfix_needs_check() and
-            last_gps_fix_check.tv_sec + gps_fix_check_interval/2.0 <
-            time_now.tv_sec) {
-        last_gps_fix_check = time_now;
-
-        // Alternate between launching thread and checking the
-        // result.
-        if (gps_fix_task.joinable()) {
-            if (gps_fix_future.has_value()) {
-
-                gps_fix_future.wait();
-
-                gps_fix_task.join();
-
-                if (not gps_fix_future.get()) {
-                    if (num_checks_without_gps_fix == 0) {
-                        etiLog.level(alert) <<
-                            "OutputUHD: GPS Time Lock lost";
-                    }
-                    num_checks_without_gps_fix++;
-                }
-                else {
-                    if (num_checks_without_gps_fix) {
-                        etiLog.level(info) <<
-                            "OutputUHD: GPS Time Lock recovered";
-                    }
-                    num_checks_without_gps_fix = 0;
-                }
-
-                if (gps_fix_check_interval * num_checks_without_gps_fix >
-                        m_conf.maxGPSHoldoverTime) {
-                    std::stringstream ss;
-                    ss << "Lost GPS Time Lock for " << gps_fix_check_interval *
-                        num_checks_without_gps_fix << " seconds";
-                    throw std::runtime_error(ss.str());
-                }
-            }
-        }
-        else {
-            // Checking the sensor here takes too much
-            // time, it has to be done in a separate thread.
-            if (gpsdo_is_ettus()) {
-                gps_fix_pt = boost::packaged_task<bool>(
-                        boost::bind(check_gps_locked, m_usrp) );
-            }
-            else {
-                gps_fix_pt = boost::packaged_task<bool>(
-                        boost::bind(check_gps_timelock, m_usrp) );
-            }
-            gps_fix_future = gps_fix_pt.get_future();
-
-            gps_fix_task = boost::thread(boost::move(gps_fix_pt));
-        }
-    }
-}
 
 void UHD::print_async_thread()
 {

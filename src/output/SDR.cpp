@@ -63,8 +63,11 @@ SDR::SDR(SDRDeviceConfig& config, std::shared_ptr<SDRDevice> device) :
     m_running(false),
     m_device(device)
 {
-    // muting is remote-controllable, and reset by the GPS fix check
+    // muting is remote-controllable
     m_config.muting = false;
+
+    time_last_frame.tv_sec = 0;
+    time_last_frame.tv_nsec = 0;
 
     m_device_thread = std::thread(&SDR::process_thread_entry, this);
 
@@ -95,11 +98,6 @@ void SDR::stop()
 int SDR::process(Buffer *dataIn)
 {
     if (m_device) {
-        if (not m_device->is_clk_source_ok()) {
-            // Ignore frame
-            return dataIn->getLength();
-        }
-
         FrameData frame;
         frame.buf.resize(dataIn->getLength());
 
@@ -210,6 +208,37 @@ void SDR::setETISource(EtiSource *etiSource)
     m_eti_source = etiSource;
 }
 
+void SDR::sleep_through_frame()
+{
+    struct timespec now;
+    if (clock_gettime(CLOCK_MONOTONIC, &now) != 0) {
+        stringstream ss;
+        ss << "clock_gettime failure: " << strerror(errno);
+        throw runtime_error(ss.str());
+    }
+
+    if (time_last_frame.tv_sec == 0) {
+        if (clock_gettime(CLOCK_MONOTONIC, &time_last_frame) != 0) {
+            stringstream ss;
+            ss << "clock_gettime failure: " << strerror(errno);
+            throw runtime_error(ss.str());
+        }
+    }
+
+    long delta_us = timespecdiff_us(time_last_frame, now);
+    long wait_time_us = transmission_frame_duration_ms(m_config.dabMode);
+
+    if (wait_time_us - delta_us > 0) {
+        usleep(wait_time_us - delta_us);
+    }
+
+    time_last_frame.tv_nsec += wait_time_us * 1000;
+    while (time_last_frame.tv_nsec >= 1000000000L) {
+        time_last_frame.tv_nsec -= 1000000000L;
+        time_last_frame.tv_sec++;
+    }
+}
+
 void SDR::handle_frame(struct FrameData& frame)
 {
     // Assumes m_device is valid
@@ -217,6 +246,7 @@ void SDR::handle_frame(struct FrameData& frame)
     constexpr double tx_timeout = 20.0;
 
     if (not m_device->is_clk_source_ok()) {
+        sleep_through_frame();
         return;
     }
 
