@@ -7,10 +7,13 @@ Unless written, no activity has been started on the topics.
 TODOs for ongoing SDR output refactoring
 ----------------------------------------
 Currently, all the frontend tuning and timestamping settings are UHD-specific.
-To make it possible to run with synchronised=1 using Soapy, refactoring the
+To make it possible to run with synchronous=1 using Soapy, refactoring the
 output to share the parts that are common.
 
-This would enable SFN support with LimeSDR devices.
+This would go towards SFN support with LimeSDR devices, under the condition
+that the LimeSDR gets support for a HW timestamp that can be set from a PPS
+signal. Discussion ongoing here
+https://discourse.myriadrf.org/t/synchronize-two-limesdr/1714
 
 
 Move dpd port from uhd section to somewhere else.
@@ -23,9 +26,11 @@ Clean up and separate GPS and refclk checks.
 
 Add antenna selection to config.
 
+Portability: replace clock_gettime with std::chrono
+
 *done* Make an abstraction for the DPD feedback server, use it for Soapy and UHD.
 
-Move staticdelay into a new process block
+*optional* Move staticdelay into a new process block
 
 Double-check all #includes
 
