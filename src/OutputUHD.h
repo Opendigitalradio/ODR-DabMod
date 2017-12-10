@@ -209,7 +209,7 @@ class OutputUHD: public ModOutput, public RemoteControllable {
         // Used to print statistics once a second
         std::chrono::steady_clock::time_point last_print_time;
 
-        bool sourceContainsTimestamp = false;
+        bool sync_and_ts_valid = false;
 
         ThreadsafeQueue<UHDWorkerFrameData> frames;
 

@@ -267,7 +267,7 @@ OutputUHD::OutputUHD(
             myConf.muteNoTimestamps ? "enabled" : "disabled");
 
     // preparing output thread worker data
-    sourceContainsTimestamp = false;
+    sync_and_ts_valid = false;
 
     SetDelayBuffer(myConf.dabMode);
 
@@ -407,7 +407,7 @@ int OutputUHD::process(Buffer* dataIn)
             throw std::runtime_error("Non-constant input length!");
         }
 
-        sourceContainsTimestamp = myConf.enableSync and
+        sync_and_ts_valid = myConf.enableSync and
             myEtiSource->sourceContainsTimestamp();
 
         if (gpsfix_needs_check()) {
@@ -733,7 +733,7 @@ void OutputUHD::handle_frame(const struct UHDWorkerFrameData *frame)
     double usrp_time = myUsrp->get_time_now().get_real_secs();
     bool timestamp_discontinuity = false;
 
-    if (sourceContainsTimestamp) {
+    if (sync_and_ts_valid) {
         // Tx time from MNSC and TIST
         uint32_t tx_second = frame->ts.timestamp_sec;
         uint32_t tx_pps    = frame->ts.timestamp_pps;
@@ -812,7 +812,7 @@ void OutputUHD::handle_frame(const struct UHDWorkerFrameData *frame)
             throw std::runtime_error("Timestamp error. Aborted.");
         }
     }
-    else { // !sourceContainsTimestamp
+    else { // !sync_and_ts_valid
         if (myConf.muting or myConf.muteNoTimestamps) {
             /* There was some error decoding the timestamp */
             if (myConf.muting) {
@@ -849,7 +849,7 @@ void OutputUHD::tx_frame(const struct UHDWorkerFrameData *frame, bool ts_update)
         //ensure the the last packet has EOB set if the timestamps has been
         //refreshed and need to be reconsidered.
         md_tx.end_of_burst = (
-                sourceContainsTimestamp and
+                sync_and_ts_valid and
                 (frame->ts.timestamp_refresh or ts_update) and
                 samps_to_send <= usrp_max_num_samps );
 
