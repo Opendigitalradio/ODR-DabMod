@@ -138,8 +138,8 @@ AS_IF([test "x$enable_soapysdr" = "xyes"],
       [AC_DEFINE(HAVE_SOAPYSDR, [1], [Define if SoapySDR output is enabled])])
 
 AX_BOOST_BASE([1.54.0], [], AC_MSG_ERROR([BOOST 1.54 or later is required]))
-AC_CHECK_LIB([boost_system], [main], [], [AC_MSG_ERROR([library boost_system is missing])])
-AC_CHECK_LIB([boost_thread], [main], [], [AC_MSG_ERROR([library boost_thread is missing])])
+AX_BOOST_SYSTEM
+AX_BOOST_THREAD
 
 AC_CHECK_LIB([rt], [clock_gettime], [], [AC_MSG_ERROR([library rt is missing])])
 
