@@ -128,8 +128,9 @@ AC_SUBST([LIBS], ["$FFTW_LIBS $SOAPYSDR_LIBS $PTHREAD_LIBS $ZMQ_LIBS"])
 
 # Checks for UHD.
 AS_IF([test "x$enable_output_uhd" = "xyes"],
-      [AC_CHECK_LIB([uhd], [main], [],
-                   [AC_MSG_ERROR([library uhd is missing])] )])
+      [ AC_CHECK_LIB([uhd], [main], [], [AC_MSG_ERROR([library uhd is missing])])
+        AC_CHECK_LIB([rt], [clock_gettime], [], [AC_MSG_ERROR([library rt is missing])])
+      ])
 
 AS_IF([test "x$enable_output_uhd" = "xyes"],
       [AC_DEFINE(HAVE_OUTPUT_UHD, [1], [Define if UHD output is enabled])])
@@ -140,8 +141,6 @@ AS_IF([test "x$enable_soapysdr" = "xyes"],
 AX_BOOST_BASE([1.54.0], [], AC_MSG_ERROR([BOOST 1.54 or later is required]))
 AX_BOOST_SYSTEM
 AX_BOOST_THREAD
-
-AC_CHECK_LIB([rt], [clock_gettime], [], [AC_MSG_ERROR([library rt is missing])])
 
 # Tests for different memory allocation debuggers.
 # Valgrind doesn't need any.
