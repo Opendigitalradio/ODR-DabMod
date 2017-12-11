@@ -27,6 +27,7 @@
 #include "PuncturingEncoder.h"
 #include "PcDebug.h"
 
+#include <string>
 #include <stdio.h>
 #include <stdexcept>
 #include <stdint.h>

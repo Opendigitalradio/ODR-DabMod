@@ -472,7 +472,7 @@ int OutputUHD::process(Buffer* dataIn)
                         myUsrp, myConf.dpdFeedbackServerPort, myConf.sampleRate);
             }
 
-            size_t num_frames = frames.push_wait_if_full(frame,
+            size_t num_frames = m_frames.push_wait_if_full(frame,
                     FRAMES_MAX_SIZE);
             etiLog.log(trace, "UHD,push %zu", num_frames);
         }
@@ -686,7 +686,7 @@ void OutputUHD::workerthread()
 
         struct UHDWorkerFrameData frame;
         etiLog.log(trace, "UHD,wait");
-        frames.wait_and_pop(frame, pop_prebuffering);
+        m_frames.wait_and_pop(frame, pop_prebuffering);
         etiLog.log(trace, "UHD,pop");
 
         handle_frame(&frame);
@@ -989,10 +989,10 @@ void OutputUHD::set_parameter(const string& parameter, const string& value)
         throw ParameterError("Parameter " + parameter + " is read-only.");
     }
     else {
-        stringstream ss;
-        ss << "Parameter '" << parameter
+        stringstream ss_err;
+        ss_err << "Parameter '" << parameter
             << "' is not exported by controllable " << get_rc_name();
-        throw ParameterError(ss.str());
+        throw ParameterError(ss_err.str());
     }
 }
 

@@ -28,6 +28,7 @@
 #include "PcDebug.h"
 
 #include <stdio.h>
+#include <string>
 #include <stdexcept>
 #include <complex>
 #include <memory>

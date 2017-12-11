@@ -43,15 +43,15 @@
 class Buffer {
     protected:
         /* Current length of the data in the Buffer */
-        size_t len;
+        size_t m_len;
 
         /* Allocated size of the Buffer */
-        size_t size;
+        size_t m_size;
 
         /* Pointer to the data. Memory allocation is entirely
          * handled by setLength.
          */
-        void *data;
+        void *m_data;
 
     public:
         using sptr = std::shared_ptr<Buffer>;
@@ -77,7 +77,7 @@ class Buffer {
         void appendData(const void *data, size_t len);
         Buffer &operator+=(const Buffer &copy);
 
-        size_t getLength() const { return len; }
-        void *getData() const { return data; }
+        size_t getLength() const { return m_len; }
+        void *getData() const { return m_data; }
 };
 

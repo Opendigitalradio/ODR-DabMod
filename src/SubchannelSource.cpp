@@ -28,6 +28,7 @@
 #include "PcDebug.h"
 #include "Log.h"
 
+#include <string>
 #include <stdexcept>
 #include <sys/types.h>
 #include <stdlib.h>

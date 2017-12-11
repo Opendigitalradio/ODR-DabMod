@@ -26,6 +26,7 @@
 
 #include "Flowgraph.h"
 #include "PcDebug.h"
+#include <string>
 #include <memory>
 #include <algorithm>
 #include <sstream>

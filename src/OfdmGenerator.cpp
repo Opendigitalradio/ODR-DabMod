@@ -230,9 +230,9 @@ int OfdmGenerator::process(Buffer* const dataIn, Buffer* dataOut)
                  */
                 double sum_iq = 0;
                 double sum_delta = 0;
-                for (size_t i = 0; i < mySpacing; i++) {
-                    sum_iq += (double)std::norm(before_cfr[i]);
-                    sum_delta += (double)std::norm(symbol[i] - before_cfr[i]);
+                for (size_t j = 0; j < mySpacing; j++) {
+                    sum_iq += (double)std::norm(before_cfr[j]);
+                    sum_delta += (double)std::norm(symbol[j] - before_cfr[j]);
                 }
 
                 // Clamp to 90dB, otherwise the MER average is going to be inf
@@ -362,10 +362,10 @@ void OfdmGenerator::set_parameter(const std::string& parameter,
         throw ParameterError("Parameter 'clip_stats' is read-only");
     }
     else {
-        stringstream ss;
-        ss << "Parameter '" << parameter
+        stringstream ss_err;
+        ss_err << "Parameter '" << parameter
             << "' is not exported by controllable " << get_rc_name();
-        throw ParameterError(ss.str());
+        throw ParameterError(ss_err.str());
     }
 }
 

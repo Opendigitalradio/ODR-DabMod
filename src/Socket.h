@@ -37,6 +37,7 @@ DESCRIPTION:
 #include <unistd.h>
 #include <cstdint>
 #include <stdexcept>
+#include <string>
 #include <sys/socket.h>
 #include <netinet/ip.h>
 #include <errno.h>

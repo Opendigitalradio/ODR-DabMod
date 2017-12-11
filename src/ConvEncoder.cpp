@@ -25,6 +25,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdexcept>
+#include <string>
 
 
 const static uint8_t PARITY[] = {

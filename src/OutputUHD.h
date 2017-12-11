@@ -211,7 +211,7 @@ class OutputUHD: public ModOutput, public RemoteControllable {
 
         bool sync_and_ts_valid = false;
 
-        ThreadsafeQueue<UHDWorkerFrameData> frames;
+        ThreadsafeQueue<UHDWorkerFrameData> m_frames;
 
         // Returns true if we want to verify loss of refclk
         bool refclk_loss_needs_check(void) const;

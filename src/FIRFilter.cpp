@@ -306,9 +306,6 @@ int FIRFilter::internal_process(Buffer* const dataIn, Buffer* dataOut)
 
 void FIRFilter::set_parameter(const string& parameter, const string& value)
 {
-    stringstream ss(value);
-    ss.exceptions ( stringstream::failbit | stringstream::badbit );
-
     if (parameter == "ntaps") {
         throw ParameterError("Parameter 'ntaps' is read-only");
     }

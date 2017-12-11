@@ -46,7 +46,7 @@ using namespace std;
 static float var_variance;
 
 GainControl::GainControl(size_t framesize,
-                         GainMode mode,
+                         GainMode gainMode,
                          float digGain,
                          float normalise,
                          float varVariance) :
@@ -60,10 +60,10 @@ GainControl::GainControl(size_t framesize,
     m_digGain(digGain),
     m_normalise(normalise),
     m_var_variance_rc(varVariance),
-    m_gainmode(mode),
+    m_gainmode(gainMode),
     m_mutex()
 {
-    PDEBUG("GainControl::GainControl(%zu, %zu) @ %p\n", framesize, (size_t)mode, this);
+    PDEBUG("GainControl::GainControl(%zu, %zu) @ %p\n", framesize, (size_t)m_gainMode, this);
 
     /* register the parameters that can be remote controlled */
     RC_ADD_PARAMETER(digital, "Digital Gain");
@@ -532,10 +532,10 @@ void GainControl::set_parameter(const string& parameter, const string& value)
         }
     }
     else {
-        stringstream ss;
-        ss << "Parameter '" << parameter
+        stringstream ss_err;
+        ss_err << "Parameter '" << parameter
             << "' is not exported by controllable " << get_rc_name();
-        throw ParameterError(ss.str());
+        throw ParameterError(ss_err.str());
     }
 }
 

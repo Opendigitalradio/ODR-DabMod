@@ -445,7 +445,7 @@ int launch_modulator(int argc, char* argv[])
                         }
                     }
 #if defined(HAVE_ZEROMQ)
-                    else if (auto in = dynamic_pointer_cast<InputZeroMQReader>(inputReader)) {
+                    else if (dynamic_pointer_cast<InputZeroMQReader>(inputReader)) {
                         run_again = true;
                         // Create a new input reader
                         auto inputZeroMQReader = make_shared<InputZeroMQReader>();
@@ -453,7 +453,8 @@ int launch_modulator(int argc, char* argv[])
                         inputReader = inputZeroMQReader;
                     }
 #endif
-                    else if (auto in = dynamic_pointer_cast<InputTcpReader>(inputReader)) {
+                    else if (dynamic_pointer_cast<InputTcpReader>(inputReader)) {
+                        // Create a new input reader
                         auto inputTcpReader = make_shared<InputTcpReader>();
                         inputTcpReader->Open(mod_settings.inputName);
                         inputReader = inputTcpReader;

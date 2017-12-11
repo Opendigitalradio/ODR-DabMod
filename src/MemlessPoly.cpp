@@ -38,7 +38,7 @@
 
 #include <stdio.h>
 #include <stdexcept>
-
+#include <string>
 #include <future>
 #include <array>
 #include <iostream>
@@ -370,9 +370,6 @@ int MemlessPoly::internal_process(Buffer* const dataIn, Buffer* dataOut)
 
 void MemlessPoly::set_parameter(const string& parameter, const string& value)
 {
-    stringstream ss(value);
-    ss.exceptions ( stringstream::failbit | stringstream::badbit );
-
     if (parameter == "ncoefs") {
         throw ParameterError("Parameter 'ncoefs' is read-only");
     }

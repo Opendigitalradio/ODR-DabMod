@@ -28,17 +28,17 @@
 #include "Buffer.h"
 #include "PcDebug.h"
 
+#include <string>
 #include <stdlib.h>
 #include <string.h>
-
 
 Buffer::Buffer(size_t len, const void *data)
 {
     PDEBUG("Buffer::Buffer(%zu, %p)\n", len, data);
 
-    this->len = 0;
-    this->size = 0;
-    this->data = NULL;
+    m_len = 0;
+    m_size = 0;
+    m_data = NULL;
     setData(data, len);
 }
 
@@ -46,23 +46,23 @@ Buffer::Buffer(const std::vector<uint8_t> &vec)
 {
     PDEBUG("Buffer::Buffer(vector [%zu])\n", vec.size());
 
-    this->len = 0;
-    this->size = 0;
-    this->data = NULL;
+    m_len = 0;
+    m_size = 0;
+    m_data = NULL;
     setData(vec.data(), vec.size());
 }
 
 
 Buffer::~Buffer()
 {
-    PDEBUG("Buffer::~Buffer() len=%zu, data=%p\n", len, data);
-    free(data);
+    PDEBUG("Buffer::~Buffer() len=%zu, data=%p\n", m_len, m_data);
+    free(m_data);
 }
 
 
 Buffer &Buffer::operator=(const Buffer &copy)
 {
-    setData(copy.data, copy.len);
+    setData(copy.m_data, copy.m_len);
     return *this;
 }
 
@@ -74,29 +74,30 @@ Buffer &Buffer::operator=(const std::vector<uint8_t> &copy)
 
 Buffer &Buffer::operator+=(const Buffer &copy)
 {
-    appendData(copy.data, copy.len);
+    appendData(copy.m_data, copy.m_len);
     return *this;
 }
 
 
 void Buffer::setLength(size_t len)
 {
-    if (len > size) {
-        void *tmp = data;
+    if (len > m_size) {
+        void *tmp = m_data;
 
         /* Align to 32-byte boundary for AVX. */
-        const int ret = posix_memalign(&data, 32, len);
+        const int ret = posix_memalign(&m_data, 32, len);
         if (ret != 0) {
-            throw std::runtime_error("memory allocation failed: " + std::to_string(ret));
+            throw std::runtime_error("memory allocation failed: " +
+                    std::to_string(ret));
         }
 
         if (tmp != NULL) {
-            memcpy(data, tmp, this->len);
+            memcpy(m_data, tmp, m_len);
             free(tmp);
         }
-        size = len;
+        m_size = len;
     }
-    this->len = len;
+    m_len = len;
 }
 
 
@@ -109,10 +110,10 @@ void Buffer::setData(const void *data, size_t len)
 
 void Buffer::appendData(const void *data, size_t len)
 {
-    size_t offset = this->len;
-    setLength(this->len + len);
+    size_t offset = m_len;
+    setLength(m_len + len);
     if (data != NULL) {
-        memcpy((char*)this->data + offset, data, len);
+        memcpy((char*)m_data + offset, data, len);
     }
 }
 
