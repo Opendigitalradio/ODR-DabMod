@@ -154,8 +154,7 @@ AS_IF([test "x$enable_debug" != "xno"],
                 )])
 
 # Checks for header files.
-AC_CHECK_HEADERS([fcntl.h limits.h malloc.h memory.h netinet/in.h stdint.h stdlib.h string.h sys/time.h sys/timeb.h unistd.h])
-AC_CHECK_DECLS([_mm_malloc], [], [], [#include <mm_malloc.h>])
+AC_CHECK_HEADERS([fcntl.h limits.h memory.h netinet/in.h stdint.h stdlib.h string.h sys/time.h sys/timeb.h unistd.h])
 AC_HEADER_STDC
 
 # Checks for typedefs, structures, and compiler characteristics.

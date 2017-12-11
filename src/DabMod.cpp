@@ -64,13 +64,6 @@
 #   include <netinet/in.h>
 #endif
 
-#if HAVE_DECL__MM_MALLOC
-#   include <mm_malloc.h>
-#else
-#   define memalign(a, b)   malloc(b)
-#endif
-
-
 /* UHD requires the input I and Q samples to be in the interval
  * [-1.0,1.0], otherwise they get truncated, which creates very
  * wide-spectrum spikes. Depending on the Transmission Mode, the

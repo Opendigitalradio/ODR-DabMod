@@ -29,7 +29,6 @@
 #include "FormatConverter.h"
 #include "PcDebug.h"
 
-#include <malloc.h>
 #include <sys/types.h>
 #include <string.h>
 #include <stdexcept>

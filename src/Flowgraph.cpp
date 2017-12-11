@@ -29,12 +29,6 @@
 #include <memory>
 #include <algorithm>
 #include <sstream>
-
-#if HAVE_DECL__MM_MALLOC
-#   include <mm_malloc.h>
-#else
-#   define memalign(a, b)   malloc(b)
-#endif
 #include <sys/types.h>
 #include <stdexcept>
 #include <assert.h>

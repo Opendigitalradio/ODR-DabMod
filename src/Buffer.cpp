@@ -30,13 +30,6 @@
 
 #include <stdlib.h>
 #include <string.h>
-#include <malloc.h>
-#if HAVE_DECL__MM_MALLOC
-#   include <mm_malloc.h>
-#else
-#   define memalign(a, b)   malloc(b)
-#endif
-
 
 
 Buffer::Buffer(size_t len, const void *data)
@@ -92,7 +85,10 @@ void Buffer::setLength(size_t len)
         void *tmp = data;
 
         /* Align to 32-byte boundary for AVX. */
-        data = memalign(32, len);
+        const int ret = posix_memalign(&data, 32, len);
+        if (ret != 0) {
+            throw std::runtime_error("memory allocation failed: " + std::to_string(ret));
+        }
 
         if (tmp != NULL) {
             memcpy(data, tmp, this->len);
