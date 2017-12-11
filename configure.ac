@@ -192,7 +192,7 @@ AS_IF([test "x$enable_native" = "xyes"],
       ])
 
 AC_TYPE_SIGNAL
-AC_CHECK_FUNCS([bzero floor ftime gettimeofday memset sqrt strchr strerror strtol])
+AC_CHECK_FUNCS([floor memset sqrt strchr strerror strtol])
 
 AC_CONFIG_FILES([Makefile])
 AC_OUTPUT

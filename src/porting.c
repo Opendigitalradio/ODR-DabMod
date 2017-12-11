@@ -21,19 +21,6 @@
 
 #include "porting.h"
 
-
-#ifndef HAVE_GETTIMEOFDAY
-#include <sys/timeb.h>
-int gettimeofday(struct timeval* t, void* timezone)
-{
-    struct timeb timebuffer;
-    ftime(&timebuffer);
-    t->tv_sec=timebuffer.time;
-    t->tv_usec=1000*timebuffer.millitm;
-    return 0;
-}
-#endif
-
 #ifdef _WIN32
 unsigned int _CRT_fmode = _O_BINARY;
 #endif
