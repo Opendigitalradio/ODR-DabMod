@@ -190,7 +190,7 @@ int OfdmGenerator::process(Buffer* const dataIn, Buffer* dataOut)
         myFftIn[0][0] = 0;
         myFftIn[0][1] = 0;
 
-        bzero(&myFftIn[myZeroDst], myZeroSize * sizeof(FFT_TYPE));
+        memset(&myFftIn[myZeroDst], 0, myZeroSize * sizeof(FFT_TYPE));
         memcpy(&myFftIn[myPosDst], &in[myPosSrc],
                 myPosSize * sizeof(FFT_TYPE));
         memcpy(&myFftIn[myNegDst], &in[myNegSrc],

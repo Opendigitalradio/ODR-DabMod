@@ -190,7 +190,7 @@ int TII::process(Buffer* dataIn, Buffer* dataOut)
     }
 
     dataOut->setLength(m_carriers * sizeof(complexf));
-    bzero(dataOut->getData(), dataOut->getLength());
+    memset(dataOut->getData(), 0,  dataOut->getLength());
 
     if (m_conf.enable and m_insert) {
         boost::mutex::scoped_lock lock(m_enabled_carriers_mutex);
