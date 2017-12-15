@@ -27,7 +27,9 @@
 
 #include "Utils.h"
 #include "GainControl.h"
-#include <sys/prctl.h>
+#if defined(HAVE_PRCTL)
+#  include <sys/prctl.h>
+#endif
 #include <pthread.h>
 
 static void printHeader()
@@ -160,7 +162,9 @@ int set_realtime_prio(int prio)
 
 void set_thread_name(const char *name)
 {
+#if defined(HAVE_PRCTL)
     prctl(PR_SET_NAME,name,0,0,0);
+#endif
 }
 
 double parseChannel(const std::string& chan)

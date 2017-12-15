@@ -173,6 +173,17 @@ AC_COMPILE_IFELSE(
         [AC_MSG_RESULT([yes])], [AC_MSG_RESULT([no]) AC_DEFINE([M_PIl], [M_PI], [Replacing define])])
 AC_LANG_POP([C++])
 
+# Linux has prctl to set thread names
+AC_MSG_CHECKING(for prctl and PR_SET_NAME)
+AC_COMPILE_IFELSE([ AC_LANG_PROGRAM([[
+                    #include <sys/prctl.h>
+                    void set_thread_name() {
+                        prctl(PR_SET_NAME,"test",0,0,0);
+                    }
+                    ]])],
+                   [ AC_MSG_RESULT(yes)
+                     AC_DEFINE(HAVE_PRCTL, 1, [Define this symbol if you have prctl and PR_SET_NAME]) ],
+                   [ AC_MSG_RESULT(no) ])
 
 # Check for march
 AS_IF([test "x$enable_native" = "xyes"],
