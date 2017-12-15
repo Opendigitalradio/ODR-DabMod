@@ -3,13 +3,13 @@ language: c++
 matrix:
   include:
     # Clang on OSX
-    - env: CC=clang CXX=clang++ CONF=
+    - env: MATRIX_EVAL="CC=clang CXX=clang++" CONF=
       os: osx
       osx_image: xcode9.1
       compiler: clang
 
     # GCC and clang builds on Linux
-    - env: CC=gcc-6 CXX=g++-6 CONF=--disable-zeromq --disable-output-uhd
+    - env: MATRIX_EVAL="CC=gcc-6 CXX=g++-6" CONF=--disable-zeromq --disable-output-uhd
       os: linux
       dist: trusty
       sudo: required
@@ -29,21 +29,20 @@ matrix:
             # libuhd-dev is not allowed
             - g++-6
 
-    - env: CC=gcc-6 CXX=g++-6 CONF=--disable-output-uhd --enable-output-raw
+    - env: MATRIX_EVAL="CC=gcc-6 CXX=g++-6" CONF=--disable-output-uhd --enable-output-raw
       compiler: gcc
       addons: *linuxaddons
 
-    - env: CC=gcc-6 CXX=g++-6 CONF=--disable-output-uhd --disable-native
+    - env: MATRIX_EVAL="CC=gcc-6 CXX=g++-6" CONF=--disable-output-uhd --disable-native
       compiler: gcc
       addons: *linuxaddons
 
-    - env: CC=clang-4.0 CXX=clang++-4.0 CONF=--disable-output-uhd
+    - env: MATRIX_EVAL="CC=clang-5.0 CXX=clang++-5.0" CONF=--disable-output-uhd
       compiler: clang
-      addons: &linuxclang40
+      addons: &linuxclang50
         apt:
           sources:
-            - ubuntu-toolchain-r-test
-            - llvm-toolchain-trusty-4.0
+            - llvm-toolchain-trusty-5.0
           packages:
             - libzmq3-dev
             - libzmq3
@@ -53,9 +52,10 @@ matrix:
             - libcurl4-openssl-dev
             - libfftw3-dev
             # libuhd-dev is not allowed
-            - clang-4.0
+            - clang-5.0
 
 before_install:
+  - eval "${MATRIX_EVAL}"
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew update ; fi
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install fftw boost zeromq automake curl uhd ; fi
 
