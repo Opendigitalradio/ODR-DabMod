@@ -53,8 +53,6 @@ private:
     unsigned char d_weight[256];
     // PRBS polynomial generator
     uint32_t d_polynomial;
-    // PRBS generator polarity mask
-    unsigned char d_polarity_mask;
     // PRBS accumulator
     uint32_t d_accum;
     uint32_t d_accum_init;
