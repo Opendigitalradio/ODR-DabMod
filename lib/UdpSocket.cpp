@@ -88,7 +88,7 @@ int UdpSocket::reinit(int port, const std::string& name)
         address.setAddress(name);
         address.setPort(port);
 
-        if (bind(listenSocket, address.getAddress(), sizeof(sockaddr_in)) == SOCKET_ERROR) {
+        if (::bind(listenSocket, address.getAddress(), sizeof(sockaddr_in)) == SOCKET_ERROR) {
             setInetError("Can't bind socket");
             ::close(listenSocket);
             listenSocket = INVALID_SOCKET;
