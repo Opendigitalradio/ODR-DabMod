@@ -107,7 +107,6 @@ private:
     eti_TIST eti_tist;
     TimestampDecoder myTimestampDecoder;
 
-    size_t myCurrentFrame;
     bool eti_fc_valid;
 
     std::vector<std::shared_ptr<SubchannelSource> > mySources;

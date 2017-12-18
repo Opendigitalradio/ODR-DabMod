@@ -58,7 +58,6 @@ EtiReader::EtiReader(
         unsigned tist_delay_stages) :
     state(EtiReaderStateSync),
     myTimestampDecoder(tist_offset_s, tist_delay_stages),
-    myCurrentFrame(0),
     eti_fc_valid(false)
 {
     rcs.enrol(&myTimestampDecoder);
