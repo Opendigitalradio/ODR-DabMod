@@ -21,15 +21,11 @@
 
 #include "GuardIntervalInserter.h"
 #include "PcDebug.h"
-
-
-#include <sys/types.h>
 #include <string.h>
 #include <stdexcept>
 #include <complex>
 
 typedef std::complex<float> complexf;
-
 
 GuardIntervalInserter::GuardIntervalInserter(size_t nbSymbols,
         size_t spacing,
@@ -43,19 +39,6 @@ GuardIntervalInserter::GuardIntervalInserter(size_t nbSymbols,
 {
     PDEBUG("GuardIntervalInserter::GuardIntervalInserter(%zu, %zu, %zu, %zu)"
            " @ %p\n", nbSymbols, spacing, nullSize, symSize, this);
-
-    if (d_nullSize) {
-        myHasNull = true;
-    } else {
-        myHasNull = false;
-    }
-}
-
-
-GuardIntervalInserter::~GuardIntervalInserter()
-{
-    PDEBUG("GuardIntervalInserter::~GuardIntervalInserter() @ %p\n", this);
-
 }
 
 
@@ -71,7 +54,7 @@ int GuardIntervalInserter::process(Buffer* const dataIn, Buffer* dataOut)
     complexf* out = reinterpret_cast<complexf*>(dataOut->getData());
     size_t sizeIn = dataIn->getLength() / sizeof(complexf);
 
-    if (sizeIn != (d_nbSymbols + (myHasNull ? 1 : 0)) * d_spacing) {
+    if (sizeIn != (d_nbSymbols + (d_nullSize ? 1 : 0)) * d_spacing) {
         PDEBUG("Nb symbols: %zu\n", d_nbSymbols);
         PDEBUG("Spacing: %zu\n", d_spacing);
         PDEBUG("Null size: %zu\n", d_nullSize);
@@ -81,8 +64,8 @@ int GuardIntervalInserter::process(Buffer* const dataIn, Buffer* dataOut)
                 "GuardIntervalInserter::process input size not valid!");
     }
 
-    // Null symbol
-    if (myHasNull) {
+    // Handle Null symbol separately because it is longer
+    if (d_nullSize) {
         // end - (nullSize - spacing) = 2 * spacing - nullSize
         memcpy(out, &in[2 * d_spacing - d_nullSize],
                 (d_nullSize - d_spacing) * sizeof(complexf));
@@ -90,9 +73,10 @@ int GuardIntervalInserter::process(Buffer* const dataIn, Buffer* dataOut)
         in += d_spacing;
         out += d_nullSize;
     }
+
     // Data symbols
     for (size_t i = 0; i < d_nbSymbols; ++i) {
-        // end - (nullSize - spacing) = 2 * spacing - nullSize
+        // end - (symSize - spacing) = 2 * spacing - symSize
         memcpy(out, &in[2 * d_spacing - d_symSize],
                 (d_symSize - d_spacing) * sizeof(complexf));
         memcpy(&out[d_symSize - d_spacing], in, d_spacing * sizeof(complexf));

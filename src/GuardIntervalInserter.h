@@ -25,20 +25,19 @@
 #   include <config.h>
 #endif
 
-
 #include "ModPlugin.h"
+#include <stdint.h>
 
-#include <sys/types.h>
-
-
+/* The GuardIntervalInserter prepends the cyclic prefix to all
+ * symbols in the transmission frame. */
 class GuardIntervalInserter : public ModCodec
 {
 public:
-    GuardIntervalInserter(size_t nbSymbols, size_t spacing, size_t nullSize, size_t symSize);
-    virtual ~GuardIntervalInserter();
-    GuardIntervalInserter(const GuardIntervalInserter&);
-    GuardIntervalInserter& operator=(const GuardIntervalInserter&);
-
+    GuardIntervalInserter(
+            size_t nbSymbols,
+            size_t spacing,
+            size_t nullSize,
+            size_t symSize);
 
     int process(Buffer* const dataIn, Buffer* dataOut);
     const char* name() { return "GuardIntervalInserter"; }
@@ -48,6 +47,5 @@ protected:
     size_t d_spacing;
     size_t d_nullSize;
     size_t d_symSize;
-    bool myHasNull;
 };
 
