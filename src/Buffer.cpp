@@ -3,7 +3,7 @@
    Her Majesty the Queen in Right of Canada (Communications Research
    Center Canada)
 
-   Copyright (C) 2016
+   Copyright (C) 2017
    Matthias P. Braendli, matthias.braendli@mpb.li
 
     http://opendigitalradio.org
@@ -37,9 +37,25 @@ Buffer::Buffer(size_t len, const void *data)
     PDEBUG("Buffer::Buffer(%zu, %p)\n", len, data);
 
     m_len = 0;
-    m_size = 0;
-    m_data = NULL;
+    m_capacity = 0;
+    m_data = nullptr;
     setData(data, len);
+}
+
+Buffer::Buffer(const Buffer& other)
+{
+    setData(other.m_data, other.m_len);
+}
+
+Buffer::Buffer(Buffer&& other)
+{
+    m_len = other.m_len;
+    m_capacity = other.m_capacity;
+    m_data = other.m_data;
+
+    other.m_len = 0;
+    other.m_capacity = 0;
+    other.m_data = nullptr;
 }
 
 Buffer::Buffer(const std::vector<uint8_t> &vec)
@@ -47,8 +63,8 @@ Buffer::Buffer(const std::vector<uint8_t> &vec)
     PDEBUG("Buffer::Buffer(vector [%zu])\n", vec.size());
 
     m_len = 0;
-    m_size = 0;
-    m_data = NULL;
+    m_capacity = 0;
+    m_data = nullptr;
     setData(vec.data(), vec.size());
 }
 
@@ -56,13 +72,28 @@ Buffer::Buffer(const std::vector<uint8_t> &vec)
 Buffer::~Buffer()
 {
     PDEBUG("Buffer::~Buffer() len=%zu, data=%p\n", m_len, m_data);
-    free(m_data);
+    if (m_data) {
+        free(m_data);
+    }
 }
 
 
 Buffer &Buffer::operator=(const Buffer &copy)
 {
     setData(copy.m_data, copy.m_len);
+    return *this;
+}
+
+Buffer& Buffer::operator=(Buffer&& other)
+{
+    m_len = other.m_len;
+    m_capacity = other.m_capacity;
+    m_data = other.m_data;
+
+    other.m_len = 0;
+    other.m_capacity = 0;
+    other.m_data = nullptr;
+
     return *this;
 }
 
@@ -81,7 +112,7 @@ Buffer &Buffer::operator+=(const Buffer &copy)
 
 void Buffer::setLength(size_t len)
 {
-    if (len > m_size) {
+    if (len > m_capacity) {
         void *tmp = m_data;
 
         /* Align to 32-byte boundary for AVX. */
@@ -91,11 +122,11 @@ void Buffer::setLength(size_t len)
                     std::to_string(ret));
         }
 
-        if (tmp != NULL) {
+        if (tmp != nullptr) {
             memcpy(m_data, tmp, m_len);
             free(tmp);
         }
-        m_size = len;
+        m_capacity = len;
     }
     m_len = len;
 }
@@ -112,7 +143,7 @@ void Buffer::appendData(const void *data, size_t len)
 {
     size_t offset = m_len;
     setLength(m_len + len);
-    if (data != NULL) {
+    if (data != nullptr) {
         memcpy((char*)m_data + offset, data, len);
     }
 }
