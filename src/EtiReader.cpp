@@ -207,8 +207,8 @@ int EtiReader::loadEtiData(const Buffer& dataIn)
                 if (input_size < 128) {
                     return dataIn.getLength() - input_size;
                 }
-                PDEBUG("Writting 128 bytes of FIC channel data\n");
-                Buffer fic = Buffer(128, in);
+                PDEBUG("Writing 128 bytes of FIC channel data\n");
+                Buffer fic(128, in);
                 myFicSource->loadFicData(fic);
                 input_size -= 128;
                 framesize -= 128;
@@ -217,8 +217,8 @@ int EtiReader::loadEtiData(const Buffer& dataIn)
                 if (input_size < 96) {
                     return dataIn.getLength() - input_size;
                 }
-                PDEBUG("Writting 96 bytes of FIC channel data\n");
-                Buffer fic = Buffer(96, in);
+                PDEBUG("Writing 96 bytes of FIC channel data\n");
+                Buffer fic(96, in);
                 myFicSource->loadFicData(fic);
                 input_size -= 96;
                 framesize -= 96;
@@ -230,7 +230,7 @@ int EtiReader::loadEtiData(const Buffer& dataIn)
             for (size_t i = 0; i < eti_stc.size(); ++i) {
                 unsigned size = mySources[i]->framesize();
                 PDEBUG("Writting %i bytes of subchannel data\n", size);
-                Buffer subch = Buffer(size, in);
+                Buffer subch(size, in);
                 mySources[i]->loadSubchannelData(subch);
                 input_size -= size;
                 framesize -= size;
