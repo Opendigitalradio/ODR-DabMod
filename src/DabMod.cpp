@@ -199,6 +199,10 @@ static shared_ptr<ModOutput> prepare_output(
 
             output = make_shared<OutputFile>(s.outputName);
         }
+        else {
+            throw runtime_error("File output format " + s.fileOutputFormat +
+                    " not known");
+        }
     }
 #if defined(HAVE_OUTPUT_UHD)
     else if (s.useUHDOutput) {
