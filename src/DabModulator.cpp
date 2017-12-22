@@ -202,6 +202,7 @@ int DabModulator::process(Buffer* dataOut)
 
         auto cifGuard = make_shared<GuardIntervalInserter>(
                 myNbSymbols, mySpacing, myNullSize, mySymSize);
+        rcs.enrol(cifGuard.get());
 
         shared_ptr<FIRFilter> cifFilter;
         if (not m_settings.filterTapsFilename.empty()) {
