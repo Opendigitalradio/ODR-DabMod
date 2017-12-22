@@ -63,7 +63,7 @@ GainControl::GainControl(size_t framesize,
     m_gainmode(gainMode),
     m_mutex()
 {
-    PDEBUG("GainControl::GainControl(%zu, %zu) @ %p\n", framesize, (size_t)m_gainMode, this);
+    PDEBUG("GainControl::GainControl(%zu, %zu) @ %p\n", framesize, (size_t)m_gainmode, this);
 
     /* register the parameters that can be remote controlled */
     RC_ADD_PARAMETER(digital, "Digital Gain");

@@ -119,7 +119,7 @@ void FIRFilter::load_filter_taps(const std::string &tapsFile)
         int n;
         for (n = 0; n < n_taps; n++) {
             taps_fstream >> filter_taps[n];
-            PDEBUG("FIRFilter: tap: %f\n",  filter_taps[n] );
+            PDEBUG("FIRFilter: tap: %f\n",  (double)filter_taps[n] );
             if (taps_fstream.eof()) {
                 fprintf(stderr, "FIRFilter: file %s should contains %d taps, but EOF reached "\
                         "after %d taps !\n", tapsFile.c_str(), n_taps, n);

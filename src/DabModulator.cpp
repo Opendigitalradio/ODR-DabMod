@@ -62,8 +62,7 @@ DabModulator::DabModulator(EtiSource& etiSource,
     myEtiSource(etiSource),
     myFlowgraph()
 {
-    PDEBUG("DabModulator::DabModulator(%u, %u, %u, %zu) @ %p\n",
-            outputRate, clockRate, dabMode, (size_t)gainMode, this);
+    PDEBUG("DabModulator::DabModulator() @ %p\n", this);
 
     if (m_settings.dabMode == 0) {
         setMode(2);
