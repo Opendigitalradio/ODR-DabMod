@@ -42,7 +42,7 @@
  * that length, enlarge the cyclic prefix too, and make symbols
  * overlap using a raised cosine window.
  * */
-class GuardIntervalInserter : public ModCodec , public RemoteControllable
+class GuardIntervalInserter : public ModCodec, public RemoteControllable
 {
     public:
         GuardIntervalInserter(
