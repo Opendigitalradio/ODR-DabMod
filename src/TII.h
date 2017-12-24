@@ -122,6 +122,9 @@ class TII : public ModCodec, public RemoteControllable
         // m_enabled_carriers is read by modulator thread, and written
         // to by RC thread.
         mutable boost::mutex m_enabled_carriers_mutex;
+
+        // m_enabled_carriers is true only for the first carrier in the
+        // active pair
         std::vector<bool> m_enabled_carriers;
 };
 
