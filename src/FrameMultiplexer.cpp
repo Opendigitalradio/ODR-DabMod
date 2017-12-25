@@ -74,7 +74,7 @@ int FrameMultiplexer::process(std::vector<Buffer*> dataIn, Buffer* dataOut)
     // Write subchannel
     const auto subchannels = m_etiSource.getSubchannels();
     if (subchannels.size() != dataIn.size() - 1) {
-        throw std::out_of_range(
+        throw FrameMultiplexerError(
                 "FrameMultiplexer detected subchannel size change from " +
                 std::to_string(dataIn.size() - 1) + " to " +
                 std::to_string(subchannels.size()));
@@ -82,7 +82,7 @@ int FrameMultiplexer::process(std::vector<Buffer*> dataIn, Buffer* dataOut)
     auto subchannel = subchannels.begin();
     while (in != dataIn.end()) {
         if ((*subchannel)->framesizeCu() * 8 != (*in)->getLength()) {
-            throw std::out_of_range(
+            throw FrameMultiplexerError(
                     "FrameMultiplexer detected invalid subchannel size! " +
                     std::to_string((*subchannel)->framesizeCu() * 8) + " != " +
                     std::to_string((*in)->getLength()));

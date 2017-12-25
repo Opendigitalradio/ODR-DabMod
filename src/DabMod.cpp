@@ -36,6 +36,7 @@
 #include "InputMemory.h"
 #include "OutputFile.h"
 #include "FormatConverter.h"
+#include "FrameMultiplexer.h"
 #if defined(HAVE_OUTPUT_UHD)
 #   include "OutputUHD.h"
 #endif
@@ -534,17 +535,19 @@ run_modulator_state_t run_modulator(modulator_data& m)
             running = 0;
             ret = run_modulator_state_t::normal_end;
         }
-    } catch (zmq_input_overflow& e) {
+    }
+    catch (const zmq_input_overflow& e) {
         // The ZeroMQ input has overflowed its buffer
         etiLog.level(warn) << e.what();
         ret = run_modulator_state_t::again;
-    } catch (std::out_of_range& e) {
-        // One of the DSP blocks has detected an invalid change
-        // or value in some settings. This can be due to a multiplex
-        // reconfiguration.
+    }
+    catch (const FrameMultiplexerError& e) {
+        // The FrameMultiplexer saw an error or a change in the size of a
+        // subchannel. This can be due to a multiplex reconfiguration.
         etiLog.level(warn) << e.what();
         ret = run_modulator_state_t::reconfigure;
-    } catch (std::exception& e) {
+    }
+    catch (const std::exception& e) {
         etiLog.level(error) << "Exception caught: " << e.what();
         ret = run_modulator_state_t::failure;
     }

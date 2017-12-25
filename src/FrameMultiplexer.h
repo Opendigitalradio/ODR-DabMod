@@ -38,12 +38,18 @@
 
 #include <sys/types.h>
 
+class FrameMultiplexerError : public std::runtime_error {
+    public:
+        FrameMultiplexerError(const char* msg) :
+            std::runtime_error(msg) {}
+        FrameMultiplexerError(const std::string& msg) :
+            std::runtime_error(msg) {}
+};
 
 class FrameMultiplexer : public ModMux
 {
 public:
-    FrameMultiplexer(
-            const EtiSource& etiSource);
+    FrameMultiplexer(const EtiSource& etiSource);
 
     int process(std::vector<Buffer*> dataIn, Buffer* dataOut);
     const char* name() { return "FrameMultiplexer"; }
