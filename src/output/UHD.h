@@ -107,8 +107,6 @@ class UHD : public Output::SDRDevice
         size_t num_underflows_previous = 0;
         size_t num_late_packets_previous = 0;
 
-        uhd::tx_metadata_t md;
-
         // Used to print statistics once a second
         std::chrono::steady_clock::time_point last_print_time;
 

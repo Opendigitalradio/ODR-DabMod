@@ -260,12 +260,23 @@ void UHD::transmit_frame(const struct FrameData& frame)
     const size_t sizeIn = frame.buf.size() / sizeof(complexf);
     const complexf* in_data = reinterpret_cast<const complexf*>(&frame.buf[0]);
 
+    uhd::tx_metadata_t md_tx;
+
+    // TODO check for enableSync?
+    if (frame.ts.timestamp_valid) {
+        uhd::time_spec_t timespec(frame.ts.timestamp_sec, frame.ts.pps_offset());
+        md_tx.time_spec = timespec;
+        md_tx.has_time_spec = true;
+    }
+    else {
+        md_tx.has_time_spec = false;
+    }
+
+
     size_t usrp_max_num_samps = m_tx_stream->get_max_num_samps();
     size_t num_acc_samps = 0; //number of accumulated samples
     while (m_running.load() and (not m_conf.muting) and (num_acc_samps < sizeIn)) {
         size_t samps_to_send = std::min(sizeIn - num_acc_samps, usrp_max_num_samps);
-
-        uhd::tx_metadata_t md_tx = md;
 
         // ensure the the last packet has EOB set if the timestamps has been
         // refreshed and need to be reconsidered.
@@ -282,7 +293,7 @@ void UHD::transmit_frame(const struct FrameData& frame)
 
         num_acc_samps += num_tx_samps;
 
-        md_tx.time_spec = md.time_spec +
+        md_tx.time_spec = md_tx.time_spec +
             uhd::time_spec_t(0, num_tx_samps/m_conf.sampleRate);
 
         if (num_tx_samps == 0) {
@@ -334,14 +345,14 @@ size_t UHD::receive_frame(
 
     m_rx_stream->issue_stream_cmd(cmd);
 
-    uhd::rx_metadata_t md;
+    uhd::rx_metadata_t md_rx;
 
     constexpr double timeout = 60;
-    size_t samples_read = m_rx_stream->recv(buf, num_samples, md, timeout);
+    size_t samples_read = m_rx_stream->recv(buf, num_samples, md_rx, timeout);
 
     // Update the ts with the effective receive TS
-    ts.timestamp_sec = md.time_spec.get_full_secs();
-    ts.timestamp_pps = md.time_spec.get_frac_secs() * 16384000.0;
+    ts.timestamp_sec = md_rx.time_spec.get_full_secs();
+    ts.timestamp_pps = md_rx.time_spec.get_frac_secs() * 16384000.0;
     return samples_read;
 }
 
@@ -442,7 +453,7 @@ void UHD::print_async_thread()
                 etiLog.level(alert) <<
                     "Received Async UHD Message '" <<
                     uhd_async_message << "' at time " <<
-                    md.time_spec.get_real_secs();
+                    async_md.time_spec.get_real_secs();
             }
         }
 

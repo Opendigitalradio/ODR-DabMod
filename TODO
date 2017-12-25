@@ -23,6 +23,7 @@ Clean up and separate GPS and refclk checks.
  * handle SoapySDR time
  * Add refclk stuff and timestamps to Soapy.
  * Ensure muting is set properly at startup.
+ * Ensure synchronous is taken in account.
 
 Add antenna selection to config.
 

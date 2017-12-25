@@ -382,10 +382,10 @@ void SDR::set_parameter(const string& parameter, const string& value)
         throw ParameterError("Parameter " + parameter + " is read-only.");
     }
     else {
-        stringstream ss;
-        ss << "Parameter '" << parameter
+        stringstream ss_err;
+        ss_err << "Parameter '" << parameter
             << "' is not exported by controllable " << get_rc_name();
-        throw ParameterError(ss.str());
+        throw ParameterError(ss_err.str());
     }
 }
 
