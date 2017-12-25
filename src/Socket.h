@@ -52,8 +52,8 @@ class TCPSocket {
 
 #if defined(HAVE_SO_NOSIGPIPE)
             int val = 1;
-            if (setsockopt(m_sock, SOL_SOCKET, SO_NOSIGPIPE, &val, sizeof(val))
-                    == SOCKET_ERROR) {
+            if (setsockopt(m_sock, SOL_SOCKET, SO_NOSIGPIPE,
+                        &val, sizeof(val)) < 0) {
                 throw std::runtime_error("Can't set SO_NOSIGPIPE");
             }
 #endif
@@ -97,7 +97,8 @@ class TCPSocket {
             addr.sin_addr.s_addr = htonl(INADDR_ANY);
 
             const int reuse = 1;
-            if (setsockopt(m_sock, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(reuse)) < 0) {
+            if (setsockopt(m_sock, SOL_SOCKET, SO_REUSEADDR,
+                        &reuse, sizeof(reuse)) < 0) {
                 throw std::runtime_error("Can't reuse address for TCP socket");
             }
 
