@@ -79,6 +79,9 @@ struct mod_settings_t {
     float cfrClip = 1.0f;
     float cfrErrorClip = 1.0f;
 
+    // Settings for the OFDM windowing
+    unsigned ofdmWindowOverlap = 0;
+
 #if defined(HAVE_OUTPUT_UHD) || defined(HAVE_SOAPYSDR)
     Output::SDRDeviceConfig sdr_device_config;
 #endif

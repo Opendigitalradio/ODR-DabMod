@@ -80,13 +80,13 @@ AC_ARG_ENABLE([output_uhd],
         [], [enable_output_uhd=yes])
 
 AC_LANG_PUSH([C++])
-AX_CHECK_COMPILE_FLAG([-Wduplicated-cond], [CFLAGS="$CFLAGS -Wduplicated-cond"])
-AX_CHECK_COMPILE_FLAG([-Wduplicated-branches], [CFLAGS="$CFLAGS -Wduplicated-branches"])
-AX_CHECK_COMPILE_FLAG([-Wlogical-op], [CFLAGS="$CFLAGS -Wlogical-op"])
-AX_CHECK_COMPILE_FLAG([-Wrestrict], [CFLAGS="$CFLAGS -Wrestrict"])
-AX_CHECK_COMPILE_FLAG([-Wshadow], [CFLAGS="$CFLAGS -Wshadow"])
-AX_CHECK_COMPILE_FLAG([-Wdouble-promotion], [CXXFLAGS="$CXXFLAGS -Wdouble-promotion"])
-AX_CHECK_COMPILE_FLAG(["-Wformat=2"], [CFLAGS="$CFLAGS -Wformat=2"])
+AX_CHECK_COMPILE_FLAG([-Wduplicated-cond], [CXXFLAGS="$CXXFLAGS -Wduplicated-cond"], [], ["-Werror"])
+AX_CHECK_COMPILE_FLAG([-Wduplicated-branches], [CXXFLAGS="$CXXFLAGS -Wduplicated-branches"], [], ["-Werror"])
+AX_CHECK_COMPILE_FLAG([-Wlogical-op], [CXXFLAGS="$CXXFLAGS -Wlogical-op"], [], ["-Werror"])
+AX_CHECK_COMPILE_FLAG([-Wrestrict], [CXXFLAGS="$CXXFLAGS -Wrestrict"], [], ["-Werror"])
+AX_CHECK_COMPILE_FLAG([-Wshadow], [CXXFLAGS="$CXXFLAGS -Wshadow"], [], ["-Werror"])
+AX_CHECK_COMPILE_FLAG([-Wdouble-promotion], [CXXFLAGS="$CXXFLAGS -Wdouble-promotion"], [], ["-Werror"])
+AX_CHECK_COMPILE_FLAG(["-Wformat=2"], [CXXFLAGS="$CXXFLAGS -Wformat=2"], [], ["-Werror"])
 AC_LANG_POP([C++])
 
 
@@ -128,8 +128,9 @@ AC_SUBST([LIBS], ["$FFTW_LIBS $SOAPYSDR_LIBS $PTHREAD_LIBS $ZMQ_LIBS"])
 
 # Checks for UHD.
 AS_IF([test "x$enable_output_uhd" = "xyes"],
-      [AC_CHECK_LIB([uhd], [main], [],
-                   [AC_MSG_ERROR([library uhd is missing])] )])
+      [ AC_CHECK_LIB([uhd], [main], [], [AC_MSG_ERROR([library uhd is missing])])
+        AC_CHECK_LIB([rt], [clock_gettime], [], [AC_MSG_ERROR([library rt is missing])])
+      ])
 
 AS_IF([test "x$enable_output_uhd" = "xyes"],
       [AC_DEFINE(HAVE_OUTPUT_UHD, [1], [Define if UHD output is enabled])])
@@ -138,10 +139,8 @@ AS_IF([test "x$enable_soapysdr" = "xyes"],
       [AC_DEFINE(HAVE_SOAPYSDR, [1], [Define if SoapySDR output is enabled])])
 
 AX_BOOST_BASE([1.54.0], [], AC_MSG_ERROR([BOOST 1.54 or later is required]))
-AC_CHECK_LIB([boost_system], [main], [], [AC_MSG_ERROR([library boost_system is missing])])
-AC_CHECK_LIB([boost_thread], [main], [], [AC_MSG_ERROR([library boost_thread is missing])])
-
-AC_CHECK_LIB([rt], [clock_gettime], [], [AC_MSG_ERROR([library rt is missing])])
+AX_BOOST_SYSTEM
+AX_BOOST_THREAD
 
 # Tests for different memory allocation debuggers.
 # Valgrind doesn't need any.
@@ -154,8 +153,7 @@ AS_IF([test "x$enable_debug" != "xno"],
                 )])
 
 # Checks for header files.
-AC_CHECK_HEADERS([fcntl.h limits.h malloc.h memory.h netinet/in.h stdint.h stdlib.h string.h sys/time.h sys/timeb.h unistd.h])
-AC_CHECK_DECLS([_mm_malloc], [], [], [#include <mm_malloc.h>])
+AC_CHECK_HEADERS([fcntl.h limits.h memory.h netinet/in.h stdint.h stdlib.h string.h sys/time.h sys/timeb.h unistd.h])
 AC_HEADER_STDC
 
 # Checks for typedefs, structures, and compiler characteristics.
@@ -175,6 +173,17 @@ AC_COMPILE_IFELSE(
         [AC_MSG_RESULT([yes])], [AC_MSG_RESULT([no]) AC_DEFINE([M_PIl], [M_PI], [Replacing define])])
 AC_LANG_POP([C++])
 
+# Linux has prctl to set thread names
+AC_MSG_CHECKING(for prctl and PR_SET_NAME)
+AC_COMPILE_IFELSE([ AC_LANG_PROGRAM([[
+                    #include <sys/prctl.h>
+                    void set_thread_name() {
+                        prctl(PR_SET_NAME,"test",0,0,0);
+                    }
+                    ]])],
+                   [ AC_MSG_RESULT(yes)
+                     AC_DEFINE(HAVE_PRCTL, 1, [Define this symbol if you have prctl and PR_SET_NAME]) ],
+                   [ AC_MSG_RESULT(no) ])
 
 # Check for march
 AS_IF([test "x$enable_native" = "xyes"],
@@ -194,7 +203,7 @@ AS_IF([test "x$enable_native" = "xyes"],
       ])
 
 AC_TYPE_SIGNAL
-AC_CHECK_FUNCS([bzero floor ftime gettimeofday memset sqrt strchr strerror strtol])
+AC_CHECK_FUNCS([floor memset sqrt strchr strerror strtol])
 
 AC_CONFIG_FILES([Makefile])
 AC_OUTPUT

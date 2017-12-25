@@ -190,16 +190,12 @@ int TII::process(Buffer* dataIn, Buffer* dataOut)
     }
 
     dataOut->setLength(m_carriers * sizeof(complexf));
-    bzero(dataOut->getData(), dataOut->getLength());
+    memset(dataOut->getData(), 0,  dataOut->getLength());
 
     if (m_conf.enable and m_insert) {
         boost::mutex::scoped_lock lock(m_enabled_carriers_mutex);
         complexf* in = reinterpret_cast<complexf*>(dataIn->getData());
         complexf* out = reinterpret_cast<complexf*>(dataOut->getData());
-
-        if ((m_enabled_carriers.size() % 2) != 0) {
-            throw std::logic_error("odd number of enabled carriers");
-        }
 
         /* Normalise the TII carrier power according to ETSI TR 101 496-3
          * Clause 5.4.2.2 Paragraph 7:
@@ -213,13 +209,10 @@ int TII::process(Buffer* dataIn, Buffer* dataOut)
          */
         const float normalise_factor = 0.14433756729740644112f; // = 1/sqrt(48)
 
-        for (size_t i = 0; i < m_enabled_carriers.size(); i+=2) {
+        for (size_t i = 0; i < m_enabled_carriers.size(); i++) {
             // See header file for an explanation of the old variant
             if (m_enabled_carriers[i]) {
                 out[i] = normalise_factor * (m_conf.old_variant ? in[i+1] : in[i]);
-            }
-
-            if (m_enabled_carriers[i+1]) {
                 out[i+1] = normalise_factor * in[i+1];
             }
         }
@@ -239,10 +232,6 @@ void TII::enable_carrier(int k) {
     }
 
     m_enabled_carriers[ix] = true;
-    // NULL frequency is never enabled.
-    if (ix > 1 and (ix-1 != 768)) {
-        m_enabled_carriers[ix-1] = true;
-    }
 }
 
 void TII::prepare_pattern() {
@@ -287,7 +276,7 @@ void TII::prepare_pattern() {
             }
         }
 
-        for (int k = 384; k <= 768; k++) {
+        for (int k = 385; k <= 768; k++) {
             for (int b = 0; b < 8; b++) {
                 if (    k == 385 + 2 * comb + 48 * b and
                         pattern_tm1_2_4[m_conf.pattern][b]) {
@@ -350,10 +339,10 @@ void TII::set_parameter(const std::string& parameter, const std::string& value)
         ss >> m_conf.old_variant;
     }
     else {
-        stringstream ss;
-        ss << "Parameter '" << parameter <<
+        stringstream ss_err;
+        ss_err << "Parameter '" << parameter <<
             "' is not exported by controllable " << get_rc_name();
-        throw ParameterError(ss.str());
+        throw ParameterError(ss_err.str());
     }
 }
 

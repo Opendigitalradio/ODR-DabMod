@@ -28,6 +28,7 @@
 #include "PcDebug.h"
 
 #include <stdexcept>
+#include <string>
 #include <sys/types.h>
 #include <stdlib.h>
 #include <string.h>

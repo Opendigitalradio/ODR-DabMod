@@ -19,23 +19,10 @@
    along with ODR-DabMod.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef PORTING_H
-#define PORTING_H
+#pragma once
 
 #ifdef HAVE_CONFIG_H
 #   include <config.h>
-#endif
-
-#ifndef HAVE_BZERO
-#   define bzero(s, n) memset(s, 0, n)
-#endif
-
-#ifndef HAVE_GETTIMEOFDAY
-#include <sys/time.h>
-#ifdef __cplusplus
-extern "C"
-#endif
-int gettimeofday(struct timeval* t, void* timezone);
 #endif
 
 #ifdef _WIN32
@@ -45,8 +32,3 @@ int gettimeofday(struct timeval* t, void* timezone);
 extern unsigned int _CRT_fmode;
 #endif
 
-#ifndef HAVE_KILL
-#   define kill(a, b) raise(b)
-#endif
-
-#endif // PORTING_H

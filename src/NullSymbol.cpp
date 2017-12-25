@@ -53,7 +53,7 @@ int NullSymbol::process(Buffer* dataOut)
     PDEBUG("NullSymbol::process(dataOut: %p)\n", dataOut);
 
     dataOut->setLength(myNbCarriers * 2 * sizeof(float));
-    bzero(dataOut->getData(), dataOut->getLength());
+    memset(dataOut->getData(), 0, dataOut->getLength());
 
     return dataOut->getLength();
 }

@@ -1,6 +1,11 @@
 /*
    Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010, 2011 Her Majesty
    the Queen in Right of Canada (Communications Research Center Canada)
+
+   Copyright (C) 2017
+   Matthias P. Braendli, matthias.braendli@mpb.li
+
+    http://opendigitalradio.org
  */
 /*
    This file is part of ODR-DabMod.
@@ -25,29 +30,48 @@
 #   include <config.h>
 #endif
 
-
 #include "ModPlugin.h"
+#include "RemoteControl.h"
+#include <stdint.h>
+#include <vector>
 
-#include <sys/types.h>
-
-
-class GuardIntervalInserter : public ModCodec
+/* The GuardIntervalInserter prepends the cyclic prefix to all
+ * symbols in the transmission frame.
+ *
+ * If windowOverlap is non-zero, it will also add a cyclic suffix of
+ * that length, enlarge the cyclic prefix too, and make symbols
+ * overlap using a raised cosine window.
+ * */
+class GuardIntervalInserter : public ModCodec, public RemoteControllable
 {
-public:
-    GuardIntervalInserter(size_t nbSymbols, size_t spacing, size_t nullSize, size_t symSize);
-    virtual ~GuardIntervalInserter();
-    GuardIntervalInserter(const GuardIntervalInserter&);
-    GuardIntervalInserter& operator=(const GuardIntervalInserter&);
+    public:
+        GuardIntervalInserter(
+                size_t nbSymbols,
+                size_t spacing,
+                size_t nullSize,
+                size_t symSize,
+                size_t windowOverlap = 0);
 
+        int process(Buffer* const dataIn, Buffer* dataOut);
+        const char* name() { return "GuardIntervalInserter"; }
 
-    int process(Buffer* const dataIn, Buffer* dataOut);
-    const char* name() { return "GuardIntervalInserter"; }
+        /******* REMOTE CONTROL ********/
+        virtual void set_parameter(const std::string& parameter,
+                const std::string& value);
 
-protected:
-    size_t d_nbSymbols;
-    size_t d_spacing;
-    size_t d_nullSize;
-    size_t d_symSize;
-    bool myHasNull;
+        virtual const std::string get_parameter(
+                const std::string& parameter) const;
+
+    protected:
+        void update_window(size_t new_window_overlap);
+
+        size_t d_nbSymbols;
+        size_t d_spacing;
+        size_t d_nullSize;
+        size_t d_symSize;
+
+        mutable std::mutex d_windowMutex;
+        size_t d_windowOverlap;
+        std::vector<float> d_window;
 };
 

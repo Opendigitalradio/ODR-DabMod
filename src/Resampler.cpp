@@ -27,10 +27,11 @@
 #include "Resampler.h"
 #include "PcDebug.h"
 
-#include <malloc.h>
+#include <string>
+#include <stdexcept>
+#include <stdlib.h>
 #include <sys/types.h>
 #include <string.h>
-#include <stdexcept>
 #include <assert.h>
 
 #define FFT_REAL(x) x[0]
@@ -81,7 +82,10 @@ Resampler::Resampler(size_t inputRate, size_t outputRate, size_t resolution) :
         myFactor = 1.0f / myFftSizeOut * outputRate / inputRate;
     }
 
-    myWindow = (float*)memalign(16, myFftSizeIn * sizeof(float));
+    const int ret = posix_memalign((void**)(&myWindow), 16, myFftSizeIn * sizeof(float));
+    if (ret != 0) {
+        throw std::runtime_error("memory allocation failed: " + std::to_string(ret));
+    }
     for (size_t i = 0; i < myFftSizeIn; ++i) {
         myWindow[i] = (float)(0.5 * (1.0 - cos(2.0 * M_PI * i / (myFftSizeIn - 1))));
         PDEBUG("Window[%zu] = %f\n", i, myWindow[i]);

@@ -51,7 +51,7 @@ class GainControl : public PipelinedModCodec, public RemoteControllable
 {
     public:
         GainControl(size_t framesize,
-                    GainMode mode,
+                    GainMode gainMode,
                     float digGain,
                     float normalise,
                     float varVariance);

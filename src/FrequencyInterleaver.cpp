@@ -24,7 +24,8 @@
 
 #include <stdio.h>
 #include <stdexcept>
-#include <malloc.h>
+#include <string>
+#include <stdlib.h>
 #include <complex>
 
 typedef std::complex<float> complexf;
@@ -68,7 +69,11 @@ FrequencyInterleaver::FrequencyInterleaver(size_t mode) :
         break;
     }
 
-    d_indexes = (size_t*)memalign(16, d_carriers * sizeof(size_t));
+    const int ret = posix_memalign((void**)(&d_indexes), 16, d_carriers * sizeof(size_t));
+    if (ret != 0) {
+        throw std::runtime_error("memory allocation failed: " + std::to_string(ret));
+    }
+
     size_t* index = d_indexes;
     size_t perm = 0;
     PDEBUG("i: %4u, R: %4u\n", 0, 0);

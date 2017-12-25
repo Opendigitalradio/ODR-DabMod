@@ -22,9 +22,10 @@
 #include "PrbsGenerator.h"
 #include "PcDebug.h"
 
+#include <stdexcept>
+#include <string>
 #include <stdio.h>
 #include <stdlib.h>
-#include <stdexcept>
 
 
 PrbsGenerator::PrbsGenerator(size_t framesize, uint32_t polynomial,
@@ -178,8 +179,8 @@ int PrbsGenerator::process(
             throw std::runtime_error("PrbsGenerator::process "
                     "input size is not equal to output size!\n");
         }
-        for (size_t i = 0; i < dataOut[0]->getLength(); ++i) {
-            out[i] ^= in[i];
+        for (size_t j = 0; j < dataOut[0]->getLength(); ++j) {
+            out[j] ^= in[j];
         }
     }
 

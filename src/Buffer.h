@@ -3,7 +3,7 @@
    Her Majesty the Queen in Right of Canada (Communications Research
    Center Canada)
 
-   Copyright (C) 2016
+   Copyright (C) 2017
    Matthias P. Braendli, matthias.braendli@mpb.li
 
     http://opendigitalradio.org
@@ -41,24 +41,13 @@
  * The allocation/freeing of the data is handled internally.
  */
 class Buffer {
-    protected:
-        /* Current length of the data in the Buffer */
-        size_t len;
-
-        /* Allocated size of the Buffer */
-        size_t size;
-
-        /* Pointer to the data. Memory allocation is entirely
-         * handled by setLength.
-         */
-        void *data;
-
     public:
         using sptr = std::shared_ptr<Buffer>;
 
-        Buffer(const Buffer& copy) = default;
-        Buffer(const std::vector<uint8_t> &vec);
-        Buffer(size_t len = 0, const void *data = NULL);
+        Buffer(size_t len = 0, const void *data = nullptr);
+        Buffer(const Buffer& copy);
+        Buffer(Buffer&& other);
+        Buffer(const std::vector<uint8_t>& vec);
         ~Buffer();
 
         /* Resize the buffer, reallocate memory if needed */
@@ -68,16 +57,29 @@ class Buffer {
          * Reallocates memory if needed.
          */
         void setData(const void *data, size_t len);
-        Buffer &operator=(const Buffer &copy);
-        Buffer &operator=(const std::vector<uint8_t> &copy);
+        Buffer& operator=(const Buffer& copy);
+        Buffer& operator=(Buffer&& other);
+        Buffer& operator=(const std::vector<uint8_t>& copy);
 
         /* Concatenate the current data with the new data given.
          * Reallocates memory if needed.
          */
         void appendData(const void *data, size_t len);
-        Buffer &operator+=(const Buffer &copy);
+        Buffer& operator+=(const Buffer& copy);
 
-        size_t getLength() const { return len; }
-        void *getData() const { return data; }
+        size_t getLength() const { return m_len; }
+        void* getData() const { return m_data; }
+
+    private:
+        /* Current length of the data in the Buffer */
+        size_t m_len;
+
+        /* Allocated size of the Buffer */
+        size_t m_capacity;
+
+        /* Pointer to the data. Memory allocation is entirely
+         * handled by setLength. */
+        void *m_data;
+
 };
 

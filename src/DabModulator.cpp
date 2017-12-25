@@ -62,8 +62,7 @@ DabModulator::DabModulator(EtiSource& etiSource,
     myEtiSource(etiSource),
     myFlowgraph()
 {
-    PDEBUG("DabModulator::DabModulator(%u, %u, %u, %zu) @ %p\n",
-            outputRate, clockRate, dabMode, (size_t)gainMode, this);
+    PDEBUG("DabModulator::DabModulator() @ %p\n", this);
 
     if (m_settings.dabMode == 0) {
         setMode(2);
@@ -205,7 +204,9 @@ int DabModulator::process(Buffer* dataOut)
         rcs.enrol(cifGain.get());
 
         auto cifGuard = make_shared<GuardIntervalInserter>(
-                myNbSymbols, mySpacing, myNullSize, mySymSize);
+                myNbSymbols, mySpacing, myNullSize, mySymSize,
+                m_settings.ofdmWindowOverlap);
+        rcs.enrol(cifGuard.get());
 
         shared_ptr<FIRFilter> cifFilter;
         if (not m_settings.filterTapsFilename.empty()) {

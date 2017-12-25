@@ -161,8 +161,12 @@ static void parse_configfile(
 
     mod_settings.dabMode = pt.get("modulator.mode", mod_settings.dabMode);
     mod_settings.clockRate = pt.get("modulator.dac_clk_rate", (size_t)0);
-    mod_settings.digitalgain = pt.get("modulator.digital_gain", mod_settings.digitalgain);
+    mod_settings.digitalgain = pt.get("modulator.digital_gain",
+            mod_settings.digitalgain);
+
     mod_settings.outputRate = pt.get("modulator.rate", mod_settings.outputRate);
+    mod_settings.ofdmWindowOverlap = pt.get("modulator.ofdmwindowing",
+            mod_settings.ofdmWindowOverlap);
 
     // FIR Filter parameters:
     if (pt.get("firfilter.enabled", 0) == 1) {

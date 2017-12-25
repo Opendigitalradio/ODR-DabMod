@@ -228,10 +228,10 @@ void TimestampDecoder::set_parameter(
         throw ParameterError("timestamp is read-only");
     }
     else {
-        stringstream ss;
-        ss << "Parameter '" << parameter
+        stringstream ss_err;
+        ss_err << "Parameter '" << parameter
             << "' is not exported by controllable " << get_rc_name();
-        throw ParameterError(ss.str());
+        throw ParameterError(ss_err.str());
     }
 }
 
