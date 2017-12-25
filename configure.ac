@@ -185,6 +185,25 @@ AC_COMPILE_IFELSE([ AC_LANG_PROGRAM([[
                      AC_DEFINE(HAVE_PRCTL, 1, [Define this symbol if you have prctl and PR_SET_NAME]) ],
                    [ AC_MSG_RESULT(no) ])
 
+# Linux defines MSG_NOSIGNAL, some other systems have SO_NOSIGPIPE instead
+AC_MSG_CHECKING(for MSG_NOSIGNAL)
+AC_COMPILE_IFELSE([ AC_LANG_PROGRAM([[
+                    #include <sys/socket.h>
+                    int f = MSG_NOSIGNAL;
+                    ]])],
+                   [ AC_MSG_RESULT(yes)
+                     AC_DEFINE(HAVE_MSG_NOSIGNAL, 1, [Define this symbol if you have MSG_NOSIGNAL]) ],
+                   [ AC_MSG_RESULT(no) ])
+
+AC_MSG_CHECKING(for SO_NOSIGPIPE)
+AC_COMPILE_IFELSE([ AC_LANG_PROGRAM([[
+                    #include <sys/socket.h>
+                    int f = SO_NOSIGPIPE;
+                    ]])],
+                   [ AC_MSG_RESULT(yes)
+                     AC_DEFINE(HAVE_SO_NOSIGPIPE, 1, [Define this symbol if you have SO_NOSIGPIPE]) ],
+                   [ AC_MSG_RESULT(no) ])
+
 # Check for march
 AS_IF([test "x$enable_native" = "xyes"],
       [AC_MSG_CHECKING(if we can add -march=native to CFLAGS)
