@@ -7,11 +7,6 @@
 
 import os
 import logging
-try:
-    logging_path = os.path.dirname(logging.getLoggerClass().root.handlers[0].baseFilename)
-except AttributeError:
-    logging_path = None
-
 import numpy as np
 
 import src.Model_AM as Model_AM
@@ -55,8 +50,6 @@ class Poly:
 
         self.model_am = Model_AM.Model_AM(c, plot=self.plot)
         self.model_pm = Model_PM.Model_PM(c, plot=self.plot)
-
-        self.plot = c.MDL_plot
 
     def reset_coefs(self):
         self.coefs_am = np.zeros(5, dtype=np.float32)

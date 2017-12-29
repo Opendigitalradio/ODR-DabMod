@@ -9,12 +9,6 @@ import datetime
 import os
 import logging
 import time
-
-try:
-    logging_path = os.path.dirname(logging.getLoggerClass().root.handlers[0].baseFilename)
-except AttributeError:
-    logging_path = None
-
 import numpy as np
 import matplotlib
 

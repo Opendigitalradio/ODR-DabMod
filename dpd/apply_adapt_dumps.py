@@ -16,21 +16,11 @@ logging.basicConfig(format='%(asctime)s - %(module)s - %(levelname)s - %(message
                     datefmt='%Y-%m-%d %H:%M:%S',
                     level=logging.DEBUG)
 
-import src.Measure as Measure
-import src.Model as Model
-import src.ExtractStatistic as ExtractStatistic
 import src.Adapt as Adapt
-import src.RX_Agc as Agc
-import src.TX_Agc as TX_Agc
 import argparse
 
-import src.Const
-import src.Symbol_align
-import src.Measure_Shoulders
-import src.MER
-
 parser = argparse.ArgumentParser(
-    description="DPD Computation Engine for ODR-DabMod")
+        description="Load pkl dumps DPD settings into ODR-DabMod")
 parser.add_argument('--port', default=50055, type=int,
                     help='port of DPD server to connect to (default: 50055)',
                     required=False)
@@ -49,7 +39,14 @@ port_rc = cli_args.rc_port
 coef_path = cli_args.coefs
 filename = cli_args.file
 
-adapt = Adapt.Adapt(port_rc, coef_path)
+# No need to initialise a GlobalConfig since adapt only needs this one field
+class DummyConfig:
+    def __init__(self):
+        self.plot_location = None
+
+c = DummyConfig()
+
+adapt = Adapt.Adapt(c, port_rc, coef_path)
 
 print("Loading and applying DPD settings from {}".format(filename))
 adapt.load(filename)

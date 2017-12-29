@@ -8,12 +8,6 @@
 import datetime
 import os
 import logging
-
-try:
-    logging_path = os.path.dirname(logging.getLoggerClass().root.handlers[0].baseFilename)
-except AttributeError:
-    logging_path = None
-
 import numpy as np
 import matplotlib
 
@@ -36,10 +30,11 @@ class Dab_Util:
      complex IQ samples of a DAB signal
      """
 
-    def __init__(self, sample_rate, plot=False):
+    def __init__(self, config, sample_rate, plot=False):
         """
         :param sample_rate: sample rate [sample/sec] to use for calculations
         """
+        self.c = config
         self.sample_rate = sample_rate
         self.dab_bandwidth = 1536000  # Bandwidth of a dab signal
         self.frame_ms = 96  # Duration of a Dab frame
@@ -56,9 +51,9 @@ class Dab_Util:
         off = sig_rec.shape[0]
         c = np.abs(signal.correlate(sig_orig, sig_rec))
 
-        if logging.getLogger().getEffectiveLevel() == logging.DEBUG and self.plot and logging_path is not None:
+        if self.plot and self.c.plot_location is not None:
             dt = datetime.datetime.now().isoformat()
-            corr_path = (logging_path + "/" + dt + "_tx_rx_corr.svg")
+            corr_path = self.c.plot_location + "/" + dt + "_tx_rx_corr.png"
             plt.plot(c, label="corr")
             plt.legend()
             plt.savefig(corr_path)
@@ -110,9 +105,9 @@ class Dab_Util:
         Returns an aligned version of sig_tx and sig_rx by cropping and subsample alignment
         """
 
-        if logging.getLogger().getEffectiveLevel() == logging.DEBUG and self.plot and logging_path is not None:
+        if self.plot and self.c.plot_location is not None:
             dt = datetime.datetime.now().isoformat()
-            fig_path = logging_path + "/" + dt + "_sync_raw.svg"
+            fig_path = self.c.plot_location + "/" + dt + "_sync_raw.png"
 
             fig, axs = plt.subplots(2)
             axs[0].plot(np.abs(sig_tx[:128]), label="TX Frame")
@@ -154,9 +149,9 @@ class Dab_Util:
             sig_tx = sig_tx[:-1]
             sig_rx = sig_rx[:-1]
 
-        if logging.getLogger().getEffectiveLevel() == logging.DEBUG and self.plot and logging_path is not None:
+        if self.plot and self.c.plot_location is not None:
             dt = datetime.datetime.now().isoformat()
-            fig_path = logging_path + "/" + dt + "_sync_sample_aligned.svg"
+            fig_path = self.c.plot_location + "/" + dt + "_sync_sample_aligned.png"
 
             fig, axs = plt.subplots(2)
             axs[0].plot(np.abs(sig_tx[:128]), label="TX Frame")
@@ -178,9 +173,9 @@ class Dab_Util:
 
         sig_rx = sa.subsample_align(sig_rx, sig_tx)
 
-        if logging.getLogger().getEffectiveLevel() == logging.DEBUG and self.plot and logging_path is not None:
+        if self.plot and self.c.plot_location is not None:
             dt = datetime.datetime.now().isoformat()
-            fig_path = logging_path + "/" + dt + "_sync_subsample_aligned.svg"
+            fig_path = self.c.plot_location + "/" + dt + "_sync_subsample_aligned.png"
 
             fig, axs = plt.subplots(2)
             axs[0].plot(np.abs(sig_tx[:128]), label="TX Frame")
@@ -202,9 +197,9 @@ class Dab_Util:
 
         sig_rx = pa.phase_align(sig_rx, sig_tx)
 
-        if logging.getLogger().getEffectiveLevel() == logging.DEBUG and self.plot and logging_path is not None:
+        if self.plot and self.c.plot_location is not None:
             dt = datetime.datetime.now().isoformat()
-            fig_path = logging_path + "/" + dt + "_sync_phase_aligned.svg"
+            fig_path = self.c.plot_location + "/" + dt + "_sync_phase_aligned.png"
 
             fig, axs = plt.subplots(2)
             axs[0].plot(np.abs(sig_tx[:128]), label="TX Frame")

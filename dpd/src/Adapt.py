@@ -16,11 +16,6 @@ import os
 import datetime
 import pickle
 
-try:
-    logging_path = os.path.dirname(logging.getLoggerClass().root.handlers[0].baseFilename)
-except AttributeError:
-    logging_path = None
-
 LUT_LEN = 32
 FORMAT_POLY = 1
 FORMAT_LUT = 2
@@ -58,8 +53,9 @@ class Adapt:
         ZMQ remote control.
     """
 
-    def __init__(self, port, coef_path):
+    def __init__(self, config, port, coef_path):
         logging.debug("Instantiate Adapt object")
+        self.c = config
         self.port = port
         self.coef_path = coef_path
         self.host = "localhost"
@@ -229,10 +225,10 @@ class Adapt:
         """Backup current settings to a file"""
         dt = datetime.datetime.now().isoformat()
         if path is None:
-            if logging_path is not None:
-                path = logging_path + "/" + dt + "_adapt.pkl"
+            if self.c.plot_location is not None:
+                path = self.c.plot_location + "/" + dt + "_adapt.pkl"
             else:
-                raise Exception("Cannot dump Adapt without either logging_path or path set")
+                raise Exception("Cannot dump Adapt without either plot_location or path set")
         d = {
             "txgain": self.get_txgain(),
             "rxgain": self.get_rxgain(),

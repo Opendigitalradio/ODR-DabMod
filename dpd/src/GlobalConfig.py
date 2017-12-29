@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# DPD Computation Engine, constants.
+# DPD Computation Engine, constants and global configuration
 #
 # Source for DAB standard: etsi_EN_300_401_v010401p p145
 #
@@ -9,19 +9,20 @@
 
 import numpy as np
 
+class GlobalConfig:
+    def __init__(self, cli_args, plot_location):
+        self.sample_rate = cli_args.sample_rate
+        assert self.sample_rate == 8192000  # By now only constants for 8192000
 
-class Const:
-    def __init__(self, sample_rate, target_median, plot):
-        assert sample_rate == 8192000  # By now only constants for 8192000
-        self.sample_rate = sample_rate
+        self.plot_location = plot_location
 
         # DAB frame
         # Time domain
-        self.T_F = sample_rate / 2048000 * 196608  # Transmission frame duration
-        self.T_NULL = sample_rate / 2048000 * 2656  # Null symbol duration
-        self.T_S = sample_rate / 2048000 * 2552  # Duration of OFDM symbols of indices l = 1, 2, 3,... L;
-        self.T_U = sample_rate / 2048000 * 2048  # Inverse of carrier spacing
-        self.T_C = sample_rate / 2048000 * 504  # Duration of cyclic prefix
+        self.T_F = self.sample_rate / 2048000 * 196608  # Transmission frame duration
+        self.T_NULL = self.sample_rate / 2048000 * 2656  # Null symbol duration
+        self.T_S = self.sample_rate / 2048000 * 2552  # Duration of OFDM symbols of indices l = 1, 2, 3,... L;
+        self.T_U = self.sample_rate / 2048000 * 2048  # Inverse of carrier spacing
+        self.T_C = self.sample_rate / 2048000 * 504  # Duration of cyclic prefix
 
         # Frequency Domain
         # example: np.delete(fft[3328:4865], 768)
@@ -34,10 +35,10 @@ class Const:
         # time per sample = 1 / sample_rate
         # frequency per bin = 1kHz
         # phase difference per sample offset = delta_t * 2 * pi * delta_freq
-        self.phase_offset_per_sample = 1. / sample_rate * 2 * np.pi * 1000
+        self.phase_offset_per_sample = 1. / self.sample_rate * 2 * np.pi * 1000
 
         # Constants for ExtractStatistic
-        self.ES_plot = plot
+        self.ES_plot = cli_args.plot
         self.ES_start = 0.0
         self.ES_end = 1.0
         self.ES_n_bins = 64  # Number of bins between ES_start and ES_end
@@ -45,7 +46,7 @@ class Const:
 
         # Constants for Measure_Shoulder
         self.MS_enable = False
-        self.MS_plot = plot
+        self.MS_plot = cli_args.plot
 
         meas_offset = 976  # Offset from center frequency to measure shoulder [kHz]
         meas_width = 100  # Size of frequency delta to measure shoulder [kHz]
@@ -63,10 +64,10 @@ class Const:
         self.MS_n_proc = 4
 
         # Constants for MER
-        self.MER_plot = plot
+        self.MER_plot = cli_args.plot
 
         # Constants for Model
-        self.MDL_plot = True or plot  # Override default
+        self.MDL_plot = cli_args.plot
 
         # Constants for Model_PM
         # Set all phase offsets to zero for TX amplitude < MPM_tx_min
@@ -74,13 +75,13 @@ class Const:
 
         # Constants for TX_Agc
         self.TAGC_max_txgain = 89  # USRP B200 specific
-        self.TAGC_tx_median_target = target_median
+        self.TAGC_tx_median_target = cli_args.target_median
         self.TAGC_tx_median_max = self.TAGC_tx_median_target * 1.4
         self.TAGC_tx_median_min = self.TAGC_tx_median_target / 1.4
 
         # Constants for RX_AGC
         self.RAGC_min_rxgain = 25  # USRP B200 specific
-        self.RAGC_rx_median_target = target_median
+        self.RAGC_rx_median_target = cli_args.target_median
 
 # The MIT License (MIT)
 #

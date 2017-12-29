@@ -8,11 +8,6 @@
 import datetime
 import os
 import logging
-try:
-    logging_path = os.path.dirname(logging.getLoggerClass().root.handlers[0].baseFilename)
-except AttributeError:
-    logging_path = None
-
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -57,12 +52,12 @@ class Model_AM:
         self.plot = plot
 
     def _plot(self, tx_dpd, rx_received, coefs_am, coefs_am_new):
-        if logging.getLogger().getEffectiveLevel() == logging.DEBUG and self.plot and logging_path is not None:
+        if self.plot and self.c.plot_location is not None:
             tx_range, rx_est = calc_line(coefs_am, 0, 0.6)
             tx_range_new, rx_est_new = calc_line(coefs_am_new, 0, 0.6)
 
             dt = datetime.datetime.now().isoformat()
-            fig_path = logging_path + "/" + dt + "_Model_AM.svg"
+            fig_path = self.c.plot_location + "/" + dt + "_Model_AM.png"
             sub_rows = 1
             sub_cols = 1
             fig = plt.figure(figsize=(sub_cols * 6, sub_rows / 2. * 6))

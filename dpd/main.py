@@ -58,7 +58,7 @@ parser.add_argument('-L', '--lut',
                     help='Use lookup table instead of polynomial predistorter',
                     action="store_true")
 parser.add_argument('--plot',
-                    help='Enable all plots, to be more selective choose plots in Const.py',
+                    help='Enable all plots, to be more selective choose plots in GlobalConfig.py',
                     action="store_true")
 parser.add_argument('--name', default="", type=str,
                     help='Name of the logging directory')
@@ -113,17 +113,17 @@ from src.Adapt import Adapt
 from src.RX_Agc import Agc
 from src.TX_Agc import TX_Agc
 from src.Symbol_align import Symbol_align
-from src.Const import Const
+from src.GlobalConfig import GlobalConfig
 from src.MER import MER
 from src.Measure_Shoulders import Measure_Shoulders
 
-c = Const(samplerate, target_median, plot)
+c = GlobalConfig(cli_args, logging_path)
 SA = Symbol_align(c)
 MER = MER(c)
 MS = Measure_Shoulders(c)
-meas = Measure(samplerate, port, num_req)
+meas = Measure(c, samplerate, port, num_req)
 extStat = ExtractStatistic(c)
-adapt = Adapt(port_rc, coef_path)
+adapt = Adapt(c, port_rc, coef_path)
 
 if cli_args.lut:
     model = Lut(c)

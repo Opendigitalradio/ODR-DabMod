@@ -9,11 +9,6 @@ import datetime
 import os
 import logging
 import time
-try:
-    logging_path = os.path.dirname(logging.getLoggerClass().root.handlers[0].baseFilename)
-except AttributeError:
-    logging_path = None
-
 import numpy as np
 import matplotlib
 matplotlib.use('agg')
@@ -73,14 +68,14 @@ class Agc:
     def plot_estimates(self):
         """Plots the estimate of for Max, Median, Mean for different
         number of samples."""
-        if logging_path is None:
+        if self.c.plot_location is None:
             return
 
         self.adapt.set_rxgain(self.min_rxgain)
         time.sleep(1)
 
         dt = datetime.datetime.now().isoformat()
-        fig_path = logging_path + "/" + dt + "_agc.svg"
+        fig_path = self.c.plot_location + "/" + dt + "_agc.png"
         fig, axs = plt.subplots(2, 2, figsize=(3*6,1*6))
         axs = axs.ravel()
 

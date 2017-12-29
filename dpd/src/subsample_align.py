@@ -7,15 +7,9 @@
 import datetime
 import logging
 import os
-try:
-    logging_path = os.path.dirname(logging.getLoggerClass().root.handlers[0].baseFilename)
-except AttributeError:
-    logging_path = None
-
 import numpy as np
 from scipy import optimize
 import matplotlib.pyplot as plt
-
 
 def gen_omega(length):
     if (length % 2) == 1:
@@ -34,7 +28,7 @@ def gen_omega(length):
     return omega
 
 
-def subsample_align(sig, ref_sig, plot=False):
+def subsample_align(sig, ref_sig, plot_location=None):
     """Do subsample alignment for sig relative to the reference signal
     ref_sig. The delay between the two must be less than sample
 
@@ -74,13 +68,13 @@ def subsample_align(sig, ref_sig, plot=False):
     if optim_result.success:
         best_tau = optim_result.x
 
-        if plot and logging_path is not None:
+        if plot_location is not None:
             corr = np.vectorize(correlate_for_delay)
             ixs = np.linspace(-1, 1, 100)
             taus = corr(ixs)
 
             dt = datetime.datetime.now().isoformat()
-            tau_path = (logging_path + "/" + dt + "_tau.svg")
+            tau_path = (plot_location + "/" + dt + "_tau.png")
             plt.plot(ixs, taus)
             plt.title("Subsample correlation, minimum is best: {}".format(best_tau))
             plt.savefig(tau_path)

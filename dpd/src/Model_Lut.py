@@ -7,13 +7,7 @@
 
 import os
 import logging
-try:
-    logging_path = os.path.dirname(logging.getLoggerClass().root.handlers[0].baseFilename)
-except AttributeError:
-    logging_path = None
-
 import numpy as np
-
 
 class Lut:
     """Implements a model that calculates lookup table coefficients"""

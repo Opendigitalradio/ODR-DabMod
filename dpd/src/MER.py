@@ -8,11 +8,6 @@
 import datetime
 import os
 import logging
-try:
-    logging_path = os.path.dirname(logging.getLoggerClass().root.handlers[0].baseFilename)
-except:
-    logging_path = None
-
 import numpy as np
 import matplotlib
 matplotlib.use('agg')
@@ -76,9 +71,9 @@ class MER:
 
         spectrum = self._calc_spectrum(tx)
 
-        if self.plot and logging_path is not None:
+        if self.plot and self.c.plot_location is not None:
             dt = datetime.datetime.now().isoformat()
-            fig_path = logging_path + "/" + dt + "_MER" + debug_name + ".svg"
+            fig_path = self.c.plot_location + "/" + dt + "_MER" + debug_name + ".png"
         else:
             fig_path = None
 

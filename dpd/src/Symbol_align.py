@@ -8,12 +8,6 @@
 import datetime
 import os
 import logging
-
-try:
-    logging_path = os.path.dirname(logging.getLoggerClass().root.handlers[0].baseFilename)
-except:
-    logging_path = None
-
 import numpy as np
 import scipy
 import matplotlib
@@ -75,9 +69,9 @@ class Symbol_align:
 
         offset = peaks[np.argmin([tx_product_avg[peak] for peak in peaks])]
 
-        if logging.getLogger().getEffectiveLevel() == logging.DEBUG and self.plot and logging_path is not None:
+        if self.plot and self.c.plot_location is not None:
             dt = datetime.datetime.now().isoformat()
-            fig_path = logging_path + "/" + dt + "_Symbol_align.svg"
+            fig_path = self.c.plot_location + "/" + dt + "_Symbol_align.png"
 
             fig = plt.figure(figsize=(9, 9))
 

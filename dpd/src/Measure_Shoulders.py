@@ -9,12 +9,6 @@ import datetime
 import os
 import logging
 import multiprocessing
-
-try:
-    logging_path = os.path.dirname(logging.getLoggerClass().root.handlers[0].baseFilename)
-except AttributeError:
-    logging_path = None
-
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -82,11 +76,11 @@ class Measure_Shoulders:
         self.plot = c.MS_plot
 
     def _plot(self, signal):
-        if logging_path is None:
+        if self.c.plot_location is None:
             return
 
         dt = datetime.datetime.now().isoformat()
-        fig_path = logging_path + "/" + dt + "_sync_subsample_aligned.svg"
+        fig_path = self.c.plot_location + "/" + dt + "_sync_subsample_aligned.png"
 
         fft = calc_fft_db(signal, 100, self.c)
         peak, idxs_peak = _calc_peak(fft, self.c)
