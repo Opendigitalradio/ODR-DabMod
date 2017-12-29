@@ -84,9 +84,6 @@ class TII : public ModCodec, public RemoteControllable
 {
     public:
         TII(unsigned int dabmode, const tii_config_t& tii_config, unsigned phase);
-        virtual ~TII();
-        TII(const TII&) = delete;
-        TII& operator=(const TII&) = delete;
 
         int process(Buffer* dataIn, Buffer* dataOut);
         const char* name();
@@ -127,5 +124,4 @@ class TII : public ModCodec, public RemoteControllable
         // active pair
         std::vector<bool> m_enabled_carriers;
 };
-
 

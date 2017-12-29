@@ -160,20 +160,14 @@ TII::TII(unsigned int dabmode, const tii_config_t& tii_config, unsigned phase) :
     prepare_pattern();
 }
 
-
-TII::~TII()
-{
-    PDEBUG("TII::~TII() @ %p\n", this);
-}
-
 const char* TII::name()
 {
     // Calculate name on demand because comb and pattern are
     // modifiable through RC
     std::stringstream ss;
-    ss << "TII(comb:" << m_conf.comb <<
-        ", pattern:" << m_conf.pattern <<
-        ", variant:" << (m_conf.old_variant ? "old" : "new") << ")";
+    ss << "TII(c:" << m_conf.comb <<
+        " p:" << m_conf.pattern <<
+        " vrnt:" << (m_conf.old_variant ? "old" : "new") << ")";
     m_name = ss.str();
 
     return m_name.c_str();
