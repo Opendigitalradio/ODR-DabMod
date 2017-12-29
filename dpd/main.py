@@ -123,7 +123,7 @@ from src.Model import Lut, Poly
 import src.Heuristics as Heuristics
 from src.Measure import Measure
 from src.ExtractStatistic import ExtractStatistic
-from src.Adapt import Adapt
+from src.Adapt import Adapt, dpddata_to_str
 from src.RX_Agc import Agc
 from src.TX_Agc import TX_Agc
 from src.Symbol_align import Symbol_align
@@ -140,14 +140,13 @@ extStat = ExtractStatistic(c)
 adapt = Adapt(c, port_rc, coef_path)
 
 if cli_args.status:
-    status = {
-            "txgain": adapt.get_txgain(),
-            "rxgain": adapt.get_rxgain(),
-            "digital_gain": adapt.get_digital_gain(),
-            "predistorter": adapt.get_predistorter()
-            }
+    txgain = adapt.get_txgain()
+    rxgain = adapt.get_rxgain()
+    digital_gain = adapt.get_digital_gain()
+    dpddata = dpddata_to_str(adapt.get_predistorter())
 
-    logging.info("ODR-DabMod currently running with {}".format(status))
+    logging.info("ODR-DabMod currently running with TXGain {}, RXGain {}, digital gain {} and {}".format(
+        rxgain, rxgain, digital_gain, dpddata))
     sys.exit(0)
 
 if cli_args.lut:
@@ -178,7 +177,7 @@ digital_gain = adapt.get_digital_gain()
 dpddata = adapt.get_predistorter()
 
 logging.info("TX gain {}, RX gain {}, digital_gain {}, {!s}".format(
-        tx_gain, rx_gain, digital_gain, Adapt.dpddata_to_str(dpddata)))
+        tx_gain, rx_gain, digital_gain, dpddata_to_str(dpddata)))
 
 if cli_args.reset:
     logging.info("DPD Settings were reset to default values.")
