@@ -47,7 +47,7 @@ def dpddata_to_str(dpddata):
         coefs_am = dpddata[1]
         coefs_pm = dpddata[2]
         return "dpd_coefs_am {}, dpd_coefs_pm {}".format(
-                self.coefs_am, self.coefs_pm)
+                coefs_am, coefs_pm)
     elif dpddata[0] == "lut":
         scalefactor = dpddata[1]
         lut = dpddata[2]
