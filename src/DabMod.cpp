@@ -182,7 +182,7 @@ static shared_ptr<ModOutput> prepare_output(
         if (s.fileOutputFormat == "complexf") {
             output = make_shared<OutputFile>(s.outputName);
         }
-        if (s.fileOutputFormat == "complexf_normalised") {
+        else if (s.fileOutputFormat == "complexf_normalised") {
             if (s.gainMode == GainMode::GAIN_FIX)
                 s.normalise = 1.0f / normalise_factor_file_fix;
             else if (s.gainMode == GainMode::GAIN_MAX)
