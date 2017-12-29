@@ -55,7 +55,6 @@ class Poly:
         self.coefs_am = np.zeros(5, dtype=np.float32)
         self.coefs_am[0] = 1
         self.coefs_pm = np.zeros(5, dtype=np.float32)
-        return self.coefs_am, self.coefs_pm
 
     def train(self, tx_abs, rx_abs, phase_diff, lr=None):
         """

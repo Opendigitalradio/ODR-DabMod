@@ -11,6 +11,7 @@
 This engine calculates and updates the parameter of the digital
 predistortion module of ODR-DabMod."""
 
+import sys
 import datetime
 import os
 import argparse
@@ -62,6 +63,8 @@ parser.add_argument('--plot',
                     action="store_true")
 parser.add_argument('--name', default="", type=str,
                     help='Name of the logging directory')
+parser.add_argument('-r', '--reset', action="store_true",
+                    help='Reset the DPD settings to the defaults.')
 
 cli_args = parser.parse_args()
 
@@ -101,7 +104,7 @@ console.setFormatter(formatter)
 # add the handler to the root logger
 logging.getLogger('').addHandler(console)
 
-logging.info(cli_args)
+logging.info("DPDCE starting up with options: {}".format(cli_args))
 
 import numpy as np
 import traceback
@@ -129,6 +132,8 @@ if cli_args.lut:
     model = Lut(c)
 else:
     model = Poly(c)
+
+# Models have the default settings on startup
 adapt.set_predistorter(model.get_dpd_data())
 adapt.set_digital_gain(digital_gain)
 
@@ -169,6 +174,10 @@ elif dpddata[0] == "lut":
     )
 else:
     logging.error("Unknown dpd data format {}".format(dpddata[0]))
+
+if cli_args.reset:
+    logging.info("DPD Settings were reset to default values.")
+    sys.exit(0)
 
 tx_agc = TX_Agc(adapt, c)
 

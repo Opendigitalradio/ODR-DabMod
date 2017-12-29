@@ -11,7 +11,7 @@ import numpy as np
 
 class GlobalConfig:
     def __init__(self, cli_args, plot_location):
-        self.sample_rate = cli_args.sample_rate
+        self.sample_rate = cli_args.samplerate
         assert self.sample_rate == 8192000  # By now only constants for 8192000
 
         self.plot_location = plot_location
