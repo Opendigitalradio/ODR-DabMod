@@ -11,14 +11,13 @@ import struct
 import numpy as np
 import src.Dab_Util as DU
 import os
-
 import logging
-logging_path = os.path.dirname(logging.getLoggerClass().root.handlers[0].baseFilename)
 
 class Measure:
     """Collect Measurement from DabMod"""
-    def __init__(self, samplerate, port, num_samples_to_request):
+    def __init__(self, config, samplerate, port, num_samples_to_request):
         logging.info("Instantiate Measure object")
+        self.c = config
         self.samplerate = samplerate
         self.sizeof_sample = 8 # complex floats
         self.port = port
@@ -106,7 +105,7 @@ class Measure:
         rx_median = np.median(np.abs(rxframe))
         rxframe = rxframe / rx_median * np.median(np.abs(txframe))
 
-        du = DU.Dab_Util(self.samplerate)
+        du = DU.Dab_Util(self.c, self.samplerate)
         txframe_aligned, rxframe_aligned = du.subsample_align(txframe, rxframe)
 
         logging.info(

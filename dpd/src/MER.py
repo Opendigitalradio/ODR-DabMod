@@ -8,11 +8,6 @@
 import datetime
 import os
 import logging
-try:
-    logging_path = os.path.dirname(logging.getLoggerClass().root.handlers[0].baseFilename)
-except:
-    logging_path = "/tmp/"
-
 import numpy as np
 import matplotlib
 matplotlib.use('agg')
@@ -76,9 +71,11 @@ class MER:
 
         spectrum = self._calc_spectrum(tx)
 
-        if self.plot:
+        if self.plot and self.c.plot_location is not None:
             dt = datetime.datetime.now().isoformat()
-            fig_path = logging_path + "/" + dt + "_MER" + debug_name + ".svg"
+            fig_path = self.c.plot_location + "/" + dt + "_MER" + debug_name + ".png"
+        else:
+            fig_path = None
 
         MERs = []
         for i, (x, y) in enumerate(self._split_in_carrier(
@@ -103,7 +100,7 @@ class MER:
                 ylim = ax.get_ylim()
                 ax.set_ylim(ylim[0] - (ylim[1] - ylim[0]) * 0.1, ylim[1])
 
-        if self.plot:
+        if fig_path is not None:
             plt.tight_layout()
             plt.savefig(fig_path)
             plt.show()

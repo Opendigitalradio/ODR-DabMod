@@ -11,6 +11,7 @@
 This engine calculates and updates the parameter of the digital
 predistortion module of ODR-DabMod."""
 
+import sys
 import datetime
 import os
 import argparse
@@ -45,7 +46,7 @@ parser.add_argument('--digital_gain', default=0.6,
                     required=False,
                     type=float)
 parser.add_argument('--target_median', default=0.05,
-                    help='target_median',
+                    help='The target median for the RX and TX AGC',
                     required=False,
                     type=float)
 parser.add_argument('--samps', default='81920', type=int,
@@ -58,10 +59,14 @@ parser.add_argument('-L', '--lut',
                     help='Use lookup table instead of polynomial predistorter',
                     action="store_true")
 parser.add_argument('--plot',
-                    help='Enable all plots, to be more selective choose plots in Const.py',
+                    help='Enable all plots, to be more selective choose plots in GlobalConfig.py',
                     action="store_true")
 parser.add_argument('--name', default="", type=str,
                     help='Name of the logging directory')
+parser.add_argument('-r', '--reset', action="store_true",
+                    help='Reset the DPD settings to the defaults.')
+parser.add_argument('-s', '--status', action="store_true",
+                    help='Display the currently running DPD settings.')
 
 cli_args = parser.parse_args()
 
@@ -81,27 +86,36 @@ plot = cli_args.plot
 # Logging
 import logging
 
-dt = datetime.datetime.now().isoformat()
-logging_path = '/tmp/dpd_{}'.format(dt).replace('.', '_').replace(':', '-')
-if name:
-    logging_path += '_' + name
-os.makedirs(logging_path)
-logging.basicConfig(format='%(asctime)s - %(module)s - %(levelname)s - %(message)s',
-                    datefmt='%Y-%m-%d %H:%M:%S',
-                    filename='{}/dpd.log'.format(logging_path),
-                    filemode='w',
-                    level=logging.DEBUG)
-# also log up to INFO to console
-console = logging.StreamHandler()
-console.setLevel(logging.INFO)
-# set a format which is simpler for console use
-formatter = logging.Formatter('%(asctime)s - %(module)s - %(levelname)s - %(message)s')
-# tell the handler to use this format
-console.setFormatter(formatter)
-# add the handler to the root logger
-logging.getLogger('').addHandler(console)
+# Simple usage scenarios don't need to clutter /tmp
+if not (cli_args.status or cli_args.reset):
+    dt = datetime.datetime.now().isoformat()
+    logging_path = '/tmp/dpd_{}'.format(dt).replace('.', '_').replace(':', '-')
+    if name:
+        logging_path += '_' + name
+    print("Logs and plots written to {}".format(logging_path))
+    os.makedirs(logging_path)
+    logging.basicConfig(format='%(asctime)s - %(module)s - %(levelname)s - %(message)s',
+                        datefmt='%Y-%m-%d %H:%M:%S',
+                        filename='{}/dpd.log'.format(logging_path),
+                        filemode='w',
+                        level=logging.DEBUG)
+    # also log up to INFO to console
+    console = logging.StreamHandler()
+    console.setLevel(logging.INFO)
+    # set a format which is simpler for console use
+    formatter = logging.Formatter('%(asctime)s - %(module)s - %(levelname)s - %(message)s')
+    # tell the handler to use this format
+    console.setFormatter(formatter)
+    # add the handler to the root logger
+    logging.getLogger('').addHandler(console)
+else:
+    dt = datetime.datetime.now().isoformat()
+    logging.basicConfig(format='%(asctime)s - %(module)s - %(levelname)s - %(message)s',
+                        datefmt='%Y-%m-%d %H:%M:%S',
+                        level=logging.DEBUG)
+    logging_path = None
 
-logging.info(cli_args)
+logging.info("DPDCE starting up with options: {}".format(cli_args))
 
 import numpy as np
 import traceback
@@ -109,26 +123,38 @@ from src.Model import Lut, Poly
 import src.Heuristics as Heuristics
 from src.Measure import Measure
 from src.ExtractStatistic import ExtractStatistic
-from src.Adapt import Adapt
+from src.Adapt import Adapt, dpddata_to_str
 from src.RX_Agc import Agc
 from src.TX_Agc import TX_Agc
 from src.Symbol_align import Symbol_align
-from src.Const import Const
+from src.GlobalConfig import GlobalConfig
 from src.MER import MER
 from src.Measure_Shoulders import Measure_Shoulders
 
-c = Const(samplerate, target_median, plot)
+c = GlobalConfig(cli_args, logging_path)
 SA = Symbol_align(c)
 MER = MER(c)
 MS = Measure_Shoulders(c)
-meas = Measure(samplerate, port, num_req)
+meas = Measure(c, samplerate, port, num_req)
 extStat = ExtractStatistic(c)
-adapt = Adapt(port_rc, coef_path)
+adapt = Adapt(c, port_rc, coef_path)
+
+if cli_args.status:
+    txgain = adapt.get_txgain()
+    rxgain = adapt.get_rxgain()
+    digital_gain = adapt.get_digital_gain()
+    dpddata = dpddata_to_str(adapt.get_predistorter())
+
+    logging.info("ODR-DabMod currently running with TXGain {}, RXGain {}, digital gain {} and {}".format(
+        rxgain, rxgain, digital_gain, dpddata))
+    sys.exit(0)
 
 if cli_args.lut:
     model = Lut(c)
 else:
     model = Poly(c)
+
+# Models have the default settings on startup
 adapt.set_predistorter(model.get_dpd_data())
 adapt.set_digital_gain(digital_gain)
 
@@ -149,26 +175,13 @@ rx_gain = adapt.get_rxgain()
 digital_gain = adapt.get_digital_gain()
 
 dpddata = adapt.get_predistorter()
-if dpddata[0] == "poly":
-    coefs_am = dpddata[1]
-    coefs_pm = dpddata[2]
-    logging.info(
-        "TX gain {}, RX gain {}, dpd_coefs_am {},"
-        " dpd_coefs_pm {}, digital_gain {}".format(
-            tx_gain, rx_gain, coefs_am, coefs_pm, digital_gain
-        )
-    )
-elif dpddata[0] == "lut":
-    scalefactor = dpddata[1]
-    lut = dpddata[2]
-    logging.info(
-        "TX gain {}, RX gain {}, LUT scalefactor {},"
-        " LUT {}, digital_gain {}".format(
-            tx_gain, rx_gain, scalefactor, lut, digital_gain
-        )
-    )
-else:
-    logging.error("Unknown dpd data format {}".format(dpddata[0]))
+
+logging.info("TX gain {}, RX gain {}, digital_gain {}, {!s}".format(
+        tx_gain, rx_gain, digital_gain, dpddata_to_str(dpddata)))
+
+if cli_args.reset:
+    logging.info("DPD Settings were reset to default values.")
+    sys.exit(0)
 
 tx_agc = TX_Agc(adapt, c)
 

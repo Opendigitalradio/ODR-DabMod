@@ -9,9 +9,6 @@ import datetime
 import os
 import logging
 import time
-
-logging_path = os.path.dirname(logging.getLoggerClass().root.handlers[0].baseFilename)
-
 import numpy as np
 import matplotlib
 

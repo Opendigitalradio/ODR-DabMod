@@ -81,50 +81,66 @@ essential that there is no nonlinearity in the RX path!
 Software Setup
 --------------
 
-We assume that you already installed *ODR-DabMux* and *ODR-DabMod*. In order to
-satisfy dependencies for the predistortion, you can install all required python
-modules using *conda*. To obtain the *conda* command line tool, install
-[miniconda](https://conda.io/docs/user-guide/install/linux.html) and do the
-beginners tutorial. It helps you keep the global python environment clean and
-install the exact same package versions as we used for development.
-
-```
-conda env create -f dpd/environment.yml
-source activate dab
-```
-
-Alternatively you can also install the dependencies from your distribution.
-You will need at least scipy, matplotlib and python-zeromq, and maybe more.
-
+We assume that you already installed *ODR-DabMux* and *ODR-DabMod*.
+You should install the required python dependencies for the DPDCE using
+distribution packages. You will need at least scipy, matplotlib and
+python-zeromq.
 
 Use the predistortion
 ----------------------
 
-Run the multiplexer and the modulator:
+Make sure you have a ODR-DabMux running with a TCP output on port 9200.
+
+Then run the modulator, with the example dpd configuration file.
 
 ```
-ODR-DabMux/src/odr-dabmux ../simple.mux
-ODR-DabMod/odr-dabmod dpd/dpd.ini
+./odr-dabmod dpd/dpd.ini
 ```
+
+This configuration file is different from usual defaults in several respects:
+
+ * logging to /tmp/dabmod.log
+ * 4x oversampling: 8192000 sample rate
+ * a very small digital gain, which will be overridden by the DPDCE
+ * predistorter enabled
+ * UHD output with a rather low TX gain, which will be overridden by DPDCE
 
 The DPDCE uses automatic gain control for both TX and RX gain to get both a
 high quantisation quality for the most frequent amplitude regions and a high
 enough back-off so the peaks are also quantised correctly. This means that the
 output power will stay at the same level, but the DPDCE may change TX gain to
-trade it with digital gain and also change RX gain.
+trade it with digital gain and also change RX gain. This also implies that you
+should *not modify txgain, rxgain, digital gain or coefficient settings manually!*
+When the DPDCE is used, it controls these settings, and there are command line
+options for you to define initial values.
 
-As a first test you should run the DPDCE with the *--plot* parameter. It
-preserves the output power and generates all available visualisation plots in
-the newly created logging directory `/tmp/dpd_<time_stamp>`. As the predistortion
-should increase the peak to shoulder ratio, you should select a *txgain* in the
-ODR-DabMod configuration file such that the initial peak-to-soulder ratio
-visible on your spectrum analyser. This way, you will be able to see a the
+To verify that the communication between the DPDCE and ODR-DabMod is ok,
+you can use the status and reset options:
+
+```
+cd dpd
+python main.py --status
+python main.py --reset
+```
+
+The reset option sets all DPD-related settings to the defaults (as shown in the
+`--help` usage screen) and stops.
+
+When neither `--status` nor `--reset` is given, the DPDCE will run the predistortion
+algorithm. As a first test you should run the DPDCE with the `--plot`
+parameter. It preserves the output power and generates all available
+visualisation plots in the newly created logging directory
+`/tmp/dpd_<time_stamp>`. As the predistortion should increase the peak to
+shoulder ratio, you should select a *txgain* in the ODR-DabMod configuration
+file such that the initial peak-to-soulder ratio visible on your spectrum
+analyser. This way, you will be able to see a the
 change.
 
 ```
 cd dpd
 python main.py --plot
 ```
+
 The DPDCE now does 10 iterations, and tries to improve the predistortion effectiveness.
 In each step the learning rate is decreased. The learning rate is the factor
 with which new coefficients are weighted in a weighted mean with the old
@@ -137,7 +153,8 @@ time stamp and its label. Following plots are generated chronologically:
  - ExtractStatistic: Extracted information from one or multiple measurements.
  - Model\_AM: Fitted function for the amplitudes of the power amplifier against the TX amplitude.
  - Model\_PM: Fitted function for the phase difference of the power amplifier against the TX amplitude.
- - adapt.pkl: Contains the settings for the predistortion. To load them again without further measurements, you can use `apply_adapt_dumps.py`.
+ - adapt.pkl: Contains all settings for the predistortion.
+   You can load them again without doing measurements with the `apply_adapt_dumps.py` script.
  - MER: Constellation diagram used to calculate the modulation error rate.
 
 After the run you should be able to observe that the peak-to-shoulder
@@ -198,7 +215,7 @@ TODO
    same.
  - At the moment we assume that the USRP RX gain has to be larger than 30dB and
    the received signal should have a median absolute value of 0.05 in order to
-   have a hight quality quantization. Do measurements to support or improve
+   have a high quality quantization. Do measurements to support or improve
    this heuristic.
  - Check if we need to measure MER differently (average over more symbols?)
  - Is -45dBm the best RX feedback power level?

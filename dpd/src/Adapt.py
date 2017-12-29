@@ -16,8 +16,6 @@ import os
 import datetime
 import pickle
 
-logging_path = os.path.dirname(logging.getLoggerClass().root.handlers[0].baseFilename)
-
 LUT_LEN = 32
 FORMAT_POLY = 1
 FORMAT_LUT = 2
@@ -44,6 +42,19 @@ def _write_lut_file(scalefactor, lut, path):
         f.write("{}\n{}\n".format(coef.real, coef.imag))
     f.close()
 
+def dpddata_to_str(dpddata):
+    if dpddata[0] == "poly":
+        coefs_am = dpddata[1]
+        coefs_pm = dpddata[2]
+        return "dpd_coefs_am {}, dpd_coefs_pm {}".format(
+                coefs_am, coefs_pm)
+    elif dpddata[0] == "lut":
+        scalefactor = dpddata[1]
+        lut = dpddata[2]
+        return "LUT scalefactor {}, LUT {}".format(
+                scalefactor, lut)
+    else:
+        raise ValueError("Unknown dpddata type {}".format(dpddata[0]))
 
 class Adapt:
     """Uses the ZMQ remote control to change parameters of the DabMod
@@ -55,8 +66,9 @@ class Adapt:
         ZMQ remote control.
     """
 
-    def __init__(self, port, coef_path):
+    def __init__(self, config, port, coef_path):
         logging.debug("Instantiate Adapt object")
+        self.c = config
         self.port = port
         self.coef_path = coef_path
         self.host = "localhost"
@@ -226,27 +238,30 @@ class Adapt:
         """Backup current settings to a file"""
         dt = datetime.datetime.now().isoformat()
         if path is None:
-            path = logging_path + "/" + dt + "_adapt.pkl"
+            if self.c.plot_location is not None:
+                path = self.c.plot_location + "/" + dt + "_adapt.pkl"
+            else:
+                raise Exception("Cannot dump Adapt without either plot_location or path set")
         d = {
             "txgain": self.get_txgain(),
             "rxgain": self.get_rxgain(),
             "digital_gain": self.get_digital_gain(),
             "predistorter": self.get_predistorter()
         }
-        with open(path, "w") as f:
+        with open(path, "wb") as f:
             pickle.dump(d, f)
 
         return path
 
     def load(self, path):
         """Restore settings from a file"""
-        with open(path, "r") as f:
+        with open(path, "rb") as f:
             d = pickle.load(f)
 
-        self.set_txgain(d["txgain"])
-        self.set_digital_gain(d["digital_gain"])
-        self.set_rxgain(d["rxgain"])
-        self.set_predistorter(d["predistorter"])
+            self.set_txgain(d["txgain"])
+            self.set_digital_gain(d["digital_gain"])
+            self.set_rxgain(d["rxgain"])
+            self.set_predistorter(d["predistorter"])
 
 # The MIT License (MIT)
 #

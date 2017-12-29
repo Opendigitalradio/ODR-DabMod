@@ -7,9 +7,6 @@
 
 import os
 import logging
-
-logging_path = os.path.dirname(logging.getLoggerClass().root.handlers[0].baseFilename)
-
 import numpy as np
 
 import src.Model_AM as Model_AM
@@ -54,13 +51,10 @@ class Poly:
         self.model_am = Model_AM.Model_AM(c, plot=self.plot)
         self.model_pm = Model_PM.Model_PM(c, plot=self.plot)
 
-        self.plot = c.MDL_plot
-
     def reset_coefs(self):
         self.coefs_am = np.zeros(5, dtype=np.float32)
         self.coefs_am[0] = 1
         self.coefs_pm = np.zeros(5, dtype=np.float32)
-        return self.coefs_am, self.coefs_pm
 
     def train(self, tx_abs, rx_abs, phase_diff, lr=None):
         """

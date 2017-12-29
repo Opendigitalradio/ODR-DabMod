@@ -8,12 +8,9 @@
 
 import numpy as np
 import matplotlib.pyplot as plt
-
 import datetime
 import os
 import logging
-
-logging_path = os.path.dirname(logging.getLoggerClass().root.handlers[0].baseFilename)
 
 
 def _check_input_extract(tx_dpd, rx_received):
@@ -64,10 +61,9 @@ class ExtractStatistic:
         self.plot = c.ES_plot
 
     def _plot_and_log(self, tx_values, rx_values, phase_diffs_values, phase_diffs_values_lists):
-        if logging.getLogger().getEffectiveLevel() == logging.DEBUG and self.plot:
-
+        if self.plot and self.c.plot_location is not None:
             dt = datetime.datetime.now().isoformat()
-            fig_path = logging_path + "/" + dt + "_ExtractStatistic.png"
+            fig_path = self.c.plot_location + "/" + dt + "_ExtractStatistic.png"
             sub_rows = 3
             sub_cols = 1
             fig = plt.figure(figsize=(sub_cols * 6, sub_rows / 2. * 6))

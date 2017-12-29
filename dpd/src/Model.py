@@ -2,6 +2,12 @@
 from src.Model_Poly import Poly
 from src.Model_Lut import Lut
 
+def select_model_from_dpddata(dpddata):
+    if dpddata[0] == 'lut':
+        return Lut
+    elif dpddata[0] == 'poly':
+        return Poly
+
 # The MIT License (MIT)
 #
 # Copyright (c) 2017 Andreas Steger

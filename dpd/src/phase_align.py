@@ -7,8 +7,6 @@
 import datetime
 import os
 import logging
-logging_path = os.path.dirname(logging.getLoggerClass().root.handlers[0].baseFilename)
-
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -24,9 +22,9 @@ def phase_align(sig, ref_sig, plot=False):
     real_diffs = np.cos(angle_diff)
     imag_diffs = np.sin(angle_diff)
 
-    if logging.getLogger().getEffectiveLevel() == logging.DEBUG and plot:
+    if plot and self.c.plot_location is not None:
         dt = datetime.datetime.now().isoformat()
-        fig_path = logging_path + "/" + dt + "_phase_align.svg"
+        fig_path = self.c.plot_location + "/" + dt + "_phase_align.png"
 
         plt.subplot(511)
         plt.hist(angle_diff, bins=60, label="Angle Diff")
