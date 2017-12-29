@@ -49,7 +49,7 @@ port_rc = cli_args.rc_port
 coef_path = cli_args.coefs
 filename = cli_args.file
 
-adapt = Adapt(port_rc, coef_path)
+adapt = Adapt.Adapt(port_rc, coef_path)
 
 print("Loading and applying DPD settings from {}".format(filename))
 adapt.load(filename)

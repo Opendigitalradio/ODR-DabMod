@@ -239,20 +239,20 @@ class Adapt:
             "digital_gain": self.get_digital_gain(),
             "predistorter": self.get_predistorter()
         }
-        with open(path, "w") as f:
+        with open(path, "wb") as f:
             pickle.dump(d, f)
 
         return path
 
     def load(self, path):
         """Restore settings from a file"""
-        with open(path, "r") as f:
+        with open(path, "rb") as f:
             d = pickle.load(f)
 
-        self.set_txgain(d["txgain"])
-        self.set_digital_gain(d["digital_gain"])
-        self.set_rxgain(d["rxgain"])
-        self.set_predistorter(d["predistorter"])
+            self.set_txgain(d["txgain"])
+            self.set_digital_gain(d["digital_gain"])
+            self.set_rxgain(d["rxgain"])
+            self.set_predistorter(d["predistorter"])
 
 # The MIT License (MIT)
 #
