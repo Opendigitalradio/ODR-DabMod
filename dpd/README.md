@@ -109,14 +109,31 @@ The DPDCE uses automatic gain control for both TX and RX gain to get both a
 high quantisation quality for the most frequent amplitude regions and a high
 enough back-off so the peaks are also quantised correctly. This means that the
 output power will stay at the same level, but the DPDCE may change TX gain to
-trade it with digital gain and also change RX gain.
+trade it with digital gain and also change RX gain. This also implies that you
+should *not modify txgain, rxgain, digital gain or coefficient settings manually!*
+When the DPDCE is used, it controls these settings, and there are command line
+options for you to define initial values.
 
-As a first test you should run the DPDCE with the *--plot* parameter. It
-preserves the output power and generates all available visualisation plots in
-the newly created logging directory `/tmp/dpd_<time_stamp>`. As the predistortion
-should increase the peak to shoulder ratio, you should select a *txgain* in the
-ODR-DabMod configuration file such that the initial peak-to-soulder ratio
-visible on your spectrum analyser. This way, you will be able to see a the
+To verify that the communication between the DPDCE and ODR-DabMod is ok,
+you can use the status and reset options:
+
+```
+cd dpd
+python main.py --status
+python main.py --reset
+```
+
+The reset option sets all DPD-related settings to the defaults (as shown in the
+`--help` usage screen) and stops.
+
+When neither `--status` nor `--reset` is given, the DPDCE will run the predistortion
+algorithm. As a first test you should run the DPDCE with the `--plot`
+parameter. It preserves the output power and generates all available
+visualisation plots in the newly created logging directory
+`/tmp/dpd_<time_stamp>`. As the predistortion should increase the peak to
+shoulder ratio, you should select a *txgain* in the ODR-DabMod configuration
+file such that the initial peak-to-soulder ratio visible on your spectrum
+analyser. This way, you will be able to see a the
 change.
 
 ```
