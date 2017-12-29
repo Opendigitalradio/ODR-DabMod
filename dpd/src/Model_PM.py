@@ -8,8 +8,10 @@
 import datetime
 import os
 import logging
-
-logging_path = os.path.dirname(logging.getLoggerClass().root.handlers[0].baseFilename)
+try:
+    logging_path = os.path.dirname(logging.getLoggerClass().root.handlers[0].baseFilename)
+except AttributeError:
+    logging_path = None
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -41,7 +43,7 @@ class Model_PM:
         self.plot = plot
 
     def _plot(self, tx_dpd, phase_diff, coefs_pm, coefs_pm_new):
-        if logging.getLogger().getEffectiveLevel() == logging.DEBUG and self.plot:
+        if logging.getLogger().getEffectiveLevel() == logging.DEBUG and self.plot and logging_path is not None:
             tx_range, phase_diff_est = self.calc_line(coefs_pm, 0, 0.6)
             tx_range_new, phase_diff_est_new = self.calc_line(coefs_pm_new, 0, 0.6)
 

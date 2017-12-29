@@ -9,7 +9,10 @@ import datetime
 import os
 import logging
 import time
-logging_path = os.path.dirname(logging.getLoggerClass().root.handlers[0].baseFilename)
+try:
+    logging_path = os.path.dirname(logging.getLoggerClass().root.handlers[0].baseFilename)
+except AttributeError:
+    logging_path = None
 
 import numpy as np
 import matplotlib
@@ -70,6 +73,9 @@ class Agc:
     def plot_estimates(self):
         """Plots the estimate of for Max, Median, Mean for different
         number of samples."""
+        if logging_path is None:
+            return
+
         self.adapt.set_rxgain(self.min_rxgain)
         time.sleep(1)
 

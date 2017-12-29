@@ -7,8 +7,10 @@
 
 import os
 import logging
-
-logging_path = os.path.dirname(logging.getLoggerClass().root.handlers[0].baseFilename)
+try:
+    logging_path = os.path.dirname(logging.getLoggerClass().root.handlers[0].baseFilename)
+except AttributeError:
+    logging_path = None
 
 import numpy as np
 

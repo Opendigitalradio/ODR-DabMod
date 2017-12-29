@@ -12,7 +12,7 @@ import logging
 try:
     logging_path = os.path.dirname(logging.getLoggerClass().root.handlers[0].baseFilename)
 except:
-    logging_path = "/tmp/"
+    logging_path = None
 
 import numpy as np
 import scipy
@@ -75,7 +75,7 @@ class Symbol_align:
 
         offset = peaks[np.argmin([tx_product_avg[peak] for peak in peaks])]
 
-        if logging.getLogger().getEffectiveLevel() == logging.DEBUG and self.plot:
+        if logging.getLogger().getEffectiveLevel() == logging.DEBUG and self.plot and logging_path is not None:
             dt = datetime.datetime.now().isoformat()
             fig_path = logging_path + "/" + dt + "_Symbol_align.svg"
 

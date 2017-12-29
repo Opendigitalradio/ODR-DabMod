@@ -7,8 +7,10 @@
 import datetime
 import logging
 import os
-
-logging_path = os.path.dirname(logging.getLoggerClass().root.handlers[0].baseFilename)
+try:
+    logging_path = os.path.dirname(logging.getLoggerClass().root.handlers[0].baseFilename)
+except AttributeError:
+    logging_path = None
 
 import numpy as np
 from scipy import optimize
@@ -72,7 +74,7 @@ def subsample_align(sig, ref_sig, plot=False):
     if optim_result.success:
         best_tau = optim_result.x
 
-        if plot:
+        if plot and logging_path is not None:
             corr = np.vectorize(correlate_for_delay)
             ixs = np.linspace(-1, 1, 100)
             taus = corr(ixs)

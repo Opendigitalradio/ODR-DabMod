@@ -73,14 +73,14 @@ class Const:
         self.MPM_tx_min = 0.1
 
         # Constants for TX_Agc
-        self.TAGC_max_txgain = 89  # USRP specific
+        self.TAGC_max_txgain = 89  # USRP B200 specific
         self.TAGC_tx_median_target = target_median
         self.TAGC_tx_median_max = self.TAGC_tx_median_target * 1.4
         self.TAGC_tx_median_min = self.TAGC_tx_median_target / 1.4
 
         # Constants for RX_AGC
-        self.RAGC_min_rxgain = 25  # USRP specific
-        self.RAGC_rx_median_target = self.TAGC_tx_median_target
+        self.RAGC_min_rxgain = 25  # USRP B200 specific
+        self.RAGC_rx_median_target = target_median
 
 # The MIT License (MIT)
 #

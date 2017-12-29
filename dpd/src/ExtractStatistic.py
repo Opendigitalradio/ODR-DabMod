@@ -12,8 +12,10 @@ import matplotlib.pyplot as plt
 import datetime
 import os
 import logging
-
-logging_path = os.path.dirname(logging.getLoggerClass().root.handlers[0].baseFilename)
+try:
+    logging_path = os.path.dirname(logging.getLoggerClass().root.handlers[0].baseFilename)
+except AttributeError:
+    logging_path = None
 
 
 def _check_input_extract(tx_dpd, rx_received):
@@ -64,7 +66,7 @@ class ExtractStatistic:
         self.plot = c.ES_plot
 
     def _plot_and_log(self, tx_values, rx_values, phase_diffs_values, phase_diffs_values_lists):
-        if logging.getLogger().getEffectiveLevel() == logging.DEBUG and self.plot:
+        if logging.getLogger().getEffectiveLevel() == logging.DEBUG and self.plot and logging_path is not None:
 
             dt = datetime.datetime.now().isoformat()
             fig_path = logging_path + "/" + dt + "_ExtractStatistic.png"

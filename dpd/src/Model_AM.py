@@ -8,8 +8,10 @@
 import datetime
 import os
 import logging
-
-logging_path = os.path.dirname(logging.getLoggerClass().root.handlers[0].baseFilename)
+try:
+    logging_path = os.path.dirname(logging.getLoggerClass().root.handlers[0].baseFilename)
+except AttributeError:
+    logging_path = None
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -55,7 +57,7 @@ class Model_AM:
         self.plot = plot
 
     def _plot(self, tx_dpd, rx_received, coefs_am, coefs_am_new):
-        if logging.getLogger().getEffectiveLevel() == logging.DEBUG and self.plot:
+        if logging.getLogger().getEffectiveLevel() == logging.DEBUG and self.plot and logging_path is not None:
             tx_range, rx_est = calc_line(coefs_am, 0, 0.6)
             tx_range_new, rx_est_new = calc_line(coefs_am_new, 0, 0.6)
 

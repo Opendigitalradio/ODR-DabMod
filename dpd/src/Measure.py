@@ -11,9 +11,7 @@ import struct
 import numpy as np
 import src.Dab_Util as DU
 import os
-
 import logging
-logging_path = os.path.dirname(logging.getLoggerClass().root.handlers[0].baseFilename)
 
 class Measure:
     """Collect Measurement from DabMod"""

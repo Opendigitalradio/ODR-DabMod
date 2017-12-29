@@ -9,7 +9,10 @@ import datetime
 import os
 import logging
 
-logging_path = os.path.dirname(logging.getLoggerClass().root.handlers[0].baseFilename)
+try:
+    logging_path = os.path.dirname(logging.getLoggerClass().root.handlers[0].baseFilename)
+except AttributeError:
+    logging_path = None
 
 import numpy as np
 import matplotlib
@@ -53,7 +56,7 @@ class Dab_Util:
         off = sig_rec.shape[0]
         c = np.abs(signal.correlate(sig_orig, sig_rec))
 
-        if logging.getLogger().getEffectiveLevel() == logging.DEBUG and self.plot:
+        if logging.getLogger().getEffectiveLevel() == logging.DEBUG and self.plot and logging_path is not None:
             dt = datetime.datetime.now().isoformat()
             corr_path = (logging_path + "/" + dt + "_tx_rx_corr.svg")
             plt.plot(c, label="corr")
@@ -107,7 +110,7 @@ class Dab_Util:
         Returns an aligned version of sig_tx and sig_rx by cropping and subsample alignment
         """
 
-        if logging.getLogger().getEffectiveLevel() == logging.DEBUG and self.plot:
+        if logging.getLogger().getEffectiveLevel() == logging.DEBUG and self.plot and logging_path is not None:
             dt = datetime.datetime.now().isoformat()
             fig_path = logging_path + "/" + dt + "_sync_raw.svg"
 
@@ -151,7 +154,7 @@ class Dab_Util:
             sig_tx = sig_tx[:-1]
             sig_rx = sig_rx[:-1]
 
-        if logging.getLogger().getEffectiveLevel() == logging.DEBUG and self.plot:
+        if logging.getLogger().getEffectiveLevel() == logging.DEBUG and self.plot and logging_path is not None:
             dt = datetime.datetime.now().isoformat()
             fig_path = logging_path + "/" + dt + "_sync_sample_aligned.svg"
 
@@ -175,7 +178,7 @@ class Dab_Util:
 
         sig_rx = sa.subsample_align(sig_rx, sig_tx)
 
-        if logging.getLogger().getEffectiveLevel() == logging.DEBUG and self.plot:
+        if logging.getLogger().getEffectiveLevel() == logging.DEBUG and self.plot and logging_path is not None:
             dt = datetime.datetime.now().isoformat()
             fig_path = logging_path + "/" + dt + "_sync_subsample_aligned.svg"
 
@@ -199,7 +202,7 @@ class Dab_Util:
 
         sig_rx = pa.phase_align(sig_rx, sig_tx)
 
-        if logging.getLogger().getEffectiveLevel() == logging.DEBUG and self.plot:
+        if logging.getLogger().getEffectiveLevel() == logging.DEBUG and self.plot and logging_path is not None:
             dt = datetime.datetime.now().isoformat()
             fig_path = logging_path + "/" + dt + "_sync_phase_aligned.svg"
 

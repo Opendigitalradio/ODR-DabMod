@@ -16,7 +16,10 @@ import os
 import datetime
 import pickle
 
-logging_path = os.path.dirname(logging.getLoggerClass().root.handlers[0].baseFilename)
+try:
+    logging_path = os.path.dirname(logging.getLoggerClass().root.handlers[0].baseFilename)
+except AttributeError:
+    logging_path = None
 
 LUT_LEN = 32
 FORMAT_POLY = 1
@@ -226,7 +229,10 @@ class Adapt:
         """Backup current settings to a file"""
         dt = datetime.datetime.now().isoformat()
         if path is None:
-            path = logging_path + "/" + dt + "_adapt.pkl"
+            if logging_path is not None:
+                path = logging_path + "/" + dt + "_adapt.pkl"
+            else:
+                raise Exception("Cannot dump Adapt without either logging_path or path set")
         d = {
             "txgain": self.get_txgain(),
             "rxgain": self.get_rxgain(),

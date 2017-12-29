@@ -45,7 +45,7 @@ parser.add_argument('--digital_gain', default=0.6,
                     required=False,
                     type=float)
 parser.add_argument('--target_median', default=0.05,
-                    help='target_median',
+                    help='The target median for the RX and TX AGC',
                     required=False,
                     type=float)
 parser.add_argument('--samps', default='81920', type=int,
