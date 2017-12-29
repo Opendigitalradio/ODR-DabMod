@@ -65,6 +65,8 @@ parser.add_argument('--name', default="", type=str,
                     help='Name of the logging directory')
 parser.add_argument('-r', '--reset', action="store_true",
                     help='Reset the DPD settings to the defaults.')
+parser.add_argument('-s', '--status', action="store_true",
+                    help='Display the currently running DPD settings.')
 
 cli_args = parser.parse_args()
 
@@ -84,25 +86,34 @@ plot = cli_args.plot
 # Logging
 import logging
 
-dt = datetime.datetime.now().isoformat()
-logging_path = '/tmp/dpd_{}'.format(dt).replace('.', '_').replace(':', '-')
-if name:
-    logging_path += '_' + name
-os.makedirs(logging_path)
-logging.basicConfig(format='%(asctime)s - %(module)s - %(levelname)s - %(message)s',
-                    datefmt='%Y-%m-%d %H:%M:%S',
-                    filename='{}/dpd.log'.format(logging_path),
-                    filemode='w',
-                    level=logging.DEBUG)
-# also log up to INFO to console
-console = logging.StreamHandler()
-console.setLevel(logging.INFO)
-# set a format which is simpler for console use
-formatter = logging.Formatter('%(asctime)s - %(module)s - %(levelname)s - %(message)s')
-# tell the handler to use this format
-console.setFormatter(formatter)
-# add the handler to the root logger
-logging.getLogger('').addHandler(console)
+# Simple usage scenarios don't need to clutter /tmp
+if not (cli_args.status or cli_args.reset):
+    dt = datetime.datetime.now().isoformat()
+    logging_path = '/tmp/dpd_{}'.format(dt).replace('.', '_').replace(':', '-')
+    if name:
+        logging_path += '_' + name
+    print("Logs and plots written to {}".format(logging_path))
+    os.makedirs(logging_path)
+    logging.basicConfig(format='%(asctime)s - %(module)s - %(levelname)s - %(message)s',
+                        datefmt='%Y-%m-%d %H:%M:%S',
+                        filename='{}/dpd.log'.format(logging_path),
+                        filemode='w',
+                        level=logging.DEBUG)
+    # also log up to INFO to console
+    console = logging.StreamHandler()
+    console.setLevel(logging.INFO)
+    # set a format which is simpler for console use
+    formatter = logging.Formatter('%(asctime)s - %(module)s - %(levelname)s - %(message)s')
+    # tell the handler to use this format
+    console.setFormatter(formatter)
+    # add the handler to the root logger
+    logging.getLogger('').addHandler(console)
+else:
+    dt = datetime.datetime.now().isoformat()
+    logging.basicConfig(format='%(asctime)s - %(module)s - %(levelname)s - %(message)s',
+                        datefmt='%Y-%m-%d %H:%M:%S',
+                        level=logging.DEBUG)
+    logging_path = None
 
 logging.info("DPDCE starting up with options: {}".format(cli_args))
 
@@ -127,6 +138,17 @@ MS = Measure_Shoulders(c)
 meas = Measure(c, samplerate, port, num_req)
 extStat = ExtractStatistic(c)
 adapt = Adapt(c, port_rc, coef_path)
+
+if cli_args.status:
+    status = {
+            "txgain": adapt.get_txgain(),
+            "rxgain": adapt.get_rxgain(),
+            "digital_gain": adapt.get_digital_gain(),
+            "predistorter": adapt.get_predistorter()
+            }
+
+    logging.info("ODR-DabMod currently running with {}".format(status))
+    sys.exit(0)
 
 if cli_args.lut:
     model = Lut(c)
@@ -154,26 +176,9 @@ rx_gain = adapt.get_rxgain()
 digital_gain = adapt.get_digital_gain()
 
 dpddata = adapt.get_predistorter()
-if dpddata[0] == "poly":
-    coefs_am = dpddata[1]
-    coefs_pm = dpddata[2]
-    logging.info(
-        "TX gain {}, RX gain {}, dpd_coefs_am {},"
-        " dpd_coefs_pm {}, digital_gain {}".format(
-            tx_gain, rx_gain, coefs_am, coefs_pm, digital_gain
-        )
-    )
-elif dpddata[0] == "lut":
-    scalefactor = dpddata[1]
-    lut = dpddata[2]
-    logging.info(
-        "TX gain {}, RX gain {}, LUT scalefactor {},"
-        " LUT {}, digital_gain {}".format(
-            tx_gain, rx_gain, scalefactor, lut, digital_gain
-        )
-    )
-else:
-    logging.error("Unknown dpd data format {}".format(dpddata[0]))
+
+logging.info("TX gain {}, RX gain {}, digital_gain {}, {!s}".format(
+        tx_gain, rx_gain, digital_gain, Adapt.dpddata_to_str(dpddata)))
 
 if cli_args.reset:
     logging.info("DPD Settings were reset to default values.")

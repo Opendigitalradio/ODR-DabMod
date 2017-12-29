@@ -42,6 +42,19 @@ def _write_lut_file(scalefactor, lut, path):
         f.write("{}\n{}\n".format(coef.real, coef.imag))
     f.close()
 
+def dpddata_to_str(dpddata):
+    if dpddata[0] == "poly":
+        coefs_am = dpddata[1]
+        coefs_pm = dpddata[2]
+        return "dpd_coefs_am {}, dpd_coefs_pm {}".format(
+                self.coefs_am, self.coefs_pm)
+    elif dpddata[0] == "lut":
+        scalefactor = dpddata[1]
+        lut = dpddata[2]
+        return "LUT scalefactor {}, LUT {}".format(
+                scalefactor, lut)
+    else:
+        raise ValueError("Unknown dpddata type {}".format(dpddata[0]))
 
 class Adapt:
     """Uses the ZMQ remote control to change parameters of the DabMod
