@@ -64,7 +64,7 @@ class PAPRStats
         /* Returns PAPR in dB if enough blocks were processed, or
          * 0 otherwise.
          */
-        double calculate_papr(void);
+        double calculate_papr(void) const;
 
     private:
         size_t m_num_blocks_to_accumulate;

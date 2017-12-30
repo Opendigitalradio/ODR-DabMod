@@ -69,7 +69,7 @@ void PAPRStats::process_block(const complexf* data, size_t data_len)
     }
 }
 
-double PAPRStats::calculate_papr()
+double PAPRStats::calculate_papr() const
 {
     if (m_squared_mean.size() < m_num_blocks_to_accumulate) {
         return 0;

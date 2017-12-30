@@ -27,11 +27,8 @@
 #include "OfdmGenerator.h"
 #include "PcDebug.h"
 
-#include <complex>
-#include "fftw3.h"
 #define FFT_TYPE fftwf_complex
 
-#include <stdio.h>
 #include <string.h>
 #include <stdexcept>
 #include <assert.h>
@@ -56,7 +53,10 @@ OfdmGenerator::OfdmGenerator(size_t nbSymbols,
     myCfr(enableCfr),
     myCfrClip(cfrClip),
     myCfrErrorClip(cfrErrorClip),
-    myCfrFft(nullptr)
+    myCfrFft(nullptr),
+    // Initialise the PAPRStats to a few seconds worth of samples
+    myPaprBeforeCFR(nbSymbols * 50),
+    myPaprAfterCFR(nbSymbols * 50)
 {
     PDEBUG("OfdmGenerator::OfdmGenerator(%zu, %zu, %zu, %s) @ %p\n",
             nbSymbols, nbCarriers, spacing, inverse ? "true" : "false", this);
@@ -71,6 +71,7 @@ OfdmGenerator::OfdmGenerator(size_t nbSymbols,
     RC_ADD_PARAMETER(clip, "CFR: Clip to amplitude");
     RC_ADD_PARAMETER(errorclip, "CFR: Limit error");
     RC_ADD_PARAMETER(clip_stats, "CFR: statistics (clip ratio, errorclip ratio)");
+    RC_ADD_PARAMETER(papr, "PAPR measurements (before CFR, after CFR)");
 
     if (inverse) {
         myPosDst = (nbCarriers & 1 ? 0 : 1);
@@ -203,19 +204,25 @@ int OfdmGenerator::process(Buffer* const dataIn, Buffer* dataOut)
 
         fftwf_execute(myFftPlan); // IFFT from myFftIn to myFftOut
 
+        complexf *symbol = reinterpret_cast<complexf*>(myFftOut);
+        myPaprBeforeCFR.process_block(symbol, mySpacing);
+
         if (myCfr) {
             if (myMERCalcIndex == i) {
                 before_cfr.resize(mySpacing);
                 memcpy(before_cfr.data(), myFftOut, mySpacing * sizeof(FFT_TYPE));
             }
 
-            complexf *symbol = reinterpret_cast<complexf*>(myFftOut);
             /* cfr_one_iteration runs the myFftPlan again at the end, and
              * therefore writes the output data to myFftOut.
              */
             const auto stat = cfr_one_iteration(symbol, reference.data());
 
             // i == 0 always zero power, so the MER ends up being NaN
+            if (i > 0) {
+                myPaprAfterCFR.process_block(symbol, mySpacing);
+            }
+
             if (i > 0 and myMERCalcIndex == i) {
                 /* MER definition, ETSI ETR 290, Annex C
                  *
@@ -358,8 +365,8 @@ void OfdmGenerator::set_parameter(const std::string& parameter,
     else if (parameter == "errorclip") {
         ss >> myCfrErrorClip;
     }
-    else if (parameter == "clip_stats") {
-        throw ParameterError("Parameter 'clip_stats' is read-only");
+    else if (parameter == "clip_stats" or parameter == "papr") {
+        throw ParameterError("Parameter '" + parameter + "' is read-only");
     }
     else {
         stringstream ss_err;
@@ -405,6 +412,15 @@ const std::string OfdmGenerator::get_parameter(const std::string& parameter) con
                 avg_errclip_ratio * 100 << "%"" errors clipped. " <<
                 "MER after CFR: " << avg_mer << " dB";
         }
+    }
+    else if (parameter == "papr") {
+        const double papr_before = myPaprBeforeCFR.calculate_papr();
+        const double papr_after = myPaprAfterCFR.calculate_papr();
+
+        ss << "PAPR [dB]: " << std::fixed <<
+            (papr_before == 0 ? string("N/A") : to_string(papr_before)) <<
+            ", " <<
+            (papr_after == 0 ? string("N/A") : to_string(papr_after));
     }
     else {
         ss << "Parameter '" << parameter <<
