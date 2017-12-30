@@ -141,6 +141,8 @@ odr_dabmod_SOURCES  = src/DabMod.cpp \
 					  src/Utils.h \
 					  src/TII.cpp \
 					  src/TII.h \
+					  src/PAPRStats.cpp \
+					  src/PAPRStats.h \
 					  src/zmq.hpp \
 					  lib/crc.h \
 					  lib/crc.c \

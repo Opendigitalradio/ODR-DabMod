@@ -30,13 +30,14 @@
 #   include "config.h"
 #endif
 
-#include "porting.h"
 #include "ModPlugin.h"
 #include "RemoteControl.h"
+#include "PAPRStats.h"
 #include "fftw3.h"
-#include <sys/types.h>
+#include <cstddef>
 #include <vector>
 #include <complex>
+#include <atomic>
 
 typedef std::complex<float> complexf;
 
@@ -101,6 +102,11 @@ class OfdmGenerator : public ModCodec, public RemoteControllable
         // Statistics for CFR
         std::deque<double> myClipRatios;
         std::deque<double> myErrorClipRatios;
+
+        // Measure PAPR before and after CFR
+        PAPRStats myPaprBeforeCFR;
+        PAPRStats myPaprAfterCFR;
+        std::atomic<bool> myPaprClearRequest;
 
         size_t myMERCalcIndex = 0;
         std::deque<double> myMERs;
