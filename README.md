@@ -29,7 +29,8 @@ Features
 - Logging: log to file, to syslog
 - ETI sources: ETI-over-TCP, file (Raw, Framed and Streamed) and ZeroMQ
 - A Telnet and ZeroMQ remote-control that can be used to change
-  some parameters during runtime
+  some parameters during runtime and retrieve statistics.
+  See doc/README-RC.md for more information
 - ZeroMQ PUB and REP output.
 - Ongoing work about digital predistortion for PA linearisation.
   See dpd/README.md
