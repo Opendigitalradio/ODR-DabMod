@@ -37,6 +37,7 @@
 #include <cstddef>
 #include <vector>
 #include <complex>
+#include <atomic>
 
 typedef std::complex<float> complexf;
 
@@ -105,6 +106,7 @@ class OfdmGenerator : public ModCodec, public RemoteControllable
         // Measure PAPR before and after CFR
         PAPRStats myPaprBeforeCFR;
         PAPRStats myPaprAfterCFR;
+        std::atomic<bool> myPaprClearRequest;
 
         size_t myMERCalcIndex = 0;
         std::deque<double> myMERs;

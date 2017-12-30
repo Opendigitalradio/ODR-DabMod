@@ -100,6 +100,12 @@ double PAPRStats::calculate_papr() const
     return 10.0 * std::log10(peak / rms2);
 }
 
+void PAPRStats::clear()
+{
+    m_squared_peaks.clear();
+    m_squared_mean.clear();
+}
+
 #if defined(TEST)
 /* Test python code:
 import numpy as np

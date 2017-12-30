@@ -66,6 +66,8 @@ class PAPRStats
          */
         double calculate_papr(void) const;
 
+        void clear(void);
+
     private:
         size_t m_num_blocks_to_accumulate;
         std::deque<double> m_squared_peaks;

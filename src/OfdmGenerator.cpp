@@ -187,6 +187,14 @@ int OfdmGenerator::process(Buffer* const dataIn, Buffer* dataOut)
     // For performance reasons, do not calculate MER for every symbol.
     myMERCalcIndex = (myMERCalcIndex + 1) % myNbSymbols;
 
+    // The PAPRStats' clear() is not threadsafe, do not access it
+    // from the RC functions.
+    if (myPaprClearRequest.load()) {
+        myPaprBeforeCFR.clear();
+        myPaprAfterCFR.clear();
+        myPaprClearRequest.store(false);
+    }
+
     for (size_t i = 0; i < myNbSymbols; ++i) {
         myFftIn[0][0] = 0;
         myFftIn[0][1] = 0;
@@ -358,12 +366,15 @@ void OfdmGenerator::set_parameter(const std::string& parameter,
 
     if (parameter == "cfr") {
         ss >> myCfr;
+        myPaprClearRequest.store(true);
     }
     else if (parameter == "clip") {
         ss >> myCfrClip;
+        myPaprClearRequest.store(true);
     }
     else if (parameter == "errorclip") {
         ss >> myCfrErrorClip;
+        myPaprClearRequest.store(true);
     }
     else if (parameter == "clip_stats" or parameter == "papr") {
         throw ParameterError("Parameter '" + parameter + "' is read-only");
