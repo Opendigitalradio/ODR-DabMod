@@ -39,14 +39,6 @@
 #include <sys/types.h>
 #include <memory>
 
-struct FILEDeleter {
-    void operator()(FILE* fd) {
-        if (fd) {
-            fclose(fd);
-        }
-    }
-};
-
 class OutputFile : public ModOutput, public ModMetadata
 {
 public:
@@ -65,6 +57,8 @@ protected:
     EtiSource *myEtiSource = nullptr;
 
     std::string myFilename;
+
+    struct FILEDeleter{ void operator()(FILE* fd){ if (fd) fclose(fd); }};
     std::unique_ptr<FILE, FILEDeleter> myFile;
 };
 

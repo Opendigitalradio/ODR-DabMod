@@ -109,6 +109,17 @@ LogLine Logger::level(log_level_t level)
     return LogLine(this, level);
 }
 
+LogToFile::LogToFile(const std::string& filename) : name("FILE")
+{
+    FILE* fd = fopen(filename.c_str(), "a");
+    if (fd == nullptr) {
+        fprintf(stderr, "Cannot open log file !");
+        throw std::runtime_error("Cannot open log file !");
+    }
+
+    log_file.reset(fd);
+}
+
 void LogToFile::log(log_level_t level, const std::string& message)
 {
     if (level != log_level_t::trace) {
@@ -116,9 +127,9 @@ void LogToFile::log(log_level_t level, const std::string& message)
             "DEBUG", "INFO", "WARN", "ERROR", "ALERT", "EMERG"};
 
         // fprintf is thread-safe
-        fprintf(log_file, SYSLOG_IDENT ": %s: %s\n",
+        fprintf(log_file.get(), SYSLOG_IDENT ": %s: %s\n",
                 log_level_text[(size_t)level], message.c_str());
-        fflush(log_file);
+        fflush(log_file.get());
     }
 }
 
@@ -142,31 +153,33 @@ void LogToSyslog::log(log_level_t level, const std::string& message)
     }
 }
 
-LogTracer::LogTracer(const string& trace_filename)
+LogTracer::LogTracer(const string& trace_filename) : name("TRACE")
 {
-    name = "TRACE";
     etiLog.level(info) << "Setting up TRACE to " << trace_filename;
 
-    m_trace_file = fopen(trace_filename.c_str(), "a");
-    if (m_trace_file == NULL) {
+    FILE* fd = fopen(trace_filename.c_str(), "a");
+    if (fd == nullptr) {
         fprintf(stderr, "Cannot open trace file !");
         throw std::runtime_error("Cannot open trace file !");
     }
+    m_trace_file.reset(fd);
 
-    auto now = chrono::steady_clock::now().time_since_epoch();
-    m_trace_micros_startup =
-        chrono::duration_cast<chrono::microseconds>(now).count();
+    using namespace std::chrono;
+    auto now = steady_clock::now().time_since_epoch();
+    m_trace_micros_startup = duration_cast<microseconds>(now).count();
 
-    fprintf(m_trace_file, "0,TRACER,startup at %ld\n", m_trace_micros_startup);
+    fprintf(m_trace_file.get(),
+            "0,TRACER,startup at %ld\n", m_trace_micros_startup);
 }
 
 void LogTracer::log(log_level_t level, const std::string& message)
 {
     if (level == log_level_t::trace) {
-        const auto now = chrono::steady_clock::now().time_since_epoch();
-        const auto micros = chrono::duration_cast<chrono::microseconds>(now).count();
+        using namespace std::chrono;
+        const auto now = steady_clock::now().time_since_epoch();
+        const auto micros = duration_cast<microseconds>(now).count();
 
-        fprintf(m_trace_file, "%ld,%s\n",
+        fprintf(m_trace_file.get(), "%ld,%s\n",
                 micros - m_trace_micros_startup,
                 message.c_str());
     }
