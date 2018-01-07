@@ -2,7 +2,7 @@
    Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010 Her Majesty the
    Queen in Right of Canada (Communications Research Center Canada)
 
-   Copyright (C) 2017
+   Copyright (C) 2018
    Matthias P. Braendli, matthias.braendli@mpb.li
 
     http://opendigitalradio.org
@@ -57,8 +57,7 @@ static constexpr double TIMESTAMP_ABORT_FUTURE = 100;
 static constexpr double TIMESTAMP_MARGIN_FUTURE = 0.5;
 
 SDR::SDR(SDRDeviceConfig& config, std::shared_ptr<SDRDevice> device) :
-    ModOutput(),
-    RemoteControllable("sdr"),
+    ModOutput(), ModMetadata(), RemoteControllable("sdr"),
     m_config(config),
     m_running(false),
     m_device(device)
@@ -97,23 +96,38 @@ void SDR::stop()
 
 int SDR::process(Buffer *dataIn)
 {
+    const uint8_t* pDataIn = (uint8_t*)dataIn->getData();
+    m_frame.resize(dataIn->getLength());
+    std::copy(pDataIn, pDataIn + dataIn->getLength(),
+            m_frame.begin());
+
+    // We will effectively transmit the frame once we got the metadata.
+
+    return dataIn->getLength();
+}
+
+meta_vec_t SDR::process_metadata(const meta_vec_t& metadataIn)
+{
     if (m_device) {
         FrameData frame;
-        frame.buf.resize(dataIn->getLength());
+        frame.buf = std::move(m_frame);
 
-        const uint8_t* pDataIn = (uint8_t*)dataIn->getData();
-        std::copy(pDataIn, pDataIn + dataIn->getLength(),
-                frame.buf.begin());
-
-        m_eti_source->calculateTimestamp(frame.ts);
-
-        // TODO check device running
-
-        if (frame.ts.fct == -1) {
+        if (metadataIn.empty()) {
             etiLog.level(info) <<
                 "SDR output: dropping one frame with invalid FCT";
         }
         else {
+            /* In transmission modes where several ETI frames are needed to
+             * build one transmission frame (like in TM 1), we will have
+             * several entries in metadataIn. Take the first one, which
+             * comes from the earliest ETI frame.
+             * This behaviour is different to earlier versions of ODR-DabMod,
+             * which took the timestamp from the latest ETI frame.
+             */
+            frame.ts = *(metadataIn[0].ts);
+
+            // TODO check device running
+
             try {
                 if (m_dpd_feedback_server) {
                     m_dpd_feedback_server->set_tx_frame(frame.buf, frame.ts);
@@ -137,9 +151,9 @@ int SDR::process(Buffer *dataIn)
     else {
         // Ignore frame
     }
-
-    return dataIn->getLength();
+    return {};
 }
+
 
 void SDR::process_thread_entry()
 {

@@ -2,7 +2,7 @@
    Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010 Her Majesty the
    Queen in Right of Canada (Communications Research Center Canada)
 
-   Copyright (C) 2017
+   Copyright (C) 2018
    Matthias P. Braendli, matthias.braendli@mpb.li
 
     http://opendigitalradio.org
@@ -43,7 +43,7 @@ namespace Output {
 
 using complexf = std::complex<float>;
 
-class SDR : public ModOutput, public RemoteControllable {
+class SDR : public ModOutput, public ModMetadata, public RemoteControllable {
     public:
         SDR(SDRDeviceConfig& config, std::shared_ptr<SDRDevice> device);
         SDR(const SDR& other) = delete;
@@ -51,6 +51,7 @@ class SDR : public ModOutput, public RemoteControllable {
         ~SDR();
 
         virtual int process(Buffer *dataIn) override;
+        virtual meta_vec_t process_metadata(const meta_vec_t& metadataIn) override;
 
         virtual const char* name() override;
 
@@ -76,6 +77,7 @@ class SDR : public ModOutput, public RemoteControllable {
 
         std::atomic<bool> m_running;
         std::thread m_device_thread;
+        std::vector<uint8_t> m_frame;
         ThreadsafeQueue<FrameData> m_queue;
 
         std::shared_ptr<SDRDevice> m_device;
