@@ -36,7 +36,7 @@
 #include <vector>
 #include <sys/types.h>
 
-class FicSource : public ModInput
+class FicSource : public ModInput, public ModMetadata
 {
 public:
     FicSource(unsigned ficf, unsigned mid);
@@ -45,12 +45,17 @@ public:
     const std::vector<PuncturingRule>& get_rules();
 
     void loadFicData(const Buffer& fic);
-    int process(Buffer* outputData);
-    const char* name() { return "FicSource"; }
+    int process(Buffer* outputData) override;
+    const char* name() override { return "FicSource"; }
+
+    void loadTimestamp(const std::shared_ptr<struct frame_timestamp>& ts);
+    virtual meta_vec_t process_metadata(
+            const meta_vec_t& metadataIn) override;
 
 private:
     size_t d_framesize;
     Buffer d_buffer;
+    std::shared_ptr<struct frame_timestamp> d_ts;
     std::vector<PuncturingRule> d_puncturing_rules;
 };
 

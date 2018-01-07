@@ -281,6 +281,8 @@ int EtiReader::loadEtiData(const Buffer& dataIn)
     myTimestampDecoder.updateTimestampEti(eti_fc.FP & 0x3,
             eti_eoh.MNSC, getPPSOffset(), eti_fc.FCT);
 
+    myFicSource->loadTimestamp(myTimestampDecoder.getTimestamp());
+
     return dataIn.getLength() - input_size;
 }
 
@@ -533,8 +535,9 @@ void EdiReader::assemble()
     const std::time_t posix_timestamp_1_jan_2000 = 946684800;
     auto utc_ts = posix_timestamp_1_jan_2000 + m_seconds - m_utco;
 
-    m_timestamp_decoder.updateTimestampEdi(
-            utc_ts, m_fc.tsta, m_fc.fct());
+    m_timestamp_decoder.updateTimestampEdi(utc_ts, m_fc.tsta, m_fc.fct(), m_fc.fp);
+
+    myFicSource->loadTimestamp(m_timestamp_decoder.getTimestamp());
 
     m_frameReady = true;
 }

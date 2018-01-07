@@ -37,6 +37,22 @@
 //#define MDEBUG(fmt, args...) fprintf (LOG, "*****" fmt , ## args)
 #define MDEBUG(fmt, args...) PDEBUG(fmt, ## args)
 
+TimestampDecoder::TimestampDecoder(double& offset_s, unsigned tist_delay_stages) :
+        RemoteControllable("tist"),
+        timestamp_offset(offset_s),
+        m_tist_delay_stages(tist_delay_stages)
+{
+    // Properly initialise temp_time
+    memset(&temp_time, 0, sizeof(temp_time));
+    const time_t timep = 0;
+    gmtime_r(&timep, &temp_time);
+
+    RC_ADD_PARAMETER(offset, "TIST offset [s]");
+    RC_ADD_PARAMETER(timestamp, "FCT and timestamp [s]");
+
+    etiLog.level(info) << "Setting up timestamp decoder with " <<
+        timestamp_offset << " offset";
+}
 
 void TimestampDecoder::calculateTimestamp(frame_timestamp& ts)
 {
@@ -48,6 +64,7 @@ void TimestampDecoder::calculateTimestamp(frame_timestamp& ts)
     ts_queued->timestamp_sec = time_secs;
     ts_queued->timestamp_pps = time_pps;
     ts_queued->fct = latestFCT;
+    ts_queued->fp = latestFP;
 
     ts_queued->timestamp_refresh = offset_changed;
     offset_changed = false;
@@ -102,7 +119,29 @@ void TimestampDecoder::calculateTimestamp(frame_timestamp& ts)
     //ts.print("calc2 ");
 }
 
-void TimestampDecoder::pushMNSCData(int framephase, uint16_t mnsc)
+std::shared_ptr<frame_timestamp> TimestampDecoder::getTimestamp()
+{
+    std::shared_ptr<frame_timestamp> ts =
+        std::make_shared<frame_timestamp>();
+
+    /* Push new timestamp into queue */
+    ts->timestamp_valid = full_timestamp_received;
+    ts->timestamp_sec = time_secs;
+    ts->timestamp_pps = time_pps;
+    ts->fct = latestFCT;
+    ts->fp = latestFP;
+
+    ts->timestamp_refresh = offset_changed;
+    offset_changed = false;
+
+    MDEBUG("time_secs=%d, time_pps=%f\n", time_secs,
+            (double)time_pps / 16384000.0);
+    *ts += timestamp_offset;
+
+    return ts;
+}
+
+void TimestampDecoder::pushMNSCData(uint8_t framephase, uint16_t mnsc)
 {
     struct eti_MNSC_TIME_0 *mnsc0;
     struct eti_MNSC_TIME_1 *mnsc1;
@@ -190,7 +229,7 @@ void TimestampDecoder::updateTimestampPPS(uint32_t pps)
 }
 
 void TimestampDecoder::updateTimestampEti(
-        int framephase,
+        uint8_t framephase,
         uint16_t mnsc,
         uint32_t pps, // In units of 1/16384000 s
         int32_t fct)
@@ -198,16 +237,19 @@ void TimestampDecoder::updateTimestampEti(
     updateTimestampPPS(pps);
     pushMNSCData(framephase, mnsc);
     latestFCT = fct;
+    latestFP = framephase;
 }
 
 void TimestampDecoder::updateTimestampEdi(
         uint32_t seconds_utc,
         uint32_t pps, // In units of 1/16384000 s
-        int32_t fct)
+        int32_t fct,
+        uint8_t framephase)
 {
     time_secs = seconds_utc;
     time_pps  = pps;
     latestFCT = fct;
+    latestFP = framephase;
     full_timestamp_received = true;
 }
 

@@ -119,3 +119,20 @@ public:
             std::vector<Buffer*> dataOut);
     virtual int process(Buffer* dataIn) = 0;
 };
+
+struct frame_timestamp;
+struct flowgraph_metadata {
+    std::shared_ptr<struct frame_timestamp> ts;
+};
+
+
+using meta_vec_t = std::vector<flowgraph_metadata>;
+
+/* Some ModPlugins also support metadata */
+class ModMetadata {
+    public:
+        // Receives metadata from all inputs, and process them, and output
+        // a sequence of metadata.
+        virtual meta_vec_t process_metadata(const meta_vec_t& metadataIn) = 0;
+};
+

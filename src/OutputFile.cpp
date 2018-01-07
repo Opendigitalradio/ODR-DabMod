@@ -2,7 +2,7 @@
    Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010, 2011 Her Majesty
    the Queen in Right of Canada (Communications Research Center Canada)
 
-   Copyright (C) 2016
+   Copyright (C) 2018
    Matthias P. Braendli, matthias.braendli@mpb.li
 
     http://opendigitalradio.org
@@ -26,47 +26,73 @@
 
 #include "OutputFile.h"
 #include "PcDebug.h"
+#include "Log.h"
+#include "TimestampDecoder.h"
 
 #include <string>
 #include <assert.h>
 #include <stdexcept>
 
 
+using namespace std;
+
 OutputFile::OutputFile(std::string filename) :
     ModOutput(),
+    ModMetadata(),
     myFilename(filename)
 {
     PDEBUG("OutputFile::OutputFile(filename: %s) @ %p\n",
             filename.c_str(), this);
 
-    myFile = fopen(filename.c_str(), "w");
-    if (myFile == NULL) {
+    FILE* fd = fopen(filename.c_str(), "w");
+    if (fd == nullptr) {
         perror(filename.c_str());
         throw std::runtime_error(
                 "OutputFile::OutputFile() unable to open file!");
     }
-}
-
-
-OutputFile::~OutputFile()
-{
-    PDEBUG("OutputFile::~OutputFile() @ %p\n", this);
-
-    if (myFile != NULL) {
-        fclose(myFile);
-    }
+    myFile.reset(fd);
 }
 
 
 int OutputFile::process(Buffer* dataIn)
 {
     PDEBUG("OutputFile::process(%p)\n", dataIn);
-    assert(dataIn != NULL);
+    assert(dataIn != nullptr);
 
-    if (fwrite(dataIn->getData(), dataIn->getLength(), 1, myFile) == 0) {
+    if (fwrite(dataIn->getData(), dataIn->getLength(), 1, myFile.get()) == 0) {
         throw std::runtime_error(
                 "OutputFile::process() unable to write to file!");
     }
 
     return dataIn->getLength();
+}
+
+meta_vec_t OutputFile::process_metadata(const meta_vec_t& metadataIn)
+{
+    stringstream ss;
+
+    if (metadataIn.empty()) {
+        etiLog.level(debug) << "OutputFile: no mdIn";
+    }
+
+    for (const auto& md : metadataIn) {
+        if (md.ts) {
+            ss << "FCT=" << md.ts->fct <<
+                " FP=" << (int)md.ts->fp;
+            if (md.ts->timestamp_valid) {
+                ss << " ts=" << md.ts->timestamp_sec <<
+                    "+" << md.ts->timestamp_pps << ", ";
+            }
+            else {
+                ss << " no ts";
+            }
+        }
+        else {
+            ss << "void, ";
+        }
+    }
+
+    etiLog.level(debug) << "Output File got metadata: " << ss.str();
+
+    return {};
 }

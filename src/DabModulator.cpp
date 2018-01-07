@@ -3,7 +3,7 @@
    Her Majesty the Queen in Right of Canada (Communications Research
    Center Canada)
 
-   Copyright (C) 2017
+   Copyright (C) 2018
    Matthias P. Braendli, matthias.braendli@mpb.li
 
     http://opendigitalradio.org
@@ -218,7 +218,7 @@ int DabModulator::process(Buffer* dataOut)
             rcs.enrol(cifPoly.get());
         }
 
-        auto myOutput = make_shared<OutputMemory>(dataOut);
+        myOutput = make_shared<OutputMemory>(dataOut);
 
         shared_ptr<Resampler> cifRes;
         if (m_settings.outputRate != 2048000) {
@@ -390,5 +390,14 @@ int DabModulator::process(Buffer* dataOut)
     // Processing data
     ////////////////////////////////////////////////////////////////////
     return myFlowgraph->run();
+}
+
+meta_vec_t DabModulator::process_metadata(const meta_vec_t& metadataIn)
+{
+    if (myOutput) {
+        return myOutput->get_latest_metadata();
+    }
+
+    return {};
 }
 
