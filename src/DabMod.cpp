@@ -425,6 +425,12 @@ int launch_modulator(int argc, char* argv[])
                 ((Output::SDR*)output.get())->setETISource(modulator->getEtiSource());
             }
 
+            // TODO remove
+            auto output_as_file = dynamic_pointer_cast<OutputFile>(output);
+            if (output_as_file) {
+                output_as_file->setETISource(modulator->getEtiSource());
+            }
+
             inputReader->PrintInfo();
 
             run_modulator_state_t st = run_modulator(m);

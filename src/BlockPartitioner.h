@@ -1,6 +1,11 @@
 /*
    Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010, 2011 Her Majesty
    the Queen in Right of Canada (Communications Research Center Canada)
+
+   Copyright (C) 2018
+   Matthias P. Braendli, matthias.braendli@mpb.li
+
+    http://opendigitalradio.org
  */
 /*
    This file is part of ODR-DabMod.
@@ -25,23 +30,20 @@
 #   include <config.h>
 #endif
 
-
 #include "ModPlugin.h"
 #include <vector>
+#include <cstddef>
 
-#include <sys/types.h>
-
-
-class BlockPartitioner : public ModMux
+class BlockPartitioner : public ModMux, public ModMetadata
 {
 public:
     BlockPartitioner(unsigned mode, unsigned phase);
-    virtual ~BlockPartitioner();
-    BlockPartitioner(const BlockPartitioner&);
-    BlockPartitioner& operator=(const BlockPartitioner&);
 
     int process(std::vector<Buffer*> dataIn, Buffer* dataOut);
     const char* name() { return "BlockPartitioner"; }
+
+    // The implementation assumes process_metadata is always called after process
+    virtual meta_vec_t process_metadata(const meta_vec_t& metadataIn);
 
 protected:
     int d_mode;
@@ -49,8 +51,11 @@ protected:
     size_t d_cifCount;
     size_t d_cifNb;
     size_t d_cifPhase;
+    size_t d_metaPhase;
     size_t d_cifSize;
     size_t d_outputFramesize;
     size_t d_outputFramecount;
+
+    meta_vec_t d_meta;
 };
 
