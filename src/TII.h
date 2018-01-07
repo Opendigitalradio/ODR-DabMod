@@ -2,7 +2,7 @@
    Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010, 2011 Her Majesty
    the Queen in Right of Canada (Communications Research Center Canada)
 
-   Copyright (C) 2017
+   Copyright (C) 2018
    Matthias P. Braendli, matthias.braendli@mpb.li
 
     http://opendigitalradio.org
@@ -35,8 +35,8 @@
 #include "ModPlugin.h"
 #include "RemoteControl.h"
 
-#include <boost/thread.hpp>
-#include <sys/types.h>
+#include <cstddef>
+#include <thread>
 #include <complex>
 #include <vector>
 #include <string>
@@ -118,7 +118,7 @@ class TII : public ModCodec, public RemoteControllable
 
         // m_enabled_carriers is read by modulator thread, and written
         // to by RC thread.
-        mutable boost::mutex m_enabled_carriers_mutex;
+        mutable std::mutex m_enabled_carriers_mutex;
 
         // m_enabled_carriers is true only for the first carrier in the
         // active pair

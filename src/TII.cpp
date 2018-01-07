@@ -2,7 +2,7 @@
    Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010, 2011 Her Majesty
    the Queen in Right of Canada (Communications Research Center Canada)
 
-   Copyright (C) 2017
+   Copyright (C) 2018
    Matthias P. Braendli, matthias.braendli@mpb.li
 
     http://opendigitalradio.org
@@ -187,7 +187,7 @@ int TII::process(Buffer* dataIn, Buffer* dataOut)
     memset(dataOut->getData(), 0,  dataOut->getLength());
 
     if (m_conf.enable and m_insert) {
-        boost::mutex::scoped_lock lock(m_enabled_carriers_mutex);
+        std::lock_guard<std::mutex> lock(m_enabled_carriers_mutex);
         complexf* in = reinterpret_cast<complexf*>(dataIn->getData());
         complexf* out = reinterpret_cast<complexf*>(dataOut->getData());
 
@@ -231,7 +231,7 @@ void TII::enable_carrier(int k) {
 void TII::prepare_pattern() {
     int comb = m_conf.comb; // Convert from unsigned to signed
 
-    boost::mutex::scoped_lock lock(m_enabled_carriers_mutex);
+    std::lock_guard<std::mutex> lock(m_enabled_carriers_mutex);
 
     // Clear previous pattern
     for (size_t i = 0; i < m_enabled_carriers.size(); i++) {
