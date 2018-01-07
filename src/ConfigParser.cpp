@@ -204,13 +204,15 @@ static void parse_configfile(
     if (output_selected == "file") {
         try {
             mod_settings.outputName = pt.get<std::string>("fileoutput.filename");
+            mod_settings.fileOutputShowMetadata =
+                (pt.get("fileoutput.show_metadata", 0) > 0);
         }
         catch (std::exception &e) {
             std::cerr << "Error: " << e.what() << "\n";
             std::cerr << "       Configuration does not specify file name for file output\n";
             throw std::runtime_error("Configuration error");
         }
-        mod_settings.useFileOutput = 1;
+        mod_settings.useFileOutput = true;
 
         mod_settings.fileOutputFormat = pt.get("fileoutput.format", mod_settings.fileOutputFormat);
     }
@@ -283,7 +285,7 @@ static void parse_configfile(
         sdr_device_config.dpdFeedbackServerPort = pt.get<long>("uhdoutput.dpd_port", 0);
 
         mod_settings.sdr_device_config = sdr_device_config;
-        mod_settings.useUHDOutput = 1;
+        mod_settings.useUHDOutput = true;
     }
 #endif
 #if defined(HAVE_SOAPYSDR)
@@ -310,14 +312,14 @@ static void parse_configfile(
             throw std::runtime_error("Configuration error");
         }
 
-        mod_settings.useSoapyOutput = 1;
+        mod_settings.useSoapyOutput = true;
     }
 #endif
 #if defined(HAVE_ZEROMQ)
     else if (output_selected == "zmq") {
         mod_settings.outputName = pt.get<std::string>("zmqoutput.listen");
         mod_settings.zmqOutputSocketType = pt.get<std::string>("zmqoutput.socket_type");
-        mod_settings.useZeroMQOutput = 1;
+        mod_settings.useZeroMQOutput = true;
     }
 #endif
     else {
@@ -399,7 +401,7 @@ void parse_args(int argc, char **argv, mod_settings_t& mod_settings)
             }
 #endif
             mod_settings.outputName = optarg;
-            mod_settings.useFileOutput = 1;
+            mod_settings.useFileOutput = true;
             break;
         case 'F':
 #if defined(HAVE_OUTPUT_UHD)
@@ -442,7 +444,7 @@ void parse_args(int argc, char **argv, mod_settings_t& mod_settings)
             mod_settings.sdr_device_config.refclk_src = "internal";
             mod_settings.sdr_device_config.pps_src = "none";
             mod_settings.sdr_device_config.pps_polarity = "pos";
-            mod_settings.useUHDOutput = 1;
+            mod_settings.useUHDOutput = true;
 #endif
             break;
         case 'V':

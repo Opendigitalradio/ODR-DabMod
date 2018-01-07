@@ -42,12 +42,13 @@
 
 struct mod_settings_t {
     std::string outputName;
-    int useZeroMQOutput = 0;
+    bool useZeroMQOutput = false;
     std::string zmqOutputSocketType = "";
-    int useFileOutput = 0;
+    bool useFileOutput = false;
     std::string fileOutputFormat = "complexf";
-    int useUHDOutput = 0;
-    int useSoapyOutput = 0;
+    bool fileOutputShowMetadata = false;
+    bool useUHDOutput = false;
+    bool useSoapyOutput = false;
 
     size_t outputRate = 2048000;
     size_t clockRate = 0;

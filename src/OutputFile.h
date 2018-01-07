@@ -42,7 +42,7 @@
 class OutputFile : public ModOutput, public ModMetadata
 {
 public:
-    OutputFile(std::string filename);
+    OutputFile(const std::string& filename, bool show_metadata);
 
     virtual int process(Buffer* dataIn) override;
     const char* name() override { return "OutputFile"; }
@@ -51,6 +51,7 @@ public:
             const meta_vec_t& metadataIn) override;
 
 protected:
+    bool myShowMetadata = false;
     std::string myFilename;
 
     struct FILEDeleter{ void operator()(FILE* fd){ if (fd) fclose(fd); }};

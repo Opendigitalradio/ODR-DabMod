@@ -177,7 +177,7 @@ static shared_ptr<ModOutput> prepare_output(
 
     if (s.useFileOutput) {
         if (s.fileOutputFormat == "complexf") {
-            output = make_shared<OutputFile>(s.outputName);
+            output = make_shared<OutputFile>(s.outputName, s.fileOutputShowMetadata);
         }
         else if (s.fileOutputFormat == "complexf_normalised") {
             if (s.gainMode == GainMode::GAIN_FIX)
@@ -186,7 +186,7 @@ static shared_ptr<ModOutput> prepare_output(
                 s.normalise = 1.0f / normalise_factor_file_max;
             else if (s.gainMode == GainMode::GAIN_VAR)
                 s.normalise = 1.0f / normalise_factor_file_var;
-            output = make_shared<OutputFile>(s.outputName);
+            output = make_shared<OutputFile>(s.outputName, s.fileOutputShowMetadata);
         }
         else if (s.fileOutputFormat == "s8" or
                 s.fileOutputFormat == "u8") {
@@ -195,7 +195,7 @@ static shared_ptr<ModOutput> prepare_output(
             // [0; 255]
             s.normalise = 127.0f / normalise_factor;
 
-            output = make_shared<OutputFile>(s.outputName);
+            output = make_shared<OutputFile>(s.outputName, s.fileOutputShowMetadata);
         }
         else {
             throw runtime_error("File output format " + s.fileOutputFormat +
