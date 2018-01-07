@@ -151,8 +151,9 @@ int Node::process()
     meta_vec_t all_input_mds;
     for (auto& md_vec_sp : myInputMetadata) {
         if (md_vec_sp) {
-            copy(md_vec_sp->begin(), md_vec_sp->end(),
+            move(md_vec_sp->begin(), md_vec_sp->end(),
                     back_inserter(all_input_mds));
+            md_vec_sp->clear();
         }
     }
 

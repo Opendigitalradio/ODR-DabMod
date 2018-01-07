@@ -47,22 +47,6 @@ struct frame_timestamp
     bool timestamp_valid = false;
     bool timestamp_refresh;
 
-    frame_timestamp() = default;
-    frame_timestamp(const frame_timestamp& other) = default;
-    frame_timestamp& operator=(const frame_timestamp &rhs)
-    {
-        if (this != &rhs) {
-            this->timestamp_sec = rhs.timestamp_sec;
-            this->timestamp_pps = rhs.timestamp_pps;
-            this->timestamp_valid = rhs.timestamp_valid;
-            this->timestamp_refresh = rhs.timestamp_refresh;
-            this->fct = rhs.fct;
-            this->fp = rhs.fp;
-        }
-
-        return *this;
-    }
-
     frame_timestamp& operator+=(const double& diff)
     {
         double offset_pps, offset_secs;

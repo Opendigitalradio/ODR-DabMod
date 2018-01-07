@@ -71,21 +71,28 @@ meta_vec_t OutputFile::process_metadata(const meta_vec_t& metadataIn)
 {
     stringstream ss;
 
-    if (metadataIn.empty()) {
-        etiLog.level(debug) << "OutputFile: no mdIn";
-    }
-
     for (const auto& md : metadataIn) {
         if (md.ts) {
             ss << " FCT=" << md.ts->fct <<
                 " FP=" << (int)md.ts->fp;
+            if (md.ts->timestamp_valid) {
+                ss << " TS=" << md.ts->timestamp_sec << ";";
+            }
+            else {
+                ss << " No TS;";
+            }
         }
         else {
             ss << " void, ";
         }
     }
 
-    etiLog.level(debug) << "Output File got metadata: " << ss.str();
+    if (metadataIn.empty()) {
+        etiLog.level(debug) << "Output File got no mdIn";
+    }
+    else {
+        etiLog.level(debug) << "Output File got metadata: " << ss.str();
+    }
 
     return {};
 }
