@@ -243,7 +243,7 @@ int DabModulator::process(Buffer* dataOut)
         ////////////////////////////////////////////////////////////////
         // Data initialisation
         ////////////////////////////////////////////////////////////////
-        myFicSizeIn = fic->getFramesize();
+        size_t ficSizeIn = fic->getFramesize();
 
         ////////////////////////////////////////////////////////////////
         // Modules configuration
@@ -255,10 +255,10 @@ int DabModulator::process(Buffer* dataOut)
         PDEBUG(" Framesize: %zu\n", fic->getFramesize());
 
         // Configuring prbs generator
-        auto ficPrbs = make_shared<PrbsGenerator>(myFicSizeIn, 0x110);
+        auto ficPrbs = make_shared<PrbsGenerator>(ficSizeIn, 0x110);
 
         // Configuring convolutionnal encoder
-        auto ficConv = make_shared<ConvEncoder>(myFicSizeIn);
+        auto ficConv = make_shared<ConvEncoder>(ficSizeIn);
 
         // Configuring puncturing encoder
         auto ficPunc = make_shared<PuncturingEncoder>();

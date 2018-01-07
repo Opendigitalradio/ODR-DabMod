@@ -94,7 +94,7 @@ class BaseRemoteController {
 class RemoteControllable {
     public:
         RemoteControllable(const std::string& name) :
-            m_name(name) {}
+            m_rc_name(name) {}
 
         RemoteControllable(const RemoteControllable& other) = delete;
         RemoteControllable& operator=(const RemoteControllable& other) = delete;
@@ -105,7 +105,7 @@ class RemoteControllable {
          * It might be used in the commands the user has to type, so keep
          * it short
          */
-        virtual std::string get_rc_name() const { return m_name; }
+        virtual std::string get_rc_name() const { return m_rc_name; }
 
         /* Return a list of possible parameters that can be set */
         virtual std::list<std::string> get_supported_parameters() const;
@@ -126,7 +126,7 @@ class RemoteControllable {
         virtual const std::string get_parameter(const std::string& parameter) const = 0;
 
     protected:
-        std::string m_name;
+        std::string m_rc_name;
         std::list< std::vector<std::string> > m_parameters;
 };
 

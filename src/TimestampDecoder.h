@@ -49,7 +49,7 @@ struct frame_timestamp
 
     frame_timestamp() = default;
     frame_timestamp(const frame_timestamp& other) = default;
-    frame_timestamp operator=(const frame_timestamp &rhs)
+    frame_timestamp& operator=(const frame_timestamp &rhs)
     {
         if (this != &rhs) {
             this->timestamp_sec = rhs.timestamp_sec;

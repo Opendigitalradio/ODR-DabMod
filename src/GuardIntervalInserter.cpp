@@ -201,7 +201,7 @@ int GuardIntervalInserter::process(Buffer* const dataIn, Buffer* dataOut)
             memcpy( &out[ox], &in[ix],
                     remaining_prefix_length * sizeof(complexf));
             ox += remaining_prefix_length;
-            assert(ox = end_cyclic_prefix_ox);
+            assert(ox == end_cyclic_prefix_ox);
             ix = 0;
 
             const bool last_symbol = (sym_ix + 1 >= d_nbSymbols);
