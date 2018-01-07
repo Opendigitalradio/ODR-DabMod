@@ -36,16 +36,14 @@ class FrequencyInterleaver : public ModCodec
 public:
     FrequencyInterleaver(size_t mode);
     virtual ~FrequencyInterleaver();
-    FrequencyInterleaver(const FrequencyInterleaver&);
-    FrequencyInterleaver& operator=(const FrequencyInterleaver&);
+    FrequencyInterleaver(const FrequencyInterleaver&) = delete;
+    FrequencyInterleaver& operator=(const FrequencyInterleaver&) = delete;
 
-
-    int process(Buffer* const dataIn, Buffer* dataOut);
-    const char* name() { return "FrequencyInterleaver"; }
+    int process(Buffer* const dataIn, Buffer* dataOut) override;
+    const char* name() override { return "FrequencyInterleaver"; }
 
 protected:
     size_t d_carriers;
-    size_t d_num;
     size_t* d_indexes;
 };
 

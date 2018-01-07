@@ -72,6 +72,7 @@ protected:
     size_t myNullSize;
     size_t mySymSize;
     size_t myFicSizeOut;
-    size_t myFicSizeIn;
+
+    std::shared_ptr<OutputMemory> myOutput;
 };
 
