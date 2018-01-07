@@ -32,8 +32,8 @@
 
 #if defined(HAVE_ZEROMQ)
 
-OutputZeroMQ::OutputZeroMQ(std::string endpoint, int type, Buffer* dataOut)
-    : ModOutput(),
+OutputZeroMQ::OutputZeroMQ(std::string endpoint, int type, Buffer* dataOut) :
+    ModOutput(),
     m_type(type),
     m_zmq_context(1),
     m_zmq_sock(m_zmq_context, type),
@@ -57,11 +57,6 @@ OutputZeroMQ::OutputZeroMQ(std::string endpoint, int type, Buffer* dataOut)
     m_name = ss.str();
 
     m_zmq_sock.bind(m_endpoint.c_str());
-}
-
-OutputZeroMQ::~OutputZeroMQ()
-{
-    PDEBUG("OutputZeroMQ::~OutputZeroMQ() @ %p\n", this);
 }
 
 int OutputZeroMQ::process(Buffer* dataIn)

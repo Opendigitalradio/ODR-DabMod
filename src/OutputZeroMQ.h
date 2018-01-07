@@ -38,10 +38,9 @@
 class OutputZeroMQ : public ModOutput
 {
     public:
-        OutputZeroMQ(std::string endpoint, int type, Buffer* dataOut = NULL);
-        virtual ~OutputZeroMQ();
-        virtual int process(Buffer* dataIn);
-        const char* name() { return m_name.c_str(); }
+        OutputZeroMQ(std::string endpoint, int type, Buffer* dataOut = nullptr);
+        virtual int process(Buffer* dataIn) override;
+        const char* name() override { return m_name.c_str(); }
 
     protected:
         int m_type;                   // zmq socket type
