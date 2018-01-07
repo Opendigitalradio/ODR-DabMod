@@ -217,11 +217,6 @@ const char* SDR::name()
     return m_name.c_str();
 }
 
-void SDR::setETISource(EtiSource *etiSource)
-{
-    m_eti_source = etiSource;
-}
-
 void SDR::sleep_through_frame()
 {
     struct timespec now;

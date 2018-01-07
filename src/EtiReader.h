@@ -59,7 +59,6 @@ public:
 
     /* Returns true if we have valid time stamps in the ETI*/
     virtual bool sourceContainsTimestamp() = 0;
-    virtual void calculateTimestamp(struct frame_timestamp& ts) = 0;
 
     /* Return the FIC source to be used for modulation */
     virtual std::shared_ptr<FicSource>& getFic(void);
@@ -75,9 +74,7 @@ protected:
 class EtiReader : public EtiSource
 {
 public:
-    EtiReader(
-            double& tist_offset_s,
-            unsigned tist_delay_stages);
+    EtiReader(double& tist_offset_s);
 
     virtual unsigned getMode();
     virtual unsigned getFp();
@@ -88,7 +85,6 @@ public:
     int loadEtiData(const Buffer& dataIn);
 
     virtual bool sourceContainsTimestamp();
-    virtual void calculateTimestamp(struct frame_timestamp& ts);
 
     virtual const std::vector<std::shared_ptr<SubchannelSource> > getSubchannels() const;
 
@@ -118,14 +114,11 @@ private:
 class EdiReader : public EtiSource, public EdiDecoder::DataCollector
 {
 public:
-    EdiReader(
-            double& tist_offset_s,
-            unsigned tist_delay_stages);
+    EdiReader(double& tist_offset_s);
 
     virtual unsigned getMode();
     virtual unsigned getFp();
     virtual bool sourceContainsTimestamp();
-    virtual void calculateTimestamp(struct frame_timestamp& ts);
     virtual const std::vector<std::shared_ptr<SubchannelSource> > getSubchannels() const;
 
     virtual bool isFrameReady(void);

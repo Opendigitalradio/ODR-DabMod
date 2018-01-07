@@ -55,8 +55,6 @@ class SDR : public ModOutput, public ModMetadata, public RemoteControllable {
 
         virtual const char* name() override;
 
-        void setETISource(EtiSource *etiSource);
-
         /*********** REMOTE CONTROL ***************/
 
         /* Base function to set parameters. */
@@ -85,7 +83,6 @@ class SDR : public ModOutput, public ModMetadata, public RemoteControllable {
 
         std::shared_ptr<DPDFeedbackServer> m_dpd_feedback_server;
 
-        EtiSource *m_eti_source = nullptr;
         bool     sourceContainsTimestamp = false;
         bool     last_tx_time_initialised = false;
         uint32_t last_tx_second = 0;

@@ -37,10 +37,9 @@
 //#define MDEBUG(fmt, args...) fprintf (LOG, "*****" fmt , ## args)
 #define MDEBUG(fmt, args...) PDEBUG(fmt, ## args)
 
-TimestampDecoder::TimestampDecoder(double& offset_s, unsigned tist_delay_stages) :
+TimestampDecoder::TimestampDecoder(double& offset_s) :
         RemoteControllable("tist"),
-        timestamp_offset(offset_s),
-        m_tist_delay_stages(tist_delay_stages)
+        timestamp_offset(offset_s)
 {
     // Properly initialise temp_time
     memset(&temp_time, 0, sizeof(temp_time));
@@ -52,71 +51,6 @@ TimestampDecoder::TimestampDecoder(double& offset_s, unsigned tist_delay_stages)
 
     etiLog.level(info) << "Setting up timestamp decoder with " <<
         timestamp_offset << " offset";
-}
-
-void TimestampDecoder::calculateTimestamp(frame_timestamp& ts)
-{
-    std::shared_ptr<frame_timestamp> ts_queued =
-        std::make_shared<frame_timestamp>();
-
-    /* Push new timestamp into queue */
-    ts_queued->timestamp_valid = full_timestamp_received;
-    ts_queued->timestamp_sec = time_secs;
-    ts_queued->timestamp_pps = time_pps;
-    ts_queued->fct = latestFCT;
-    ts_queued->fp = latestFP;
-
-    ts_queued->timestamp_refresh = offset_changed;
-    offset_changed = false;
-
-    MDEBUG("time_secs=%d, time_pps=%f\n", time_secs,
-            (double)time_pps / 16384000.0);
-    *ts_queued += timestamp_offset;
-
-    queue_timestamps.push(ts_queued);
-
-    /* Here, the queue size is one more than the pipeline delay, because
-     * we've just added a new element in the queue.
-     *
-     * Therefore, use <= and not < for comparison
-     */
-    if (queue_timestamps.size() <= m_tist_delay_stages) {
-        //fprintf(stderr, "* %zu %u ", queue_timestamps.size(), m_tist_delay_stages);
-        /* Return invalid timestamp until the queue is full */
-        ts.timestamp_valid = false;
-        ts.timestamp_sec = 0;
-        ts.timestamp_pps = 0;
-        ts.timestamp_refresh = false;
-        ts.fct = -1;
-    }
-    else {
-        //fprintf(stderr, ". %zu ", queue_timestamps.size());
-        /* Return timestamp from queue */
-        ts_queued = queue_timestamps.front();
-        queue_timestamps.pop();
-        /*fprintf(stderr, "ts_queued v:%d, sec:%d, pps:%f, ref:%d\n",
-                ts_queued->timestamp_valid,
-                ts_queued->timestamp_sec,
-                ts_queued->timestamp_pps_offset,
-                ts_queued->timestamp_refresh);*/
-        ts = *ts_queued;
-        /*fprintf(stderr, "ts v:%d, sec:%d, pps:%f, ref:%d\n\n",
-                ts.timestamp_valid,
-                ts.timestamp_sec,
-                ts.timestamp_pps_offset,
-                ts.timestamp_refresh);*/
-    }
-
-    MDEBUG("Timestamp queue size %zu, delay_calc %u\n",
-            queue_timestamps.size(),
-            m_tist_delay_stages);
-
-    if (queue_timestamps.size() > m_tist_delay_stages) {
-        etiLog.level(error) << "Error: Timestamp queue is too large : size " <<
-            queue_timestamps.size() << "! This should not happen !";
-    }
-
-    //ts.print("calc2 ");
 }
 
 std::shared_ptr<frame_timestamp> TimestampDecoder::getTimestamp()

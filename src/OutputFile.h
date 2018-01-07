@@ -50,12 +50,7 @@ public:
     virtual meta_vec_t process_metadata(
             const meta_vec_t& metadataIn) override;
 
-    void setETISource(EtiSource *etiSource);
-
 protected:
-    // TODO remove
-    EtiSource *myEtiSource = nullptr;
-
     std::string myFilename;
 
     struct FILEDeleter{ void operator()(FILE* fd){ if (fd) fclose(fd); }};

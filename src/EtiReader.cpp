@@ -54,10 +54,9 @@ enum ETI_READER_STATE {
 
 
 EtiReader::EtiReader(
-        double& tist_offset_s,
-        unsigned tist_delay_stages) :
+        double& tist_offset_s) :
     state(EtiReaderStateSync),
-    myTimestampDecoder(tist_offset_s, tist_delay_stages),
+    myTimestampDecoder(tist_offset_s),
     eti_fc_valid(false)
 {
     rcs.enrol(&myTimestampDecoder);
@@ -292,11 +291,6 @@ bool EtiReader::sourceContainsTimestamp()
     /* See ETS 300 799, Annex C.2.2 */
 }
 
-void EtiReader::calculateTimestamp(struct frame_timestamp& ts)
-{
-    myTimestampDecoder.calculateTimestamp(ts);
-}
-
 uint32_t EtiReader::getPPSOffset()
 {
     if (!sourceContainsTimestamp()) {
@@ -311,9 +305,8 @@ uint32_t EtiReader::getPPSOffset()
 }
 
 EdiReader::EdiReader(
-        double& tist_offset_s,
-        unsigned tist_delay_stages) :
-    m_timestamp_decoder(tist_offset_s, tist_delay_stages)
+        double& tist_offset_s) :
+    m_timestamp_decoder(tist_offset_s)
 {
     rcs.enrol(&m_timestamp_decoder);
 }
@@ -359,11 +352,6 @@ bool EdiReader::sourceContainsTimestamp()
     }
 
     return m_fc.tsta != 0xFFFFFF;
-}
-
-void EdiReader::calculateTimestamp(struct frame_timestamp& ts)
-{
-    m_timestamp_decoder.calculateTimestamp(ts);
 }
 
 bool EdiReader::isFrameReady()

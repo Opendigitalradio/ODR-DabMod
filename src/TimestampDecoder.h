@@ -2,7 +2,7 @@
    Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010 Her Majesty the
    Queen in Right of Canada (Communications Research Center Canada)
 
-   Copyright (C) 2017
+   Copyright (C) 2018
    Matthias P. Braendli, matthias.braendli@mpb.li
 
     http://opendigitalradio.org
@@ -119,15 +119,8 @@ class TimestampDecoder : public RemoteControllable
     public:
         /* offset_s: The modulator adds this offset to the TIST to define time of
          * frame transmission
-         *
-         * tist_delay_stages: Specifies by how many stages the timestamp must
-         * be delayed.  (e.g. The FIRFilter is pipelined, therefore we must
-         * increase tist_delay_stages by one if the filter is used
          */
-        TimestampDecoder(double& offset_s, unsigned tist_delay_stages);
-
-        /* Calculate the timestamp for the current frame. */
-        void calculateTimestamp(frame_timestamp& ts);
+        TimestampDecoder(double& offset_s);
 
         std::shared_ptr<frame_timestamp> getTimestamp(void);
 
@@ -185,7 +178,6 @@ class TimestampDecoder : public RemoteControllable
         uint32_t latestFP = 0;
         uint32_t time_pps = 0;
         double& timestamp_offset;
-        unsigned m_tist_delay_stages;
         int inhibit_second_update = 0;
         bool offset_changed = false;
 
@@ -196,12 +188,5 @@ class TimestampDecoder : public RemoteControllable
 
         /* Disable timstamps until full time has been received */
         bool full_timestamp_received = false;
-
-        /* when pipelining, we must shift the calculated timestamps
-         * through this queue. Otherwise, it would not be possible to
-         * synchronise two modulators if only one uses (for instance) the
-         * FIRFilter (1 stage pipeline)
-         */
-        std::queue<std::shared_ptr<frame_timestamp> > queue_timestamps;
 };
 

@@ -269,12 +269,6 @@ int launch_modulator(int argc, char* argv[])
         throw std::runtime_error("Configuration error");
     }
 
-    // When using the FIRFilter, increase the modulator offset pipelining delay
-    // by the correct amount
-    if (not mod_settings.filterTapsFilename.empty()) {
-        mod_settings.tist_delay_stages += FIRFILTER_PIPELINE_DELAY;
-    }
-
     printModSettings(mod_settings);
 
     modulator_data m;
@@ -295,7 +289,7 @@ int launch_modulator(int argc, char* argv[])
     set_thread_name("modulator");
 
     if (mod_settings.inputTransport == "edi") {
-        EdiReader ediReader(mod_settings.tist_offset_s, mod_settings.tist_delay_stages);
+        EdiReader ediReader(mod_settings.tist_offset_s);
         EdiDecoder::ETIDecoder ediInput(ediReader, false);
         if (mod_settings.edi_max_delay_ms > 0.0f) {
             // setMaxDelay wants number of AF packets, which correspond to 24ms ETI frames
@@ -318,17 +312,6 @@ int launch_modulator(int argc, char* argv[])
         }
         else {
             flowgraph.connect(modulator, output);
-        }
-
-        if (false
-#if defined(HAVE_OUTPUT_UHD)
-                or mod_settings.useUHDOutput
-#endif
-#if defined(HAVE_SOAPYSDR)
-                or mod_settings.useSoapyOutput
-#endif
-           ) {
-            ((Output::SDR*)output.get())->setETISource(modulator->getEtiSource());
         }
 
         size_t framecount = 0;
@@ -400,7 +383,7 @@ int launch_modulator(int argc, char* argv[])
             m.flowgraph = &flowgraph;
             m.data.setLength(6144);
 
-            EtiReader etiReader(mod_settings.tist_offset_s, mod_settings.tist_delay_stages);
+            EtiReader etiReader(mod_settings.tist_offset_s);
             m.etiReader = &etiReader;
 
             auto input = make_shared<InputMemory>(&m.data);
@@ -412,23 +395,6 @@ int launch_modulator(int argc, char* argv[])
             }
             else {
                 flowgraph.connect(modulator, output);
-            }
-
-            if (false
-#if defined(HAVE_OUTPUT_UHD)
-                    or mod_settings.useUHDOutput
-#endif
-#if defined(HAVE_SOAPYSDR)
-                    or mod_settings.useSoapyOutput
-#endif
-               ) {
-                ((Output::SDR*)output.get())->setETISource(modulator->getEtiSource());
-            }
-
-            // TODO remove
-            auto output_as_file = dynamic_pointer_cast<OutputFile>(output);
-            if (output_as_file) {
-                output_as_file->setETISource(modulator->getEtiSource());
             }
 
             inputReader->PrintInfo();

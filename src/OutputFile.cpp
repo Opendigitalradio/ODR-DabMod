@@ -85,18 +85,8 @@ meta_vec_t OutputFile::process_metadata(const meta_vec_t& metadataIn)
         }
     }
 
-    if (myEtiSource) {
-        frame_timestamp ts;
-        myEtiSource->calculateTimestamp(ts);
-        ss << " ETI FCT=" << ts.fct;
-    }
-
     etiLog.level(debug) << "Output File got metadata: " << ss.str();
 
     return {};
 }
 
-void OutputFile::setETISource(EtiSource *etiSource)
-{
-    myEtiSource = etiSource;
-}
