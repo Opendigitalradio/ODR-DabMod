@@ -74,9 +74,9 @@ int ModOutput::process(
 
 PipelinedModCodec::PipelinedModCodec() :
     ModCodec(),
-    m_number_of_runs(0),
     m_input_queue(),
     m_output_queue(),
+    m_metadata_fifo(),
     m_running(false),
     m_thread()
 {
@@ -107,7 +107,7 @@ int PipelinedModCodec::process(Buffer* dataIn, Buffer* dataOut)
 
     m_input_queue.push(inbuffer);
 
-    if (m_number_of_runs > 0) {
+    if (m_ready_to_output_data) {
         std::shared_ptr<Buffer> outbuffer;
         m_output_queue.wait_and_pop(outbuffer);
 
@@ -116,11 +116,24 @@ int PipelinedModCodec::process(Buffer* dataIn, Buffer* dataOut)
     else {
         dataOut->setLength(dataIn->getLength());
         memset(dataOut->getData(), 0, dataOut->getLength());
-        m_number_of_runs++;
+        m_ready_to_output_data = true;
     }
 
     return dataOut->getLength();
 
+}
+
+meta_vec_t PipelinedModCodec::process_metadata(const meta_vec_t& metadataIn)
+{
+    m_metadata_fifo.push_back(metadataIn);
+    if (m_metadata_fifo.size() == 2) {
+        auto r = std::move(m_metadata_fifo.front());
+        m_metadata_fifo.pop_front();
+        return r;
+    }
+    else {
+        return {};
+    }
 }
 
 void PipelinedModCodec::process_thread()

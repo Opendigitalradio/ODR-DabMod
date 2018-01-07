@@ -32,6 +32,7 @@
 
 
 #include "ModPlugin.h"
+#include "EtiReader.h"
 
 #include <string>
 #include <stdio.h>
@@ -57,7 +58,12 @@ public:
     virtual meta_vec_t process_metadata(
             const meta_vec_t& metadataIn) override;
 
+    void setETISource(EtiSource *etiSource);
+
 protected:
+    // TODO remove
+    EtiSource *myEtiSource = nullptr;
+
     std::string myFilename;
     std::unique_ptr<FILE, FILEDeleter> myFile;
 };

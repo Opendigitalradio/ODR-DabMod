@@ -30,16 +30,34 @@
 #   include <config.h>
 #endif
 
-
 #include "Buffer.h"
 #include "ThreadsafeQueue.h"
-
-#include <sys/types.h>
+#include <cstddef>
 #include <vector>
 #include <memory>
 #include <thread>
 #include <atomic>
 
+// All flowgraph elements derive from ModPlugin, or a variant of it.
+// Some ModPlugins also support handling metadata.
+
+struct frame_timestamp;
+struct flowgraph_metadata {
+    std::shared_ptr<struct frame_timestamp> ts;
+};
+
+using meta_vec_t = std::vector<flowgraph_metadata>;
+
+/* ModPlugins that support metadata derive from ModMetadata */
+class ModMetadata {
+    public:
+        // Receives metadata from all inputs, and process them, and output
+        // a sequence of metadata.
+        virtual meta_vec_t process_metadata(const meta_vec_t& metadataIn) = 0;
+};
+
+
+/* Abstract base class for all flowgraph elements */
 class ModPlugin
 {
 public:
@@ -69,7 +87,11 @@ public:
     virtual int process(Buffer* const dataIn, Buffer* dataOut) = 0;
 };
 
-class PipelinedModCodec : public ModCodec
+/* Pipelined ModCodecs run their processing in a separate thread, and
+ * have a one-call-to-process() latency. Because of this latency, they
+ * must also handle the metadata
+ */
+class PipelinedModCodec : public ModCodec, public ModMetadata
 {
 public:
     PipelinedModCodec();
@@ -82,6 +104,8 @@ public:
     virtual int process(Buffer* const dataIn, Buffer* dataOut) final;
     virtual const char* name() = 0;
 
+    virtual meta_vec_t process_metadata(const meta_vec_t& metadataIn) final;
+
 protected:
     // Once the instance implementing PipelinedModCodec has been constructed,
     // it must call start_pipeline_thread()
@@ -89,10 +113,12 @@ protected:
     virtual int internal_process(Buffer* const dataIn, Buffer* dataOut) = 0;
 
 private:
-    size_t m_number_of_runs;
+    bool m_ready_to_output_data = false;
 
     ThreadsafeQueue<std::shared_ptr<Buffer> > m_input_queue;
     ThreadsafeQueue<std::shared_ptr<Buffer> > m_output_queue;
+
+    std::deque<meta_vec_t> m_metadata_fifo;
 
     std::atomic<bool> m_running;
     std::thread m_thread;
@@ -118,21 +144,5 @@ public:
             std::vector<Buffer*> dataIn,
             std::vector<Buffer*> dataOut);
     virtual int process(Buffer* dataIn) = 0;
-};
-
-struct frame_timestamp;
-struct flowgraph_metadata {
-    std::shared_ptr<struct frame_timestamp> ts;
-};
-
-
-using meta_vec_t = std::vector<flowgraph_metadata>;
-
-/* Some ModPlugins also support metadata */
-class ModMetadata {
-    public:
-        // Receives metadata from all inputs, and process them, and output
-        // a sequence of metadata.
-        virtual meta_vec_t process_metadata(const meta_vec_t& metadataIn) = 0;
 };
 

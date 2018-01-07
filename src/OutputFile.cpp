@@ -77,22 +77,26 @@ meta_vec_t OutputFile::process_metadata(const meta_vec_t& metadataIn)
 
     for (const auto& md : metadataIn) {
         if (md.ts) {
-            ss << "FCT=" << md.ts->fct <<
+            ss << " FCT=" << md.ts->fct <<
                 " FP=" << (int)md.ts->fp;
-            if (md.ts->timestamp_valid) {
-                ss << " ts=" << md.ts->timestamp_sec <<
-                    "+" << md.ts->timestamp_pps << ", ";
-            }
-            else {
-                ss << " no ts";
-            }
         }
         else {
-            ss << "void, ";
+            ss << " void, ";
         }
+    }
+
+    if (myEtiSource) {
+        frame_timestamp ts;
+        myEtiSource->calculateTimestamp(ts);
+        ss << " ETI FCT=" << ts.fct;
     }
 
     etiLog.level(debug) << "Output File got metadata: " << ss.str();
 
     return {};
+}
+
+void OutputFile::setETISource(EtiSource *etiSource)
+{
+    myEtiSource = etiSource;
 }
