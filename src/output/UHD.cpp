@@ -256,25 +256,12 @@ void UHD::transmit_frame(const struct FrameData& frame)
 
     bool tx_allowed = true;
 
-    if (m_conf.enableSync) {
-        if (frame.ts.timestamp_valid) {
-            uhd::time_spec_t timespec(
-                    frame.ts.timestamp_sec, frame.ts.pps_offset());
-            md_tx.time_spec = timespec;
-            md_tx.has_time_spec = true;
-        }
-        else {
-            if (m_conf.muteNoTimestamps) {
-                std::this_thread::sleep_for(std::chrono::seconds(
-                            std::lround(
-                                ((double)sizeIn) /
-                                ((double)m_conf.sampleRate))));
-                tx_allowed = false;
-            }
-            else {
-                md_tx.has_time_spec = false;
-            }
-        }
+    // muting and mutenotimestamp is handled by SDR
+    if (m_conf.enableSync and frame.ts.timestamp_valid) {
+        uhd::time_spec_t timespec(
+                frame.ts.timestamp_sec, frame.ts.pps_offset());
+        md_tx.time_spec = timespec;
+        md_tx.has_time_spec = true;
     }
     else {
         md_tx.has_time_spec = false;

@@ -83,7 +83,6 @@ class SDR : public ModOutput, public ModMetadata, public RemoteControllable {
 
         std::shared_ptr<DPDFeedbackServer> m_dpd_feedback_server;
 
-        bool     sourceContainsTimestamp = false;
         bool     last_tx_time_initialised = false;
         uint32_t last_tx_second = 0;
         uint32_t last_tx_pps = 0;

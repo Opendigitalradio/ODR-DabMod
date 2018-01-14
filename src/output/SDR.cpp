@@ -260,10 +260,18 @@ void SDR::handle_frame(struct FrameData& frame)
     }
 
     double device_time = m_device->get_real_secs();
-    bool timestamp_discontinuity = false;
     const auto& time_spec = frame.ts;
 
-    if (sourceContainsTimestamp) {
+    if (m_config.enableSync and m_config.muteNoTimestamps and
+            not time_spec.timestamp_valid) {
+        sleep_through_frame();
+        etiLog.log(info,
+                "OutputSDR: Muting sample %d : no timestamp\n",
+                frame.ts.fct);
+        return;
+    }
+
+    if (m_config.enableSync and time_spec.timestamp_valid) {
         // Tx time from MNSC and TIST
         const uint32_t tx_second = frame.ts.timestamp_sec;
         const uint32_t tx_pps    = frame.ts.timestamp_pps;
@@ -305,7 +313,7 @@ void SDR::handle_frame(struct FrameData& frame)
                     tx_second << "+" << (double)tx_pps/16384000.0 <<
                     "(" << tx_pps << ")";
 
-                timestamp_discontinuity = true;
+                frame.ts.timestamp_refresh = true;
             }
         }
 
@@ -337,26 +345,14 @@ void SDR::handle_frame(struct FrameData& frame)
             throw std::runtime_error("Timestamp error. Aborted.");
         }
     }
-    else { // !sourceContainsTimestamp
-        if (m_config.muting or m_config.muteNoTimestamps) {
-            /* There was some error decoding the timestamp */
-            if (m_config.muting) {
-                etiLog.log(info,
-                        "OutputSDR: Muting sample %d requested\n",
-                        frame.ts.fct);
-            }
-            else {
-                etiLog.log(info,
-                        "OutputSDR: Muting sample %d : no timestamp\n",
-                        frame.ts.fct);
-            }
-            return;
-        }
+
+    if (m_config.muting) {
+        etiLog.log(info,
+                "OutputSDR: Muting sample %d requested\n",
+                frame.ts.fct);
+        return;
     }
 
-    if (timestamp_discontinuity) {
-        frame.ts.timestamp_refresh = true;
-    }
     m_device->transmit_frame(frame);
 }
 
