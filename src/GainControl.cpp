@@ -73,6 +73,10 @@ GainControl::GainControl(size_t framesize,
     start_pipeline_thread();
 }
 
+GainControl::~GainControl()
+{
+    stop_pipeline_thread();
+}
 
 int GainControl::internal_process(Buffer* const dataIn, Buffer* dataOut)
 {

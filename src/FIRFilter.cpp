@@ -87,6 +87,11 @@ FIRFilter::FIRFilter(const std::string& taps_file) :
     start_pipeline_thread();
 }
 
+FIRFilter::~FIRFilter()
+{
+    stop_pipeline_thread();
+}
+
 void FIRFilter::load_filter_taps(const std::string &tapsFile)
 {
     std::vector<float> filter_taps;

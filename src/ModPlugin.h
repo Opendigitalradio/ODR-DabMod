@@ -95,13 +95,6 @@ public:
 class PipelinedModCodec : public ModCodec, public ModMetadata
 {
 public:
-    PipelinedModCodec();
-    PipelinedModCodec(const PipelinedModCodec&) = delete;
-    PipelinedModCodec& operator=(const PipelinedModCodec&) = delete;
-    PipelinedModCodec(PipelinedModCodec&&) = delete;
-    PipelinedModCodec& operator=(PipelinedModCodec&&) = delete;
-    virtual ~PipelinedModCodec();
-
     virtual int process(Buffer* const dataIn, Buffer* dataOut) final;
     virtual const char* name() = 0;
 
@@ -111,6 +104,11 @@ protected:
     // Once the instance implementing PipelinedModCodec has been constructed,
     // it must call start_pipeline_thread()
     void start_pipeline_thread(void);
+    // To avoid race conditions on teardown, plugins must call
+    // stop_pipeline_thread in their destructor.
+    void stop_pipeline_thread(void);
+
+    // The real processing must be implemented in internal_process
     virtual int internal_process(Buffer* const dataIn, Buffer* dataOut) = 0;
 
 private:
@@ -121,7 +119,7 @@ private:
 
     std::deque<meta_vec_t> m_metadata_fifo;
 
-    std::atomic<bool> m_running;
+    std::atomic<bool> m_running = ATOMIC_VAR_INIT(false);
     std::thread m_thread;
     void process_thread(void);
 };

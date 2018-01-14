@@ -53,6 +53,9 @@ class FIRFilter : public PipelinedModCodec, public RemoteControllable
 {
 public:
     FIRFilter(const std::string& taps_file);
+    FIRFilter(const FIRFilter& other) = delete;
+    FIRFilter& operator=(const FIRFilter& other) = delete;
+    virtual ~FIRFilter();
 
     const char* name() override { return "FIRFilter"; }
 

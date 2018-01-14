@@ -99,6 +99,11 @@ MemlessPoly::MemlessPoly(const std::string& coefs_file, unsigned int num_threads
     start_pipeline_thread();
 }
 
+MemlessPoly::~MemlessPoly()
+{
+    stop_pipeline_thread();
+}
+
 void MemlessPoly::load_coefficients(const std::string &coefFile)
 {
     std::ifstream coef_fstream(coefFile.c_str());

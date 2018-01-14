@@ -59,6 +59,9 @@ class MemlessPoly : public PipelinedModCodec, public RemoteControllable
 {
 public:
     MemlessPoly(const std::string& coefs_file, unsigned int num_threads);
+    MemlessPoly(const MemlessPoly& other) = delete;
+    MemlessPoly& operator=(const MemlessPoly& other) = delete;
+    virtual ~MemlessPoly();
 
     virtual const char* name() { return "MemlessPoly"; }
 

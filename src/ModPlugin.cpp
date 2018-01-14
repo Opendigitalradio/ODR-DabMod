@@ -72,17 +72,7 @@ int ModOutput::process(
     return process(dataIn[0]);
 }
 
-PipelinedModCodec::PipelinedModCodec() :
-    ModCodec(),
-    m_input_queue(),
-    m_output_queue(),
-    m_metadata_fifo(),
-    m_running(false),
-    m_thread()
-{
-}
-
-PipelinedModCodec::~PipelinedModCodec()
+void PipelinedModCodec::stop_pipeline_thread()
 {
     m_input_queue.push({});
     if (m_thread.joinable()) {
