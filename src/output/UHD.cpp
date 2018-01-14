@@ -270,12 +270,14 @@ void UHD::transmit_frame(const struct FrameData& frame)
 
     size_t usrp_max_num_samps = m_tx_stream->get_max_num_samps();
     size_t num_acc_samps = 0; //number of accumulated samples
-    while (m_running.load() and (not m_conf.muting) and (num_acc_samps < sizeIn)) {
+    while (m_running.load() and (num_acc_samps < sizeIn)) {
         size_t samps_to_send = std::min(sizeIn - num_acc_samps, usrp_max_num_samps);
+
+        const bool eob_because_muting = m_conf.muting;
 
         // ensure the the last packet has EOB set if the timestamps has been
         // refreshed and need to be reconsidered.
-        md_tx.end_of_burst = (
+        md_tx.end_of_burst = eob_because_muting or (
                 frame.ts.timestamp_valid and
                 frame.ts.timestamp_refresh and
                 samps_to_send <= usrp_max_num_samps );
@@ -294,6 +296,10 @@ void UHD::transmit_frame(const struct FrameData& frame)
         if (num_tx_samps == 0) {
             etiLog.log(warn,
                     "OutputUHD unable to write to device, skipping frame!");
+            break;
+        }
+
+        if (eob_because_muting) {
             break;
         }
     }
