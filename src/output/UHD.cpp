@@ -172,9 +172,6 @@ UHD::UHD(SDRDeviceConfig& config) :
     etiLog.log(debug, "OutputUHD:Mute on missing timestamps: %s",
             m_conf.muteNoTimestamps ? "enabled" : "disabled");
 
-    // preparing output thread worker data
-    // TODO sourceContainsTimestamp = false;
-
     m_usrp->set_rx_rate(m_conf.sampleRate);
     etiLog.log(debug, "OutputUHD:Actual RX Rate: %f sps.", m_usrp->get_rx_rate());
 
@@ -257,26 +254,42 @@ void UHD::transmit_frame(const struct FrameData& frame)
 
     uhd::tx_metadata_t md_tx;
 
-    // TODO check for enableSync?
-    if (frame.ts.timestamp_valid) {
-        uhd::time_spec_t timespec(frame.ts.timestamp_sec, frame.ts.pps_offset());
-        md_tx.time_spec = timespec;
-        md_tx.has_time_spec = true;
+    bool tx_allowed = true;
+
+    if (m_conf.enableSync) {
+        if (frame.ts.timestamp_valid) {
+            uhd::time_spec_t timespec(
+                    frame.ts.timestamp_sec, frame.ts.pps_offset());
+            md_tx.time_spec = timespec;
+            md_tx.has_time_spec = true;
+        }
+        else {
+            if (m_conf.muteNoTimestamps) {
+                std::this_thread::sleep_for(std::chrono::seconds(
+                            std::lround(
+                                ((double)sizeIn) /
+                                ((double)m_conf.sampleRate))));
+                tx_allowed = false;
+            }
+            else {
+                md_tx.has_time_spec = false;
+            }
+        }
     }
     else {
         md_tx.has_time_spec = false;
     }
 
-
     size_t usrp_max_num_samps = m_tx_stream->get_max_num_samps();
     size_t num_acc_samps = 0; //number of accumulated samples
-    while (m_running.load() and (num_acc_samps < sizeIn)) {
+    while (tx_allowed and m_running.load() and (num_acc_samps < sizeIn)) {
         size_t samps_to_send = std::min(sizeIn - num_acc_samps, usrp_max_num_samps);
 
         const bool eob_because_muting = m_conf.muting;
 
         // ensure the the last packet has EOB set if the timestamps has been
-        // refreshed and need to be reconsidered.
+        // refreshed and need to be reconsidered. If muting was set, set the
+        // EOB and quit the loop afterwards, to avoid an underrun.
         md_tx.end_of_burst = eob_because_muting or (
                 frame.ts.timestamp_valid and
                 frame.ts.timestamp_refresh and
