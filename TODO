@@ -27,6 +27,8 @@ Clean up and separate GPS and refclk checks.
 
 Add antenna selection to config.
 
+Test RC entries.
+
 Portability: replace clock_gettime with std::chrono
 
 *done* Make an abstraction for the DPD feedback server, use it for Soapy and UHD.

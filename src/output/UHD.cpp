@@ -469,7 +469,8 @@ void UHD::print_async_thread()
                         "OutputUHD status (usrp time: %f): "
                         "%d underruns and %d late packets since last status.\n",
                         usrp_time,
-                        num_underflows, num_late_packets);
+                        num_underflows - num_underflows_previous,
+                        num_late_packets - num_late_packets_previous);
             }
 
             num_underflows_previous = num_underflows;
