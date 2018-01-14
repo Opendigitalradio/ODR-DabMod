@@ -238,9 +238,8 @@ Flowgraph::~Flowgraph()
 {
     PDEBUG("Flowgraph::~Flowgraph() @ %p\n", this);
 
-    stringstream ss;
-
     if (myProcessTime) {
+        stringstream ss;
         ss << "Process time:\n";
 
         char node_time_sz[1024] = {};
