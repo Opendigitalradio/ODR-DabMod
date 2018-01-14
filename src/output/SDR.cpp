@@ -374,8 +374,7 @@ void SDR::set_parameter(const string& parameter, const string& value)
     }
     else if (parameter == "rxgain") {
         ss >> m_config.rxgain;
-        // TODO myUsrp->set_rx_gain(m_config.rxgain);
-        throw ParameterError("Parameter " + parameter + " is TODO.");
+        m_device->set_rxgain(m_config.rxgain);
     }
     else if (parameter == "freq") {
         ss >> m_config.frequency;

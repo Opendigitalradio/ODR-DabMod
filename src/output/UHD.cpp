@@ -85,8 +85,7 @@ static void uhd_msg_handler(uhd::msg::type_t type, const std::string &msg)
 
 
 
-UHD::UHD(
-        SDRDeviceConfig& config) :
+UHD::UHD(SDRDeviceConfig& config) :
     SDRDevice(),
     m_conf(config),
     m_running(false)
@@ -103,10 +102,6 @@ UHD::UHD(
 
     MDEBUG("OutputUHD::OutputUHD(device: %s) @ %p\n",
             device.str().c_str(), this);
-
-    /* TODO
-    RC_ADD_PARAMETER(rxgain, "UHD analog daughterboard RX gain for DPD feedback");
-    */
 
     uhd::msg::register_handler(uhd_msg_handler);
 
