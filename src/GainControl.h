@@ -56,9 +56,9 @@ class GainControl : public PipelinedModCodec, public RemoteControllable
                     float normalise,
                     float varVariance);
 
-        virtual ~GainControl();
-        GainControl(const GainControl&);
-        GainControl& operator=(const GainControl&);
+        virtual ~GainControl() = default;
+        GainControl(const GainControl&) = delete;
+        GainControl& operator=(const GainControl&) = delete;
 
         const char* name() override { return "GainControl"; }
 

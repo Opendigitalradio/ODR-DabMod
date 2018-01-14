@@ -65,6 +65,7 @@ public:
             std::vector<Buffer*> dataIn,
             std::vector<Buffer*> dataOut) = 0;
     virtual const char* name() = 0;
+    virtual ~ModPlugin() = default;
 };
 
 /* Inputs are sources, the output buffers without reading any */
@@ -99,7 +100,7 @@ public:
     PipelinedModCodec& operator=(const PipelinedModCodec&) = delete;
     PipelinedModCodec(PipelinedModCodec&&) = delete;
     PipelinedModCodec& operator=(PipelinedModCodec&&) = delete;
-    ~PipelinedModCodec();
+    virtual ~PipelinedModCodec();
 
     virtual int process(Buffer* const dataIn, Buffer* dataOut) final;
     virtual const char* name() = 0;
