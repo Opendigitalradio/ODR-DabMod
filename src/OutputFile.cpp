@@ -77,10 +77,12 @@ meta_vec_t OutputFile::process_metadata(const meta_vec_t& metadataIn)
                 ss << " FCT=" << md.ts->fct <<
                     " FP=" << (int)md.ts->fp;
                 if (md.ts->timestamp_valid) {
-                    ss << " TS=" << md.ts->timestamp_sec << ";";
+                    ss << " TS=" << md.ts->timestamp_sec << " + " <<
+                        std::fixed
+                        << (double)md.ts->timestamp_pps / 163840000.0 << ";";
                 }
                 else {
-                    ss << " No TS;";
+                    ss << " TS invalid;";
                 }
             }
             else {

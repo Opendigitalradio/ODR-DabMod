@@ -51,6 +51,10 @@ Tests, both with B200 and LimeSDR:
 - Proper teardown
 - DPD server
 
+Replace all prints to stderr
+----------------------------
+We have a nice logging subsystem, use it to avoid that fprintf(stderr, ...) and
+logging to stderr messages collide.
 
 Finalise EDI input
 ------------------
