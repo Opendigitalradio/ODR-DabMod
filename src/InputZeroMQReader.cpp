@@ -120,7 +120,7 @@ int InputZeroMQReader::GetNextFrame(void* buffer)
     return framesize;
 }
 
-void InputZeroMQReader::PrintInfo()
+void InputZeroMQReader::PrintInfo() const
 {
     fprintf(stderr, "Input ZeroMQ:\n");
     fprintf(stderr, "  Receiving from %s\n\n", uri_.c_str());

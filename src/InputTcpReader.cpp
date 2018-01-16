@@ -32,9 +32,12 @@
 #include "InputReader.h"
 #include "PcDebug.h"
 #include "Utils.h"
-#include <sys/socket.h>
 #include <unistd.h>
 #include <errno.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <netdb.h>
+#include <arpa/inet.h>
 
 InputTcpReader::InputTcpReader()
 {
@@ -126,7 +129,7 @@ int InputTcpReader::GetNextFrame(void* buffer)
     return r;
 }
 
-void InputTcpReader::PrintInfo()
+void InputTcpReader::PrintInfo() const
 {
     fprintf(stderr, "Input TCP:\n");
     fprintf(stderr, "  Receiving from %s\n\n", m_uri.c_str());
