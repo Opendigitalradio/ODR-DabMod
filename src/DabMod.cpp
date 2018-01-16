@@ -92,18 +92,12 @@ void signalHandler(int signalNb)
 
 struct modulator_data
 {
-    modulator_data() :
-        inputReader(nullptr),
-        framecount(0),
-        flowgraph(nullptr),
-        etiReader(nullptr) {}
-
-    InputReader* inputReader;
+    std::shared_ptr<InputReader> inputReader;
     Buffer data;
-    uint64_t framecount;
+    uint64_t framecount = 0;
 
-    Flowgraph* flowgraph;
-    EtiReader* etiReader;
+    Flowgraph* flowgraph = nullptr;
+    EtiReader* etiReader = nullptr;
 };
 
 enum class run_modulator_state_t {
@@ -113,7 +107,7 @@ enum class run_modulator_state_t {
     reconfigure // Some sort of change of configuration we cannot handle happened
 };
 
-run_modulator_state_t run_modulator(modulator_data& m);
+static run_modulator_state_t run_modulator(modulator_data& m);
 
 static void printModSettings(const mod_settings_t& mod_settings)
 {
@@ -271,8 +265,6 @@ int launch_modulator(int argc, char* argv[])
 
     printModSettings(mod_settings);
 
-    modulator_data m;
-
     shared_ptr<FormatConverter> format_converter;
     if (mod_settings.useFileOutput and
             (mod_settings.fileOutputFormat == "s8" or
@@ -379,7 +371,8 @@ int launch_modulator(int argc, char* argv[])
         while (run_again) {
             Flowgraph flowgraph;
 
-            m.inputReader = inputReader.get();
+            modulator_data m;
+            m.inputReader = inputReader;
             m.flowgraph = &flowgraph;
             m.data.setLength(6144);
 
@@ -461,7 +454,7 @@ int launch_modulator(int argc, char* argv[])
     return ret;
 }
 
-run_modulator_state_t run_modulator(modulator_data& m)
+static run_modulator_state_t run_modulator(modulator_data& m)
 {
     auto ret = run_modulator_state_t::failure;
     try {
@@ -498,13 +491,26 @@ run_modulator_state_t run_modulator(modulator_data& m)
                 }
             }
             if (framesize == 0) {
-                etiLog.level(info) << "End of file reached.";
+                if (dynamic_pointer_cast<InputFileReader>(m.inputReader)) {
+                    etiLog.level(info) << "End of file reached.";
+                    running = 0;
+                    ret = run_modulator_state_t::normal_end;
+                }
+#if defined(HAVE_ZEROMQ)
+                else if (dynamic_pointer_cast<InputZeroMQReader>(m.inputReader)) {
+                    /* An empty frame marks a timeout. We ignore it, but we are
+                     * now able to handle SIGINT properly.
+                     */
+                }
+#endif // defined(HAVE_ZEROMQ)
+                // No need to handle the TCP input in a special way to get SIGINT working,
+                // because recv() will return with EINTR.
             }
             else {
                 etiLog.level(error) << "Input read error.";
+                running = 0;
+                ret = run_modulator_state_t::normal_end;
             }
-            running = 0;
-            ret = run_modulator_state_t::normal_end;
         }
     }
     catch (const zmq_input_overflow& e) {
