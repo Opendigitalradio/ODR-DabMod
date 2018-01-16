@@ -2,7 +2,7 @@
    Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010 Her Majesty the
    Queen in Right of Canada (Communications Research Center Canada)
 
-   Copyright (C) 2017
+   Copyright (C) 2018
    Matthias P. Braendli, matthias.braendli@mpb.li
 
     http://opendigitalradio.org
@@ -114,7 +114,7 @@ void Soapy::tune(double lo_offset, double frequency)
     m_device->setFrequency(SOAPY_SDR_TX, 0, m_conf.frequency, offset_arg);
 }
 
-double Soapy::get_tx_freq(void)
+double Soapy::get_tx_freq(void) const
 {
     if (not m_device) throw runtime_error("Soapy device not set up");
 
@@ -129,13 +129,13 @@ void Soapy::set_txgain(double txgain)
     m_device->setGain(SOAPY_SDR_TX, 0, m_conf.txgain);
 }
 
-double Soapy::get_txgain(void)
+double Soapy::get_txgain(void) const
 {
     if (not m_device) throw runtime_error("Soapy device not set up");
     return m_device->getGain(SOAPY_SDR_TX, 0);
 }
 
-SDRDevice::RunStatistics Soapy::get_run_statistics(void)
+SDRDevice::RunStatistics Soapy::get_run_statistics(void) const
 {
     RunStatistics rs;
     rs.num_underruns = underflows;
@@ -146,7 +146,7 @@ SDRDevice::RunStatistics Soapy::get_run_statistics(void)
 }
 
 
-double Soapy::get_real_secs(void)
+double Soapy::get_real_secs(void) const
 {
     if (m_device) {
         long long time_ns = m_device->getHardwareTime();
@@ -163,7 +163,7 @@ void Soapy::set_rxgain(double rxgain)
     m_conf.rxgain = m_device->getGain(SOAPY_SDR_RX, 0);
 }
 
-double Soapy::get_rxgain(void)
+double Soapy::get_rxgain(void) const
 {
     return m_device->getGain(SOAPY_SDR_RX, 0);
 }
@@ -197,13 +197,13 @@ size_t Soapy::receive_frame(
 }
 
 
-bool Soapy::is_clk_source_ok()
+bool Soapy::is_clk_source_ok() const
 {
     // TODO
     return true;
 }
 
-const char* Soapy::device_name(void)
+const char* Soapy::device_name(void) const
 {
     return "Soapy";
 }

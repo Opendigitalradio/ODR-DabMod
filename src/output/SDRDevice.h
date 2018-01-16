@@ -110,16 +110,15 @@ class SDRDevice {
             size_t num_frames_modulated; //TODO increment
         };
 
-        // TODO make some functions const
         virtual void tune(double lo_offset, double frequency) = 0;
-        virtual double get_tx_freq(void) = 0;
+        virtual double get_tx_freq(void) const = 0;
         virtual void set_txgain(double txgain) = 0;
-        virtual double get_txgain(void) = 0;
+        virtual double get_txgain(void) const = 0;
         virtual void transmit_frame(const struct FrameData& frame) = 0;
-        virtual RunStatistics get_run_statistics(void) = 0;
-        virtual double get_real_secs(void) = 0;
+        virtual RunStatistics get_run_statistics(void) const = 0;
+        virtual double get_real_secs(void) const = 0;
         virtual void set_rxgain(double rxgain) = 0;
-        virtual double get_rxgain(void) = 0;
+        virtual double get_rxgain(void) const = 0;
         virtual size_t receive_frame(
                 complexf *buf,
                 size_t num_samples,
@@ -128,9 +127,9 @@ class SDRDevice {
 
 
         // Return true if GPS and reference clock inputs are ok
-        virtual bool is_clk_source_ok(void) = 0;
+        virtual bool is_clk_source_ok(void) const = 0;
 
-        virtual const char* device_name(void) = 0;
+        virtual const char* device_name(void) const = 0;
 };
 
 } // namespace Output

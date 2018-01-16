@@ -2,7 +2,7 @@
    Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010 Her Majesty the
    Queen in Right of Canada (Communications Research Center Canada)
 
-   Copyright (C) 2017
+   Copyright (C) 2018
    Matthias P. Braendli, matthias.braendli@mpb.li
 
     http://opendigitalradio.org
@@ -230,7 +230,7 @@ void UHD::tune(double lo_offset, double frequency)
     m_usrp->set_rx_freq(frequency);
 }
 
-double UHD::get_tx_freq(void)
+double UHD::get_tx_freq(void) const
 {
     return m_usrp->get_tx_freq();
 }
@@ -241,7 +241,7 @@ void UHD::set_txgain(double txgain)
     m_conf.txgain = m_usrp->get_tx_gain();
 }
 
-double UHD::get_txgain(void)
+double UHD::get_txgain(void) const
 {
     return m_usrp->get_tx_gain();
 }
@@ -306,7 +306,7 @@ void UHD::transmit_frame(const struct FrameData& frame)
 }
 
 
-SDRDevice::RunStatistics UHD::get_run_statistics(void)
+SDRDevice::RunStatistics UHD::get_run_statistics(void) const
 {
     RunStatistics rs;
     rs.num_underruns = num_underflows;
@@ -316,7 +316,7 @@ SDRDevice::RunStatistics UHD::get_run_statistics(void)
     return rs;
 }
 
-double UHD::get_real_secs(void)
+double UHD::get_real_secs(void) const
 {
     return m_usrp->get_time_now().get_real_secs();
 }
@@ -327,7 +327,7 @@ void UHD::set_rxgain(double rxgain)
     m_conf.rxgain = m_usrp->get_rx_gain();
 }
 
-double UHD::get_rxgain()
+double UHD::get_rxgain() const
 {
     return m_usrp->get_rx_gain();
 }
@@ -358,7 +358,7 @@ size_t UHD::receive_frame(
 }
 
 // Return true if GPS and reference clock inputs are ok
-bool UHD::is_clk_source_ok(void)
+bool UHD::is_clk_source_ok(void) const
 {
     bool ok = true;
 
@@ -390,7 +390,7 @@ bool UHD::is_clk_source_ok(void)
     return ok;
 }
 
-const char* UHD::device_name(void)
+const char* UHD::device_name(void) const
 {
     return "UHD";
 }

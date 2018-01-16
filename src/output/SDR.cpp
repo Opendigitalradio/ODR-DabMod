@@ -201,7 +201,6 @@ void SDR::process_thread_entry()
     }
 
     m_running.store(false);
-    etiLog.level(warn) << "SDR Device thread terminated";
 }
 
 const char* SDR::name()

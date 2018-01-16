@@ -2,7 +2,7 @@
    Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010 Her Majesty the
    Queen in Right of Canada (Communications Research Center Canada)
 
-   Copyright (C) 2017
+   Copyright (C) 2018
    Matthias P. Braendli, matthias.braendli@mpb.li
 
     http://opendigitalradio.org
@@ -61,15 +61,15 @@ class Soapy : public Output::SDRDevice
         ~Soapy();
 
         virtual void tune(double lo_offset, double frequency) override;
-        virtual double get_tx_freq(void) override;
+        virtual double get_tx_freq(void) const override;
         virtual void set_txgain(double txgain) override;
-        virtual double get_txgain(void) override;
+        virtual double get_txgain(void) const override;
         virtual void transmit_frame(const struct FrameData& frame) override;
-        virtual RunStatistics get_run_statistics(void) override;
-        virtual double get_real_secs(void) override;
+        virtual RunStatistics get_run_statistics(void) const override;
+        virtual double get_real_secs(void) const override;
 
         virtual void set_rxgain(double rxgain) override;
-        virtual double get_rxgain(void) override;
+        virtual double get_rxgain(void) const override;
         virtual size_t receive_frame(
                 complexf *buf,
                 size_t num_samples,
@@ -77,8 +77,8 @@ class Soapy : public Output::SDRDevice
                 double timeout_secs) override;
 
         // Return true if GPS and reference clock inputs are ok
-        virtual bool is_clk_source_ok(void) override;
-        virtual const char* device_name(void) override;
+        virtual bool is_clk_source_ok(void) const override;
+        virtual const char* device_name(void) const override;
 
     private:
         SDRDeviceConfig& m_conf;
