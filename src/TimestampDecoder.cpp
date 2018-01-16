@@ -120,7 +120,6 @@ void TimestampDecoder::pushMNSCData(uint8_t framephase, uint16_t mnsc)
 
             if (enableDecode)
             {
-                full_timestamp_received = true;
                 updateTimestampSeconds(mktime(&temp_time));
             }
             break;
@@ -142,6 +141,7 @@ void TimestampDecoder::updateTimestampSeconds(uint32_t secs)
     {
         MDEBUG("TimestampDecoder::updateTimestampSeconds(%d) apply\n", secs);
         time_secs = secs;
+        full_timestamp_received = true;
     }
 }
 
