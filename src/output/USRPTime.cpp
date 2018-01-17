@@ -217,63 +217,57 @@ bool USRPTime::gpsdo_is_ettus() const
     return (m_conf.refclk_src == "gpsdo-ettus");
 }
 
+/* Return a uhd:time_spec representing current system time
+ * with 1ms granularity.  */
+static uhd::time_spec_t uhd_timespec_now(void)
+{
+    using namespace std::chrono;
+    auto n = system_clock::now();
+    const long long ticks = duration_cast<milliseconds>(n.time_since_epoch()).count();
+    return uhd::time_spec_t::from_ticks(ticks, 1000);
+}
+
 void USRPTime::set_usrp_time_from_localtime()
 {
     etiLog.level(warn) <<
         "OutputUHD: WARNING:"
         " you are using synchronous transmission without PPS input!";
 
-    struct timespec now;
-    if (clock_gettime(CLOCK_REALTIME, &now)) {
-        etiLog.level(error) << "OutputUHD: could not get time :" <<
-            strerror(errno);
-    }
-    else {
-        const uhd::time_spec_t t(now.tv_sec, (double)now.tv_nsec / 1e9);
-        m_usrp->set_time_now(t);
-        etiLog.level(info) << "OutputUHD: Setting USRP time to " <<
-            std::fixed << t.get_real_secs();
-    }
+    const auto t = uhd_timespec_now();
+    m_usrp->set_time_now(t);
+
+    etiLog.level(info) << "OutputUHD: Setting USRP time to " <<
+        std::fixed << t.get_real_secs();
 }
 
 void USRPTime::set_usrp_time_from_pps()
 {
+    using namespace std::chrono;
+
     /* handling time for synchronisation: wait until the next full
      * second, and set the USRP time at next PPS */
-    struct timespec now;
-    time_t seconds;
-    if (clock_gettime(CLOCK_REALTIME, &now)) {
-        etiLog.level(error) << "OutputUHD: could not get time :" <<
-            strerror(errno);
-        throw std::runtime_error("OutputUHD: could not get time.");
+    auto now = uhd_timespec_now();
+    const time_t secs_since_epoch = now.get_full_secs();
+
+    while (secs_since_epoch + 1 > now.get_full_secs()) {
+        this_thread::sleep_for(milliseconds(1));
+        now = uhd_timespec_now();
     }
-    else {
-        seconds = now.tv_sec;
+    /* We are now shortly after the second change.
+     * Wait 200ms to ensure the PPS comes later. */
+    this_thread::sleep_for(milliseconds(200));
 
-        MDEBUG("OutputUHD:sec+1: %ld ; now: %ld ...\n", seconds+1, now.tv_sec);
-        while (seconds + 1 > now.tv_sec) {
-            usleep(1);
-            if (clock_gettime(CLOCK_REALTIME, &now)) {
-                etiLog.level(error) << "OutputUHD: could not get time :" <<
-                    strerror(errno);
-                throw std::runtime_error("OutputUHD: could not get time.");
-            }
-        }
-        MDEBUG("OutputUHD:sec+1: %ld ; now: %ld ...\n", seconds+1, now.tv_sec);
-        /* We are now shortly after the second change. */
+    const auto time_set = uhd::time_spec_t(secs_since_epoch + 2);
+    etiLog.level(info) << "OutputUHD: Setting USRP time next pps to " <<
+        std::fixed << time_set.get_real_secs();
+    m_usrp->set_time_next_pps(time_set);
 
-        usleep(200000); // 200ms, we want the PPS to be later
-        m_usrp->set_time_unknown_pps(uhd::time_spec_t(seconds + 2));
-        etiLog.level(info) << "OutputUHD: Setting USRP time next pps to " <<
-            std::fixed <<
-            uhd::time_spec_t(seconds + 2).get_real_secs();
-    }
-
-    usleep(1e6);
-    etiLog.log(info,  "OutputUHD: USRP time %f\n",
-            m_usrp->get_time_now().get_real_secs());
+    // The UHD doc says we need to give the USRP one second to update
+    // all the internal registers.
+    this_thread::sleep_for(seconds(1));
+    etiLog.level(info) << "OutputUHD: USRP time " <<
+        std::fixed << m_usrp->get_time_now().get_real_secs();
 }
-
 
 } // namespace Output
 
