@@ -103,7 +103,7 @@ class UHD : public Output::SDRDevice
         size_t num_underflows = 0;
         size_t num_overflows = 0;
         size_t num_late_packets = 0;
-        size_t num_frames_modulated = 0; //TODO increment
+        size_t num_frames_modulated = 0;
         size_t num_underflows_previous = 0;
         size_t num_late_packets_previous = 0;
 

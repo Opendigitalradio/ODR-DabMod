@@ -255,6 +255,7 @@ void Soapy::transmit_frame(const struct FrameData& frame)
 
         num_acc_samps += ret;
     }
+    num_frames_modulated++;
 }
 
 } // namespace Output

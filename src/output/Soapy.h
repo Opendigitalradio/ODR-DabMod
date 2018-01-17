@@ -89,7 +89,7 @@ class Soapy : public Output::SDRDevice
         size_t underflows = 0;
         size_t overflows = 0;
         size_t late_packets = 0;
-        size_t num_frames_modulated = 0; //TODO increment
+        size_t num_frames_modulated = 0;
 };
 
 } // namespace Output

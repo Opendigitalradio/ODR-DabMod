@@ -15,6 +15,8 @@ that the LimeSDR gets support for a HW timestamp that can be set from a PPS
 signal. Discussion ongoing here
 https://discourse.myriadrf.org/t/synchronize-two-limesdr/1714
 
+DPD will be possible too.
+
 
 Move dpd port from uhd section to somewhere else.
 

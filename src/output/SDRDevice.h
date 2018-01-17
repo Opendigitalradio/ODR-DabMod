@@ -107,7 +107,7 @@ class SDRDevice {
             size_t num_underruns;
             size_t num_late_packets;
             size_t num_overruns;
-            size_t num_frames_modulated; //TODO increment
+            size_t num_frames_modulated;
         };
 
         virtual void tune(double lo_offset, double frequency) = 0;

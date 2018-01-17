@@ -303,6 +303,8 @@ void UHD::transmit_frame(const struct FrameData& frame)
             break;
         }
     }
+
+    num_frames_modulated++;
 }
 
 
