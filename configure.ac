@@ -129,7 +129,6 @@ AC_SUBST([LIBS], ["$FFTW_LIBS $SOAPYSDR_LIBS $PTHREAD_LIBS $ZMQ_LIBS"])
 # Checks for UHD.
 AS_IF([test "x$enable_output_uhd" = "xyes"],
       [ AC_CHECK_LIB([uhd], [main], [], [AC_MSG_ERROR([library uhd is missing])])
-        AC_CHECK_LIB([rt], [clock_gettime], [], [AC_MSG_ERROR([library rt is missing])])
       ])
 
 AS_IF([test "x$enable_output_uhd" = "xyes"],
