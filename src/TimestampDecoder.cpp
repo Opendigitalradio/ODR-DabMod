@@ -24,15 +24,13 @@
    along with ODR-DabMod.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <queue>
 #include <iostream>
 #include <fstream>
 #include <string>
-#include <sys/types.h>
 #include "PcDebug.h"
 #include "TimestampDecoder.h"
-#include "Eti.h"
 #include "Log.h"
+#include "Eti.h"
 
 //#define MDEBUG(fmt, args...) fprintf (LOG, "*****" fmt , ## args)
 #define MDEBUG(fmt, args...) PDEBUG(fmt, ## args)
@@ -55,10 +53,8 @@ TimestampDecoder::TimestampDecoder(double& offset_s) :
 
 std::shared_ptr<frame_timestamp> TimestampDecoder::getTimestamp()
 {
-    std::shared_ptr<frame_timestamp> ts =
-        std::make_shared<frame_timestamp>();
+    auto ts = std::make_shared<frame_timestamp>();
 
-    /* Push new timestamp into queue */
     ts->timestamp_valid = full_timestamp_received;
     ts->timestamp_sec = time_secs;
     ts->timestamp_pps = time_pps;
@@ -82,8 +78,7 @@ void TimestampDecoder::pushMNSCData(uint8_t framephase, uint16_t mnsc)
     struct eti_MNSC_TIME_2 *mnsc2;
     struct eti_MNSC_TIME_3 *mnsc3;
 
-    switch (framephase)
-    {
+    switch (framephase) {
         case 0:
             mnsc0 = (struct eti_MNSC_TIME_0*)&mnsc;
             enableDecode = (mnsc0->type == 0) &&
@@ -99,10 +94,10 @@ void TimestampDecoder::pushMNSCData(uint8_t framephase, uint16_t mnsc)
             temp_time.tm_sec = mnsc1->second_tens * 10 + mnsc1->second_unit;
             temp_time.tm_min = mnsc1->minute_tens * 10 + mnsc1->minute_unit;
 
-            if (!mnsc1->sync_to_frame)
-            {
+            if (!mnsc1->sync_to_frame) {
                 enableDecode = false;
-                PDEBUG("TimestampDecoder: MNSC time info is not synchronised to frame\n");
+                PDEBUG("TimestampDecoder: "
+                        "MNSC time info is not synchronised to frame\n");
             }
 
             break;
@@ -118,8 +113,7 @@ void TimestampDecoder::pushMNSCData(uint8_t framephase, uint16_t mnsc)
             temp_time.tm_mon = (mnsc3->month_tens * 10 + mnsc3->month_unit) - 1;
             temp_time.tm_year = (mnsc3->year_tens * 10 + mnsc3->year_unit) + 100;
 
-            if (enableDecode)
-            {
+            if (enableDecode) {
                 updateTimestampSeconds(mktime(&temp_time));
             }
             break;
@@ -132,13 +126,11 @@ void TimestampDecoder::pushMNSCData(uint8_t framephase, uint16_t mnsc)
 
 void TimestampDecoder::updateTimestampSeconds(uint32_t secs)
 {
-    if (inhibit_second_update > 0)
-    {
+    if (inhibit_second_update > 0) {
         MDEBUG("TimestampDecoder::updateTimestampSeconds(%d) inhibit\n", secs);
         inhibit_second_update--;
     }
-    else
-    {
+    else {
         MDEBUG("TimestampDecoder::updateTimestampSeconds(%d) apply\n", secs);
         time_secs = secs;
         full_timestamp_received = true;
@@ -149,8 +141,7 @@ void TimestampDecoder::updateTimestampPPS(uint32_t pps)
 {
     MDEBUG("TimestampDecoder::updateTimestampPPS(%f)\n", (double)pps / 16384000.0);
 
-    if (time_pps > pps) // Second boundary crossed
-    {
+    if (time_pps > pps) { // Second boundary crossed
         MDEBUG("TimestampDecoder::updateTimestampPPS crossed second\n");
 
         // The second for the next eight frames will not

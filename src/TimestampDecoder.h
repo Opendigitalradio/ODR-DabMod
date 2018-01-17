@@ -26,14 +26,11 @@
 
 #pragma once
 
-#include <queue>
+#include <cstdint>
 #include <memory>
 #include <string>
-#include <time.h>
 #include <math.h>
 #include <stdio.h>
-#include "Eti.h"
-#include "Log.h"
 #include "RemoteControl.h"
 
 struct frame_timestamp
@@ -55,16 +52,14 @@ struct frame_timestamp
         this->timestamp_sec += lrintf(offset_secs);
         this->timestamp_pps += lrintf(offset_pps * 16384000.0);
 
-        while (this->timestamp_pps >= 16384000)
-        {
+        while (this->timestamp_pps >= 16384000) {
             this->timestamp_pps -= 16384000;
             this->timestamp_sec += 1;
-        };
+        }
         return *this;
     }
 
-    const frame_timestamp operator+(const double diff)
-    {
+    const frame_timestamp operator+(const double diff) {
         frame_timestamp ts = *this;
         ts += diff;
         return ts;
@@ -86,8 +81,7 @@ struct frame_timestamp
         return ns;
     }
 
-    void print(const char* t)
-    {
+    void print(const char* t) const {
         fprintf(stderr,
                 "%s <frame_timestamp(%s, %d, %.9f, %d)>\n",
                 t, this->timestamp_valid ? "valid" : "invalid",
