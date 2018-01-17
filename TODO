@@ -18,7 +18,7 @@ https://discourse.myriadrf.org/t/synchronize-two-limesdr/1714
 DPD will be possible too.
 
 
-Move dpd port from uhd section to somewhere else.
+Test sleep_through_frame implementation.
 
 Clean up and separate GPS and refclk checks.
  * *done* handle UHD GPSDO and time
@@ -31,7 +31,7 @@ Add antenna selection to config.
 
 Test RC entries.
 
-Portability: replace clock_gettime with std::chrono
+*done* Portability: replace clock_gettime with std::chrono
 
 *done* Make an abstraction for the DPD feedback server, use it for Soapy and UHD.
 

@@ -3,7 +3,7 @@
    Her Majesty the Queen in Right of Canada (Communications Research
    Center Canada)
 
-   Copyright (C) 2017
+   Copyright (C) 2018
    Matthias P. Braendli, matthias.braendli@mpb.li
 
     http://opendigitalradio.org
@@ -36,28 +36,13 @@
 #include <stdio.h>
 #include <time.h>
 #include <string>
+#include <chrono>
 
 void printUsage(const char* progName);
 
 void printVersion(void);
 
 void printStartupInfo(void);
-
-inline long timespecdiff_us(struct timespec& oldTime, struct timespec& time)
-{
-    long tv_sec;
-    long tv_nsec;
-    if (time.tv_nsec < oldTime.tv_nsec) {
-        tv_sec = time.tv_sec - 1 - oldTime.tv_sec;
-        tv_nsec = 1000000000L + time.tv_nsec - oldTime.tv_nsec;
-    }
-    else {
-        tv_sec = time.tv_sec - oldTime.tv_sec;
-        tv_nsec = time.tv_nsec - oldTime.tv_nsec;
-    }
-
-    return tv_sec * 1000 + tv_nsec / 1000;
-}
 
 // Set SCHED_RR with priority prio (0=lowest)
 int set_realtime_prio(int prio);
@@ -70,5 +55,4 @@ double parseChannel(const std::string& chan);
 
 // dabMode is either 1, 2, 3, 4, corresponding to TM I, TM II, TM III and TM IV.
 // throws a runtime_error if dabMode is not one of these values.
-int transmission_frame_duration_ms(unsigned int dabMode);
-
+std::chrono::milliseconds transmission_frame_duration(unsigned int dabmode);

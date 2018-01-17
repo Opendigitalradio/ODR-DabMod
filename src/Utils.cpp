@@ -3,7 +3,7 @@
    Her Majesty the Queen in Right of Canada (Communications Research
    Center Canada)
 
-   Copyright (C) 2017
+   Copyright (C) 2018
    Matthias P. Braendli, matthias.braendli@mpb.li
 
     http://opendigitalradio.org
@@ -215,16 +215,16 @@ double parseChannel(const std::string& chan)
     return freq;
 }
 
-int transmission_frame_duration_ms(unsigned int dabMode)
+std::chrono::milliseconds transmission_frame_duration(unsigned int dabmode)
 {
-    switch (dabMode) {
-        case 1: return 96;
-        case 2: return 24;
-        case 3: return 24;
-        case 4: return 48;
+    using namespace std::chrono;
+    switch (dabmode) {
+        case 1: return milliseconds(96);
+        case 2: return milliseconds(24);
+        case 3: return milliseconds(24);
+        case 4: return milliseconds(48);
         default:
             throw std::runtime_error("invalid DAB mode");
     }
 }
-
 

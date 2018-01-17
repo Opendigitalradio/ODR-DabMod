@@ -59,14 +59,10 @@ static constexpr double TIMESTAMP_MARGIN_FUTURE = 0.5;
 SDR::SDR(SDRDeviceConfig& config, std::shared_ptr<SDRDevice> device) :
     ModOutput(), ModMetadata(), RemoteControllable("sdr"),
     m_config(config),
-    m_running(false),
     m_device(device)
 {
     // muting is remote-controllable
     m_config.muting = false;
-
-    time_last_frame.tv_sec = 0;
-    time_last_frame.tv_nsec = 0;
 
     m_device_thread = std::thread(&SDR::process_thread_entry, this);
 
@@ -78,15 +74,10 @@ SDR::SDR(SDRDeviceConfig& config, std::shared_ptr<SDRDevice> device) :
 
 SDR::~SDR()
 {
-    stop();
-}
-
-void SDR::stop()
-{
     m_running.store(false);
 
     FrameData end_marker;
-    end_marker.buf.resize(0);
+    end_marker.buf.clear();
     m_queue.push(end_marker);
 
     if (m_device_thread.joinable()) {
@@ -218,33 +209,23 @@ const char* SDR::name()
 
 void SDR::sleep_through_frame()
 {
-    struct timespec now;
-    if (clock_gettime(CLOCK_MONOTONIC, &now) != 0) {
-        stringstream ss;
-        ss << "clock_gettime failure: " << strerror(errno);
-        throw runtime_error(ss.str());
+    using namespace std::chrono;
+
+    const auto now = steady_clock::now();
+
+    if (not t_last_frame_initialised) {
+        t_last_frame = now;
+        t_last_frame_initialised = true;
     }
 
-    if (time_last_frame.tv_sec == 0) {
-        if (clock_gettime(CLOCK_MONOTONIC, &time_last_frame) != 0) {
-            stringstream ss;
-            ss << "clock_gettime failure: " << strerror(errno);
-            throw runtime_error(ss.str());
-        }
+    const auto delta = now - t_last_frame;
+    const auto wait_time = transmission_frame_duration(m_config.dabMode);
+
+    if (wait_time > delta) {
+        this_thread::sleep_for(wait_time - delta);
     }
 
-    long delta_us = timespecdiff_us(time_last_frame, now);
-    long wait_time_us = transmission_frame_duration_ms(m_config.dabMode);
-
-    if (wait_time_us - delta_us > 0) {
-        usleep(wait_time_us - delta_us);
-    }
-
-    time_last_frame.tv_nsec += wait_time_us * 1000;
-    while (time_last_frame.tv_nsec >= 1000000000L) {
-        time_last_frame.tv_nsec -= 1000000000L;
-        time_last_frame.tv_sec++;
-    }
+    t_last_frame += wait_time;
 }
 
 void SDR::handle_frame(struct FrameData& frame)

@@ -34,6 +34,7 @@ DESCRIPTION:
 #   include <config.h>
 #endif
 
+#include <chrono>
 #include "ModPlugin.h"
 #include "EtiReader.h"
 #include "output/SDRDevice.h"
@@ -66,14 +67,13 @@ class SDR : public ModOutput, public ModMetadata, public RemoteControllable {
                 const std::string& parameter) const override;
 
     private:
-        void stop(void);
         void process_thread_entry(void);
         void handle_frame(struct FrameData &frame);
         void sleep_through_frame(void);
 
         SDRDeviceConfig& m_config;
 
-        std::atomic<bool> m_running;
+        std::atomic<bool> m_running = ATOMIC_VAR_INIT(false);
         std::thread m_device_thread;
         std::vector<uint8_t> m_frame;
         ThreadsafeQueue<FrameData> m_queue;
@@ -87,8 +87,8 @@ class SDR : public ModOutput, public ModMetadata, public RemoteControllable {
         uint32_t last_tx_second = 0;
         uint32_t last_tx_pps = 0;
 
-        struct timespec time_last_frame;
-
+        bool     t_last_frame_initialised = false;
+        std::chrono::steady_clock::time_point t_last_frame;
 };
 
 }
