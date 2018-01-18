@@ -3,7 +3,7 @@
    Her Majesty the Queen in Right of Canada (Communications Research
    Center Canada)
 
-   Copyright (C) 2017
+   Copyright (C) 2018
    Matthias P. Braendli, matthias.braendli@mpb.li
 
     http://opendigitalradio.org
@@ -244,6 +244,8 @@ static void parse_configfile(
         }
 
         sdr_device_config.txgain = pt.get("uhdoutput.txgain", 0.0);
+        sdr_device_config.tx_antenna = pt.get("uhdoutput.tx_antenna", "");
+        sdr_device_config.rx_antenna = pt.get("uhdoutput.rx_antenna", "RX2");
         sdr_device_config.rxgain = pt.get("uhdoutput.rxgain", 0.0);
         sdr_device_config.frequency = pt.get<double>("uhdoutput.frequency", 0);
         std::string chan = pt.get<std::string>("uhdoutput.channel", "");
@@ -295,6 +297,7 @@ static void parse_configfile(
         outputsoapy_conf.masterClockRate = pt.get<long>("soapyoutput.master_clock_rate", 0);
 
         outputsoapy_conf.txgain = pt.get("soapyoutput.txgain", 0.0);
+        outputsoapy_conf.tx_antenna = pt.get("soapyoutput.tx_antenna", "");
         outputsoapy_conf.lo_offset = pt.get<double>("soapyoutput.lo_offset", 0.0);
         outputsoapy_conf.frequency = pt.get<double>("soapyoutput.frequency", 0);
         std::string chan = pt.get<std::string>("soapyoutput.channel", "");
@@ -421,9 +424,7 @@ void parse_args(int argc, char **argv, mod_settings_t& mod_settings)
             break;
         case 'o':
             mod_settings.tist_offset_s = strtod(optarg, NULL);
-#if defined(HAVE_OUTPUT_UHD)
             mod_settings.sdr_device_config.enableSync = true;
-#endif
             break;
         case 'm':
             mod_settings.dabMode = strtol(optarg, NULL, 0);
@@ -445,6 +446,8 @@ void parse_args(int argc, char **argv, mod_settings_t& mod_settings)
             mod_settings.sdr_device_config.pps_src = "none";
             mod_settings.sdr_device_config.pps_polarity = "pos";
             mod_settings.useUHDOutput = true;
+#else
+            throw std::invalid_argument("Cannot select UHD output, not compiled in!");
 #endif
             break;
         case 'V':

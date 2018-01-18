@@ -27,7 +27,7 @@ Clean up and separate GPS and refclk checks.
  * Ensure muting is set properly at startup.
  * Ensure synchronous is taken in account.
 
-Add antenna selection to config.
+*done* Add antenna selection to config.
 
 Test RC entries.
 
@@ -52,6 +52,12 @@ Tests, both with B200 and LimeSDR:
 - Underrun recovery
 - Proper teardown
 - DPD server
+
+Smaller things
+--------------
+
+Remove GuardIntervalInserter implementation for window==0, as it was shown both are equivalent.
+
 
 Replace all prints to stderr
 ----------------------------
@@ -84,13 +90,3 @@ The CIC Equaliser was used for the USRP1 to compensate for spectrum flatness.
 It is not documented, and its effect poorly explained. Review if still needed,
 and document appropriately.
 
-
-Add metadata to flowgraph
--------------------------
-The flowgraph does not support metadata. This is why the timestamp has this
-kludge with the delay queue, so that the timestamps are delayed properly
-depending on what is included in the flowgraph.
-
-Without metadata inside the flowgraph, it is more difficult to pipeline the DSP
-processing to make use of many-core systems, because the timestamp cannot be
-carried alongside the data it corresponds to.

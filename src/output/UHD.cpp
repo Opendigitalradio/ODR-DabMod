@@ -159,10 +159,10 @@ UHD::UHD(SDRDeviceConfig& config) :
     tune(m_conf.lo_offset, m_conf.frequency);
 
     m_conf.frequency = m_usrp->get_tx_freq();
-    etiLog.level(info) << std::fixed << std::setprecision(3) <<
+    etiLog.level(debug) << std::fixed << std::setprecision(3) <<
         "OutputUHD:Actual TX frequency: " << m_conf.frequency;
 
-    etiLog.level(info) << std::fixed << std::setprecision(3) <<
+    etiLog.level(debug) << std::fixed << std::setprecision(3) <<
         "OutputUHD:Actual RX frequency: " << m_usrp->get_tx_freq();
 
     m_usrp->set_tx_gain(m_conf.txgain);
@@ -175,17 +175,20 @@ UHD::UHD(SDRDeviceConfig& config) :
     m_usrp->set_rx_rate(m_conf.sampleRate);
     etiLog.log(debug, "OutputUHD:Actual RX Rate: %f sps.", m_usrp->get_rx_rate());
 
-    m_usrp->set_rx_antenna("RX2");
-    etiLog.log(debug, "OutputUHD:Set RX Antenna: %s",
+    if (not m_conf.rx_antenna.empty()) {
+        m_usrp->set_rx_antenna(m_conf.rx_antenna);
+    }
+    etiLog.log(debug, "OutputUHD:Actual RX Antenna: %s",
             m_usrp->get_rx_antenna().c_str());
+
+    if (not m_conf.tx_antenna.empty()) {
+        m_usrp->set_tx_antenna(m_conf.tx_antenna);
+    }
+    etiLog.log(debug, "OutputUHD:Actual TX Antenna: %s",
+            m_usrp->get_tx_antenna().c_str());
 
     m_usrp->set_rx_gain(m_conf.rxgain);
     etiLog.log(debug, "OutputUHD:Actual RX Gain: %f", m_usrp->get_rx_gain());
-
-    /* TODO
-    uhdFeedback = std::make_shared<OutputUHDFeedback>(
-            m_usrp, m_conf.dpdFeedbackServerPort, m_conf.sampleRate);
-    */
 
     const uhd::stream_args_t stream_args("fc32"); //complex floats
     m_rx_stream = m_usrp->get_rx_stream(stream_args);

@@ -71,22 +71,31 @@ Soapy::Soapy(SDRDeviceConfig& config) :
 
     m_device->setMasterClockRate(m_conf.masterClockRate);
     etiLog.level(info) << "SoapySDR master clock rate set to " <<
+        std::fixed << std::setprecision(4) <<
         m_device->getMasterClockRate()/1000.0 << " kHz";
 
     m_device->setSampleRate(SOAPY_SDR_TX, 0, m_conf.sampleRate);
     etiLog.level(info) << "SoapySDR:Actual TX rate: " <<
+        std::fixed << std::setprecision(4) <<
         m_device->getSampleRate(SOAPY_SDR_TX, 0) / 1000.0 <<
         " ksps.";
 
     tune(m_conf.lo_offset, m_conf.frequency);
     m_conf.frequency = m_device->getFrequency(SOAPY_SDR_TX, 0);
     etiLog.level(info) << "SoapySDR:Actual frequency: " <<
-        m_conf.frequency / 1000.0 <<
-        " kHz.";
+        std::fixed << std::setprecision(3) <<
+        m_conf.frequency / 1000.0 << " kHz.";
 
     m_device->setGain(SOAPY_SDR_TX, 0, m_conf.txgain);
     etiLog.level(info) << "SoapySDR:Actual tx gain: " <<
+        std::fixed << std::setprecision(2) <<
         m_device->getGain(SOAPY_SDR_TX, 0);
+
+    if (not m_conf.tx_antenna.empty()) {
+        m_device->setAntenna(SOAPY_SDR_TX, 0, m_conf.tx_antenna);
+    }
+    etiLog.level(info) << "SoapySDR:Actual tx antenna: " <<
+        m_device->getAntenna(SOAPY_SDR_TX, 0);
 
     const std::vector<size_t> channels({0});
     m_tx_stream = m_device->setupStream(SOAPY_SDR_TX, "CF32", channels);

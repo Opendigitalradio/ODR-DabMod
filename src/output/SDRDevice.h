@@ -53,6 +53,8 @@ using complexf = std::complex<float>;
 struct SDRDeviceConfig {
     std::string device;
     std::string subDevice; // For UHD
+    std::string tx_antenna;
+    std::string rx_antenna;
 
     long masterClockRate = 32768000;
     unsigned sampleRate = 2048000;
