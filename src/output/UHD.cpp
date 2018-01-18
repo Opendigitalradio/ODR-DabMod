@@ -212,22 +212,30 @@ void UHD::tune(double lo_offset, double frequency)
         const auto tr = uhd::tune_request_t(frequency, lo_offset);
         uhd::tune_result_t result = m_usrp->set_tx_freq(tr);
 
-        etiLog.level(debug) << "OutputUHD:" <<
+        etiLog.level(debug) << "OutputUHD: TX freq" <<
             std::fixed << std::setprecision(0) <<
             " Target RF: " << result.target_rf_freq <<
             " Actual RF: " << result.actual_rf_freq <<
             " Target DSP: " << result.target_dsp_freq <<
             " Actual DSP: " << result.actual_dsp_freq;
+
+        uhd::tune_result_t result_rx = m_usrp->set_rx_freq(tr);
+
+        etiLog.level(debug) << "OutputUHD: RX freq" <<
+            std::fixed << std::setprecision(0) <<
+            " Target RF: " << result_rx.target_rf_freq <<
+            " Actual RF: " << result_rx.actual_rf_freq <<
+            " Target DSP: " << result_rx.target_dsp_freq <<
+            " Actual DSP: " << result_rx.actual_dsp_freq;
     }
     else {
         //set the centre frequency
         etiLog.level(info) << std::fixed << std::setprecision(3) <<
             "OutputUHD:Setting freq to " << frequency << "...";
         m_usrp->set_tx_freq(frequency);
-    }
 
-    // TODO configure LO offset also for RX
-    m_usrp->set_rx_freq(frequency);
+        m_usrp->set_rx_freq(frequency);
+    }
 }
 
 double UHD::get_tx_freq(void) const
