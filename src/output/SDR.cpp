@@ -87,6 +87,10 @@ SDR::~SDR()
 
 int SDR::process(Buffer *dataIn)
 {
+    if (not m_running) {
+        throw std::runtime_error("SDR thread failed");
+    }
+
     const uint8_t* pDataIn = (uint8_t*)dataIn->getData();
     m_frame.resize(dataIn->getLength());
     std::copy(pDataIn, pDataIn + dataIn->getLength(),
@@ -99,7 +103,7 @@ int SDR::process(Buffer *dataIn)
 
 meta_vec_t SDR::process_metadata(const meta_vec_t& metadataIn)
 {
-    if (m_device) {
+    if (m_device and m_running) {
         FrameData frame;
         frame.buf = std::move(m_frame);
 
@@ -162,33 +166,37 @@ void SDR::process_thread_entry()
 
     m_running.store(true);
 
-    while (m_running.load()) {
-        struct FrameData frame;
-        etiLog.log(trace, "SDR,wait");
-        m_queue.wait_and_pop(frame, pop_prebuffering);
-        etiLog.log(trace, "SDR,pop");
+    try {
+        while (m_running.load()) {
+            struct FrameData frame;
+            etiLog.log(trace, "SDR,wait");
+            m_queue.wait_and_pop(frame, pop_prebuffering);
+            etiLog.log(trace, "SDR,pop");
 
-        if (m_running.load() == false or frame.buf.empty()) {
-            break;
-        }
-
-        if (m_device) {
-            handle_frame(frame);
-
-            const auto rs = m_device->get_run_statistics();
-
-            /* Ensure we fill frames after every underrun and
-             * at startup to reduce underrun likelihood. */
-            if (last_num_underflows < rs.num_underruns) {
-                pop_prebuffering = FRAMES_MAX_SIZE;
-            }
-            else {
-                pop_prebuffering = 1;
+            if (m_running.load() == false or frame.buf.empty()) {
+                break;
             }
 
-            last_num_underflows = rs.num_underruns;
-        }
+            if (m_device) {
+                handle_frame(frame);
 
+                const auto rs = m_device->get_run_statistics();
+
+                /* Ensure we fill frames after every underrun and
+                 * at startup to reduce underrun likelihood. */
+                if (last_num_underflows < rs.num_underruns) {
+                    pop_prebuffering = FRAMES_MAX_SIZE;
+                }
+                else {
+                    pop_prebuffering = 1;
+                }
+
+                last_num_underflows = rs.num_underruns;
+            }
+        }
+    }
+    catch (const runtime_error& e) {
+        etiLog.level(error) << "SDR output thread caught runtime error: " << e.what();
     }
 
     m_running.store(false);
