@@ -88,8 +88,21 @@ USRPTime::USRPTime(
     m_conf(conf),
     time_last_check(timepoint_t::clock::now())
 {
-    if (m_conf.enableSync and (m_conf.pps_src == "none")) {
+    if (m_conf.pps_src == "none") {
+        if (m_conf.enableSync) {
+            etiLog.level(warn) <<
+                "OutputUHD: WARNING:"
+                " you are using synchronous transmission without PPS input!";
+        }
+
         set_usrp_time_from_localtime();
+    }
+    else if (m_conf.pps_src == "pps" or m_conf.pps_src == "gpsdo") {
+        set_usrp_time_from_pps();
+    }
+    else {
+        throw std::runtime_error("USRPTime not implemented yet: " +
+                m_conf.pps_src);
     }
 }
 
@@ -229,10 +242,6 @@ static uhd::time_spec_t uhd_timespec_now(void)
 
 void USRPTime::set_usrp_time_from_localtime()
 {
-    etiLog.level(warn) <<
-        "OutputUHD: WARNING:"
-        " you are using synchronous transmission without PPS input!";
-
     const auto t = uhd_timespec_now();
     m_usrp->set_time_now(t);
 
