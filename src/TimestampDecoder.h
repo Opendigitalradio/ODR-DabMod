@@ -71,7 +71,7 @@ struct frame_timestamp
 
     double get_real_secs() const {
         double t = timestamp_sec;
-        t += timestamp_pps;
+        t += pps_offset();
         return t;
     }
 
