@@ -94,7 +94,7 @@ void DPDFeedbackServer::set_tx_frame(
     boost::mutex::scoped_lock lock(burstRequest.mutex);
 
     if (buf.size() % sizeof(complexf) != 0) {
-        throw std::logic_error("Buffer for tx frame has incorrect size");
+        throw logic_error("Buffer for tx frame has incorrect size");
     }
 
     if (burstRequest.state == BurstRequestState::SaveTransmitFrame) {
@@ -191,6 +191,9 @@ void DPDFeedbackServer::ReceiveBurstThread()
     }
     catch (const std::exception &e) {
         etiLog.level(error) << "DPD Feedback RX exception: " << e.what();
+    }
+    catch (const boost::thread_interrupted& e) {
+        etiLog.level(info) << "DPD Feedback RX stopping.";
     }
     catch (...) {
         etiLog.level(error) << "DPD Feedback RX unknown exception!";
