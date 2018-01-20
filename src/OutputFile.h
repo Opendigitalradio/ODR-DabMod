@@ -2,7 +2,7 @@
    Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010, 2011 Her Majesty
    the Queen in Right of Canada (Communications Research Center Canada)
 
-   Copyright (C) 2016
+   Copyright (C) 2018
    Matthias P. Braendli, matthias.braendli@mpb.li
 
     http://opendigitalradio.org
@@ -32,23 +32,29 @@
 
 
 #include "ModPlugin.h"
+#include "EtiReader.h"
 
 #include <string>
 #include <stdio.h>
 #include <sys/types.h>
+#include <memory>
 
-
-class OutputFile : public ModOutput
+class OutputFile : public ModOutput, public ModMetadata
 {
 public:
-    OutputFile(std::string filename);
-    virtual ~OutputFile();
+    OutputFile(const std::string& filename, bool show_metadata);
 
-    virtual int process(Buffer* dataIn);
-    const char* name() { return "OutputFile"; }
+    virtual int process(Buffer* dataIn) override;
+    const char* name() override { return "OutputFile"; }
+
+    virtual meta_vec_t process_metadata(
+            const meta_vec_t& metadataIn) override;
 
 protected:
+    bool myShowMetadata = false;
     std::string myFilename;
-    FILE* myFile;
+
+    struct FILEDeleter{ void operator()(FILE* fd){ if (fd) fclose(fd); }};
+    std::unique_ptr<FILE, FILEDeleter> myFile;
 };
 

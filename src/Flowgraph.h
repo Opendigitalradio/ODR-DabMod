@@ -2,7 +2,7 @@
    Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010, 2011 Her Majesty
    the Queen in Right of Canada (Communications Research Center Canada)
 
-   Copyright (C) 2016
+   Copyright (C) 2018
    Matthias P. Braendli, matthias.braendli@mpb.li
 
     http://opendigitalradio.org
@@ -39,6 +39,8 @@
 #include <list>
 #include <cstdio>
 
+using Metadata_vec_sptr = std::shared_ptr<std::vector<flowgraph_metadata> >;
+
 class Node
 {
 public:
@@ -55,15 +57,18 @@ public:
         myProcessTime += processTime;
     }
 
-    void addOutputBuffer(Buffer::sptr& buffer);
-    void removeOutputBuffer(Buffer::sptr& buffer);
+    void addOutputBuffer(Buffer::sptr& buffer, Metadata_vec_sptr& md);
+    void removeOutputBuffer(Buffer::sptr& buffer, Metadata_vec_sptr& md);
 
-    void addInputBuffer(Buffer::sptr& buffer);
-    void removeInputBuffer(Buffer::sptr& buffer);
+    void addInputBuffer(Buffer::sptr& buffer, Metadata_vec_sptr& md);
+    void removeInputBuffer(Buffer::sptr& buffer, Metadata_vec_sptr& md);
 
 protected:
     std::list<Buffer::sptr> myInputBuffers;
     std::list<Buffer::sptr> myOutputBuffers;
+    std::list<Metadata_vec_sptr> myInputMetadata;
+    std::list<Metadata_vec_sptr> myOutputMetadata;
+
 #if DEBUG
     std::list<FILE*> myDebugFiles;
 #endif
@@ -85,6 +90,7 @@ protected:
     std::shared_ptr<Node> mySrcNode;
     std::shared_ptr<Node> myDstNode;
     std::shared_ptr<Buffer> myBuffer;
+    std::shared_ptr<std::vector<flowgraph_metadata> > myMetadata;
 };
 
 

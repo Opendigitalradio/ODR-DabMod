@@ -34,41 +34,41 @@ DESCRIPTION:
 #   include <config.h>
 #endif
 
-#ifdef HAVE_OUTPUT_UHD
-
 #include <vector>
 #include <complex>
 #include <cstring>
-#include <uhd/types/stream_cmd.hpp>
 #include <sys/socket.h>
 #include <errno.h>
 #include <poll.h>
 #include <boost/date_time/posix_time/posix_time.hpp>
-#include "OutputUHDFeedback.h"
+#include "output/Feedback.h"
 #include "Utils.h"
 #include "Socket.h"
 
 using namespace std;
-typedef std::complex<float> complexf;
 
-OutputUHDFeedback::OutputUHDFeedback(
-        uhd::usrp::multi_usrp::sptr usrp,
+namespace Output {
+
+DPDFeedbackServer::DPDFeedbackServer(
+        std::shared_ptr<SDRDevice> device,
         uint16_t port,
-        uint32_t sampleRate)
+        uint32_t sampleRate) :
+    m_port(port),
+    m_sampleRate(sampleRate),
+    m_device(device)
 {
-    m_port = port;
-    m_sampleRate = sampleRate;
-    m_usrp = usrp;
-
     if (m_port) {
         m_running.store(true);
 
-        rx_burst_thread = boost::thread(&OutputUHDFeedback::ReceiveBurstThread, this);
-        burst_tcp_thread = boost::thread(&OutputUHDFeedback::ServeFeedbackThread, this);
+        rx_burst_thread = boost::thread(
+                &DPDFeedbackServer::ReceiveBurstThread, this);
+
+        burst_tcp_thread = boost::thread(
+                &DPDFeedbackServer::ServeFeedbackThread, this);
     }
 }
 
-OutputUHDFeedback::~OutputUHDFeedback()
+DPDFeedbackServer::~DPDFeedbackServer()
 {
     m_running.store(false);
 
@@ -83,12 +83,12 @@ OutputUHDFeedback::~OutputUHDFeedback()
     }
 }
 
-void OutputUHDFeedback::set_tx_frame(
+void DPDFeedbackServer::set_tx_frame(
         const std::vector<uint8_t> &buf,
         const struct frame_timestamp &buf_ts)
 {
     if (not m_running) {
-        throw runtime_error("OutputUHDFeedback not running");
+        throw runtime_error("DPDFeedbackServer not running");
     }
 
     boost::mutex::scoped_lock lock(burstRequest.mutex);
@@ -131,13 +131,10 @@ void OutputUHDFeedback::set_tx_frame(
     }
 }
 
-void OutputUHDFeedback::ReceiveBurstThread()
+void DPDFeedbackServer::ReceiveBurstThread()
 {
     try {
-        set_thread_name("uhdreceiveburst");
-
-        uhd::stream_args_t stream_args("fc32"); //complex floats
-        auto rxStream = m_usrp->get_rx_stream(stream_args);
+        set_thread_name("dpdreceiveburst");
 
         while (m_running) {
             boost::mutex::scoped_lock lock(burstRequest.mutex);
@@ -148,43 +145,40 @@ void OutputUHDFeedback::ReceiveBurstThread()
 
             if (not m_running) break;
 
-            uhd::stream_cmd_t cmd(
-                    uhd::stream_cmd_t::stream_mode_t::STREAM_MODE_NUM_SAMPS_AND_DONE);
-            cmd.num_samps = burstRequest.num_samples;
-            cmd.stream_now = false;
+            const size_t num_samps = burstRequest.num_samples;
 
-            double pps = burstRequest.rx_pps / 16384000.0;
-            cmd.time_spec = uhd::time_spec_t(burstRequest.rx_second, pps);
+            frame_timestamp ts;
+            ts.timestamp_sec = burstRequest.rx_second;
+            ts.timestamp_pps = burstRequest.rx_pps;
+            ts.timestamp_valid = true;
 
             // We need to free the mutex while we recv(), because otherwise we block the
             // TX thread
             lock.unlock();
 
-            const double usrp_time = m_usrp->get_time_now().get_real_secs();
-            const double cmd_time = cmd.time_spec.get_real_secs();
+            const double device_time = m_device->get_real_secs();
+            const double cmd_time = ts.get_real_secs();
 
-            rxStream->issue_stream_cmd(cmd);
-
-            uhd::rx_metadata_t md;
-
-            std::vector<uint8_t> buf(cmd.num_samps * sizeof(complexf));
+            std::vector<uint8_t> buf(num_samps * sizeof(complexf));
 
             const double timeout = 60;
-            size_t samples_read = rxStream->recv(&buf[0], cmd.num_samps, md, timeout);
+            size_t samples_read = m_device->receive_frame(
+                    reinterpret_cast<complexf*>(buf.data()),
+                    num_samps, ts, timeout);
 
             lock.lock();
             burstRequest.rx_samples = std::move(buf);
             burstRequest.rx_samples.resize(samples_read * sizeof(complexf));
 
             // The recv might have happened at another time than requested
-            burstRequest.rx_second = md.time_spec.get_full_secs();
-            burstRequest.rx_pps = md.time_spec.get_frac_secs() * 16384000.0;
+            burstRequest.rx_second = ts.timestamp_sec;
+            burstRequest.rx_pps = ts.timestamp_pps;
 
             etiLog.level(debug) << "DPD: acquired " << samples_read <<
                 " RX feedback samples " <<
                 "at time " << burstRequest.tx_second << " + " <<
                 std::fixed << burstRequest.tx_pps / 16384000.0 <<
-                " Delta=" << cmd_time - usrp_time;
+                " Delta=" << cmd_time - device_time;
 
             burstRequest.state = BurstRequestState::Acquired;
 
@@ -205,7 +199,7 @@ void OutputUHDFeedback::ReceiveBurstThread()
     m_running.store(false);
 }
 
-void OutputUHDFeedback::ServeFeedback()
+void DPDFeedbackServer::ServeFeedback()
 {
     TCPSocket m_server_sock;
     m_server_sock.listen(m_port);
@@ -335,9 +329,9 @@ void OutputUHDFeedback::ServeFeedback()
     }
 }
 
-void OutputUHDFeedback::ServeFeedbackThread()
+void DPDFeedbackServer::ServeFeedbackThread()
 {
-    set_thread_name("uhdservefeedback");
+    set_thread_name("dpdfeedbackserver");
 
     while (m_running) {
         try {
@@ -359,4 +353,4 @@ void OutputUHDFeedback::ServeFeedbackThread()
     m_running.store(false);
 }
 
-#endif
+} // namespace Output

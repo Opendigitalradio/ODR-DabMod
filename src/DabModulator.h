@@ -3,7 +3,7 @@
    Her Majesty the Queen in Right of Canada (Communications Research
    Center Canada)
 
-   Copyright (C) 2017
+   Copyright (C) 2018
    Matthias P. Braendli, matthias.braendli@mpb.li
 
     http://opendigitalradio.org
@@ -46,7 +46,7 @@
 #include "TII.h"
 
 
-class DabModulator : public ModInput
+class DabModulator : public ModInput, public ModMetadata
 {
 public:
     DabModulator(EtiSource& etiSource,
@@ -54,6 +54,9 @@ public:
 
     int process(Buffer* dataOut);
     const char* name() { return "DabModulator"; }
+
+    virtual meta_vec_t process_metadata(
+            const meta_vec_t& metadataIn);
 
     /* Required to get the timestamp */
     EtiSource* getEtiSource() { return &myEtiSource; }

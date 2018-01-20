@@ -53,20 +53,21 @@ class FIRFilter : public PipelinedModCodec, public RemoteControllable
 {
 public:
     FIRFilter(const std::string& taps_file);
-    virtual ~FIRFilter() = default;
+    FIRFilter(const FIRFilter& other) = delete;
+    FIRFilter& operator=(const FIRFilter& other) = delete;
+    virtual ~FIRFilter();
 
-    const char* name() { return "FIRFilter"; }
+    const char* name() override { return "FIRFilter"; }
 
     /******* REMOTE CONTROL ********/
     virtual void set_parameter(const std::string& parameter,
-            const std::string& value);
+            const std::string& value) override;
 
     virtual const std::string get_parameter(
-            const std::string& parameter) const;
-
+            const std::string& parameter) const override;
 
 protected:
-    virtual int internal_process(Buffer* const dataIn, Buffer* dataOut);
+    virtual int internal_process(Buffer* const dataIn, Buffer* dataOut) override;
     void load_filter_taps(const std::string &tapsFile);
 
     std::string m_taps_file;

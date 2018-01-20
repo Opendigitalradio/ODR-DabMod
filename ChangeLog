@@ -1,6 +1,23 @@
 This file contains information about the changes done to
 ODR-DabMod in this repository
 
+2018-01-20: Matthias P. Braendli <matthias@mpb.li>
+	(upcoming version):
+		Big rework of the SDR device handling, putting in common more
+		logic between UHD and SoapySDR. Goal is to enable SoapySDR devices
+		to be used for SFN and for DPD.
+		Replace the old timestamp path that went around the process flowgraph
+		by a new metadata path that goes through the flowgraph, to avoid the
+		issues with misalignment of frame and timestamps. Do not mix different
+		versions when using timestamps, and be careful when mixing ODR-DabMod
+		with other transmitters in SFNs, as the timestamp interpretation can
+		change!
+		Add a timeout to the ZeroMQ input to quit on SIGINT (Ctrl-C).
+		Optionally show the flowgraph metadata in the file output for
+		test purposes.
+		Replace usage of non-portable Linux-only clock_gettime().
+		Add antenna selection to UHD and SoapySDR outputs.
+
 2017-11-18: Matthias P. Braendli <matthias@mpb.li>
 	(v1.1.0):
 		Fix TII insertion power level.

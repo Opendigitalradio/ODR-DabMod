@@ -57,7 +57,7 @@ static const std::string levels_as_str[] =
 class LogBackend {
     public:
         virtual void log(log_level_t level, const std::string& message) = 0;
-        virtual std::string get_name() = 0;
+        virtual std::string get_name() const = 0;
 };
 
 /** A Logging backend for Syslog */
@@ -73,7 +73,7 @@ class LogToSyslog : public LogBackend {
 
         void log(log_level_t level, const std::string& message);
 
-        std::string get_name() { return name; }
+        std::string get_name() const { return name; }
 
     private:
         const std::string name;
@@ -84,27 +84,15 @@ class LogToSyslog : public LogBackend {
 
 class LogToFile : public LogBackend {
     public:
-        LogToFile(const std::string& filename) : name("FILE") {
-            log_file = fopen(filename.c_str(), "a");
-            if (log_file == NULL) {
-                fprintf(stderr, "Cannot open log file !");
-                throw std::runtime_error("Cannot open log file !");
-            }
-        }
-
-        ~LogToFile() {
-            if (log_file != NULL) {
-                fclose(log_file);
-            }
-        }
-
+        LogToFile(const std::string& filename);
         void log(log_level_t level, const std::string& message);
-
-        std::string get_name() { return name; }
+        std::string get_name() const { return name; }
 
     private:
         const std::string name;
-        FILE* log_file;
+
+        struct FILEDeleter{ void operator()(FILE* fd){ if(fd) fclose(fd);}};
+        std::unique_ptr<FILE, FILEDeleter> log_file;
 
         LogToFile(const LogToFile& other) = delete;
         const LogToFile& operator=(const LogToFile& other) = delete;
@@ -113,19 +101,14 @@ class LogToFile : public LogBackend {
 class LogTracer : public LogBackend {
     public:
         LogTracer(const std::string& filename);
-
-        ~LogTracer() {
-            if (m_trace_file != NULL) {
-                fclose(m_trace_file);
-            }
-        }
-
         void log(log_level_t level, const std::string& message);
-        std::string get_name() { return name; }
+        std::string get_name() const { return name; }
     private:
         std::string name;
-        uint64_t m_trace_micros_startup;
-        FILE* m_trace_file;
+        uint64_t m_trace_micros_startup = 0;
+
+        struct FILEDeleter{ void operator()(FILE* fd){ if(fd) fclose(fd);}};
+        std::unique_ptr<FILE, FILEDeleter> m_trace_file;
 
         LogTracer(const LogTracer& other) = delete;
         const LogTracer& operator=(const LogTracer& other) = delete;

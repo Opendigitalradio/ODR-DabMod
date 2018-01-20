@@ -37,12 +37,9 @@
 #include "OutputFile.h"
 #include "FormatConverter.h"
 #include "FrameMultiplexer.h"
-#if defined(HAVE_OUTPUT_UHD)
-#   include "OutputUHD.h"
-#endif
-#if defined(HAVE_SOAPYSDR)
-#   include "OutputSoapy.h"
-#endif
+#include "output/SDR.h"
+#include "output/UHD.h"
+#include "output/Soapy.h"
 #include "OutputZeroMQ.h"
 #include "InputReader.h"
 #include "PcDebug.h"
@@ -95,18 +92,12 @@ void signalHandler(int signalNb)
 
 struct modulator_data
 {
-    modulator_data() :
-        inputReader(nullptr),
-        framecount(0),
-        flowgraph(nullptr),
-        etiReader(nullptr) {}
-
-    InputReader* inputReader;
+    std::shared_ptr<InputReader> inputReader;
     Buffer data;
-    uint64_t framecount;
+    uint64_t framecount = 0;
 
-    Flowgraph* flowgraph;
-    EtiReader* etiReader;
+    Flowgraph* flowgraph = nullptr;
+    EtiReader* etiReader = nullptr;
 };
 
 enum class run_modulator_state_t {
@@ -116,7 +107,7 @@ enum class run_modulator_state_t {
     reconfigure // Some sort of change of configuration we cannot handle happened
 };
 
-run_modulator_state_t run_modulator(modulator_data& m);
+static run_modulator_state_t run_modulator(modulator_data& m);
 
 static void printModSettings(const mod_settings_t& mod_settings)
 {
@@ -133,15 +124,15 @@ static void printModSettings(const mod_settings_t& mod_settings)
     else if (mod_settings.useUHDOutput) {
         fprintf(stderr, " UHD\n"
                         "  Device: %s\n"
-                        "  Type: %s\n"
+                        "  Subdevice: %s\n"
                         "  master_clock_rate: %ld\n"
                         "  refclk: %s\n"
                         "  pps source: %s\n",
-                mod_settings.outputuhd_conf.device.c_str(),
-                mod_settings.outputuhd_conf.usrpType.c_str(),
-                mod_settings.outputuhd_conf.masterClockRate,
-                mod_settings.outputuhd_conf.refclk_src.c_str(),
-                mod_settings.outputuhd_conf.pps_src.c_str());
+                mod_settings.sdr_device_config.device.c_str(),
+                mod_settings.sdr_device_config.subDevice.c_str(),
+                mod_settings.sdr_device_config.masterClockRate,
+                mod_settings.sdr_device_config.refclk_src.c_str(),
+                mod_settings.sdr_device_config.pps_src.c_str());
     }
 #endif
 #if defined(HAVE_SOAPYSDR)
@@ -149,8 +140,8 @@ static void printModSettings(const mod_settings_t& mod_settings)
         fprintf(stderr, " SoapySDR\n"
                         "  Device: %s\n"
                         "  master_clock_rate: %ld\n",
-                mod_settings.outputsoapy_conf.device.c_str(),
-                mod_settings.outputsoapy_conf.masterClockRate);
+                mod_settings.sdr_device_config.device.c_str(),
+                mod_settings.sdr_device_config.masterClockRate);
     }
 #endif
     else if (mod_settings.useZeroMQOutput) {
@@ -180,7 +171,7 @@ static shared_ptr<ModOutput> prepare_output(
 
     if (s.useFileOutput) {
         if (s.fileOutputFormat == "complexf") {
-            output = make_shared<OutputFile>(s.outputName);
+            output = make_shared<OutputFile>(s.outputName, s.fileOutputShowMetadata);
         }
         else if (s.fileOutputFormat == "complexf_normalised") {
             if (s.gainMode == GainMode::GAIN_FIX)
@@ -189,7 +180,7 @@ static shared_ptr<ModOutput> prepare_output(
                 s.normalise = 1.0f / normalise_factor_file_max;
             else if (s.gainMode == GainMode::GAIN_VAR)
                 s.normalise = 1.0f / normalise_factor_file_var;
-            output = make_shared<OutputFile>(s.outputName);
+            output = make_shared<OutputFile>(s.outputName, s.fileOutputShowMetadata);
         }
         else if (s.fileOutputFormat == "s8" or
                 s.fileOutputFormat == "u8") {
@@ -198,7 +189,7 @@ static shared_ptr<ModOutput> prepare_output(
             // [0; 255]
             s.normalise = 127.0f / normalise_factor;
 
-            output = make_shared<OutputFile>(s.outputName);
+            output = make_shared<OutputFile>(s.outputName, s.fileOutputShowMetadata);
         }
         else {
             throw runtime_error("File output format " + s.fileOutputFormat +
@@ -208,18 +199,20 @@ static shared_ptr<ModOutput> prepare_output(
 #if defined(HAVE_OUTPUT_UHD)
     else if (s.useUHDOutput) {
         s.normalise = 1.0f / normalise_factor;
-        s.outputuhd_conf.sampleRate = s.outputRate;
-        output = make_shared<OutputUHD>(s.outputuhd_conf);
-        rcs.enrol((OutputUHD*)output.get());
+        s.sdr_device_config.sampleRate = s.outputRate;
+        auto uhddevice = make_shared<Output::UHD>(s.sdr_device_config);
+        output = make_shared<Output::SDR>(s.sdr_device_config, uhddevice);
+        rcs.enrol((Output::SDR*)output.get());
     }
 #endif
 #if defined(HAVE_SOAPYSDR)
     else if (s.useSoapyOutput) {
         /* We normalise the same way as for the UHD output */
         s.normalise = 1.0f / normalise_factor;
-        s.outputsoapy_conf.sampleRate = s.outputRate;
-        output = make_shared<OutputSoapy>(s.outputsoapy_conf);
-        rcs.enrol((OutputSoapy*)output.get());
+        s.sdr_device_config.sampleRate = s.outputRate;
+        auto soapydevice = make_shared<Output::Soapy>(s.sdr_device_config);
+        output = make_shared<Output::SDR>(s.sdr_device_config, soapydevice);
+        rcs.enrol((Output::SDR*)output.get());
     }
 #endif
 #if defined(HAVE_ZEROMQ)
@@ -270,15 +263,7 @@ int launch_modulator(int argc, char* argv[])
         throw std::runtime_error("Configuration error");
     }
 
-    // When using the FIRFilter, increase the modulator offset pipelining delay
-    // by the correct amount
-    if (not mod_settings.filterTapsFilename.empty()) {
-        mod_settings.tist_delay_stages += FIRFILTER_PIPELINE_DELAY;
-    }
-
     printModSettings(mod_settings);
-
-    modulator_data m;
 
     shared_ptr<FormatConverter> format_converter;
     if (mod_settings.useFileOutput and
@@ -296,7 +281,7 @@ int launch_modulator(int argc, char* argv[])
     set_thread_name("modulator");
 
     if (mod_settings.inputTransport == "edi") {
-        EdiReader ediReader(mod_settings.tist_offset_s, mod_settings.tist_delay_stages);
+        EdiReader ediReader(mod_settings.tist_offset_s);
         EdiDecoder::ETIDecoder ediInput(ediReader, false);
         if (mod_settings.edi_max_delay_ms > 0.0f) {
             // setMaxDelay wants number of AF packets, which correspond to 24ms ETI frames
@@ -320,17 +305,6 @@ int launch_modulator(int argc, char* argv[])
         else {
             flowgraph.connect(modulator, output);
         }
-
-#if defined(HAVE_OUTPUT_UHD)
-        if (mod_settings.useUHDOutput) {
-            ((OutputUHD*)output.get())->setETISource(modulator->getEtiSource());
-        }
-#endif
-#if defined(HAVE_SOAPYSDR)
-        if (mod_settings.useSoapyOutput) {
-            ((OutputSoapy*)output.get())->setETISource(modulator->getEtiSource());
-        }
-#endif
 
         size_t framecount = 0;
 
@@ -397,11 +371,12 @@ int launch_modulator(int argc, char* argv[])
         while (run_again) {
             Flowgraph flowgraph;
 
-            m.inputReader = inputReader.get();
+            modulator_data m;
+            m.inputReader = inputReader;
             m.flowgraph = &flowgraph;
             m.data.setLength(6144);
 
-            EtiReader etiReader(mod_settings.tist_offset_s, mod_settings.tist_delay_stages);
+            EtiReader etiReader(mod_settings.tist_offset_s);
             m.etiReader = &etiReader;
 
             auto input = make_shared<InputMemory>(&m.data);
@@ -414,17 +389,6 @@ int launch_modulator(int argc, char* argv[])
             else {
                 flowgraph.connect(modulator, output);
             }
-
-#if defined(HAVE_OUTPUT_UHD)
-            if (mod_settings.useUHDOutput) {
-                ((OutputUHD*)output.get())->setETISource(modulator->getEtiSource());
-            }
-#endif
-#if defined(HAVE_SOAPYSDR)
-            if (mod_settings.useSoapyOutput) {
-                ((OutputSoapy*)output.get())->setETISource(modulator->getEtiSource());
-            }
-#endif
 
             inputReader->PrintInfo();
 
@@ -490,7 +454,7 @@ int launch_modulator(int argc, char* argv[])
     return ret;
 }
 
-run_modulator_state_t run_modulator(modulator_data& m)
+static run_modulator_state_t run_modulator(modulator_data& m)
 {
     auto ret = run_modulator_state_t::failure;
     try {
@@ -527,13 +491,26 @@ run_modulator_state_t run_modulator(modulator_data& m)
                 }
             }
             if (framesize == 0) {
-                etiLog.level(info) << "End of file reached.";
+                if (dynamic_pointer_cast<InputFileReader>(m.inputReader)) {
+                    etiLog.level(info) << "End of file reached.";
+                    running = 0;
+                    ret = run_modulator_state_t::normal_end;
+                }
+#if defined(HAVE_ZEROMQ)
+                else if (dynamic_pointer_cast<InputZeroMQReader>(m.inputReader)) {
+                    /* An empty frame marks a timeout. We ignore it, but we are
+                     * now able to handle SIGINT properly.
+                     */
+                }
+#endif // defined(HAVE_ZEROMQ)
+                // No need to handle the TCP input in a special way to get SIGINT working,
+                // because recv() will return with EINTR.
             }
             else {
                 etiLog.level(error) << "Input read error.";
+                running = 0;
+                ret = run_modulator_state_t::normal_end;
             }
-            running = 0;
-            ret = run_modulator_state_t::normal_end;
         }
     }
     catch (const zmq_input_overflow& e) {

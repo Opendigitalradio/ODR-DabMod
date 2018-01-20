@@ -49,6 +49,14 @@ class TCPSocket {
             if ((m_sock = socket(PF_INET, SOCK_STREAM, 0)) < 0) {
                 throw std::runtime_error("Can't create TCP socket");
             }
+
+#if defined(HAVE_SO_NOSIGPIPE)
+            int val = 1;
+            if (setsockopt(m_sock, SOL_SOCKET, SO_NOSIGPIPE,
+                        &val, sizeof(val)) < 0) {
+                throw std::runtime_error("Can't set SO_NOSIGPIPE");
+            }
+#endif
         }
 
         ~TCPSocket() {
@@ -89,11 +97,12 @@ class TCPSocket {
             addr.sin_addr.s_addr = htonl(INADDR_ANY);
 
             const int reuse = 1;
-            if (setsockopt(m_sock, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(reuse)) < 0) {
+            if (setsockopt(m_sock, SOL_SOCKET, SO_REUSEADDR,
+                        &reuse, sizeof(reuse)) < 0) {
                 throw std::runtime_error("Can't reuse address for TCP socket");
             }
 
-            if (bind(m_sock, (struct sockaddr*)&addr, sizeof(addr)) < 0) {
+            if (::bind(m_sock, (struct sockaddr*)&addr, sizeof(addr)) < 0) {
                 close();
                 throw std::runtime_error("Can't bind TCP socket");
             }
@@ -138,8 +147,16 @@ class TCPSocket {
         {
             uint8_t *buf = (uint8_t*)buffer;
             while (buflen > 0) {
-                // Set MSG_NOSIGNAL to avoid that this thread gets a SIGPIPE
-                ssize_t sent = send(m_sock, buf, buflen, MSG_NOSIGNAL);
+                /* On Linux, the MSG_NOSIGNAL flag ensures that the process
+                 * would not receive a SIGPIPE and die.
+                 * Other systems have SO_NOSIGPIPE set on the socket for the
+                 * same effect. */
+#if defined(HAVE_MSG_NOSIGNAL)
+                const int flags = MSG_NOSIGNAL;
+#else
+                const int flags = 0;
+#endif
+                ssize_t sent = ::send(m_sock, buf, buflen, flags);
                 if (sent < 0) {
                     return -1;
                 }

@@ -2,7 +2,7 @@
    Copyright (C) 2007, 2008, 2009, 2010, 2011 Her Majesty the Queen in
    Right of Canada (Communications Research Center Canada)
 
-   Copyright (C) 2016
+   Copyright (C) 2018
    Matthias P. Braendli, matthias.braendli@mpb.li
 
     http://opendigitalradio.org
@@ -46,18 +46,26 @@
 #include "ModPlugin.h"
 
 
-class OutputMemory : public ModOutput
+class OutputMemory : public ModOutput, public ModMetadata
 {
 public:
     OutputMemory(Buffer* dataOut);
     virtual ~OutputMemory();
-    virtual int process(Buffer* dataIn);
-    const char* name() { return "OutputMemory"; }
+    OutputMemory(OutputMemory& other) = delete;
+    OutputMemory& operator=(OutputMemory& other) = delete;
+
+    virtual int process(Buffer* dataIn) override;
+    const char* name() override { return "OutputMemory"; }
+    virtual meta_vec_t process_metadata(
+            const meta_vec_t& metadataIn) override;
+
+    meta_vec_t get_latest_metadata(void);
 
     void setOutput(Buffer* dataOut);
 
 protected:
     Buffer* myDataOut;
+    meta_vec_t myMetadata;
 
 #if OUTPUT_MEM_HISTOGRAM
     // keep track of max value

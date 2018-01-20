@@ -59,7 +59,6 @@ protected:
     FFT_PLAN myFftPlan2;
     size_t L;
     size_t M;
-    size_t K;
     size_t myFftSizeIn;
     size_t myFftSizeOut;
     FFT_TYPE* myFftIn;

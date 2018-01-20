@@ -97,8 +97,6 @@ void GuardIntervalInserter::update_window(size_t new_window_overlap)
     }
 }
 
-#pragma GCC optimize ("O0")
-
 int GuardIntervalInserter::process(Buffer* const dataIn, Buffer* dataOut)
 {
     PDEBUG("GuardIntervalInserter::process(dataIn: %p, dataOut: %p)\n",

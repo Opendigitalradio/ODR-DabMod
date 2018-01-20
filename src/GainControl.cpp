@@ -75,7 +75,7 @@ GainControl::GainControl(size_t framesize,
 
 GainControl::~GainControl()
 {
-    PDEBUG("GainControl::~GainControl() @ %p\n", this);
+    stop_pipeline_thread();
 }
 
 int GainControl::internal_process(Buffer* const dataIn, Buffer* dataOut)

@@ -2,7 +2,7 @@
    Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010 Her Majesty the
    Queen in Right of Canada (Communications Research Center Canada)
 
-   Copyright (C) 2017
+   Copyright (C) 2018
    Matthias P. Braendli, matthias.braendli@mpb.li
 
     http://opendigitalradio.org
@@ -26,40 +26,23 @@
 
 #pragma once
 
-#include <queue>
+#include <cstdint>
 #include <memory>
 #include <string>
-#include <time.h>
 #include <math.h>
 #include <stdio.h>
-#include "Eti.h"
-#include "Log.h"
 #include "RemoteControl.h"
 
 struct frame_timestamp
 {
     // Which frame count does this timestamp apply to
     int32_t fct;
+    uint8_t fp; // Frame Phase
 
     uint32_t timestamp_sec;
     uint32_t timestamp_pps; // In units of 1/16384000 s
-    bool timestamp_valid;
+    bool timestamp_valid = false;
     bool timestamp_refresh;
-
-    frame_timestamp() = default;
-    frame_timestamp(const frame_timestamp& other) = default;
-    frame_timestamp& operator=(const frame_timestamp &rhs)
-    {
-        if (this != &rhs) {
-            this->timestamp_sec = rhs.timestamp_sec;
-            this->timestamp_pps = rhs.timestamp_pps;
-            this->timestamp_valid = rhs.timestamp_valid;
-            this->timestamp_refresh = rhs.timestamp_refresh;
-            this->fct = rhs.fct;
-        }
-
-        return *this;
-    }
 
     frame_timestamp& operator+=(const double& diff)
     {
@@ -69,16 +52,14 @@ struct frame_timestamp
         this->timestamp_sec += lrintf(offset_secs);
         this->timestamp_pps += lrintf(offset_pps * 16384000.0);
 
-        while (this->timestamp_pps >= 16384000)
-        {
+        while (this->timestamp_pps >= 16384000) {
             this->timestamp_pps -= 16384000;
             this->timestamp_sec += 1;
-        };
+        }
         return *this;
     }
 
-    const frame_timestamp operator+(const double diff)
-    {
+    const frame_timestamp operator+(const double diff) {
         frame_timestamp ts = *this;
         ts += diff;
         return ts;
@@ -88,8 +69,19 @@ struct frame_timestamp
         return timestamp_pps / 16384000.0;
     }
 
-    void print(const char* t)
-    {
+    double get_real_secs() const {
+        double t = timestamp_sec;
+        t += pps_offset();
+        return t;
+    }
+
+    long long int get_ns() const {
+        long long int ns = timestamp_sec * 1000000000ull;
+        ns += llrint((double)timestamp_pps / 0.016384);
+        return ns;
+    }
+
+    void print(const char* t) const {
         fprintf(stderr,
                 "%s <frame_timestamp(%s, %d, %.9f, %d)>\n",
                 t, this->timestamp_valid ? "valid" : "invalid",
@@ -103,49 +95,16 @@ struct frame_timestamp
 class TimestampDecoder : public RemoteControllable
 {
     public:
-        TimestampDecoder(
-                /* The modulator adds this offset to the TIST to define time of
-                 * frame transmission
-                 */
-                double& offset_s,
+        /* offset_s: The modulator adds this offset to the TIST to define time of
+         * frame transmission
+         */
+        TimestampDecoder(double& offset_s);
 
-                /* Specifies by how many stages the timestamp must be delayed.
-                 * (e.g. The FIRFilter is pipelined, therefore we must increase
-                 * tist_delay_stages by one if the filter is used
-                 */
-                unsigned tist_delay_stages) :
-            RemoteControllable("tist"),
-            timestamp_offset(offset_s)
-        {
-            m_tist_delay_stages = tist_delay_stages;
-            inhibit_second_update = 0;
-            time_pps = 0.0;
-            time_secs = 0;
-            latestFCT = 0;
-            enableDecode = false;
-            full_timestamp_received = false;
-
-            // Properly initialise temp_time
-            memset(&temp_time, 0, sizeof(temp_time));
-            const time_t timep = 0;
-            gmtime_r(&timep, &temp_time);
-
-            offset_changed = false;
-
-            RC_ADD_PARAMETER(offset, "TIST offset [s]");
-            RC_ADD_PARAMETER(timestamp, "FCT and timestamp [s]");
-
-            etiLog.level(info) << "Setting up timestamp decoder with " <<
-                timestamp_offset << " offset";
-
-        };
-
-        /* Calculate the timestamp for the current frame. */
-        void calculateTimestamp(frame_timestamp& ts);
+        std::shared_ptr<frame_timestamp> getTimestamp(void);
 
         /* Update timestamp data from ETI */
         void updateTimestampEti(
-                int framephase,
+                uint8_t framephase,
                 uint16_t mnsc,
                 uint32_t pps, // In units of 1/16384000 s
                 int32_t fct);
@@ -154,7 +113,8 @@ class TimestampDecoder : public RemoteControllable
         void updateTimestampEdi(
                 uint32_t seconds_utc,
                 uint32_t pps, // In units of 1/16384000 s
-                int32_t fct);
+                int32_t fct,
+                uint8_t framephase);
 
         /*********** REMOTE CONTROL ***************/
 
@@ -171,7 +131,7 @@ class TimestampDecoder : public RemoteControllable
 
     protected:
         /* Push a new MNSC field into the decoder */
-        void pushMNSCData(int framephase, uint16_t mnsc);
+        void pushMNSCData(uint8_t framephase, uint16_t mnsc);
 
         /* Each frame contains the TIST field with the PPS offset.
          * For each frame, this function must be called to update
@@ -191,28 +151,20 @@ class TimestampDecoder : public RemoteControllable
         void updateTimestampSeconds(uint32_t secs);
 
         struct tm temp_time;
-        uint32_t time_secs;
-        int32_t latestFCT;
-        uint32_t time_pps;
+        uint32_t time_secs = 0;
+        int32_t latestFCT = 0;
+        uint32_t latestFP = 0;
+        uint32_t time_pps = 0;
         double& timestamp_offset;
-        unsigned m_tist_delay_stages;
-        int inhibit_second_update;
-        bool offset_changed;
+        int inhibit_second_update = 0;
+        bool offset_changed = false;
 
         /* When the type or identifier don't match, the decoder must
          * be disabled
          */
-        bool enableDecode;
+        bool enableDecode = false;
 
         /* Disable timstamps until full time has been received */
-        bool full_timestamp_received;
-
-        /* when pipelining, we must shift the calculated timestamps
-         * through this queue. Otherwise, it would not be possible to
-         * synchronise two modulators if only one uses (for instance) the
-         * FIRFilter (1 stage pipeline)
-         */
-        std::queue<std::shared_ptr<frame_timestamp> > queue_timestamps;
-
+        bool full_timestamp_received = false;
 };
 

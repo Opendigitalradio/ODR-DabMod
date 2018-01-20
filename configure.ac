@@ -129,7 +129,6 @@ AC_SUBST([LIBS], ["$FFTW_LIBS $SOAPYSDR_LIBS $PTHREAD_LIBS $ZMQ_LIBS"])
 # Checks for UHD.
 AS_IF([test "x$enable_output_uhd" = "xyes"],
       [ AC_CHECK_LIB([uhd], [main], [], [AC_MSG_ERROR([library uhd is missing])])
-        AC_CHECK_LIB([rt], [clock_gettime], [], [AC_MSG_ERROR([library rt is missing])])
       ])
 
 AS_IF([test "x$enable_output_uhd" = "xyes"],
@@ -183,6 +182,25 @@ AC_COMPILE_IFELSE([ AC_LANG_PROGRAM([[
                     ]])],
                    [ AC_MSG_RESULT(yes)
                      AC_DEFINE(HAVE_PRCTL, 1, [Define this symbol if you have prctl and PR_SET_NAME]) ],
+                   [ AC_MSG_RESULT(no) ])
+
+# Linux defines MSG_NOSIGNAL, some other systems have SO_NOSIGPIPE instead
+AC_MSG_CHECKING(for MSG_NOSIGNAL)
+AC_COMPILE_IFELSE([ AC_LANG_PROGRAM([[
+                    #include <sys/socket.h>
+                    int f = MSG_NOSIGNAL;
+                    ]])],
+                   [ AC_MSG_RESULT(yes)
+                     AC_DEFINE(HAVE_MSG_NOSIGNAL, 1, [Define this symbol if you have MSG_NOSIGNAL]) ],
+                   [ AC_MSG_RESULT(no) ])
+
+AC_MSG_CHECKING(for SO_NOSIGPIPE)
+AC_COMPILE_IFELSE([ AC_LANG_PROGRAM([[
+                    #include <sys/socket.h>
+                    int f = SO_NOSIGPIPE;
+                    ]])],
+                   [ AC_MSG_RESULT(yes)
+                     AC_DEFINE(HAVE_SO_NOSIGPIPE, 1, [Define this symbol if you have SO_NOSIGPIPE]) ],
                    [ AC_MSG_RESULT(no) ])
 
 # Check for march

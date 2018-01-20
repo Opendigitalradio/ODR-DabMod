@@ -24,93 +24,61 @@
    along with ODR-DabMod.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <queue>
 #include <iostream>
 #include <fstream>
 #include <string>
-#include <sys/types.h>
 #include "PcDebug.h"
 #include "TimestampDecoder.h"
-#include "Eti.h"
 #include "Log.h"
+#include "Eti.h"
 
 //#define MDEBUG(fmt, args...) fprintf (LOG, "*****" fmt , ## args)
 #define MDEBUG(fmt, args...) PDEBUG(fmt, ## args)
 
-
-void TimestampDecoder::calculateTimestamp(frame_timestamp& ts)
+TimestampDecoder::TimestampDecoder(double& offset_s) :
+        RemoteControllable("tist"),
+        timestamp_offset(offset_s)
 {
-    std::shared_ptr<frame_timestamp> ts_queued =
-        std::make_shared<frame_timestamp>();
+    // Properly initialise temp_time
+    memset(&temp_time, 0, sizeof(temp_time));
+    const time_t timep = 0;
+    gmtime_r(&timep, &temp_time);
 
-    /* Push new timestamp into queue */
-    ts_queued->timestamp_valid = full_timestamp_received;
-    ts_queued->timestamp_sec = time_secs;
-    ts_queued->timestamp_pps = time_pps;
-    ts_queued->fct = latestFCT;
+    RC_ADD_PARAMETER(offset, "TIST offset [s]");
+    RC_ADD_PARAMETER(timestamp, "FCT and timestamp [s]");
 
-    ts_queued->timestamp_refresh = offset_changed;
+    etiLog.level(info) << "Setting up timestamp decoder with " <<
+        timestamp_offset << " offset";
+}
+
+std::shared_ptr<frame_timestamp> TimestampDecoder::getTimestamp()
+{
+    auto ts = std::make_shared<frame_timestamp>();
+
+    ts->timestamp_valid = full_timestamp_received;
+    ts->timestamp_sec = time_secs;
+    ts->timestamp_pps = time_pps;
+    ts->fct = latestFCT;
+    ts->fp = latestFP;
+
+    ts->timestamp_refresh = offset_changed;
     offset_changed = false;
 
     MDEBUG("time_secs=%d, time_pps=%f\n", time_secs,
             (double)time_pps / 16384000.0);
-    *ts_queued += timestamp_offset;
+    *ts += timestamp_offset;
 
-    queue_timestamps.push(ts_queued);
-
-    /* Here, the queue size is one more than the pipeline delay, because
-     * we've just added a new element in the queue.
-     *
-     * Therefore, use <= and not < for comparison
-     */
-    if (queue_timestamps.size() <= m_tist_delay_stages) {
-        //fprintf(stderr, "* %zu %u ", queue_timestamps.size(), m_tist_delay_stages);
-        /* Return invalid timestamp until the queue is full */
-        ts.timestamp_valid = false;
-        ts.timestamp_sec = 0;
-        ts.timestamp_pps = 0;
-        ts.timestamp_refresh = false;
-        ts.fct = -1;
-    }
-    else {
-        //fprintf(stderr, ". %zu ", queue_timestamps.size());
-        /* Return timestamp from queue */
-        ts_queued = queue_timestamps.front();
-        queue_timestamps.pop();
-        /*fprintf(stderr, "ts_queued v:%d, sec:%d, pps:%f, ref:%d\n",
-                ts_queued->timestamp_valid,
-                ts_queued->timestamp_sec,
-                ts_queued->timestamp_pps_offset,
-                ts_queued->timestamp_refresh);*/
-        ts = *ts_queued;
-        /*fprintf(stderr, "ts v:%d, sec:%d, pps:%f, ref:%d\n\n",
-                ts.timestamp_valid,
-                ts.timestamp_sec,
-                ts.timestamp_pps_offset,
-                ts.timestamp_refresh);*/
-    }
-
-    MDEBUG("Timestamp queue size %zu, delay_calc %u\n",
-            queue_timestamps.size(),
-            m_tist_delay_stages);
-
-    if (queue_timestamps.size() > m_tist_delay_stages) {
-        etiLog.level(error) << "Error: Timestamp queue is too large : size " <<
-            queue_timestamps.size() << "! This should not happen !";
-    }
-
-    //ts.print("calc2 ");
+    return ts;
 }
 
-void TimestampDecoder::pushMNSCData(int framephase, uint16_t mnsc)
+void TimestampDecoder::pushMNSCData(uint8_t framephase, uint16_t mnsc)
 {
     struct eti_MNSC_TIME_0 *mnsc0;
     struct eti_MNSC_TIME_1 *mnsc1;
     struct eti_MNSC_TIME_2 *mnsc2;
     struct eti_MNSC_TIME_3 *mnsc3;
 
-    switch (framephase)
-    {
+    switch (framephase) {
         case 0:
             mnsc0 = (struct eti_MNSC_TIME_0*)&mnsc;
             enableDecode = (mnsc0->type == 0) &&
@@ -126,10 +94,10 @@ void TimestampDecoder::pushMNSCData(int framephase, uint16_t mnsc)
             temp_time.tm_sec = mnsc1->second_tens * 10 + mnsc1->second_unit;
             temp_time.tm_min = mnsc1->minute_tens * 10 + mnsc1->minute_unit;
 
-            if (!mnsc1->sync_to_frame)
-            {
+            if (!mnsc1->sync_to_frame) {
                 enableDecode = false;
-                PDEBUG("TimestampDecoder: MNSC time info is not synchronised to frame\n");
+                PDEBUG("TimestampDecoder: "
+                        "MNSC time info is not synchronised to frame\n");
             }
 
             break;
@@ -145,9 +113,7 @@ void TimestampDecoder::pushMNSCData(int framephase, uint16_t mnsc)
             temp_time.tm_mon = (mnsc3->month_tens * 10 + mnsc3->month_unit) - 1;
             temp_time.tm_year = (mnsc3->year_tens * 10 + mnsc3->year_unit) + 100;
 
-            if (enableDecode)
-            {
-                full_timestamp_received = true;
+            if (enableDecode) {
                 updateTimestampSeconds(mktime(&temp_time));
             }
             break;
@@ -160,15 +126,14 @@ void TimestampDecoder::pushMNSCData(int framephase, uint16_t mnsc)
 
 void TimestampDecoder::updateTimestampSeconds(uint32_t secs)
 {
-    if (inhibit_second_update > 0)
-    {
+    if (inhibit_second_update > 0) {
         MDEBUG("TimestampDecoder::updateTimestampSeconds(%d) inhibit\n", secs);
         inhibit_second_update--;
     }
-    else
-    {
+    else {
         MDEBUG("TimestampDecoder::updateTimestampSeconds(%d) apply\n", secs);
         time_secs = secs;
+        full_timestamp_received = true;
     }
 }
 
@@ -176,8 +141,7 @@ void TimestampDecoder::updateTimestampPPS(uint32_t pps)
 {
     MDEBUG("TimestampDecoder::updateTimestampPPS(%f)\n", (double)pps / 16384000.0);
 
-    if (time_pps > pps) // Second boundary crossed
-    {
+    if (time_pps > pps) { // Second boundary crossed
         MDEBUG("TimestampDecoder::updateTimestampPPS crossed second\n");
 
         // The second for the next eight frames will not
@@ -190,7 +154,7 @@ void TimestampDecoder::updateTimestampPPS(uint32_t pps)
 }
 
 void TimestampDecoder::updateTimestampEti(
-        int framephase,
+        uint8_t framephase,
         uint16_t mnsc,
         uint32_t pps, // In units of 1/16384000 s
         int32_t fct)
@@ -198,16 +162,19 @@ void TimestampDecoder::updateTimestampEti(
     updateTimestampPPS(pps);
     pushMNSCData(framephase, mnsc);
     latestFCT = fct;
+    latestFP = framephase;
 }
 
 void TimestampDecoder::updateTimestampEdi(
         uint32_t seconds_utc,
         uint32_t pps, // In units of 1/16384000 s
-        int32_t fct)
+        int32_t fct,
+        uint8_t framephase)
 {
     time_secs = seconds_utc;
     time_pps  = pps;
     latestFCT = fct;
+    latestFP = framephase;
     full_timestamp_received = true;
 }
 

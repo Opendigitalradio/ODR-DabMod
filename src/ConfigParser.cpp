@@ -3,7 +3,7 @@
    Her Majesty the Queen in Right of Canada (Communications Research
    Center Canada)
 
-   Copyright (C) 2017
+   Copyright (C) 2018
    Matthias P. Braendli, matthias.braendli@mpb.li
 
     http://opendigitalradio.org
@@ -29,15 +29,17 @@
 #   include "config.h"
 #endif
 
+#include <cstdint>
+#include <boost/property_tree/ptree.hpp>
+#include <boost/property_tree/ini_parser.hpp>
+
 #include "ConfigParser.h"
 #include "porting.h"
 #include "Utils.h"
 #include "Log.h"
 #include "DabModulator.h"
+#include "output/SDR.h"
 
-#include <unistd.h>
-#include <boost/property_tree/ptree.hpp>
-#include <boost/property_tree/ini_parser.hpp>
 
 using namespace std;
 
@@ -202,87 +204,101 @@ static void parse_configfile(
     if (output_selected == "file") {
         try {
             mod_settings.outputName = pt.get<std::string>("fileoutput.filename");
+            mod_settings.fileOutputShowMetadata =
+                (pt.get("fileoutput.show_metadata", 0) > 0);
         }
         catch (std::exception &e) {
             std::cerr << "Error: " << e.what() << "\n";
             std::cerr << "       Configuration does not specify file name for file output\n";
             throw std::runtime_error("Configuration error");
         }
-        mod_settings.useFileOutput = 1;
+        mod_settings.useFileOutput = true;
 
         mod_settings.fileOutputFormat = pt.get("fileoutput.format", mod_settings.fileOutputFormat);
     }
 #if defined(HAVE_OUTPUT_UHD)
     else if (output_selected == "uhd") {
-        OutputUHDConfig outputuhd_conf;
+        Output::SDRDeviceConfig sdr_device_config;
 
-        outputuhd_conf.device = pt.get("uhdoutput.device", "");
-        outputuhd_conf.usrpType = pt.get("uhdoutput.type", "");
-        outputuhd_conf.subDevice = pt.get("uhdoutput.subdevice", "");
-        outputuhd_conf.masterClockRate = pt.get<long>("uhdoutput.master_clock_rate", 0);
+        string device = pt.get("uhdoutput.device", "");
+        const auto usrpType = pt.get("uhdoutput.type", "");
+        if (usrpType != "") {
+            if (not device.empty()) {
+                device += ",";
+            }
+            device += "type=" + usrpType;
+        }
+        sdr_device_config.device = device;
 
-        if (outputuhd_conf.device.find("master_clock_rate") != std::string::npos) {
+        sdr_device_config.subDevice = pt.get("uhdoutput.subdevice", "");
+        sdr_device_config.masterClockRate = pt.get<long>("uhdoutput.master_clock_rate", 0);
+
+        if (sdr_device_config.device.find("master_clock_rate") != std::string::npos) {
             std::cerr << "Warning:"
                 "setting master_clock_rate in [uhd] device is deprecated !\n";
         }
 
-        if (outputuhd_conf.device.find("type=") != std::string::npos) {
+        if (sdr_device_config.device.find("type=") != std::string::npos) {
             std::cerr << "Warning:"
                 "setting type in [uhd] device is deprecated !\n";
         }
 
-        outputuhd_conf.txgain = pt.get("uhdoutput.txgain", 0.0);
-        outputuhd_conf.rxgain = pt.get("uhdoutput.rxgain", 0.0);
-        outputuhd_conf.frequency = pt.get<double>("uhdoutput.frequency", 0);
+        sdr_device_config.txgain = pt.get("uhdoutput.txgain", 0.0);
+        sdr_device_config.tx_antenna = pt.get("uhdoutput.tx_antenna", "");
+        sdr_device_config.rx_antenna = pt.get("uhdoutput.rx_antenna", "RX2");
+        sdr_device_config.rxgain = pt.get("uhdoutput.rxgain", 0.0);
+        sdr_device_config.frequency = pt.get<double>("uhdoutput.frequency", 0);
         std::string chan = pt.get<std::string>("uhdoutput.channel", "");
-        outputuhd_conf.dabMode = mod_settings.dabMode;
+        sdr_device_config.dabMode = mod_settings.dabMode;
 
-        if (outputuhd_conf.frequency == 0 && chan == "") {
+        if (sdr_device_config.frequency == 0 && chan == "") {
             std::cerr << "       UHD output enabled, but neither frequency nor channel defined.\n";
             throw std::runtime_error("Configuration error");
         }
-        else if (outputuhd_conf.frequency == 0) {
-            outputuhd_conf.frequency = parseChannel(chan);
+        else if (sdr_device_config.frequency == 0) {
+            sdr_device_config.frequency = parseChannel(chan);
         }
-        else if (outputuhd_conf.frequency != 0 && chan != "") {
+        else if (sdr_device_config.frequency != 0 && chan != "") {
             std::cerr << "       UHD output: cannot define both frequency and channel.\n";
             throw std::runtime_error("Configuration error");
         }
 
-        outputuhd_conf.lo_offset = pt.get<double>("uhdoutput.lo_offset", 0);
+        sdr_device_config.lo_offset = pt.get<double>("uhdoutput.lo_offset", 0);
 
-        outputuhd_conf.refclk_src = pt.get("uhdoutput.refclk_source", "internal");
-        outputuhd_conf.pps_src = pt.get("uhdoutput.pps_source", "none");
-        outputuhd_conf.pps_polarity = pt.get("uhdoutput.pps_polarity", "pos");
+        sdr_device_config.refclk_src = pt.get("uhdoutput.refclk_source", "internal");
+        sdr_device_config.pps_src = pt.get("uhdoutput.pps_source", "none");
+        sdr_device_config.pps_polarity = pt.get("uhdoutput.pps_polarity", "pos");
 
         std::string behave = pt.get("uhdoutput.behaviour_refclk_lock_lost", "ignore");
 
         if (behave == "crash") {
-            outputuhd_conf.refclk_lock_loss_behaviour = CRASH;
+            sdr_device_config.refclk_lock_loss_behaviour = Output::CRASH;
         }
         else if (behave == "ignore") {
-            outputuhd_conf.refclk_lock_loss_behaviour = IGNORE;
+            sdr_device_config.refclk_lock_loss_behaviour = Output::IGNORE;
         }
         else {
             std::cerr << "Error: UHD output: behaviour_refclk_lock_lost invalid." << std::endl;
             throw std::runtime_error("Configuration error");
         }
 
-        outputuhd_conf.maxGPSHoldoverTime = pt.get("uhdoutput.max_gps_holdover_time", 0);
+        sdr_device_config.maxGPSHoldoverTime = pt.get("uhdoutput.max_gps_holdover_time", 0);
 
-        outputuhd_conf.dpdFeedbackServerPort = pt.get<long>("uhdoutput.dpd_port", 0);
+        sdr_device_config.dpdFeedbackServerPort = pt.get<long>("uhdoutput.dpd_port", 0);
 
-        mod_settings.outputuhd_conf = outputuhd_conf;
-        mod_settings.useUHDOutput = 1;
+        mod_settings.sdr_device_config = sdr_device_config;
+        mod_settings.useUHDOutput = true;
     }
 #endif
 #if defined(HAVE_SOAPYSDR)
     else if (output_selected == "soapysdr") {
-        auto& outputsoapy_conf = mod_settings.outputsoapy_conf;
+        auto& outputsoapy_conf = mod_settings.sdr_device_config;
         outputsoapy_conf.device = pt.get("soapyoutput.device", "");
         outputsoapy_conf.masterClockRate = pt.get<long>("soapyoutput.master_clock_rate", 0);
 
         outputsoapy_conf.txgain = pt.get("soapyoutput.txgain", 0.0);
+        outputsoapy_conf.tx_antenna = pt.get("soapyoutput.tx_antenna", "");
+        outputsoapy_conf.lo_offset = pt.get<double>("soapyoutput.lo_offset", 0.0);
         outputsoapy_conf.frequency = pt.get<double>("soapyoutput.frequency", 0);
         std::string chan = pt.get<std::string>("soapyoutput.channel", "");
         outputsoapy_conf.dabMode = mod_settings.dabMode;
@@ -299,14 +315,16 @@ static void parse_configfile(
             throw std::runtime_error("Configuration error");
         }
 
-        mod_settings.useSoapyOutput = 1;
+        outputsoapy_conf.dpdFeedbackServerPort = pt.get<long>("soapyoutput.dpd_port", 0);
+
+        mod_settings.useSoapyOutput = true;
     }
 #endif
 #if defined(HAVE_ZEROMQ)
     else if (output_selected == "zmq") {
         mod_settings.outputName = pt.get<std::string>("zmqoutput.listen");
         mod_settings.zmqOutputSocketType = pt.get<std::string>("zmqoutput.socket_type");
-        mod_settings.useZeroMQOutput = 1;
+        mod_settings.useZeroMQOutput = true;
     }
 #endif
     else {
@@ -315,9 +333,9 @@ static void parse_configfile(
     }
 
 #if defined(HAVE_OUTPUT_UHD)
-    mod_settings.outputuhd_conf.enableSync = (pt.get("delaymanagement.synchronous", 0) == 1);
-    mod_settings.outputuhd_conf.muteNoTimestamps = (pt.get("delaymanagement.mutenotimestamps", 0) == 1);
-    if (mod_settings.outputuhd_conf.enableSync) {
+    mod_settings.sdr_device_config.enableSync = (pt.get("delaymanagement.synchronous", 0) == 1);
+    mod_settings.sdr_device_config.muteNoTimestamps = (pt.get("delaymanagement.mutenotimestamps", 0) == 1);
+    if (mod_settings.sdr_device_config.enableSync) {
         std::string delay_mgmt = pt.get<std::string>("delaymanagement.management", "");
         std::string fixedoffset = pt.get<std::string>("delaymanagement.fixedoffset", "");
         std::string offset_filename = pt.get<std::string>("delaymanagement.dynamicoffsetfile", "");
@@ -388,11 +406,11 @@ void parse_args(int argc, char **argv, mod_settings_t& mod_settings)
             }
 #endif
             mod_settings.outputName = optarg;
-            mod_settings.useFileOutput = 1;
+            mod_settings.useFileOutput = true;
             break;
         case 'F':
 #if defined(HAVE_OUTPUT_UHD)
-            mod_settings.outputuhd_conf.frequency = strtof(optarg, NULL);
+            mod_settings.sdr_device_config.frequency = strtof(optarg, NULL);
 #endif
             break;
         case 'g':
@@ -400,7 +418,7 @@ void parse_args(int argc, char **argv, mod_settings_t& mod_settings)
             break;
         case 'G':
 #if defined(HAVE_OUTPUT_UHD)
-            mod_settings.outputuhd_conf.txgain = strtod(optarg, NULL);
+            mod_settings.sdr_device_config.txgain = strtod(optarg, NULL);
 #endif
             break;
         case 'l':
@@ -408,9 +426,7 @@ void parse_args(int argc, char **argv, mod_settings_t& mod_settings)
             break;
         case 'o':
             mod_settings.tist_offset_s = strtod(optarg, NULL);
-#if defined(HAVE_OUTPUT_UHD)
-            mod_settings.outputuhd_conf.enableSync = true;
-#endif
+            mod_settings.sdr_device_config.enableSync = true;
             break;
         case 'm':
             mod_settings.dabMode = strtol(optarg, NULL, 0);
@@ -427,11 +443,13 @@ void parse_args(int argc, char **argv, mod_settings_t& mod_settings)
                 fprintf(stderr, "Options -u and -f are mutually exclusive\n");
                 throw std::invalid_argument("Invalid command line options");
             }
-            mod_settings.outputuhd_conf.device = optarg;
-            mod_settings.outputuhd_conf.refclk_src = "internal";
-            mod_settings.outputuhd_conf.pps_src = "none";
-            mod_settings.outputuhd_conf.pps_polarity = "pos";
-            mod_settings.useUHDOutput = 1;
+            mod_settings.sdr_device_config.device = optarg;
+            mod_settings.sdr_device_config.refclk_src = "internal";
+            mod_settings.sdr_device_config.pps_src = "none";
+            mod_settings.sdr_device_config.pps_polarity = "pos";
+            mod_settings.useUHDOutput = true;
+#else
+            throw std::invalid_argument("Cannot select UHD output, not compiled in!");
 #endif
             break;
         case 'V':

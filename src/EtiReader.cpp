@@ -54,10 +54,9 @@ enum ETI_READER_STATE {
 
 
 EtiReader::EtiReader(
-        double& tist_offset_s,
-        unsigned tist_delay_stages) :
+        double& tist_offset_s) :
     state(EtiReaderStateSync),
-    myTimestampDecoder(tist_offset_s, tist_delay_stages),
+    myTimestampDecoder(tist_offset_s),
     eti_fc_valid(false)
 {
     rcs.enrol(&myTimestampDecoder);
@@ -281,6 +280,8 @@ int EtiReader::loadEtiData(const Buffer& dataIn)
     myTimestampDecoder.updateTimestampEti(eti_fc.FP & 0x3,
             eti_eoh.MNSC, getPPSOffset(), eti_fc.FCT);
 
+    myFicSource->loadTimestamp(myTimestampDecoder.getTimestamp());
+
     return dataIn.getLength() - input_size;
 }
 
@@ -288,11 +289,6 @@ bool EtiReader::sourceContainsTimestamp()
 {
     return (ntohl(eti_tist.TIST) & 0xFFFFFF) != 0xFFFFFF;
     /* See ETS 300 799, Annex C.2.2 */
-}
-
-void EtiReader::calculateTimestamp(struct frame_timestamp& ts)
-{
-    myTimestampDecoder.calculateTimestamp(ts);
 }
 
 uint32_t EtiReader::getPPSOffset()
@@ -309,9 +305,8 @@ uint32_t EtiReader::getPPSOffset()
 }
 
 EdiReader::EdiReader(
-        double& tist_offset_s,
-        unsigned tist_delay_stages) :
-    m_timestamp_decoder(tist_offset_s, tist_delay_stages)
+        double& tist_offset_s) :
+    m_timestamp_decoder(tist_offset_s)
 {
     rcs.enrol(&m_timestamp_decoder);
 }
@@ -357,11 +352,6 @@ bool EdiReader::sourceContainsTimestamp()
     }
 
     return m_fc.tsta != 0xFFFFFF;
-}
-
-void EdiReader::calculateTimestamp(struct frame_timestamp& ts)
-{
-    m_timestamp_decoder.calculateTimestamp(ts);
 }
 
 bool EdiReader::isFrameReady()
@@ -533,8 +523,9 @@ void EdiReader::assemble()
     const std::time_t posix_timestamp_1_jan_2000 = 946684800;
     auto utc_ts = posix_timestamp_1_jan_2000 + m_seconds - m_utco;
 
-    m_timestamp_decoder.updateTimestampEdi(
-            utc_ts, m_fc.tsta, m_fc.fct());
+    m_timestamp_decoder.updateTimestampEdi(utc_ts, m_fc.tsta, m_fc.fct(), m_fc.fp);
+
+    myFicSource->loadTimestamp(m_timestamp_decoder.getTimestamp());
 
     m_frameReady = true;
 }

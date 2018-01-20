@@ -2,7 +2,7 @@
    Copyright (C) 2007, 2008, 2009, 2010, 2011 Her Majesty the Queen in
    Right of Canada (Communications Research Center Canada)
 
-   Copyright (C) 2016
+   Copyright (C) 2018
    Matthias P. Braendli, matthias.braendli@mpb.li
 
     http://opendigitalradio.org
@@ -26,6 +26,7 @@
 
 #include "OutputMemory.h"
 #include "PcDebug.h"
+#include "Log.h"
 
 #include <stdexcept>
 #include <string.h>
@@ -92,5 +93,16 @@ int OutputMemory::process(Buffer* dataIn)
 #endif
 
     return myDataOut->getLength();
+}
+
+meta_vec_t OutputMemory::process_metadata(const meta_vec_t& metadataIn)
+{
+    myMetadata = metadataIn;
+    return {};
+}
+
+meta_vec_t OutputMemory::get_latest_metadata()
+{
+    return myMetadata;
 }
 

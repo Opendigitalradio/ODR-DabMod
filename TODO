@@ -4,15 +4,65 @@ to some degree.
 
 Unless written, no activity has been started on the topics.
 
-
-Rework Soapy and UHD outputs
-----------------------------
+TODOs for ongoing SDR output refactoring
+----------------------------------------
 Currently, all the frontend tuning and timestamping settings are UHD-specific.
-To make it possible to run with synchronised=1 using Soapy, refactoring the
+To make it possible to run with synchronous=1 using Soapy, refactoring the
 output to share the parts that are common.
 
-This would enable SFN support with LimeSDR devices.
+This would go towards SFN support with LimeSDR devices, under the condition
+that the LimeSDR gets support for a HW timestamp that can be set from a PPS
+signal. Discussion ongoing here
+https://discourse.myriadrf.org/t/synchronize-two-limesdr/1714
 
+DPD will be possible too.
+
+
+Test sleep_through_frame implementation.
+
+Clean up and separate GPS and refclk checks.
+ * *done* handle UHD GPSDO and time
+ * handle SoapySDR time
+ * Add refclk stuff and timestamps to Soapy.
+ * Ensure muting is set properly at startup.
+ * Ensure synchronous is taken in account.
+
+*done* Add antenna selection to config.
+
+Test RC entries.
+
+*done* Portability: replace clock_gettime with std::chrono
+
+*done* Make an abstraction for the DPD feedback server, use it for Soapy and UHD.
+
+*optional* Move staticdelay into a new process block
+
+Double-check all #includes
+
+Move other non SDR outputs to the output folder.
+
+Tests, both with B200 and LimeSDR:
+- No timestamps
+- with timestamps
+- LO offset
+- muting through RC
+- proper muting in absence of timestamps
+- GPS lock loss behaviour
+- All RC commands
+- Underrun recovery
+- Proper teardown
+- DPD server
+
+Smaller things
+--------------
+
+Remove GuardIntervalInserter implementation for window==0, as it was shown both are equivalent.
+
+
+Replace all prints to stderr
+----------------------------
+We have a nice logging subsystem, use it to avoid that fprintf(stderr, ...) and
+logging to stderr messages collide.
 
 Finalise EDI input
 ------------------
@@ -40,13 +90,3 @@ The CIC Equaliser was used for the USRP1 to compensate for spectrum flatness.
 It is not documented, and its effect poorly explained. Review if still needed,
 and document appropriately.
 
-
-Add metadata to flowgraph
--------------------------
-The flowgraph does not support metadata. This is why the timestamp has this
-kludge with the delay queue, so that the timestamps are delayed properly
-depending on what is included in the flowgraph.
-
-Without metadata inside the flowgraph, it is more difficult to pipeline the DSP
-processing to make use of many-core systems, because the timestamp cannot be
-carried alongside the data it corresponds to.

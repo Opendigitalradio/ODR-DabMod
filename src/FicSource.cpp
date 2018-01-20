@@ -2,7 +2,7 @@
    Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010, 2011 Her Majesty
    the Queen in Right of Canada (Communications Research Center Canada)
 
-   Copyright (C) 2016
+   Copyright (C) 2018
    Matthias P. Braendli, matthias.braendli@mpb.li
 
     http://opendigitalradio.org
@@ -26,6 +26,8 @@
 
 #include "FicSource.h"
 #include "PcDebug.h"
+#include "Log.h"
+#include "TimestampDecoder.h"
 
 #include <stdexcept>
 #include <string>
@@ -90,5 +92,25 @@ int FicSource::process(Buffer* outputData)
     *outputData = d_buffer;
 
     return outputData->getLength();
+}
+
+void FicSource::loadTimestamp(const std::shared_ptr<struct frame_timestamp>& ts)
+{
+    d_ts = ts;
+}
+
+
+meta_vec_t FicSource::process_metadata(const meta_vec_t& metadataIn)
+{
+    if (not d_ts) {
+        return {};
+    }
+
+    using namespace std;
+    meta_vec_t md_vec;
+    flowgraph_metadata meta;
+    meta.ts = d_ts;
+    md_vec.push_back(meta);
+    return md_vec;
 }
 

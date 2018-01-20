@@ -1,6 +1,11 @@
 /*
    Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010, 2011 Her Majesty
    the Queen in Right of Canada (Communications Research Center Canada)
+
+   Copyright (C) 2018
+   Matthias P. Braendli, matthias.braendli@mpb.li
+
+    http://opendigitalradio.org
  */
 /*
    This file is part of ODR-DabMod.
@@ -21,6 +26,7 @@
 
 #include "BlockPartitioner.h"
 #include "PcDebug.h"
+#include "Log.h"
 
 #include <stdio.h>
 #include <stdexcept>
@@ -31,6 +37,7 @@
 
 BlockPartitioner::BlockPartitioner(unsigned mode, unsigned phase) :
     ModMux(),
+    ModMetadata(),
     d_mode(mode)
 {
     PDEBUG("BlockPartitioner::BlockPartitioner(%i)\n", mode);
@@ -68,14 +75,8 @@ BlockPartitioner::BlockPartitioner(unsigned mode, unsigned phase) :
     d_cifNb = 0;
     // For Synchronisation purpose, count nb of CIF to drop
     d_cifPhase = phase % d_cifCount;
+    d_metaPhase = phase % d_cifCount;
     d_cifSize = 864 * 8;
-}
-
-
-BlockPartitioner::~BlockPartitioner()
-{
-    PDEBUG("BlockPartitioner::~BlockPartitioner()\n");
-
 }
 
 
@@ -124,10 +125,10 @@ int BlockPartitioner::process(std::vector<Buffer*> dataIn, Buffer* dataOut)
     uint8_t* out = reinterpret_cast<uint8_t*>(dataOut->getData());
 
     // Copy FIC data
-    PDEBUG("Writting FIC %zu bytes to %zu\n", d_ficSize, d_cifNb * d_ficSize);
+    PDEBUG("Writing FIC %zu bytes to %zu\n", d_ficSize, d_cifNb * d_ficSize);
     memcpy(out + (d_cifNb * d_ficSize), fic, d_ficSize);
     // Copy CIF data
-    PDEBUG("Writting CIF %u bytes to %zu\n", 864 * 8,
+    PDEBUG("Writing CIF %u bytes to %zu\n", 864 * 8,
             (d_cifCount * d_ficSize) + (d_cifNb * 864 * 8));
     memcpy(out + (d_cifCount * d_ficSize) + (d_cifNb * 864 * 8), cif, 864 * 8);
 
@@ -136,4 +137,29 @@ int BlockPartitioner::process(std::vector<Buffer*> dataIn, Buffer* dataOut)
     }
 
     return d_cifNb == 0;
+}
+
+meta_vec_t BlockPartitioner::process_metadata(const meta_vec_t& metadataIn)
+{
+    // Synchronize CIF phase
+    if (d_metaPhase != 0) {
+        if (++d_metaPhase == d_cifCount) {
+            d_metaPhase = 0;
+        }
+        // Drop this metadata
+        return {};
+    }
+
+    if (d_cifNb == 1) {
+        d_meta.clear();
+    }
+
+    std::copy(metadataIn.begin(), metadataIn.end(), std::back_inserter(d_meta));
+
+    if (d_cifNb == 0) {
+        return d_meta;
+    }
+    else {
+        return {};
+    }
 }

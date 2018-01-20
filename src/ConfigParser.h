@@ -34,23 +34,21 @@
 #include <string>
 #include "GainControl.h"
 #include "TII.h"
-#if defined(HAVE_OUTPUT_UHD)
-#   include "OutputUHD.h"
-#endif
-#if defined(HAVE_SOAPYSDR)
-#   include "OutputSoapy.h"
-#endif
+#include "output/SDR.h"
+#include "output/UHD.h"
+#include "output/Soapy.h"
 
 #define ZMQ_INPUT_MAX_FRAME_QUEUE 500
 
 struct mod_settings_t {
     std::string outputName;
-    int useZeroMQOutput = 0;
+    bool useZeroMQOutput = false;
     std::string zmqOutputSocketType = "";
-    int useFileOutput = 0;
+    bool useFileOutput = false;
     std::string fileOutputFormat = "complexf";
-    int useUHDOutput = 0;
-    int useSoapyOutput = 0;
+    bool fileOutputShowMetadata = false;
+    bool useUHDOutput = false;
+    bool useSoapyOutput = false;
 
     size_t outputRate = 2048000;
     size_t clockRate = 0;
@@ -61,7 +59,6 @@ struct mod_settings_t {
     float gainmodeVariance = 4.0f;
 
     // To handle the timestamp offset of the modulator
-    unsigned tist_delay_stages = 1; // because GainControl is pipelined
     double tist_offset_s = 0.0;
 
     bool loop = false;
@@ -85,12 +82,8 @@ struct mod_settings_t {
     // Settings for the OFDM windowing
     unsigned ofdmWindowOverlap = 0;
 
-#if defined(HAVE_OUTPUT_UHD)
-    OutputUHDConfig outputuhd_conf;
-#endif
-
-#if defined(HAVE_SOAPYSDR)
-    OutputSoapyConfig outputsoapy_conf;
+#if defined(HAVE_OUTPUT_UHD) || defined(HAVE_SOAPYSDR)
+    Output::SDRDeviceConfig sdr_device_config;
 #endif
 
 };

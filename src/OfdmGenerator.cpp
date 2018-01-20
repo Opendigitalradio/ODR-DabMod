@@ -139,6 +139,14 @@ OfdmGenerator::~OfdmGenerator()
         fftwf_destroy_plan(myFftPlan);
     }
 
+    if (myCfrPostClip) {
+        fftwf_free(myCfrPostClip);
+    }
+
+    if (myCfrPostFft) {
+        fftwf_free(myCfrPostFft);
+    }
+
     if (myCfrFft) {
         fftwf_destroy_plan(myCfrFft);
     }
