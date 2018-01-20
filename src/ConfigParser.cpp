@@ -315,6 +315,8 @@ static void parse_configfile(
             throw std::runtime_error("Configuration error");
         }
 
+        outputsoapy_conf.dpdFeedbackServerPort = pt.get<long>("soapyoutput.dpd_port", 0);
+
         mod_settings.useSoapyOutput = true;
     }
 #endif
