@@ -97,6 +97,13 @@ Soapy::Soapy(SDRDeviceConfig& config) :
     etiLog.level(info) << "SoapySDR:Actual tx antenna: " <<
         m_device->getAntenna(SOAPY_SDR_TX, 0);
 
+    if (m_device->hasHardwareTime()) {
+        using namespace std::chrono;
+        auto n = system_clock::now();
+        const long long ticks = duration_cast<nanoseconds>(n.time_since_epoch()).count();
+        m_device->setHardwareTime(ticks);
+    }
+
     const std::vector<size_t> channels({0});
     m_tx_stream = m_device->setupStream(SOAPY_SDR_TX, "CF32", channels);
     m_device->activateStream(m_tx_stream);

@@ -247,7 +247,6 @@ void SDR::handle_frame(struct FrameData& frame)
         return;
     }
 
-    double device_time = m_device->get_real_secs();
     const auto& time_spec = frame.ts;
 
     if (m_config.enableSync and m_config.muteNoTimestamps and
@@ -264,6 +263,8 @@ void SDR::handle_frame(struct FrameData& frame)
         const uint32_t tx_second = frame.ts.timestamp_sec;
         const uint32_t tx_pps    = frame.ts.timestamp_pps;
 
+        const double device_time = m_device->get_real_secs();
+
         if (not frame.ts.timestamp_valid) {
             /* We have not received a full timestamp through
              * MNSC. We sleep through the frame.
@@ -277,11 +278,13 @@ void SDR::handle_frame(struct FrameData& frame)
 
         if (last_tx_time_initialised) {
             const size_t sizeIn = frame.buf.size() / sizeof(complexf);
-            uint64_t increment = (uint64_t)sizeIn * 16384000ul /
-                                 (uint64_t)m_config.sampleRate;
-                                  // samps  * ticks/s  / (samps/s)
-                                  // (samps * ticks * s) / (s * samps)
-                                  // ticks
+
+            // Checking units for the increment calculation:
+            // samps  * ticks/s  / (samps/s)
+            // (samps * ticks * s) / (s * samps)
+            // ticks
+            const uint64_t increment = (uint64_t)sizeIn * 16384000ul /
+                                       (uint64_t)m_config.sampleRate;
 
             uint32_t expected_sec = last_tx_second + increment / 16384000ul;
             uint32_t expected_pps = last_tx_pps + increment % 16384000ul;
