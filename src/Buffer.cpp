@@ -3,7 +3,7 @@
    Her Majesty the Queen in Right of Canada (Communications Research
    Center Canada)
 
-   Copyright (C) 2017
+   Copyright (C) 2018
    Matthias P. Braendli, matthias.braendli@mpb.li
 
     http://opendigitalradio.org
@@ -58,7 +58,7 @@ Buffer::Buffer(Buffer&& other)
     other.m_data = nullptr;
 }
 
-Buffer::Buffer(const std::vector<uint8_t> &vec)
+Buffer::Buffer(const std::vector<uint8_t>& vec)
 {
     PDEBUG("Buffer::Buffer(vector [%zu])\n", vec.size());
 
@@ -78,34 +78,38 @@ Buffer::~Buffer()
 }
 
 
-Buffer &Buffer::operator=(const Buffer &copy)
+Buffer& Buffer::operator=(const Buffer& other)
 {
-    setData(copy.m_data, copy.m_len);
+    if (&other != this) {
+        setData(other.m_data, other.m_len);
+    }
     return *this;
 }
 
 Buffer& Buffer::operator=(Buffer&& other)
 {
-    m_len = other.m_len;
-    m_capacity = other.m_capacity;
-    m_data = other.m_data;
+    if (&other != this) {
+        m_len = other.m_len;
+        m_capacity = other.m_capacity;
+        m_data = other.m_data;
 
-    other.m_len = 0;
-    other.m_capacity = 0;
-    other.m_data = nullptr;
+        other.m_len = 0;
+        other.m_capacity = 0;
+        other.m_data = nullptr;
+    }
 
     return *this;
 }
 
-Buffer &Buffer::operator=(const std::vector<uint8_t> &copy)
+Buffer& Buffer::operator=(const std::vector<uint8_t>& buf)
 {
-    setData(copy.data(), copy.size());
+    setData(buf.data(), buf.size());
     return *this;
 }
 
-Buffer &Buffer::operator+=(const Buffer &copy)
+Buffer& Buffer::operator+=(const Buffer& other)
 {
-    appendData(copy.m_data, copy.m_len);
+    appendData(other.m_data, other.m_len);
     return *this;
 }
 
@@ -143,6 +147,7 @@ void Buffer::appendData(const void *data, size_t len)
 {
     size_t offset = m_len;
     setLength(m_len + len);
+
     if (data != nullptr) {
         memcpy((char*)m_data + offset, data, len);
     }

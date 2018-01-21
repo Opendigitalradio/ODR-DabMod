@@ -3,7 +3,7 @@
    Her Majesty the Queen in Right of Canada (Communications Research
    Center Canada)
 
-   Copyright (C) 2017
+   Copyright (C) 2018
    Matthias P. Braendli, matthias.braendli@mpb.li
 
     http://opendigitalradio.org
@@ -35,8 +35,8 @@
 #include <vector>
 #include <memory>
 
-/* Buffer is a container for a byte array, that is memcpy'ed
- * on assignment and by the copy-constructor.
+/* Buffer is a container for a byte array, which is memory-aligned
+ * to 32 bytes for SSE performance.
  *
  * The allocation/freeing of the data is handled internally.
  */
@@ -45,7 +45,7 @@ class Buffer {
         using sptr = std::shared_ptr<Buffer>;
 
         Buffer(size_t len = 0, const void *data = nullptr);
-        Buffer(const Buffer& copy);
+        Buffer(const Buffer& other);
         Buffer(Buffer&& other);
         Buffer(const std::vector<uint8_t>& vec);
         ~Buffer();
@@ -54,18 +54,16 @@ class Buffer {
         void setLength(size_t len);
 
         /* Replace the data in the Buffer by the new data given.
-         * Reallocates memory if needed.
-         */
+         * Reallocates memory if needed. */
         void setData(const void *data, size_t len);
-        Buffer& operator=(const Buffer& copy);
+        Buffer& operator=(const Buffer& other);
         Buffer& operator=(Buffer&& other);
-        Buffer& operator=(const std::vector<uint8_t>& copy);
+        Buffer& operator=(const std::vector<uint8_t>& buf);
 
         /* Concatenate the current data with the new data given.
-         * Reallocates memory if needed.
-         */
+         * Reallocates memory if needed. */
         void appendData(const void *data, size_t len);
-        Buffer& operator+=(const Buffer& copy);
+        Buffer& operator+=(const Buffer& other);
 
         size_t getLength() const { return m_len; }
         void* getData() const { return m_data; }
@@ -80,6 +78,5 @@ class Buffer {
         /* Pointer to the data. Memory allocation is entirely
          * handled by setLength. */
         void *m_data;
-
 };
 
