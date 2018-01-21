@@ -245,8 +245,8 @@ int launch_modulator(int argc, char* argv[])
     sa.sa_handler = &signalHandler;
 
     if (sigaction(SIGINT, &sa, NULL) == -1) {
-        perror("sigaction");
-        return EXIT_FAILURE;
+        const string errstr = strerror(errno);
+        throw runtime_error("Could not set signal handler: " + errstr);
     }
 
     mod_settings_t mod_settings;
@@ -258,9 +258,7 @@ int launch_modulator(int argc, char* argv[])
              mod_settings.useUHDOutput or
              mod_settings.useZeroMQOutput or
              mod_settings.useSoapyOutput)) {
-        etiLog.level(error) << "Output not specified";
-        fprintf(stderr, "Must specify output !");
-        throw std::runtime_error("Configuration error");
+        throw std::runtime_error("Configuration error: Output not specified");
     }
 
     printModSettings(mod_settings);
@@ -291,8 +289,7 @@ int launch_modulator(int argc, char* argv[])
 
         ediUdpInput.Open(mod_settings.inputName);
         if (not ediUdpInput.isEnabled()) {
-            etiLog.level(error) << "inputTransport is edi, but ediUdpInput is not enabled";
-            return -1;
+            throw runtime_error("inputTransport is edi, but ediUdpInput is not enabled");
         }
         Flowgraph flowgraph;
 
@@ -335,9 +332,6 @@ int launch_modulator(int argc, char* argv[])
 
             // Opening ETI input file
             if (inputFileReader->Open(mod_settings.inputName, mod_settings.loop) == -1) {
-                fprintf(stderr, "Unable to open input file!\n");
-                etiLog.level(error) << "Unable to open input file!";
-                ret = -1;
                 throw std::runtime_error("Unable to open input");
             }
 
@@ -345,9 +339,8 @@ int launch_modulator(int argc, char* argv[])
         }
         else if (mod_settings.inputTransport == "zeromq") {
 #if !defined(HAVE_ZEROMQ)
-            fprintf(stderr, "Error, ZeroMQ input transport selected, but not compiled in!\n");
-            ret = -1;
-            throw std::runtime_error("Unable to open input");
+            throw std::runtime_error("Unable to open input: "
+                    "ZeroMQ input transport selected, but not compiled in!");
 #else
             auto inputZeroMQReader = make_shared<InputZeroMQReader>();
             inputZeroMQReader->Open(mod_settings.inputName, mod_settings.inputMaxFramesQueued);
@@ -359,11 +352,9 @@ int launch_modulator(int argc, char* argv[])
             inputTcpReader->Open(mod_settings.inputName);
             inputReader = inputTcpReader;
         }
-        else
-        {
-            fprintf(stderr, "Error, invalid input transport %s selected!\n", mod_settings.inputTransport.c_str());
-            ret = -1;
-            throw std::runtime_error("Unable to open input");
+        else {
+            throw std::runtime_error("Unable to open input: "
+                    "invalid input transport " + mod_settings.inputTransport + " selected!");
         }
 
         bool run_again = true;
@@ -442,11 +433,8 @@ int launch_modulator(int argc, char* argv[])
                     break;
             }
 
-            fprintf(stderr, "\n\n");
             etiLog.level(info) << m.framecount << " DAB frames encoded";
             etiLog.level(info) << ((float)m.framecount * 0.024f) << " seconds encoded";
-
-            m.data.setLength(0);
         }
     }
 
@@ -550,5 +538,7 @@ int main(int argc, char* argv[])
     catch (std::runtime_error& e) {
         std::cerr << "Modulator runtime error: " << e.what() << std::endl;
     }
+
+    return 1;
 }
 
