@@ -230,9 +230,6 @@ int DabModulator::process(Buffer* dataOut)
                     m_settings.outputRate,
                     mySpacing);
         }
-        else {
-            fprintf(stderr, "No resampler\n");
-        }
 
         myFlowgraph->connect(cifPrbs, cifMux);
 
