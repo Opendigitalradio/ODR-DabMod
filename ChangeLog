@@ -12,6 +12,8 @@ ODR-DabMod in this repository
 		versions when using timestamps, and be careful when mixing ODR-DabMod
 		with other transmitters in SFNs, as the timestamp interpretation can
 		change!
+		Fix TII carrier selection.
+		Add OFDM symbol windowing for improved shoulder performance.
 		Add a timeout to the ZeroMQ input to quit on SIGINT (Ctrl-C).
 		Optionally show the flowgraph metadata in the file output for
 		test purposes.
@@ -19,6 +21,7 @@ ODR-DabMod in this repository
 		Add antenna selection to UHD and SoapySDR outputs.
 		Make EDI input optional (it's not well tested, unfinished and slows
 		compile time)
+		Improve portability for non-Linux POSIX systems.
 
 2017-11-18: Matthias P. Braendli <matthias@mpb.li>
 	(v1.1.0):
@@ -39,6 +42,8 @@ ODR-DabMod in this repository
 		configuration.
 		Add u8 IQ output format.
 		Add a normalised complexf IQ output format.
+		Make resampler unity-gain, i.e. remove digital_gain - sample rate
+		dependency.
 		Read UHD async messages in separate thread to lessen influence on the
 		time-critical transmit thread.
 		Pre-fill UHD IQ buffer before starting to stream data, to ensure it is

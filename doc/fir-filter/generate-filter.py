@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # This tool uses gnuradio to generate FIR filter taps
 # that can be used for the FIRFilter function in
-# CRC DabMod
+# ODR-DabMod
 #
 # Usage:
 #  1) adapt the filter settings below

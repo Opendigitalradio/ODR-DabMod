@@ -22,7 +22,7 @@ Test sleep_through_frame implementation.
 
 Clean up and separate GPS and refclk checks.
  * *done* handle UHD GPSDO and time
- * handle SoapySDR time
+ * *done* handle SoapySDR time
  * Add refclk stuff and timestamps to Soapy.
  * Ensure muting is set properly at startup.
  * Ensure synchronous is taken in account.
