@@ -39,6 +39,10 @@ matrix:
       compiler: gcc
       addons: *linuxaddons
 
+    - env: MATRIX_EVAL="CC=gcc-6 CXX=g++-6" CONF="--disable-output-uhd --enable-edi"
+      compiler: gcc
+      addons: *linuxaddons
+
     - env: MATRIX_EVAL="CC=gcc-6 CXX=g++-6" CONF="--disable-output-uhd --enable-trace"
       compiler: gcc
       addons: *linuxaddons

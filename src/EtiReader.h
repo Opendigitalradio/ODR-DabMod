@@ -2,7 +2,7 @@
    Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010, 2011 Her Majesty
    the Queen in Right of Canada (Communications Research Center Canada)
 
-   Copyright (C) 2017
+   Copyright (C) 2018
    Matthias P. Braendli, matthias.braendli@mpb.li
 
     http://opendigitalradio.org
@@ -37,7 +37,9 @@
 #include "SubchannelSource.h"
 #include "TimestampDecoder.h"
 #include "lib/edi/ETIDecoder.hpp"
-#include "lib/UdpSocket.h"
+#ifdef HAVE_EDI
+#  include "lib/UdpSocket.h"
+#endif
 #include "ThreadsafeQueue.h"
 
 #include <vector>
@@ -108,6 +110,7 @@ private:
     std::vector<std::shared_ptr<SubchannelSource> > mySources;
 };
 
+#ifdef HAVE_EDI
 /* The EdiReader extracts the necessary data using the EDI input library in
  * lib/edi
  */
@@ -203,4 +206,5 @@ class EdiUdpInput {
         UdpReceiver m_udp_rx;
         EdiDecoder::ETIDecoder& m_decoder;
 };
+#endif
 

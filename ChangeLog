@@ -17,6 +17,8 @@ ODR-DabMod in this repository
 		test purposes.
 		Replace usage of non-portable Linux-only clock_gettime().
 		Add antenna selection to UHD and SoapySDR outputs.
+		Make EDI input optional (it's not well tested, unfinished and slows
+		compile time)
 
 2017-11-18: Matthias P. Braendli <matthias@mpb.li>
 	(v1.1.0):

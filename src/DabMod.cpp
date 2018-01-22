@@ -3,7 +3,7 @@
    Her Majesty the Queen in Right of Canada (Communications Research
    Center Canada)
 
-   Copyright (C) 2017
+   Copyright (C) 2018
    Matthias P. Braendli, matthias.braendli@mpb.li
 
     http://opendigitalradio.org
@@ -279,6 +279,7 @@ int launch_modulator(int argc, char* argv[])
     set_thread_name("modulator");
 
     if (mod_settings.inputTransport == "edi") {
+#ifdef HAVE_EDI
         EdiReader ediReader(mod_settings.tist_offset_s);
         EdiDecoder::ETIDecoder ediInput(ediReader, false);
         if (mod_settings.edi_max_delay_ms > 0.0f) {
@@ -323,6 +324,10 @@ int launch_modulator(int argc, char* argv[])
                 rcs.check_faults();
             }
         }
+#else
+        throw std::runtime_error("Unable to open input: "
+                "EDI input transport selected, but not compiled in!");
+#endif // HAVE_EDI
     }
     else {
         shared_ptr<InputReader> inputReader;

@@ -2,7 +2,7 @@
    Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010, 2011 Her Majesty
    the Queen in Right of Canada (Communications Research Center Canada)
 
-   Copyright (C) 2017
+   Copyright (C) 2018
    Matthias P. Braendli, matthias.braendli@mpb.li
 
     http://opendigitalradio.org
@@ -304,6 +304,7 @@ uint32_t EtiReader::getPPSOffset()
     return timestamp;
 }
 
+#ifdef HAVE_EDI
 EdiReader::EdiReader(
         double& tist_offset_s) :
     m_timestamp_decoder(tist_offset_s)
@@ -569,4 +570,4 @@ bool EdiUdpInput::rxPacket()
         return false;
     }
 }
-
+#endif // HAVE_EDI

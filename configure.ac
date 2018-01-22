@@ -65,10 +65,13 @@ AC_ARG_ENABLE([trace],
         [AS_HELP_STRING([--enable-trace], [Enable trace output])],
         [], [enable_trace=no])
 
-# ZeroMQ message queue input
 AC_ARG_ENABLE([zeromq],
         [AS_HELP_STRING([--disable-zeromq], [Disable ZeroMQ input, output and remote control])],
         [], [enable_zeromq=yes])
+
+AC_ARG_ENABLE([edi],
+        [AS_HELP_STRING([--enable-edi], [Enable EDI input])],
+        [], [enable_edi=no])
 
 AC_ARG_ENABLE([native],
         [AS_HELP_STRING([--disable-native], [Do not compile with -march=native])],
@@ -136,6 +139,11 @@ AS_IF([test "x$enable_output_uhd" = "xyes"],
 
 AS_IF([test "x$enable_soapysdr" = "xyes"],
       [AC_DEFINE(HAVE_SOAPYSDR, [1], [Define if SoapySDR output is enabled])])
+
+AS_IF([test "x$enable_edi" = "xyes"],
+      [AC_DEFINE(HAVE_EDI, [1], [Define if EDI input is enabled]) ])
+
+AM_CONDITIONAL([COMPILE_EDI], [test "x$enable_edi" = "xyes"])
 
 AX_BOOST_BASE([1.54.0], [], AC_MSG_ERROR([BOOST 1.54 or later is required]))
 AX_BOOST_SYSTEM
@@ -231,7 +239,7 @@ echo "***********************************************"
 echo
 enabled=""
 disabled=""
-for feat in debug prof trace output_uhd zeromq soapysdr
+for feat in edi debug prof trace output_uhd zeromq soapysdr
 do
     eval var=\$enable_$feat
     AS_IF([test "x$var" = "xyes"],
