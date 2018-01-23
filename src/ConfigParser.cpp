@@ -426,7 +426,9 @@ void parse_args(int argc, char **argv, mod_settings_t& mod_settings)
             break;
         case 'o':
             mod_settings.tist_offset_s = strtod(optarg, NULL);
+#if defined(HAVE_OUTPUT_UHD)
             mod_settings.sdr_device_config.enableSync = true;
+#endif
             break;
         case 'm':
             mod_settings.dabMode = strtol(optarg, NULL, 0);
