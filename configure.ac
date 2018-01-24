@@ -1,7 +1,7 @@
 # Copyright (C) 2007, 2008, 2009, 2010, 2011, 2012 Her Majesty the
 # Queen in Right of Canada (Communications Research Center Canada)
 
-# Copyright (C) 2017 Matthias P. Braendli, http://opendigitalradio.org
+# Copyright (C) 2018 Matthias P. Braendli, http://opendigitalradio.org
 
 # This file is part of ODR-DabMod.
 #
@@ -18,32 +18,21 @@
 # You should have received a copy of the GNU General Public License
 # along with ODR-DabMod.  If not, see <http://www.gnu.org/licenses/>.
 
-AC_PREREQ(2.59)
+AC_PREREQ(2.69)
 AC_INIT([ODR-DabMod], [1.1.0], [matthias.braendli@mpb.li])
 AC_CONFIG_AUX_DIR([build-aux])
 AC_CONFIG_MACRO_DIR([m4])
 AC_CANONICAL_SYSTEM
 AM_INIT_AUTOMAKE([-Wall foreign subdir-objects])
 AC_CONFIG_SRCDIR([src/DabMod.cpp])
-AM_CONFIG_HEADER([config.h])
+AC_CONFIG_HEADER([config.h])
 AM_SILENT_RULES([yes])
-
-case $target_cpu in
-    x86_64)
-AC_DEFINE([__64BIT__], [], [__16BIT__, __32BIT__])
-    ;;
-    *)
-AC_DEFINE([__32BIT__], [], [__16BIT__, __64BIT__])
-    esac
-#case $target_os in
 
 # Checks for programs.
 AC_PROG_CXX
 AC_PROG_CC
 AM_PROG_CC_C_O
 AC_PROG_INSTALL
-AC_PROG_CPP
-AC_PROG_MKDIR_P
 
 AX_CXX_COMPILE_STDCXX_11(noext,mandatory)
 
@@ -149,31 +138,10 @@ AX_BOOST_BASE([1.54.0], [], AC_MSG_ERROR([BOOST 1.54 or later is required]))
 AX_BOOST_SYSTEM
 AX_BOOST_THREAD
 
-# Tests for different memory allocation debuggers.
-# Valgrind doesn't need any.
-AS_IF([test "x$enable_debug" != "xno"],
-        [AS_IF([test "x$with_debug_malloc" != "xno"],
-            [AS_IF([test "x$with_debug_malloc" = "xyes"],
-                [AC_CHECK_LIB([duma], [malloc], [],
-                    [AC_CHECK_LIB([efence], [malloc])])],
-                [AC_CHECK_LIB([$with_debug_malloc], [malloc])])]
-                )])
-
 # Checks for header files.
-AC_CHECK_HEADERS([fcntl.h limits.h memory.h netinet/in.h stdint.h stdlib.h string.h sys/time.h sys/timeb.h unistd.h])
 AC_HEADER_STDC
+AC_CHECK_HEADERS([fcntl.h limits.h memory.h netinet/in.h stdint.h stdlib.h string.h sys/time.h sys/timeb.h unistd.h])
 
-# Checks for typedefs, structures, and compiler characteristics.
-AC_HEADER_STDBOOL
-AC_C_CONST
-AC_C_INLINE
-AC_TYPE_SIZE_T
-AC_HEADER_TIME
-AC_TYPE_UINT16_T
-AC_TYPE_UINT32_T
-AC_TYPE_UINT8_T
-AC_HEADER_TIME
-AC_MSG_CHECKING([for M_PIl])
 AC_LANG_PUSH([C++])
 AC_COMPILE_IFELSE(
         [AC_LANG_PROGRAM([[#include <math.h>]], [[double pi = M_PIl;]])],
@@ -227,9 +195,6 @@ AS_IF([test "x$enable_native" = "xyes"],
            CXXFLAGS="$save_CXXFLAGS"
        fi
       ])
-
-AC_TYPE_SIGNAL
-AC_CHECK_FUNCS([floor memset sqrt strchr strerror strtol])
 
 AC_CONFIG_FILES([Makefile])
 AC_OUTPUT
