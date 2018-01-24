@@ -49,8 +49,8 @@ struct frame_timestamp
         double offset_pps, offset_secs;
         offset_pps = modf(diff, &offset_secs);
 
-        this->timestamp_sec += lrintf(offset_secs);
-        this->timestamp_pps += lrintf(offset_pps * 16384000.0);
+        this->timestamp_sec += lrint(offset_secs);
+        this->timestamp_pps += lrint(offset_pps * 16384000.0);
 
         while (this->timestamp_pps >= 16384000) {
             this->timestamp_pps -= 16384000;
