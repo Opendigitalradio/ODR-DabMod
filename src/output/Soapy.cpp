@@ -106,8 +106,6 @@ Soapy::Soapy(SDRDeviceConfig& config) :
 
     const std::vector<size_t> channels({0});
     m_tx_stream = m_device->setupStream(SOAPY_SDR_TX, "CF32", channels);
-    m_device->activateStream(m_tx_stream);
-
     m_rx_stream = m_device->setupStream(SOAPY_SDR_RX, "CF32", channels);
 }
 
@@ -116,6 +114,10 @@ Soapy::~Soapy()
     if (m_device != nullptr) {
         if (m_tx_stream != nullptr) {
             m_device->closeStream(m_tx_stream);
+        }
+
+        if (m_rx_stream != nullptr) {
+            m_device->closeStream(m_rx_stream);
         }
         SoapySDR::Device::unmake(m_device);
     }
@@ -197,19 +199,31 @@ size_t Soapy::receive_frame(
     void *buffs[1];
     buffs[0] = buf;
 
-    m_device->activateStream(m_rx_stream, flags, timeNs, numElems);
+    int ret = m_device->activateStream(m_rx_stream, flags, timeNs, numElems);
+    if (ret != 0) {
+        throw std::runtime_error(string("Soapy activate RX stream failed: ") +
+                SoapySDR::errToStr(ret));
+    }
+    m_rx_stream_active = true;
 
-    auto ret = m_device->readStream(m_tx_stream, buffs, num_samples, flags, timeNs);
+    int n_read = m_device->readStream(
+            m_rx_stream, buffs, num_samples, flags, timeNs);
 
-    m_device->deactivateStream(m_rx_stream);
+    ret = m_device->deactivateStream(m_rx_stream);
+    if (ret != 0) {
+        throw std::runtime_error(string("Soapy deactivate RX stream failed: ") +
+                SoapySDR::errToStr(ret));
+    }
+    m_rx_stream_active = false;
 
-    // TODO update effective receive ts
-
-    if (ret < 0) {
-        throw runtime_error("Soapy readStream error: " + to_string(ret));
+    if (n_read < 0) {
+        throw std::runtime_error(string("Soapy failed to read from RX stream : ") +
+                SoapySDR::errToStr(ret));
     }
 
-    return ret;
+    ts.set_ns(timeNs);
+
+    return n_read;
 }
 
 
@@ -228,7 +242,19 @@ void Soapy::transmit_frame(const struct FrameData& frame)
 {
     if (not m_device) throw runtime_error("Soapy device not set up");
 
-    // TODO timestamps
+    long long int timeNs = frame.ts.get_ns();
+    // muting and mutenotimestamp is handled by SDR
+    const bool has_time_spec = (m_conf.enableSync and frame.ts.timestamp_valid);
+
+    if (not m_tx_stream_active) {
+        int flags = has_time_spec ? SOAPY_SDR_HAS_TIME : 0;
+        int ret = m_device->activateStream(m_tx_stream, flags, timeNs);
+        if (ret != 0) {
+            throw std::runtime_error(string("Soapy activate TX stream failed: ") +
+                    SoapySDR::errToStr(ret));
+        }
+        m_tx_stream_active = true;
+    }
 
     // The frame buffer contains bytes representing FC32 samples
     const complexf *buf = reinterpret_cast<const complexf*>(frame.buf.data());
@@ -242,34 +268,58 @@ void Soapy::transmit_frame(const struct FrameData& frame)
 
     size_t num_acc_samps = 0;
     while (num_acc_samps < numSamples) {
+
         const void *buffs[1];
         buffs[0] = buf + num_acc_samps;
 
         const size_t samps_to_send = std::min(numSamples - num_acc_samps, mtu);
 
+        const bool eob_because_muting = m_conf.muting;
+        const bool end_of_burst = eob_because_muting or (
+                frame.ts.timestamp_valid and
+                frame.ts.timestamp_refresh and
+                samps_to_send <= mtu );
+
         int flags = 0;
 
-        auto ret = m_device->writeStream(m_tx_stream, buffs, samps_to_send, flags);
+        auto num_sent = m_device->writeStream(
+                m_tx_stream, buffs, samps_to_send, flags, timeNs);
 
-        if (ret == SOAPY_SDR_TIMEOUT) {
+        if (num_sent == SOAPY_SDR_TIMEOUT) {
             continue;
         }
-        else if (ret == SOAPY_SDR_OVERFLOW) {
+        else if (num_sent == SOAPY_SDR_OVERFLOW) {
             overflows++;
             continue;
         }
-        else if (ret == SOAPY_SDR_UNDERFLOW) {
+        else if (num_sent == SOAPY_SDR_UNDERFLOW) {
             underflows++;
             continue;
         }
 
-        if (ret < 0) {
+        if (num_sent < 0) {
             etiLog.level(error) << "Unexpected stream error " <<
-                SoapySDR::errToStr(ret);
+                SoapySDR::errToStr(num_sent);
             throw std::runtime_error("Fault in Soapy");
         }
 
-        num_acc_samps += ret;
+        timeNs += 1e9 * num_sent/m_conf.sampleRate;
+
+        num_acc_samps += num_sent;
+
+        if (end_of_burst) {
+            int ret_deact = m_device->deactivateStream(m_tx_stream);
+            if (ret_deact != 0) {
+                throw std::runtime_error(
+                        string("Soapy activate TX stream failed: ") +
+                        SoapySDR::errToStr(ret_deact));
+            }
+            m_tx_stream_active = false;
+        }
+
+        if (eob_because_muting) {
+            break;
+        }
     }
     num_frames_modulated++;
 }

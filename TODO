@@ -26,6 +26,7 @@ Clean up and separate GPS and refclk checks.
  * Add refclk stuff and timestamps to Soapy.
  * Ensure muting is set properly at startup.
  * Ensure synchronous is taken in account.
+ * Verify resync after underflow and muting
 
 *done* Add antenna selection to config.
 

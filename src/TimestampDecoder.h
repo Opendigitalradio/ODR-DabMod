@@ -81,6 +81,12 @@ struct frame_timestamp
         return ns;
     }
 
+    void set_ns(long long int time_ns) {
+        timestamp_sec = time_ns / 1000000000ull;
+        const long long int subsecond = time_ns % 1000000000ull;
+        timestamp_pps = lrint(subsecond * 16384000.0);
+    }
+
     void print(const char* t) const {
         fprintf(stderr,
                 "%s <frame_timestamp(%s, %d, %.9f, %d)>\n",
