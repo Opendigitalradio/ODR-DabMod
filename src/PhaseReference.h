@@ -2,7 +2,7 @@
    Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010, 2011 Her Majesty
    the Queen in Right of Canada (Communications Research Center Canada)
 
-   Copyright (C) 2016
+   Copyright (C) 2018
    Matthias P. Braendli, matthias.braendli@mpb.li
 
     http://opendigitalradio.org
@@ -32,29 +32,25 @@
 
 #include "ModPlugin.h"
 
-#include <sys/types.h>
+#include <cstddef>
 #include <complex>
 #include <vector>
 
-
 class PhaseReference : public ModInput
 {
-public:
-    PhaseReference(unsigned int dabmode);
-    virtual ~PhaseReference();
-    PhaseReference(const PhaseReference&);
-    PhaseReference& operator=(const PhaseReference&);
+    public:
+        PhaseReference(unsigned int dabmode);
 
-    int process(Buffer* dataOut);
-    const char* name() { return "PhaseReference"; }
+        int process(Buffer* dataOut) override;
+        const char* name() override { return "PhaseReference"; }
 
-protected:
-    unsigned int d_dabmode;
-    size_t d_carriers;
-    size_t d_num;
-    const static unsigned char d_h[4][32];
-    std::vector<std::complex<float> > d_dataIn;
+    protected:
+        unsigned int d_dabmode;
+        size_t d_carriers;
+        size_t d_num;
+        const static uint8_t d_h[4][32];
+        std::vector<std::complex<float> > d_dataIn;
 
-    void fillData();
+        void fillData();
 };
 

@@ -1,6 +1,11 @@
 /*
    Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010, 2011 Her Majesty
    the Queen in Right of Canada (Communications Research Center Canada)
+
+   Copyright (C) 2018
+   Matthias P. Braendli, matthias.braendli@mpb.li
+
+    http://opendigitalradio.org
  */
 /*
    This file is part of ODR-DabMod.
@@ -22,12 +27,9 @@
 #include "PhaseReference.h"
 #include "PcDebug.h"
 
-#include <stdio.h>
 #include <stdexcept>
-#include <complex>
-#include <string.h>
 
-typedef std::complex<float> complexf;
+using complexf = std::complex<float>;
 
 /* ETSI EN 300 401 Table 43 (Clause 14.3.2)
  * Contains h_{i,k} values
@@ -52,8 +54,6 @@ const uint8_t PhaseReference::d_h[4][32] = {
  * Tables 44 to 47 describe the frequency interleaving done in
  * FrequencyInterleaver.
  */
-
-
 PhaseReference::PhaseReference(unsigned int dabmode) :
     ModInput(),
     d_dabmode(dabmode)
@@ -61,36 +61,30 @@ PhaseReference::PhaseReference(unsigned int dabmode) :
     PDEBUG("PhaseReference::PhaseReference(%u) @ %p\n", dabmode, this);
 
     switch (d_dabmode) {
-    case 1:
-        d_carriers = 1536;
-        d_num = 2048;
-        break;
-    case 2:
-        d_carriers = 384;
-        d_num = 512;
-        break;
-    case 3:
-        d_carriers = 192;
-        d_num = 256;
-        break;
-    case 4:
-        d_dabmode = 0;
-    case 0:
-        d_carriers = 768;
-        d_num = 1024;
-        break;
-    default:
-        throw std::runtime_error(
-                "PhaseReference::PhaseReference DAB mode not valid!");
+        case 1:
+            d_carriers = 1536;
+            d_num = 2048;
+            break;
+        case 2:
+            d_carriers = 384;
+            d_num = 512;
+            break;
+        case 3:
+            d_carriers = 192;
+            d_num = 256;
+            break;
+        case 4:
+            d_dabmode = 0;
+        case 0:
+            d_carriers = 768;
+            d_num = 1024;
+            break;
+        default:
+            throw std::runtime_error(
+                    "PhaseReference::PhaseReference DAB mode not valid!");
     }
     d_dataIn.resize(d_carriers);
     fillData();
-}
-
-
-PhaseReference::~PhaseReference()
-{
-    PDEBUG("PhaseReference::~PhaseReference() @ %p\n", this);
 }
 
 
@@ -107,10 +101,6 @@ complexf convert(uint8_t data) {
 
 void PhaseReference::fillData()
 {
-    size_t index;
-    size_t offset;
-    size_t k;
-
     const int table[][48][2] = {
         { // Mode 0/4
             // Positive part
@@ -156,10 +146,14 @@ void PhaseReference::fillData()
                 "PhaseReference::fillData d_dataIn has incorrect size!");
     }
 
-    for (index = 0, offset = 0; index < d_dataIn.size(); ++offset) {
-        for (k = 0; k < 32; ++k) {
-            d_dataIn[index++] = convert(d_h[table[d_dabmode][offset][0]][k]
-                    + table[d_dabmode][offset][1]);
+    for (size_t index = 0,
+                offset = 0;
+                index < d_dataIn.size();
+                ++offset) {
+        for (size_t k = 0; k < 32; ++k) {
+            d_dataIn[index++] = convert(
+                    d_h[ table[d_dabmode][offset][0] ][k] +
+                    table[d_dabmode][offset][1] );
         }
     }
 }
