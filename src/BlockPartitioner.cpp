@@ -34,8 +34,7 @@
 #include <stdint.h>
 #include <assert.h>
 
-
-BlockPartitioner::BlockPartitioner(unsigned mode, unsigned phase) :
+BlockPartitioner::BlockPartitioner(unsigned mode) :
     ModMux(),
     ModMetadata(),
     d_mode(mode)
@@ -72,13 +71,7 @@ BlockPartitioner::BlockPartitioner(unsigned mode, unsigned phase) :
                 "BlockPartitioner::BlockPartitioner invalid mode");
         break;
     }
-    d_cifNb = 0;
-    // For Synchronisation purpose, count nb of CIF to drop
-    d_cifPhase = phase % d_cifCount;
-    d_metaPhase = phase % d_cifCount;
-    d_cifSize = 864 * 8;
 }
-
 
 // dataIn[0] -> FIC
 // dataIn[1] -> CIF
@@ -111,15 +104,6 @@ int BlockPartitioner::process(std::vector<Buffer*> dataIn, Buffer* dataOut)
                 "BlockPartitioner::process input 1 size not valid!");
     }
 
-    // Synchronize CIF phase
-    if (d_cifPhase != 0) {
-        if (++d_cifPhase == d_cifCount) {
-            d_cifPhase = 0;
-        }
-        // Drop CIF
-        return 0;
-    }
-
     uint8_t* fic = reinterpret_cast<uint8_t*>(dataIn[0]->getData());
     uint8_t* cif = reinterpret_cast<uint8_t*>(dataIn[1]->getData());
     uint8_t* out = reinterpret_cast<uint8_t*>(dataOut->getData());
@@ -141,15 +125,6 @@ int BlockPartitioner::process(std::vector<Buffer*> dataIn, Buffer* dataOut)
 
 meta_vec_t BlockPartitioner::process_metadata(const meta_vec_t& metadataIn)
 {
-    // Synchronize CIF phase
-    if (d_metaPhase != 0) {
-        if (++d_metaPhase == d_cifCount) {
-            d_metaPhase = 0;
-        }
-        // Drop this metadata
-        return {};
-    }
-
     if (d_cifNb == 1) {
         d_meta.clear();
     }

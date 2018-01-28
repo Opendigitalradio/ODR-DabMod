@@ -106,7 +106,7 @@ const int pattern_tm1_2_4[][8] = { // {{{
     {1,1,1,0,1,0,0,0},
     {1,1,1,1,0,0,0,0} }; // }}}
 
-TII::TII(unsigned int dabmode, const tii_config_t& tii_config, unsigned phase) :
+TII::TII(unsigned int dabmode, const tii_config_t& tii_config) :
     ModCodec(),
     RemoteControllable("tii"),
     m_dabmode(dabmode),
@@ -122,7 +122,6 @@ TII::TII(unsigned int dabmode, const tii_config_t& tii_config, unsigned phase) :
     switch (m_dabmode) {
         case 1:
             m_carriers = 1536;
-            m_insert = (phase & 0x40) ? false : true;
 
             if (not(0 <= m_conf.pattern and m_conf.pattern <= 69) ) {
                 throw TIIError("TII::TII pattern not valid!");
@@ -130,7 +129,6 @@ TII::TII(unsigned int dabmode, const tii_config_t& tii_config, unsigned phase) :
             break;
         case 2:
             m_carriers = 384;
-            m_insert = (phase & 0x01) ? false : true;
 
             if (not(0 <= m_conf.pattern and m_conf.pattern <= 69) ) {
                 throw TIIError("TII::TII pattern not valid!");
@@ -198,16 +196,14 @@ int TII::process(Buffer* dataIn, Buffer* dataOut)
          * > is 1:48 for all Modes, so that the signal power in a TII symbol is
          * > 16 dB below the signal power of the other symbols.
          *
-         * We need to normalise to the square root of 48 because we touch I and
-         * Q separately.
+         * This is because we only enable 32 out of 1536 carriers, not because
+         * every carrier is lower power.
          */
-        const float normalise_factor = 0.14433756729740644112f; // = 1/sqrt(48)
-
         for (size_t i = 0; i < m_enabled_carriers.size(); i++) {
             // See header file for an explanation of the old variant
             if (m_enabled_carriers[i]) {
-                out[i] = normalise_factor * (m_conf.old_variant ? in[i+1] : in[i]);
-                out[i+1] = normalise_factor * in[i+1];
+                out[i] = (m_conf.old_variant ? in[i+1] : in[i]);
+                out[i+1] = in[i+1];
             }
         }
     }

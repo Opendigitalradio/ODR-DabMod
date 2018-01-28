@@ -135,7 +135,7 @@ int DabModulator::process(Buffer* dataOut)
         ////////////////////////////////////////////////////////////////
         auto cifPrbs = make_shared<PrbsGenerator>(864 * 8, 0x110);
         auto cifMux = make_shared<FrameMultiplexer>(myEtiSource);
-        auto cifPart = make_shared<BlockPartitioner>(mode, myEtiSource.getFp());
+        auto cifPart = make_shared<BlockPartitioner>(mode);
 
         auto cifMap = make_shared<QpskSymbolMapper>(myNbCarriers);
         auto cifRef = make_shared<PhaseReference>(mode);
@@ -175,8 +175,7 @@ int DabModulator::process(Buffer* dataOut)
         try {
             tii = make_shared<TII>(
                     m_settings.dabMode,
-                    m_settings.tiiConfig,
-                    myEtiSource.getFp());
+                    m_settings.tiiConfig);
             rcs.enrol(tii.get());
             tiiRef = make_shared<PhaseReference>(mode);
         }

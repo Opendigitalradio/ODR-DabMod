@@ -37,7 +37,7 @@
 class BlockPartitioner : public ModMux, public ModMetadata
 {
 public:
-    BlockPartitioner(unsigned mode, unsigned phase);
+    BlockPartitioner(unsigned mode);
 
     int process(std::vector<Buffer*> dataIn, Buffer* dataOut);
     const char* name() { return "BlockPartitioner"; }
@@ -49,10 +49,8 @@ protected:
     int d_mode;
     size_t d_ficSize;
     size_t d_cifCount;
-    size_t d_cifNb;
-    size_t d_cifPhase;
-    size_t d_metaPhase;
-    size_t d_cifSize;
+    size_t d_cifNb = 0;
+    const size_t d_cifSize = 864 * 8;
     size_t d_outputFramesize;
     size_t d_outputFramecount;
 
