@@ -306,6 +306,8 @@ int launch_modulator(int argc, char* argv[])
 
         size_t framecount = 0;
 
+        bool first_frame = true;
+
         while (running) {
             while (not ediReader.isFrameReady()) {
                 bool success = ediUdpInput.rxPacket();
@@ -314,6 +316,19 @@ int launch_modulator(int argc, char* argv[])
                     break;
                 }
             }
+
+            if (first_frame) {
+                if (ediReader.getFp() != 0) {
+                    // Do not start the flowgraph before we get to FP 0
+                    // to ensure all blocks are properly aligned.
+                    ediReader.clearFrame();
+                    continue;
+                }
+                else {
+                    first_frame = false;
+                }
+            }
+
             framecount++;
             flowgraph.run();
             ediReader.clearFrame();
@@ -454,6 +469,7 @@ static run_modulator_state_t run_modulator(modulator_data& m)
         while (running) {
 
             int framesize;
+            bool first_frame = true;
 
             PDEBUG("*****************************************\n");
             PDEBUG("* Starting main loop\n");
@@ -473,6 +489,17 @@ static run_modulator_state_t run_modulator(modulator_data& m)
                 if ((size_t)eti_bytes_read != m.data.getLength()) {
                     etiLog.level(error) << "ETI frame incompletely read";
                     throw std::runtime_error("ETI read error");
+                }
+
+                if (first_frame) {
+                    if (m.etiReader->getFp() != 0) {
+                        // Do not start the flowgraph before we get to FP 0
+                        // to ensure all blocks are properly aligned.
+                        continue;
+                    }
+                    else {
+                        first_frame = false;
+                    }
                 }
 
                 m.flowgraph->run();
