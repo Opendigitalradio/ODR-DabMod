@@ -49,7 +49,7 @@ class SDR : public ModOutput, public ModMetadata, public RemoteControllable {
         SDR(SDRDeviceConfig& config, std::shared_ptr<SDRDevice> device);
         SDR(const SDR& other) = delete;
         SDR operator=(const SDR& other) = delete;
-        ~SDR();
+        virtual ~SDR();
 
         virtual int process(Buffer *dataIn) override;
         virtual meta_vec_t process_metadata(const meta_vec_t& metadataIn) override;
