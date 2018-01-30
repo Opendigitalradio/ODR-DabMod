@@ -27,6 +27,7 @@ Clean up and separate GPS and refclk checks.
  * Ensure muting is set properly at startup.
  * Ensure synchronous is taken in account.
  * Verify resync after underflow and muting
+ * Add GPSDO status to RC and munin.
 
 *done* Add antenna selection to config.
 

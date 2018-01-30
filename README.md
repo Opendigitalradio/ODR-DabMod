@@ -24,6 +24,7 @@ Features
   - Can be used to drive the [LimeSDR board](https://myriadrf.org/projects/limesdr/), the [HackRF](https://greatscottgadgets.com/hackrf/) and others.
 - Timestamping support required for SFN
 - GPSDO monitoring (both Ettus and [ODR LEA-M8F board](http://www.opendigitalradio.org/lea-m8f-gpsdo))
+- Monitoring integration with munin
 - A FIR filter for improved spectrum mask
 - TII insertion
 - Logging: log to file, to syslog
@@ -38,8 +39,8 @@ Features
 
 The src/ directory contains the source code of ODR-DabMod.
 
-The doc/ directory contains the ODR-DabMod documentation, and an example
-configuration file.
+The doc/ directory contains the ODR-DabMod documentation, an example
+configuration file and a script for munin integration.
 
 The lib/ directory contains source code of libraries needed to build
 ODR-DabMod.

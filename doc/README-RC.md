@@ -11,8 +11,11 @@ the software will only listen on the local loopback interface. To get secure
 remote access, use SSH port forwarding.
 
 The ZeroMQ interface is designed for machine interaction, e.g. for usage in
-scripts or from third party tools. An example python script to connect to that
-interface is available in `doc/zmq-ctrl/zmq_remote.py`, and example C++ code is available in `doc/zmq-ctrl/cpp/`.
+scripts or from third party tools. The Munin monitoring is also using this
+interface, please see `doc/stats_dabmod_munin.py`.
+An example python script to connect to that
+interface is available in `doc/zmq-ctrl/zmq_remote.py`,
+and example C++ code is available in `doc/zmq-ctrl/cpp/`.
 
 Both interfaces may be enabled simultaneously.
 
