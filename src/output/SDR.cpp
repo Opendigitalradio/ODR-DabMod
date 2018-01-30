@@ -70,6 +70,14 @@ SDR::SDR(SDRDeviceConfig& config, std::shared_ptr<SDRDevice> device) :
             m_device,
             m_config.dpdFeedbackServerPort,
             m_config.sampleRate);
+
+    RC_ADD_PARAMETER(txgain, "TX gain");
+    RC_ADD_PARAMETER(rxgain, "RX gain for DPD feedback");
+    RC_ADD_PARAMETER(freq, "Transmission frequency");
+    RC_ADD_PARAMETER(muting, "Mute the output by stopping the transmitter");
+    RC_ADD_PARAMETER(underruns, "Counter of number of underruns");
+    RC_ADD_PARAMETER(latepackets, "Counter of number of late packets");
+    RC_ADD_PARAMETER(frames, "Counter of number of frames modulated");
 }
 
 SDR::~SDR()
