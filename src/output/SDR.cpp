@@ -395,6 +395,7 @@ void SDR::set_parameter(const string& parameter, const string& value)
 const string SDR::get_parameter(const string& parameter) const
 {
     stringstream ss;
+    ss << std::fixed;
     if (parameter == "txgain") {
         ss << m_config.txgain;
     }
