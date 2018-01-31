@@ -170,7 +170,7 @@ int UdpSocket::send(const std::vector<uint8_t>& data, InetAddress destination)
  *  @param groupname The multicast address to join.
  *  @return 0 if ok, -1 if error
  */
-int UdpSocket::joinGroup(char* groupname)
+int UdpSocket::joinGroup(const char* groupname, const char* if_addr)
 {
     ip_mreqn group;
     if ((group.imr_multiaddr.s_addr = inet_addr(groupname)) == INADDR_NONE) {
@@ -181,7 +181,7 @@ int UdpSocket::joinGroup(char* groupname)
         setInetError("Not a multicast address");
         return -1;
     }
-    group.imr_address.s_addr = htons(INADDR_ANY);;
+    group.imr_address.s_addr = inet_addr(if_addr);
     group.imr_ifindex = 0;
     if (setsockopt(listenSocket, IPPROTO_IP, IP_ADD_MEMBERSHIP, &group, sizeof(group))
             == SOCKET_ERROR) {
@@ -261,8 +261,10 @@ UdpReceiver::~UdpReceiver() {
     }
 }
 
-void UdpReceiver::start(int port, size_t max_packets_queued) {
+void UdpReceiver::start(int port, std::string& bindto, std::string& mcastaddr, size_t max_packets_queued) {
     m_port = port;
+    m_bindto = bindto;
+    m_mcastaddr = mcastaddr;
     m_max_packets_queued = max_packets_queued;
     m_thread = std::thread(&UdpReceiver::m_run, this);
 }
@@ -288,7 +290,13 @@ void UdpReceiver::m_run()
         private: atomic<bool>& m_stop;
     } autoSetStop(m_stop);
 
-    m_sock.reinit(m_port, "0.0.0.0");
+    if(IN_MULTICAST(ntohl(inet_addr(m_mcastaddr.c_str())))){
+        m_sock.reinit(m_port, m_mcastaddr);
+        m_sock.setMulticastSource(m_bindto.c_str());
+        m_sock.joinGroup(m_mcastaddr.c_str(), m_bindto.c_str());
+    } else {
+        m_sock.reinit(m_port, m_bindto);
+    }
 
     const size_t packsize = 8192;
     UdpPacket packet(packsize);

@@ -111,7 +111,7 @@ class UdpSocket
          */
         int receive(UdpPacket& packet);
 
-        int joinGroup(char* groupname);
+        int joinGroup(const char* groupname, const char *if_addr);
         int setMulticastSource(const char* source_addr);
         int setMulticastTTL(int ttl);
 
@@ -184,7 +184,7 @@ class UdpReceiver {
         UdpReceiver operator=(const UdpReceiver&) = delete;
 
         // Start the receiver in a separate thread
-        void start(int port, size_t max_packets_queued);
+        void start(int port, std::string& bindto, std::string& mcastaddr, size_t max_packets_queued);
 
         // Get the data contained in a UDP packet, blocks if none available
         // In case of error, throws a runtime_error
@@ -194,6 +194,8 @@ class UdpReceiver {
         void m_run(void);
 
         int m_port;
+        std::string m_bindto;
+        std::string m_mcastaddr;
         size_t m_max_packets_queued;
         std::thread m_thread;
         std::atomic<bool> m_stop;

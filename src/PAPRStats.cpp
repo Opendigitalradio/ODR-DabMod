@@ -27,6 +27,7 @@
 #include "PAPRStats.h"
 #include <numeric>
 #include <cmath>
+#include <stdexcept>
 #if defined(TEST)
 /* compile with g++ -std=c++11 -Wall -DTEST PAPRStats.cpp -o paprtest */
 #  include <iostream>

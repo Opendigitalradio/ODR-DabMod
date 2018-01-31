@@ -202,6 +202,8 @@ class EdiUdpInput {
     private:
         bool m_enabled;
         int m_port;
+        std::string m_bindto;
+        std::string m_mcastaddr;
 
         UdpReceiver m_udp_rx;
         EdiDecoder::ETIDecoder& m_decoder;
