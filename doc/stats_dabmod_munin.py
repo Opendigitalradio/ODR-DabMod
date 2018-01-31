@@ -2,6 +2,9 @@
 #
 # present statistics from ODR-DabMod's
 # RC interface to munin
+#
+# Copy this file to /etc/munin/plugins/dabmod
+# to use it, and make sure it's executable (chmod +x)
 
 import sys
 import json
@@ -272,6 +275,8 @@ if len(sys.argv) == 1:
     # Plotting FCT is not useful because it overflows in 6s, and the poll
     # interval is usually 5min
 
+    tist_timestamp = get_rc_value("tist", "timestamp", sock)
+    re_tist_timestamp = re.compile(r"(\d+\.\d+)\ for\ frame\ FCT\ (\d+)", re.X)
     munin_values += "multigraph tist_timestamp\n"
     munin_values += handle_re("timestamp.value", re_tist_timestamp, tist_timestamp, 1)
 
