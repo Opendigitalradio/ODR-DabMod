@@ -85,23 +85,6 @@ offset.label Configured offset
 offset.min 0
 offset.max 300"""
 
-# One COUNTER (min 0, max 249) graph for
-#   tist timestamp fct
-config_all += """
-multigraph frame_fct
-graph_title TIST FCT
-graph_order fct
-graph_args --base 1000
-graph_vlabel FCT value
-graph_category dabmod
-graph_info This graph shows the FCT value
-
-fct.info FCT
-fct.label FCT
-fct.type COUNTER
-fct.min 0
-fct.max 249"""
-
 # One DDERIVE graph for
 #   tist timestamp timestamps
 config_all += """
@@ -286,10 +269,8 @@ if len(sys.argv) == 1:
     tist_offset = get_rc_value("tist", "offset", sock)
     munin_values += handle_re("offset.value", re_double_value, tist_offset)
 
-    munin_values += "multigraph frame_fct\n"
-    tist_timestamp = get_rc_value("tist", "timestamp", sock)
-    re_tist_timestamp = re.compile(r"(\d+\.\d+)\ for\ frame\ FCT\ (\d+)", re.X)
-    munin_values += handle_re("fct.value", re_tist_timestamp, tist_timestamp, 2)
+    # Plotting FCT is not useful because it overflows in 6s, and the poll
+    # interval is usually 5min
 
     munin_values += "multigraph tist_timestamp\n"
     munin_values += handle_re("timestamp.value", re_tist_timestamp, tist_timestamp, 1)
