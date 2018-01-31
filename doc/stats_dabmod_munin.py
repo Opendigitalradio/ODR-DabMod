@@ -1,7 +1,8 @@
 #!/usr/bin/env python2
 #
 # present statistics from ODR-DabMod's
-# RC interface to munin
+# RC interface to munin. Expects ZeroMQ on port
+# 9400.
 #
 # Copy this file to /etc/munin/plugins/dabmod
 # to use it, and make sure it's executable (chmod +x)
@@ -211,9 +212,9 @@ def get_rc_value(module, name, sock):
 def handle_re(graph_name, re, rc_value, group_number=1):
     match = re.search(rc_value)
     if match:
-        return "{} {}\n".format(graph_name, match.group(group_number))
+        return "{}.value {}\n".format(graph_name, match.group(group_number))
     else:
-        return "{} U\n".format(graph_name)
+        return "{}.value U\n".format(graph_name)
 
 re_double_value = re.compile(r"(\d+\.\d+)", re.X)
 re_int_value = re.compile(r"(\d+)", re.X)
@@ -226,15 +227,15 @@ if len(sys.argv) == 1:
     munin_values += "multigraph ofdm_clip_stats\n"
     ofdm_clip_stats = get_rc_value("ofdm", "clip_stats", sock)
     re_clip_samples = re.compile(r"(\d+\.\d+)%\ samples\ clipped", re.X)
-    munin_values += handle_re("clip_ratio.value ", re_clip_samples, ofdm_clip_stats)
+    munin_values += handle_re("clip_ratio", re_clip_samples, ofdm_clip_stats)
 
     re_clip_errors = re.compile(r"(\d+\.\d+)%\ errors\ clipped", re.X)
-    munin_values += handle_re("errorclip_ratio.value",
+    munin_values += handle_re("errorclip_ratio",
             re_clip_errors, ofdm_clip_stats)
 
     munin_values += "multigraph ofdm_clip_stats_mer\n"
     re_clip_mer = re.compile(r"MER\ after\ CFR:\ (\d+\.\d+)", re.X)
-    munin_values += handle_re("mer.value",
+    munin_values += handle_re("mer",
             re_clip_mer, ofdm_clip_stats)
 
     munin_values += "multigraph ofdm_papr\n"
@@ -270,7 +271,7 @@ if len(sys.argv) == 1:
 
     munin_values += "multigraph tist_offset\n"
     tist_offset = get_rc_value("tist", "offset", sock)
-    munin_values += handle_re("offset.value", re_double_value, tist_offset)
+    munin_values += handle_re("offset", re_double_value, tist_offset)
 
     # Plotting FCT is not useful because it overflows in 6s, and the poll
     # interval is usually 5min
@@ -278,17 +279,17 @@ if len(sys.argv) == 1:
     tist_timestamp = get_rc_value("tist", "timestamp", sock)
     re_tist_timestamp = re.compile(r"(\d+\.\d+)\ for\ frame\ FCT\ (\d+)", re.X)
     munin_values += "multigraph tist_timestamp\n"
-    munin_values += handle_re("timestamp.value", re_tist_timestamp, tist_timestamp, 1)
+    munin_values += handle_re("timestamp", re_tist_timestamp, tist_timestamp, 1)
 
     munin_values += "multigraph sdr_stats\n"
     sdr_underruns = get_rc_value("sdr", "underruns", sock)
-    munin_values += handle_re("underruns.value", re_int_value, sdr_underruns)
+    munin_values += handle_re("underruns", re_int_value, sdr_underruns)
     sdr_latepackets = get_rc_value("sdr", "latepackets", sock)
-    munin_values += handle_re("latepacket.value", re_int_value, sdr_latepackets)
+    munin_values += handle_re("latepacket", re_int_value, sdr_latepackets)
 
     munin_values += "multigraph sdr_frames\n"
     sdr_frames = get_rc_value("sdr", "frames", sock)
-    munin_values += handle_re("frames.value", re_int_value, sdr_frames)
+    munin_values += handle_re("frames", re_int_value, sdr_frames)
 
     print(munin_values)
 
