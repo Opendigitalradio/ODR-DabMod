@@ -285,7 +285,7 @@ if len(sys.argv) == 1:
     sdr_underruns = get_rc_value("sdr", "underruns", sock)
     munin_values += handle_re("underruns", re_int_value, sdr_underruns)
     sdr_latepackets = get_rc_value("sdr", "latepackets", sock)
-    munin_values += handle_re("latepacket", re_int_value, sdr_latepackets)
+    munin_values += handle_re("latepackets", re_int_value, sdr_latepackets)
 
     munin_values += "multigraph sdr_frames\n"
     sdr_frames = get_rc_value("sdr", "frames", sock)
