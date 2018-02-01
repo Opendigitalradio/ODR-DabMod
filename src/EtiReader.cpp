@@ -543,21 +543,25 @@ void EdiUdpInput::Open(const std::string& uri)
 {
     etiLog.level(info) << "Opening EDI :" << uri;
     size_t found_port = uri.find_first_of(":", 6);
-    if(found_port == string::npos)
+    if (found_port == string::npos) {
         throw std::invalid_argument("EDI input port must be provided");
+    }
 
-    m_port =std::stoi(uri.substr(found_port+1));
-    std::string host_full=uri.substr(6, found_port-6);// ignore udp://
+    m_port = std::stoi(uri.substr(found_port+1));
+    std::string host_full = uri.substr(6, found_port-6);// ignore udp://
     size_t found_mcast = host_full.find_first_of("@"); //have multicast address:
-    if(found_mcast != string::npos) {
-        if(found_mcast>0)
-            m_bindto=host_full.substr(0,found_mcast);
-        m_mcastaddr=host_full.substr(found_mcast+1);
-    } else if(found_port != 6) {
+    if (found_mcast != string::npos) {
+        if (found_mcast > 0) {
+            m_bindto = host_full.substr(0, found_mcast);
+        }
+        m_mcastaddr = host_full.substr(found_mcast+1);
+    }
+    else if (found_port != 6) {
         m_bindto=host_full;
     }
 
-    etiLog.level(info) << "EDI input: host:" << m_bindto << ", source:" << m_mcastaddr << ", port:" << m_port;
+    etiLog.level(info) << "EDI input: host:" << m_bindto <<
+        ", source:" << m_mcastaddr << ", port:" << m_port;
 
     // The max_fragments_queued is only a protection against a runaway
     // memory usage.

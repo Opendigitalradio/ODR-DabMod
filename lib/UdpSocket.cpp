@@ -290,11 +290,12 @@ void UdpReceiver::m_run()
         private: atomic<bool>& m_stop;
     } autoSetStop(m_stop);
 
-    if(IN_MULTICAST(ntohl(inet_addr(m_mcastaddr.c_str())))){
+    if (IN_MULTICAST(ntohl(inet_addr(m_mcastaddr.c_str())))) {
         m_sock.reinit(m_port, m_mcastaddr);
         m_sock.setMulticastSource(m_bindto.c_str());
         m_sock.joinGroup(m_mcastaddr.c_str(), m_bindto.c_str());
-    } else {
+    }
+    else {
         m_sock.reinit(m_port, m_bindto);
     }
 
