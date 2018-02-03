@@ -204,43 +204,32 @@ void USRPTime::check_gps()
     if (gpsfix_needs_check() and time_last_check + checkinterval < time_now) {
         time_last_check = time_now;
 
-        // Alternate between launching thread and checking the
-        // result.
-        if (gps_fix_task.joinable()) {
-            if (gps_fix_future.has_value()) {
-
-                gps_fix_future.wait();
-
-                gps_fix_task.join();
-
-                if (not gps_fix_future.get()) {
-                    if (num_checks_without_gps_fix == 0) {
-                        etiLog.level(alert) << "OutputUHD: GPS Time Lock lost";
-                    }
-                    num_checks_without_gps_fix++;
+        // Alternate between launching task and checking the result.
+        if (gps_fix_future.valid()) {
+            if (not gps_fix_future.get()) {
+                if (num_checks_without_gps_fix == 0) {
+                    etiLog.level(alert) << "OutputUHD: GPS Time Lock lost";
                 }
-                else {
-                    if (num_checks_without_gps_fix) {
-                        etiLog.level(info) << "OutputUHD: GPS Time Lock recovered";
-                    }
-                    num_checks_without_gps_fix = 0;
+                num_checks_without_gps_fix++;
+            }
+            else {
+                if (num_checks_without_gps_fix) {
+                    etiLog.level(info) << "OutputUHD: GPS Time Lock recovered";
                 }
+                num_checks_without_gps_fix = 0;
             }
         }
         else {
             // Checking the sensor here takes too much
             // time, it has to be done in a separate thread.
             if (gpsdo_is_ettus()) {
-                gps_fix_pt = boost::packaged_task<bool>(
-                        boost::bind(check_gps_locked, m_usrp) );
+                gps_fix_future = std::async(std::launch::async,
+                        std::bind(check_gps_locked, m_usrp) );
             }
             else {
-                gps_fix_pt = boost::packaged_task<bool>(
-                        boost::bind(check_gps_timelock, m_usrp) );
+                gps_fix_future = std::async(std::launch::async,
+                        std::bind(check_gps_timelock, m_usrp) );
             }
-            gps_fix_future = gps_fix_pt.get_future();
-
-            gps_fix_task = boost::thread(boost::move(gps_fix_pt));
         }
     }
 }

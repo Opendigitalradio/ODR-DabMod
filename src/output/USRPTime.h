@@ -42,6 +42,7 @@ DESCRIPTION:
 #include <memory>
 #include <string>
 #include <atomic>
+#include <future>
 
 #include "Log.h"
 #include "output/SDR.h"
@@ -96,9 +97,7 @@ class USRPTime {
         using timepoint_t = std::chrono::time_point<std::chrono::steady_clock>;
         timepoint_t time_last_check;
 
-        boost::packaged_task<bool> gps_fix_pt;
-        boost::unique_future<bool> gps_fix_future;
-        boost::thread gps_fix_task;
+        std::future<bool> gps_fix_future;
 
         // Returns true if we want to check for the gps_timelock sensor
         bool gpsfix_needs_check(void) const;
