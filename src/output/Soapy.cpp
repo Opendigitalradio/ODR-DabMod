@@ -36,6 +36,7 @@ DESCRIPTION:
 #include <SoapySDR/Errors.hpp>
 #include <chrono>
 #include <cstdio>
+#include <iomanip>
 
 #include "Log.h"
 #include "Utils.h"
