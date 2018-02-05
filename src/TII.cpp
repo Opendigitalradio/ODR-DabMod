@@ -153,8 +153,8 @@ TII::TII(unsigned int dabmode, const tii_config_t& tii_config) :
         throw TIIError("TII::TII comb not valid!");
     }
 
-    m_enabled_carriers.clear();
-    m_enabled_carriers.resize(m_carriers);
+    m_Acp.clear();
+    m_Acp.resize(m_carriers);
     prepare_pattern();
 }
 
@@ -199,11 +199,27 @@ int TII::process(Buffer* dataIn, Buffer* dataOut)
          * This is because we only enable 32 out of 1536 carriers, not because
          * every carrier is lower power.
          */
-        for (size_t i = 0; i < m_enabled_carriers.size(); i++) {
-            // See header file for an explanation of the old variant
-            if (m_enabled_carriers[i]) {
-                out[i] = (m_conf.old_variant ? in[i+1] : in[i]);
-                out[i+1] = in[i+1];
+        for (size_t i = 0; i < m_Acp.size(); i++) {
+            /* See header file for an explanation of the old variant.
+             *
+             * A_{c,p}(k) and A_{c,p}(k-1) are never both simultaneously true,
+             * so instead of doing the sum inside z_{m,0,k}, we could do
+             *
+             * if (m_Acp[i]) out[i] = in[i];
+             * if (m_Acp[i-1]) out[i] = in[i-1]
+             *
+             * (Considering only the new variant)
+             *
+             * To avoid messing with indices, we substitute j = i-1
+             *
+             * if (m_Acp[i]) out[i] = in[i];
+             * if (m_Acp[j]) out[j+1] = in[j]
+             *
+             * and fuse the two conditionals together:
+             */
+            if (m_Acp[i]) {
+                out[i] = in[i];
+                out[i+1] = (m_conf.old_variant ? in[i+1] : in[i]);
             }
         }
     }
@@ -217,11 +233,11 @@ int TII::process(Buffer* dataIn, Buffer* dataOut)
 void TII::enable_carrier(int k) {
     int ix = m_carriers/2 + k;
 
-    if (ix < 0 or ix+1 >= (ssize_t)m_enabled_carriers.size()) {
+    if (ix < 0 or ix+1 >= (ssize_t)m_Acp.size()) {
         throw TIIError("TII::enable_carrier invalid k!");
     }
 
-    m_enabled_carriers[ix] = true;
+    m_Acp[ix] = true;
 }
 
 void TII::prepare_pattern() {
@@ -230,8 +246,8 @@ void TII::prepare_pattern() {
     std::lock_guard<std::mutex> lock(m_enabled_carriers_mutex);
 
     // Clear previous pattern
-    for (size_t i = 0; i < m_enabled_carriers.size(); i++) {
-        m_enabled_carriers[i] = false;
+    for (size_t i = 0; i < m_Acp.size(); i++) {
+        m_Acp[i] = false;
     }
 
     // This could be written more efficiently, but since it is

@@ -43,11 +43,9 @@
 
 struct tii_config_t
 {
-    tii_config_t() : enable(false), comb(0), pattern(0), old_variant(false) {}
-
-    bool enable;
-    int comb;
-    int pattern;
+    bool enable = false;
+    int comb = 0;
+    int pattern = 0;
 
     /* EN 300 401 clause 14.8 describes how to generate the TII signal, and
      * defines z_{m,0,k}:
@@ -69,7 +67,7 @@ struct tii_config_t
      * The option 'old_variant' allows the user to choose between this
      * old incorrect implementation and the new conforming one.
      */
-    bool old_variant;
+    bool old_variant = false;
 };
 
 class TIIError : public std::runtime_error {
@@ -96,11 +94,11 @@ class TII : public ModCodec, public RemoteControllable
                 const std::string& parameter) const;
 
     protected:
-        // Fill m_enabled_carriers with the correct carriers for the pattern/comb
+        // Fill m_Acp with the correct carriers for the pattern/comb
         // combination
         void prepare_pattern(void);
 
-        // prerequisites: calling thread must hold m_enabled_carriers mutex
+        // prerequisites: calling thread must hold m_Acp mutex
         void enable_carrier(int k);
 
         // Configuration settings
@@ -116,12 +114,13 @@ class TII : public ModCodec, public RemoteControllable
 
         std::string m_name;
 
-        // m_enabled_carriers is read by modulator thread, and written
+        // m_Acp is read by modulator thread, and written
         // to by RC thread.
         mutable std::mutex m_enabled_carriers_mutex;
 
-        // m_enabled_carriers is true only for the first carrier in the
-        // active pair
-        std::vector<bool> m_enabled_carriers;
+        // m_Acp corresponds to the A_{c,p}(k) function from the spec, except
+        // that the leftmost carrier is at index 0, and not at -m_carriers/2 like
+        // in the spec.
+        std::vector<bool> m_Acp;
 };
 
