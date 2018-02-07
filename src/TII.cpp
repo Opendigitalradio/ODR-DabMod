@@ -230,8 +230,16 @@ int TII::process(Buffer* dataIn, Buffer* dataOut)
     return 1;
 }
 
-void TII::enable_carrier(int k) {
-    int ix = m_carriers/2 + k;
+void TII::enable_carrier(int k)
+{
+    /* The OFDMGenerator shifts all positive frequencies by one,
+     * i.e. index 0 is not the DC component, it's the first positive
+     * frequency. Because this is different from the definition of k
+     * from the spec, we need to compensate this here.
+     *
+     * Positive frequencies are k > 0
+     */
+    int ix = m_carriers/2 + k + (k>=0 ? -1 : 0);
 
     if (ix < 0 or ix+1 >= (ssize_t)m_Acp.size()) {
         throw TIIError("TII::enable_carrier invalid k!");
@@ -240,7 +248,8 @@ void TII::enable_carrier(int k) {
     m_Acp[ix] = true;
 }
 
-void TII::prepare_pattern() {
+void TII::prepare_pattern()
+{
     int comb = m_conf.comb; // Convert from unsigned to signed
 
     std::lock_guard<std::mutex> lock(m_enabled_carriers_mutex);

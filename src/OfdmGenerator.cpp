@@ -207,11 +207,17 @@ int OfdmGenerator::process(Buffer* const dataIn, Buffer* dataOut)
         myFftIn[0][0] = 0;
         myFftIn[0][1] = 0;
 
+        /* For TM I this is:
+         * ZeroDst=769 ZeroSize=511
+         * PosSrc=0 PosDst=1 PosSize=768
+         * NegSrc=768 NegDst=1280 NegSize=768
+         */
         memset(&myFftIn[myZeroDst], 0, myZeroSize * sizeof(FFT_TYPE));
         memcpy(&myFftIn[myPosDst], &in[myPosSrc],
                 myPosSize * sizeof(FFT_TYPE));
         memcpy(&myFftIn[myNegDst], &in[myNegSrc],
                 myNegSize * sizeof(FFT_TYPE));
+
 
         if (myCfr) {
             reference.resize(mySpacing);
