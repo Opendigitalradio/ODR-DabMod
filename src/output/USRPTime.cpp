@@ -88,6 +88,26 @@ USRPTime::USRPTime(
     m_conf(conf),
     time_last_check(timepoint_t::clock::now())
 {
+
+    if (m_conf.pps_src == "gpsdo") {
+        using namespace std::chrono;
+        auto now = system_clock::now();
+        auto expiry = now + seconds(m_conf.maxGPSHoldoverTime);
+        auto checkfunc = gpsdo_is_ettus() ? check_gps_locked : check_gps_timelock;
+        while (now < expiry) {
+            if (checkfunc(m_usrp)) {
+                break;
+            }
+
+            now = system_clock::now();
+            this_thread::sleep_for(seconds(1));
+        }
+
+        if (not checkfunc(m_usrp)) {
+            throw runtime_error("GPSDO did not lock during startup");
+        }
+    }
+
     if (m_conf.pps_src == "none") {
         if (m_conf.enableSync) {
             etiLog.level(warn) <<
@@ -266,16 +286,21 @@ void USRPTime::set_usrp_time_from_pps()
      * Wait 200ms to ensure the PPS comes later. */
     this_thread::sleep_for(milliseconds(200));
 
-    const auto time_set = uhd::time_spec_t(secs_since_epoch + 2);
+    const auto time_set = uhd::time_spec_t(secs_since_epoch + 3, 0.0);
     etiLog.level(info) << "OutputUHD: Setting USRP time next pps to " <<
         std::fixed << time_set.get_real_secs();
-    m_usrp->set_time_next_pps(time_set);
+    m_usrp->set_time_unknown_pps(time_set);
 
     // The UHD doc says we need to give the USRP one second to update
     // all the internal registers.
     this_thread::sleep_for(seconds(1));
+    const auto time_usrp = m_usrp->get_time_now();
     etiLog.level(info) << "OutputUHD: USRP time " <<
-        std::fixed << m_usrp->get_time_now().get_real_secs();
+        std::fixed << time_usrp.get_real_secs();
+
+    if (std::abs(time_usrp.get_real_secs() - time_set.get_real_secs()) > 10.0) {
+        throw runtime_error("OutputUHD: Unable to set USRP time!");
+    }
 }
 
 } // namespace Output

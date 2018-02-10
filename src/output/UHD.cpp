@@ -136,8 +136,6 @@ UHD::UHD(SDRDeviceConfig& config) :
     }
     m_usrp->set_time_source(m_conf.pps_src);
 
-    m_device_time = std::make_shared<USRPTime>(m_usrp, m_conf);
-
     if (m_conf.subDevice != "") {
         m_usrp->set_tx_subdev_spec(uhd::usrp::subdev_spec_t(m_conf.subDevice),
                 uhd::usrp::multi_usrp::ALL_MBOARDS);
@@ -146,6 +144,8 @@ UHD::UHD(SDRDeviceConfig& config) :
     etiLog.level(debug) << "UHD clock source is " << m_usrp->get_clock_source(0);
 
     etiLog.level(debug) << "UHD time source is " << m_usrp->get_time_source(0);
+
+    m_device_time = std::make_shared<USRPTime>(m_usrp, m_conf);
 
     m_usrp->set_tx_rate(m_conf.sampleRate);
     etiLog.log(debug, "OutputUHD:Set rate to %d. Actual TX Rate: %f sps...",
