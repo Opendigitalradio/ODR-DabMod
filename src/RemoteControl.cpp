@@ -108,7 +108,7 @@ void RemoteControllerTelnet::handle_accept(
         boost::asio::ip::tcp::acceptor& acceptor)
 {
 
-    const std::string welcome = "ODR-DabMux Remote Control CLI\n"
+    const std::string welcome = "ODR-DabMod Remote Control CLI\n"
                                 "Write 'help' for help.\n"
                                 "**********\n";
     const std::string prompt = "> ";
