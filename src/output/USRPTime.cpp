@@ -48,14 +48,29 @@ static bool check_gps_timelock(uhd::usrp::multi_usrp::sptr& usrp)
             usrp->get_mboard_sensor("gps_timelock", 0).to_pp_string();
 
         if (sensor_value.find("TIME LOCKED") == string::npos) {
-            etiLog.level(warn) << "OutputUHD: gps_timelock " << sensor_value;
+
+            const string gngga =
+                usrp->get_mboard_sensor("gps_gngga", 0).to_pp_string();
+
+            std::stringstream ss(gngga);
+            std::string item;
+            std::vector<std::string> elems;
+            while (std::getline(ss, item, ',')) {
+                elems.push_back(item);
+            }
+
+            const auto num_svs = (elems.size() >= 7) ? elems[7] : "?";
+
+            etiLog.level(info) << "OutputUHD: " << num_svs << " SVs,"
+                " gps_timelock " << sensor_value;
             return false;
         }
 
         return true;
     }
-    catch (const uhd::lookup_error &e) {
-        etiLog.level(warn) << "OutputUHD: no gps_timelock sensor";
+    catch (const uhd::exception &e) {
+        etiLog.level(warn) << "OutputUHD: no gps_timelock sensor: " <<
+            e.what();
         return false;
     }
 }
@@ -74,8 +89,9 @@ static bool check_gps_locked(uhd::usrp::multi_usrp::sptr& usrp)
 
         return true;
     }
-    catch (const uhd::lookup_error &e) {
-        etiLog.level(warn) << "OutputUHD: no gps_locked sensor";
+    catch (const uhd::exception &e) {
+        etiLog.level(warn) << "OutputUHD: no gps_locked sensor" <<
+            e.what();
         return false;
     }
 }
@@ -100,7 +116,7 @@ USRPTime::USRPTime(
             }
 
             now = system_clock::now();
-            this_thread::sleep_for(seconds(1));
+            this_thread::sleep_for(seconds(2));
         }
 
         if (not checkfunc(m_usrp)) {
