@@ -2,7 +2,7 @@
    Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010 Her Majesty the
    Queen in Right of Canada (Communications Research Center Canada)
 
-   Copyright (C) 2017
+   Copyright (C) 2018
    Matthias P. Braendli, matthias.braendli@mpb.li
 
     http://opendigitalradio.org
@@ -46,6 +46,7 @@ TimestampDecoder::TimestampDecoder(double& offset_s) :
 
     RC_ADD_PARAMETER(offset, "TIST offset [s]");
     RC_ADD_PARAMETER(timestamp, "FCT and timestamp [s]");
+    RC_ADD_PARAMETER(timestamp0, "Timestamp of frame with FCT=0 [s]");
 
     etiLog.level(info) << "Setting up timestamp decoder with " <<
         timestamp_offset << " offset";
@@ -163,6 +164,11 @@ void TimestampDecoder::updateTimestampEti(
     pushMNSCData(framephase, mnsc);
     latestFCT = fct;
     latestFP = framephase;
+
+    if (full_timestamp_received and fct == 0) {
+        time_secs_of_frame0 = time_secs;
+        time_pps_of_frame0 = time_pps;
+    }
 }
 
 void TimestampDecoder::updateTimestampEdi(
@@ -176,6 +182,11 @@ void TimestampDecoder::updateTimestampEdi(
     latestFCT = fct;
     latestFP = framephase;
     full_timestamp_received = true;
+
+    if (fct == 0) {
+        time_secs_of_frame0 = time_secs;
+        time_pps_of_frame0 = time_pps;
+    }
 }
 
 void TimestampDecoder::set_parameter(
@@ -193,6 +204,9 @@ void TimestampDecoder::set_parameter(
     }
     else if (parameter == "timestamp") {
         throw ParameterError("timestamp is read-only");
+    }
+    else if (parameter == "timestamp0") {
+        throw ParameterError("timestamp0 is read-only");
     }
     else {
         stringstream ss_err;
@@ -216,6 +230,17 @@ const std::string TimestampDecoder::get_parameter(
             ss.setf(std::ios_base::fixed, std::ios_base::floatfield);
             ss << time_secs + ((double)time_pps / 16384000.0) <<
                 " for frame FCT " << latestFCT;
+        }
+        else {
+            throw ParameterError("Not available yet");
+        }
+    }
+    else if (parameter == "timestamp0") {
+        if (full_timestamp_received) {
+            ss.setf(std::ios_base::fixed, std::ios_base::floatfield);
+            ss << time_secs_of_frame0 +
+                ((double)time_pps_of_frame0 / 16384000.0) <<
+                " for frame FCT 0";
         }
         else {
             throw ParameterError("Not available yet");

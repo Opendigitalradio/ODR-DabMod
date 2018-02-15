@@ -165,6 +165,9 @@ class TimestampDecoder : public RemoteControllable
         int inhibit_second_update = 0;
         bool offset_changed = false;
 
+        uint32_t time_secs_of_frame0 = 0;
+        uint32_t time_pps_of_frame0 = 0;
+
         /* When the type or identifier don't match, the decoder must
          * be disabled
          */
