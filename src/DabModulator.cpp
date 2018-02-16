@@ -121,12 +121,7 @@ int DabModulator::process(Buffer* dataOut)
     PDEBUG("DabModulator::process(dataOut: %p)\n", dataOut);
 
     if (not myFlowgraph) {
-        unsigned mode = myEtiSource.getMode();
-        if (m_settings.dabMode != 0) {
-            mode = m_settings.dabMode;
-        } else if (mode == 0) {
-            mode = 4;
-        }
+        const unsigned mode = m_settings.dabMode;
         setMode(mode);
 
         myFlowgraph = make_shared<Flowgraph>();

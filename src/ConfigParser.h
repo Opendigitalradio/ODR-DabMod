@@ -52,7 +52,7 @@ struct mod_settings_t {
 
     size_t outputRate = 2048000;
     size_t clockRate = 0;
-    unsigned dabMode = 0;
+    unsigned dabMode = 1;
     float digitalgain = 1.0f;
     float normalise = 1.0f;
     GainMode gainMode = GainMode::GAIN_VAR;
