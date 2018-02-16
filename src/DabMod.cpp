@@ -472,10 +472,10 @@ static run_modulator_state_t run_modulator(modulator_data& m)
 {
     auto ret = run_modulator_state_t::failure;
     try {
-        while (running) {
+        bool first_frame = true;
 
+        while (running) {
             int framesize;
-            bool first_frame = true;
 
             PDEBUG("*****************************************\n");
             PDEBUG("* Starting main loop\n");
