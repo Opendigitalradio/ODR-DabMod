@@ -70,7 +70,7 @@ void printUsage(const char* progName)
 
     FILE* out = stderr;
     fprintf(out, "Usage with configuration file:\n");
-    fprintf(out, "\t%s [-C] config_file.ini\n\n", progName);
+    fprintf(out, "\t%s config_file.ini\n\n", progName);
 
     fprintf(out, "Usage with command line options:\n");
     fprintf(out, "\t%s"
