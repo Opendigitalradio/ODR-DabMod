@@ -214,7 +214,8 @@ static void parse_configfile(
         }
         mod_settings.useFileOutput = true;
 
-        mod_settings.fileOutputFormat = pt.get("fileoutput.format", mod_settings.fileOutputFormat);
+        mod_settings.fileOutputFormat = pt.get("fileoutput.format",
+                mod_settings.fileOutputFormat);
     }
 #if defined(HAVE_OUTPUT_UHD)
     else if (output_selected == "uhd") {
@@ -409,9 +410,18 @@ void parse_args(int argc, char **argv, mod_settings_t& mod_settings)
             mod_settings.useFileOutput = true;
             break;
         case 'F':
+            if (mod_settings.useFileOutput) {
+                mod_settings.fileOutputFormat = optarg;
+            }
 #if defined(HAVE_OUTPUT_UHD)
-            mod_settings.sdr_device_config.frequency = strtof(optarg, NULL);
+            else if (mod_settings.useUHDOutput) {
+                mod_settings.sdr_device_config.frequency = strtof(optarg, NULL);
+            }
 #endif
+            else {
+                fprintf(stderr, "Cannot use -F before setting output!\n");
+                throw std::invalid_argument("Invalid command line options");
+            }
             break;
         case 'g':
             mod_settings.gainMode = parse_gainmode(optarg);

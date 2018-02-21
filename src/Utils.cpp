@@ -75,12 +75,14 @@ void printUsage(const char* progName)
     fprintf(out, "Usage with command line options:\n");
     fprintf(out, "\t%s"
             " input"
-            " (-f filename | -u uhddevice -F frequency) "
+            " (-f filename -F format | -u uhddevice -F frequency)"
+            "\n\t"
             " [-G txgain]"
             " [-o offset]"
             " [-T filter_taps_file]"
             " [-a gain]"
             " [-c clockrate]"
+            "\n\t"
             " [-g gainMode]"
             " [-h]"
             " [-l]"
@@ -93,6 +95,7 @@ void printUsage(const char* progName)
     fprintf(out, "                  zmq+tcp://source:port for ZMQ input.\n");
     fprintf(out, "                  udp://:port for EDI input.\n");
     fprintf(out, "-f name:       Use file output with given filename. (use /dev/stdout for standard output)\n");
+    fprintf(out, "-F format:     Set the output format (see doc/example.ini for formats) for the file output.\n");
     fprintf(out, "-u device:     Use UHD output with given device string. (use "" for default device)\n");
     fprintf(out, "-F frequency:  Set the transmit frequency when using UHD output. (mandatory option when using UHD)\n");
     fprintf(out, "-G txgain:     Set the transmit gain for the UHD driver (default: 0)\n");
