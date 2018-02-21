@@ -108,7 +108,7 @@ class Adapt:
         returns the answer ODR-DabMod sends back.
 
         An example message could be
-        "get uhd txgain" or "set uhd txgain 50"
+        "get sdr txgain" or "set sdr txgain 50"
 
         Parameter
         ---------
@@ -141,12 +141,12 @@ class Adapt:
         # TODO this is specific to the B200
         if gain < 0 or gain > 89:
             raise ValueError("Gain has to be in [0,89]")
-        return self.send_receive("set uhd txgain %.4f" % float(gain))
+        return self.send_receive("set sdr txgain %.4f" % float(gain))
 
     def get_txgain(self):
         """Get the txgain value in dB for the ODR-DabMod."""
         # TODO handle failure
-        return float(self.send_receive("get uhd txgain")[0])
+        return float(self.send_receive("get sdr txgain")[0])
 
     def set_rxgain(self, gain):
         """Set a new rxgain for the ODR-DabMod.
@@ -159,12 +159,12 @@ class Adapt:
         # TODO this is specific to the B200
         if gain < 0 or gain > 89:
             raise ValueError("Gain has to be in [0,89]")
-        return self.send_receive("set uhd rxgain %.4f" % float(gain))
+        return self.send_receive("set sdr rxgain %.4f" % float(gain))
 
     def get_rxgain(self):
         """Get the rxgain value in dB for the ODR-DabMod."""
         # TODO handle failure
-        return float(self.send_receive("get uhd rxgain")[0])
+        return float(self.send_receive("get sdr rxgain")[0])
 
     def set_digital_gain(self, gain):
         """Set a new rxgain for the ODR-DabMod.

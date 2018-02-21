@@ -146,7 +146,7 @@ if cli_args.status:
     dpddata = dpddata_to_str(adapt.get_predistorter())
 
     logging.info("ODR-DabMod currently running with TXGain {}, RXGain {}, digital gain {} and {}".format(
-        rxgain, rxgain, digital_gain, dpddata))
+        txgain, rxgain, digital_gain, dpddata))
     sys.exit(0)
 
 if cli_args.lut:
@@ -279,6 +279,8 @@ while i < num_iter:
     except:
         logging.error('Iteration {} failed.'.format(i))
         logging.error(traceback.format_exc())
+        i += 1
+        state = 'measure'
 
 # The MIT License (MIT)
 #
