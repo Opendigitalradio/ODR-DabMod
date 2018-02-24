@@ -34,7 +34,6 @@
 #include <boost/property_tree/ini_parser.hpp>
 
 #include "ConfigParser.h"
-#include "porting.h"
 #include "Utils.h"
 #include "Log.h"
 #include "DabModulator.h"

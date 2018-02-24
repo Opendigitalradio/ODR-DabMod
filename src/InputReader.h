@@ -39,7 +39,6 @@
 #  include "zmq.hpp"
 #  include "ThreadsafeQueue.h"
 #endif
-#include "porting.h"
 #include "Log.h"
 #include <unistd.h>
 #define INVALID_SOCKET   -1

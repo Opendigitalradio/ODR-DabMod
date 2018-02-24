@@ -45,8 +45,6 @@ odr_dabmod_LDADD    = $(FFT_LDADD) $(BOOST_LDFLAGS) $(BOOST_THREAD_LIB) $(BOOST_
 odr_dabmod_SOURCES  = src/DabMod.cpp \
 					  src/PcDebug.h \
 					  src/Socket.h \
-					  src/porting.c \
-					  src/porting.h \
 					  src/DabModulator.cpp \
 					  src/DabModulator.h \
 					  src/Buffer.cpp \

@@ -30,7 +30,6 @@
 #   include "config.h"
 #endif
 
-#include "porting.h"
 #include "ModPlugin.h"
 
 #include <sys/types.h>

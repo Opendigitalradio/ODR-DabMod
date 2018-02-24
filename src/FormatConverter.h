@@ -32,7 +32,6 @@
 #   include <config.h>
 #endif
 
-#include "porting.h"
 #include "ModPlugin.h"
 #include <complex>
 #include <string>

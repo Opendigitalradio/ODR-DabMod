@@ -29,7 +29,6 @@
 #   include "config.h"
 #endif
 
-#include "porting.h"
 #include "Utils.h"
 #include "Log.h"
 #include "DabModulator.h"

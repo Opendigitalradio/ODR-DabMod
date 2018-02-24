@@ -39,7 +39,6 @@
 #include <errno.h>
 #include <stdint.h>
 #include <sys/stat.h>
-#include "porting.h"
 #include "InputReader.h"
 #include "PcDebug.h"
 
