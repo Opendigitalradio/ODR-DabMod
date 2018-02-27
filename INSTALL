@@ -36,7 +36,7 @@ The configure script can be launch with a variety of options:
 
 Debugging options: You should not enable debug if you need good performance.
 By default, debug is disabled.
- --enable-debug         Do not compile with debugging, and enable optimisations
+ --enable-debug         Compile with debugging, and disable optimisations
  --enable-trace         Create debugging files for each DSP block for data analysis
 
 For more information, call:
