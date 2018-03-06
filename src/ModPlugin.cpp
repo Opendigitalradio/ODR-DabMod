@@ -2,7 +2,7 @@
    Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010 Her Majesty the
    Queen in Right of Canada (Communications Research Center Canada)
 
-   Copyright (C) 2017
+   Copyright (C) 2018
    Matthias P. Braendli, matthias.braendli@mpb.li
 
     http://opendigitalradio.org
@@ -29,6 +29,7 @@
 #include "Utils.h"
 #include <stdexcept>
 #include <string>
+#include <cstring>
 
 #define MODASSERT(cond) \
     if (not (cond)) { \
@@ -92,16 +93,14 @@ int PipelinedModCodec::process(Buffer* dataIn, Buffer* dataOut)
         return 0;
     }
 
-    std::shared_ptr<Buffer> inbuffer =
-        std::make_shared<Buffer>(dataIn->getLength(), dataIn->getData());
-
-    m_input_queue.push(inbuffer);
+    Buffer inbuffer;
+    std::swap(inbuffer, *dataIn);
+    m_input_queue.push(std::move(inbuffer));
 
     if (m_ready_to_output_data) {
-        std::shared_ptr<Buffer> outbuffer;
+        Buffer outbuffer;
         m_output_queue.wait_and_pop(outbuffer);
-
-        dataOut->setData(outbuffer->getData(), outbuffer->getLength());
+        std::swap(outbuffer, *dataOut);
     }
     else {
         dataOut->setLength(dataIn->getLength());
@@ -132,21 +131,21 @@ void PipelinedModCodec::process_thread()
     set_realtime_prio(1);
 
     while (m_running) {
-        std::shared_ptr<Buffer> dataIn;
+        Buffer dataIn;
         m_input_queue.wait_and_pop(dataIn);
 
-        if (!dataIn or dataIn->getLength() == 0) {
+        if (dataIn.getLength() == 0) {
             break;
         }
 
-        std::shared_ptr<Buffer> dataOut = std::make_shared<Buffer>();
-        dataOut->setLength(dataIn->getLength());
+        Buffer dataOut;
+        dataOut.setLength(dataIn.getLength());
 
-        if (internal_process(dataIn.get(), dataOut.get()) == 0) {
+        if (internal_process(&dataIn, &dataOut) == 0) {
             m_running = false;
         }
 
-        m_output_queue.push(dataOut);
+        m_output_queue.push(std::move(dataOut));
     }
 
     m_running = false;

@@ -36,7 +36,6 @@
 #include <cstdio>
 #include <stdint.h>
 #include "zmq.hpp"
-#include <boost/thread/thread.hpp>
 #include "InputReader.h"
 #include "PcDebug.h"
 #include "Utils.h"
@@ -88,7 +87,7 @@ int InputZeroMQReader::Open(const string& uri, size_t max_queued_frames)
 
     m_max_queued_frames = max_queued_frames;
 
-    m_recv_thread = boost::thread(&InputZeroMQReader::RecvProcess, this);
+    m_recv_thread = std::thread(&InputZeroMQReader::RecvProcess, this);
 
     return 0;
 }
@@ -99,7 +98,7 @@ int InputZeroMQReader::GetNextFrame(void* buffer)
         return 0;
     }
 
-    shared_ptr<vector<uint8_t> > incoming;
+    vector<uint8_t> incoming;
 
     /* Do some prebuffering because reads will happen in bursts
      * (4 ETI frames in TM1) and we should make sure that
@@ -122,11 +121,11 @@ int InputZeroMQReader::GetNextFrame(void* buffer)
 
 
     const size_t framesize = 6144;
-    if (incoming->empty()) {
+    if (incoming.empty()) {
         return 0;
     }
-    else if (incoming->size() == framesize) {
-        memcpy(buffer, &incoming->front(), framesize);
+    else if (incoming.size() == framesize) {
+        memcpy(buffer, &incoming.front(), framesize);
     }
     else {
         throw logic_error("ZMQ ETI not 6144");
@@ -184,7 +183,7 @@ void InputZeroMQReader::RecvProcess()
             const int num_events = zmq::poll(items, 1, zmq_timeout_ms);
             if (num_events == 0) {
                 // timeout is signalled by an empty buffer
-                auto buf = make_shared<vector<uint8_t> >();
+                vector<uint8_t> buf;
                 m_in_messages.push(buf);
                 continue;
             }
@@ -228,7 +227,7 @@ void InputZeroMQReader::RecvProcess()
                             throw runtime_error(ss.str());
                         }
                         else {
-                            auto buf = make_shared<vector<uint8_t> >(6144, 0x55);
+                            vector<uint8_t> buf(6144, 0x55);
 
                             const int framesize = dab_msg->buflen[i];
 
@@ -236,13 +235,13 @@ void InputZeroMQReader::RecvProcess()
                                 throw runtime_error("ZeroMQ packet too small");
                             }
 
-                            memcpy(&buf->front(),
+                            memcpy(&buf.front(),
                                     ((uint8_t*)incoming.data()) + offset,
                                     framesize);
 
                             offset += framesize;
 
-                            queue_size = m_in_messages.push(buf);
+                            queue_size = m_in_messages.push(move(buf));
                             etiLog.log(trace, "ZMQ,push %zu", queue_size);
                         }
                     }

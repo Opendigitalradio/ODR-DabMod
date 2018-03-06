@@ -173,12 +173,12 @@ class InputZeroMQReader : public InputReader
         std::atomic<bool> m_running = ATOMIC_VAR_INIT(false);
         std::string m_uri;
         size_t m_max_queued_frames = 0;
-        ThreadsafeQueue<std::shared_ptr<std::vector<uint8_t> > > m_in_messages;
+        ThreadsafeQueue<std::vector<uint8_t> > m_in_messages;
 
         void RecvProcess(void);
 
         zmq::context_t m_zmqcontext; // is thread-safe
-        boost::thread m_recv_thread;
+        std::thread m_recv_thread;
 
         /* We must be careful to keep frame phase consistent. If we
          * drop a single ETI frame, we will break the transmission

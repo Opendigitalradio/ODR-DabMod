@@ -77,6 +77,12 @@ Buffer::~Buffer()
     }
 }
 
+void Buffer::swap(Buffer& other)
+{
+    std::swap(m_len, other.m_len);
+    std::swap(m_capacity, other.m_capacity);
+    std::swap(m_data, other.m_data);
+}
 
 Buffer& Buffer::operator=(const Buffer& other)
 {
@@ -142,6 +148,13 @@ void Buffer::setData(const void *data, size_t len)
     appendData(data, len);
 }
 
+uint8_t Buffer::operator[](size_t i) const
+{
+    if (i >= m_len) {
+        throw std::out_of_range("index out of range");
+    }
+    return reinterpret_cast<uint8_t*>(m_data)[i];
+}
 
 void Buffer::appendData(const void *data, size_t len)
 {
@@ -151,5 +164,10 @@ void Buffer::appendData(const void *data, size_t len)
     if (data != nullptr) {
         memcpy((char*)m_data + offset, data, len);
     }
+}
+
+void swap(Buffer& buf1, Buffer& buf2)
+{
+    buf1.swap(buf2);
 }
 

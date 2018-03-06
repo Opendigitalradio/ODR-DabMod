@@ -50,6 +50,8 @@ class Buffer {
         Buffer(const std::vector<uint8_t>& vec);
         ~Buffer();
 
+        void swap(Buffer& other);
+
         /* Resize the buffer, reallocate memory if needed */
         void setLength(size_t len);
 
@@ -59,6 +61,8 @@ class Buffer {
         Buffer& operator=(const Buffer& other);
         Buffer& operator=(Buffer&& other);
         Buffer& operator=(const std::vector<uint8_t>& buf);
+
+        uint8_t operator[](size_t i) const;
 
         /* Concatenate the current data with the new data given.
          * Reallocates memory if needed. */
@@ -79,4 +83,6 @@ class Buffer {
          * handled by setLength. */
         void *m_data;
 };
+
+void swap(Buffer& buf1, Buffer& buf2);
 

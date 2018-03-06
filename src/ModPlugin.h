@@ -2,7 +2,7 @@
    Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010, 2011 Her Majesty
    the Queen in Right of Canada (Communications Research Center Canada)
 
-   Copyright (C) 2017
+   Copyright (C) 2018
    Matthias P. Braendli, matthias.braendli@mpb.li
 
     http://opendigitalradio.org
@@ -114,8 +114,8 @@ protected:
 private:
     bool m_ready_to_output_data = false;
 
-    ThreadsafeQueue<std::shared_ptr<Buffer> > m_input_queue;
-    ThreadsafeQueue<std::shared_ptr<Buffer> > m_output_queue;
+    ThreadsafeQueue<Buffer> m_input_queue;
+    ThreadsafeQueue<Buffer> m_output_queue;
 
     std::deque<meta_vec_t> m_metadata_fifo;
 
