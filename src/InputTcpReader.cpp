@@ -3,7 +3,7 @@
    Her Majesty the Queen in Right of Canada (Communications Research
    Center Canada)
 
-   Copyright (C) 2016
+   Copyright (C) 2018
    Matthias P. Braendli, matthias.braendli@mpb.li
 
     http://www.opendigitalradio.org
@@ -34,24 +34,6 @@
 #include "Utils.h"
 #include <unistd.h>
 #include <errno.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <netdb.h>
-#include <arpa/inet.h>
-
-InputTcpReader::InputTcpReader()
-{
-    if ((m_sock = socket(PF_INET, SOCK_STREAM, 0)) == INVALID_SOCKET) {
-        throw std::runtime_error("Can't create TCP socket");
-    }
-}
-
-InputTcpReader::~InputTcpReader()
-{
-    if (m_sock != INVALID_SOCKET) {
-        close(m_sock);
-    }
-}
 
 void InputTcpReader::Open(const std::string& endpoint)
 {
@@ -79,35 +61,7 @@ void InputTcpReader::Open(const std::string& endpoint)
 
     hostname = hostname.substr(0, colon_pos);
 
-    struct sockaddr_in addr;
-    addr.sin_family = PF_INET;
-    addr.sin_addr.s_addr = htons(INADDR_ANY);
-    addr.sin_port = htons(port);
-
-    hostent *host = gethostbyname(hostname.c_str());
-    if (host) {
-        addr.sin_addr = *(in_addr *)(host->h_addr);
-    }
-    else {
-        std::stringstream ss;
-        ss << "Could not resolve hostname " << hostname << ": " << strerror(errno);
-        throw std::runtime_error(ss.str());
-    }
-
-    /* Set recv timeout of 30s, see socket(7) for details */
-    struct timeval tv = {0};
-    tv.tv_sec = 30;
-    if (setsockopt(m_sock, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(struct timeval)) == -1) {
-        std::stringstream ss;
-        ss << "Could not set socket recv timeout: " << strerror(errno);
-        throw std::runtime_error(ss.str());
-    }
-
-    if (connect(m_sock, (struct sockaddr*)&addr, sizeof(addr)) == -1) {
-        std::stringstream ss;
-        ss << "Could not connect to " << hostname << ":" << port << " :" << strerror(errno);
-        throw std::runtime_error(ss.str());
-    }
+    m_tcpclient.connect(hostname, port);
 
     m_uri = endpoint;
 }
@@ -117,16 +71,16 @@ int InputTcpReader::GetNextFrame(void* buffer)
     uint8_t* buf = (uint8_t*)buffer;
 
     const size_t framesize = 6144;
+    const int timeout_ms = 8000;
 
-    ssize_t r = recv(m_sock, buf, framesize, MSG_WAITALL);
+    ssize_t ret = m_tcpclient.recv(buf, framesize, MSG_WAITALL, timeout_ms);
 
-    if (r == -1) {
-        std::stringstream ss;
-        ss << "Could not receive from socket :" << strerror(errno);
-        throw std::runtime_error(ss.str());
+    if (ret == 0) {
+        etiLog.level(debug) << "TCP input auto reconnect";
+        std::this_thread::sleep_for(std::chrono::seconds(1));
     }
 
-    return r;
+    return ret;
 }
 
 void InputTcpReader::PrintInfo() const

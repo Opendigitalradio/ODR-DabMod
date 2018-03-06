@@ -528,8 +528,12 @@ static run_modulator_state_t run_modulator(modulator_data& m)
                      */
                 }
 #endif // defined(HAVE_ZEROMQ)
-                // No need to handle the TCP input in a special way to get SIGINT working,
-                // because recv() will return with EINTR.
+                else if (dynamic_pointer_cast<InputTcpReader>(m.inputReader)) {
+                    /* Same as for ZeroMQ */
+                }
+                else {
+                    throw logic_error("Unhandled framesize==0!");
+                }
             }
             else {
                 etiLog.level(error) << "Input read error.";

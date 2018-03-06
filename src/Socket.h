@@ -2,7 +2,7 @@
    Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010 Her Majesty the
    Queen in Right of Canada (Communications Research Center Canada)
 
-   Copyright (C) 2017
+   Copyright (C) 2018
    Matthias P. Braendli, matthias.braendli@mpb.li
 
     http://opendigitalradio.org
@@ -34,150 +34,71 @@ DESCRIPTION:
 #   include <config.h>
 #endif
 
-#include <unistd.h>
-#include <cstdint>
 #include <stdexcept>
 #include <string>
-#include <sys/socket.h>
-#include <netinet/ip.h>
+#include <cstdint>
+#include <cstring>
+#include <unistd.h>
 #include <errno.h>
 #include <poll.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <netdb.h>
+#include <arpa/inet.h>
 
 class TCPSocket {
     public:
-        TCPSocket() {
-            if ((m_sock = socket(PF_INET, SOCK_STREAM, 0)) < 0) {
-                throw std::runtime_error("Can't create TCP socket");
-            }
-
-#if defined(HAVE_SO_NOSIGPIPE)
-            int val = 1;
-            if (setsockopt(m_sock, SOL_SOCKET, SO_NOSIGPIPE,
-                        &val, sizeof(val)) < 0) {
-                throw std::runtime_error("Can't set SO_NOSIGPIPE");
-            }
-#endif
-        }
-
-        ~TCPSocket() {
-            if (m_sock != -1) {
-                ::close(m_sock);
-            }
-        }
-
+        TCPSocket();
+        ~TCPSocket();
         TCPSocket(const TCPSocket& other) = delete;
         TCPSocket& operator=(const TCPSocket& other) = delete;
-        TCPSocket(TCPSocket&& other) {
-            m_sock = other.m_sock;
+        TCPSocket(TCPSocket&& other);
+        TCPSocket& operator=(TCPSocket&& other);
 
-            if (other.m_sock != -1) {
-                other.m_sock = -1;
-            }
-        }
+        bool valid(void) const;
+        void connect(const std::string& hostname, int port);
+        void listen(int port);
+        void close(void);
 
-        TCPSocket& operator=(TCPSocket&& other)
-        {
-            m_sock = other.m_sock;
+        /* throws a runtime_error on failure, an invalid socket on timeout */
+        TCPSocket accept_with_timeout(int timeout_ms, struct sockaddr_in *client);
 
-            if (other.m_sock != -1) {
-                other.m_sock = -1;
-            }
+        /* returns -1 on error */
+        ssize_t sendall(const void *buffer, size_t buflen);
 
-            return *this;
-        }
+        /* Returns number of bytes read, 0 on disconnect. Throws a
+         * runtime_error on error */
+        ssize_t recv(void *buffer, size_t length, int flags);
 
-        bool valid(void) const {
-            return m_sock != -1;
-        }
-
-        void listen(int port) {
-            struct sockaddr_in addr;
-            addr.sin_family = AF_INET;
-            addr.sin_port = htons(port);
-            addr.sin_addr.s_addr = htonl(INADDR_ANY);
-
-            const int reuse = 1;
-            if (setsockopt(m_sock, SOL_SOCKET, SO_REUSEADDR,
-                        &reuse, sizeof(reuse)) < 0) {
-                throw std::runtime_error("Can't reuse address for TCP socket");
-            }
-
-            if (::bind(m_sock, (struct sockaddr*)&addr, sizeof(addr)) < 0) {
-                close();
-                throw std::runtime_error("Can't bind TCP socket");
-            }
-
-            if (::listen(m_sock, 1) < 0) {
-                close();
-                m_sock = -1;
-                throw std::runtime_error("Can't listen TCP socket");
-            }
-
-        }
-
-        void close(void) {
-            ::close(m_sock);
-            m_sock = -1;
-        }
-
-        TCPSocket accept_with_timeout(int timeout_ms, struct sockaddr_in *client)
-        {
-            struct pollfd fds[1];
-            fds[0].fd = m_sock;
-            fds[0].events = POLLIN | POLLOUT;
-
-            int retval = poll(fds, 1, timeout_ms);
-
-            if (retval == -1) {
-                throw std::runtime_error("TCP Socket accept error: " + std::to_string(errno));
-            }
-            else if (retval) {
-                socklen_t client_len = sizeof(struct sockaddr_in);
-                int sockfd = accept(m_sock, (struct sockaddr*)&client, &client_len);
-                TCPSocket s(sockfd);
-                return s;
-            }
-            else {
-                TCPSocket s(-1);
-                return s;
-            }
-        }
-
-        ssize_t sendall(const void *buffer, size_t buflen)
-        {
-            uint8_t *buf = (uint8_t*)buffer;
-            while (buflen > 0) {
-                /* On Linux, the MSG_NOSIGNAL flag ensures that the process
-                 * would not receive a SIGPIPE and die.
-                 * Other systems have SO_NOSIGPIPE set on the socket for the
-                 * same effect. */
-#if defined(HAVE_MSG_NOSIGNAL)
-                const int flags = MSG_NOSIGNAL;
-#else
-                const int flags = 0;
-#endif
-                ssize_t sent = ::send(m_sock, buf, buflen, flags);
-                if (sent < 0) {
-                    return -1;
-                }
-                else {
-                    buf += sent;
-                    buflen -= sent;
-                }
-            }
-            return buflen;
-        }
-
-        ssize_t recv(void *buffer, size_t length, int flags)
-        {
-            return ::recv(m_sock, buffer, length, flags);
-        }
+        class Timeout {};
+        class Interrupted {};
+        /* Returns number of bytes read, 0 on disconnect or refused connection.
+         * Throws a Timeout on timeout, Interrupted on EINTR, a runtime_error
+         * on error
+         */
+        ssize_t recv(void *buffer, size_t length, int flags, int timeout_ms);
 
     private:
-        explicit TCPSocket(int sockfd) {
-            m_sock = sockfd;
-        }
-
+        explicit TCPSocket(int sockfd);
         int m_sock = -1;
+
+        friend class TCPClient;
+};
+
+/* Implement a TCP receiver that auto-reconnects on errors */
+class TCPClient {
+    public:
+        void connect(const std::string& hostname, int port);
+
+        /* Returns numer of bytes read, 0 on auto-reconnect, -1
+         * on interruption.
+         * Throws a runtime_error on error */
+        ssize_t recv(void *buffer, size_t length, int flags, int timeout_ms);
+
+    private:
+        void reconnect(void);
+        TCPSocket m_sock;
+        std::string m_hostname;
+        int m_port;
 };
 

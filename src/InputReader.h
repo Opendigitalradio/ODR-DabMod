@@ -40,6 +40,7 @@
 #  include "ThreadsafeQueue.h"
 #endif
 #include "Log.h"
+#include "Socket.h"
 #include <unistd.h>
 #define INVALID_SOCKET   -1
 
@@ -129,11 +130,6 @@ class InputFileReader : public InputReader
 class InputTcpReader : public InputReader
 {
     public:
-        InputTcpReader();
-        InputTcpReader(const InputTcpReader& other) = delete;
-        InputTcpReader& operator=(const InputTcpReader& other) = delete;
-        virtual ~InputTcpReader();
-
         // Endpoint is either host:port or tcp://host:port
         void Open(const std::string& endpoint);
 
@@ -146,7 +142,7 @@ class InputTcpReader : public InputReader
         virtual void PrintInfo() const;
 
     private:
-        int m_sock = INVALID_SOCKET;
+        TCPClient m_tcpclient;
         std::string m_uri;
 };
 
