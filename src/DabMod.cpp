@@ -102,7 +102,7 @@ struct modulator_data
 enum class run_modulator_state_t {
     failure,    // Corresponds to all failures
     normal_end, // Number of frames to modulate was reached
-    again,      // ZeroMQ overrun
+    again,      // Restart the modulator part
     reconfigure // Some sort of change of configuration we cannot handle happened
 };
 
@@ -317,7 +317,7 @@ int launch_modulator(int argc, char* argv[])
             while (not ediReader.isFrameReady()) {
                 bool success = ediUdpInput.rxPacket();
                 if (not success) {
-                    running = false;
+                    running = 0;
                     break;
                 }
             }
@@ -439,10 +439,8 @@ int launch_modulator(int argc, char* argv[])
                     }
 #endif
                     else if (dynamic_pointer_cast<InputTcpReader>(inputReader)) {
-                        // Create a new input reader
-                        auto inputTcpReader = make_shared<InputTcpReader>();
-                        inputTcpReader->Open(mod_settings.inputName);
-                        inputReader = inputTcpReader;
+                        // Keep the same inputReader, as there is no input buffer overflow
+                        run_again = true;
                     }
                     break;
                 case run_modulator_state_t::reconfigure:
@@ -472,6 +470,7 @@ static run_modulator_state_t run_modulator(modulator_data& m)
     auto ret = run_modulator_state_t::failure;
     try {
         bool first_frame = true;
+        int last_eti_fct = -1;
 
         while (running) {
             int framesize;
@@ -506,6 +505,16 @@ static run_modulator_state_t run_modulator(modulator_data& m)
                         first_frame = false;
                     }
                 }
+
+                // Check for ETI FCT continuity
+                const unsigned expected_fct = (last_eti_fct + 1) % 250;
+                const unsigned fct = m.etiReader->getFct();
+                if (last_eti_fct != -1 and expected_fct != fct) {
+                    etiLog.level(info) << "ETI FCT discontinuity, expected " <<
+                        expected_fct << " received " << m.etiReader->getFct();
+                    return run_modulator_state_t::again;
+                }
+                last_eti_fct = fct;
 
                 m.flowgraph->run();
 

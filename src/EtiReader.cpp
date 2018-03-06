@@ -85,6 +85,14 @@ unsigned EtiReader::getFp()
     return eti_fc.FP;
 }
 
+unsigned EtiReader::getFct()
+{
+    if (not eti_fc_valid) {
+        throw std::runtime_error("Trying to access FCT before it is ready!");
+    }
+    return eti_fc.FCT;
+}
+
 
 const std::vector<std::shared_ptr<SubchannelSource> > EtiReader::getSubchannels() const
 {
@@ -327,6 +335,14 @@ unsigned EdiReader::getFp()
         throw std::runtime_error("Trying to access FP before it is ready!");
     }
     return m_fc.fp;
+}
+
+unsigned EdiReader::getFct()
+{
+    if (not m_fc_valid) {
+        throw std::runtime_error("Trying to access FCT before it is ready!");
+    }
+    return m_fc.fct;
 }
 
 const std::vector<std::shared_ptr<SubchannelSource> > EdiReader::getSubchannels() const

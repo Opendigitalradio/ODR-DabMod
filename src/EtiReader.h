@@ -59,6 +59,9 @@ public:
     /* Get the current Frame Phase */
     virtual unsigned getFp() = 0;
 
+    /* Get the current Frame Count */
+    virtual unsigned getFct() = 0;
+
     /* Returns true if we have valid time stamps in the ETI*/
     virtual bool sourceContainsTimestamp() = 0;
 
@@ -80,6 +83,7 @@ public:
 
     virtual unsigned getMode();
     virtual unsigned getFp();
+    virtual unsigned getFct();
 
     /* Read ETI data from dataIn. Returns the number of bytes
      * read from the buffer.
@@ -121,6 +125,7 @@ public:
 
     virtual unsigned getMode();
     virtual unsigned getFp();
+    virtual unsigned getFct();
     virtual bool sourceContainsTimestamp();
     virtual const std::vector<std::shared_ptr<SubchannelSource> > getSubchannels() const;
 
