@@ -37,31 +37,21 @@ AC_PROG_INSTALL
 AX_CXX_COMPILE_STDCXX_11(noext,mandatory)
 
 EXTRA=""
-AC_ARG_ENABLE([debug],
-        [AS_HELP_STRING([--enable-debug], [Enable debugger symbols])],
-        [], [enable_debug=no])
 AC_ARG_ENABLE([prof],
         [AS_HELP_STRING([--enable-prof], [Enable profiling])],
         [], [enable_prof=no])
 AC_ARG_ENABLE([fast-math],
         [AS_HELP_STRING([--enable-fast-math], [Set -ffast-math])],
         [], [enable_fast_math=no])
-AC_ARG_WITH([debug-malloc],
-        [AS_HELP_STRING([--with-debug-malloc[=no|yes|duma|efence|...]],
-            [Add malloc debugger support])],
-        [], [with_debug_malloc=no])
 AC_ARG_ENABLE([trace],
         [AS_HELP_STRING([--enable-trace], [Enable trace output])],
         [], [enable_trace=no])
-
 AC_ARG_ENABLE([zeromq],
         [AS_HELP_STRING([--disable-zeromq], [Disable ZeroMQ input, output and remote control])],
         [], [enable_zeromq=yes])
-
 AC_ARG_ENABLE([edi],
         [AS_HELP_STRING([--enable-edi], [Enable EDI input])],
         [], [enable_edi=no])
-
 AC_ARG_ENABLE([native],
         [AS_HELP_STRING([--disable-native], [Do not compile with -march=native])],
         [], [enable_native=yes])
@@ -92,10 +82,6 @@ AS_IF([test "x$enable_zeromq" = "xyes"],
 
 AS_IF([test "x$enable_zeromq" = "xyes"],
         [AC_DEFINE(HAVE_ZEROMQ, [1], [Define if ZeroMQ is enabled])])
-
-AS_IF([test "x$enable_debug" = "xno"],
-        [EXTRA="$EXTRA -DNDEBUG"],
-        [EXTRA="$EXTRA"])
 
 AS_IF([test "x$enable_prof" != "xno"],
         [EXTRA="$EXTRA -pg"])
@@ -218,7 +204,7 @@ echo
 echo
 enabled=""
 disabled=""
-for feat in with_debug_malloc supports_march_native enable_fast_math
+for feat in supports_march_native enable_fast_math
 do
     eval var=\$$feat
     AS_IF([test "x$var" != "xno"],

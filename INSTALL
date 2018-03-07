@@ -27,16 +27,14 @@ The configure script can be launch with a variety of options:
                         output and remotecontrol.
  --disable-output-uhd   Disable the binding to the UHD driver for USRPs
  --enable-fast-math     Compile using the -ffast-math option that gives a substantial
-                        speedup at the cost of correctness.
+                        speedup at the cost of floating point correctness.
  --disable-native       Do not compile ODR-DabMod with -march=native compiler option.
                         This is meant for distribution package maintainers who want to
                         use their own march option, and for people running into compilation
                         issues due to -march=native. (e.g. GCC bug 70132 on ARM systems)
  --enable-edi           Enable the EDI input.
 
-Debugging options: You should not enable debug if you need good performance.
-By default, debug is disabled.
- --enable-debug         Do not compile with debugging, and enable optimisations
+Debugging options: You should not enable any debug option if you need good performance.
  --enable-trace         Create debugging files for each DSP block for data analysis
 
 For more information, call:
@@ -54,10 +52,21 @@ Tricks for best performance:
     * Do not use --disable-native
     * Use --enable-fast-math
     * Add -O3 to compiler flags
+    * Disable assertions with -DNDEBUG
 
 Applying all together:
 
-    % CFLAGS="-O3" CXXFLAGS="-O3" ./configure --enable-fast-math
+    % ./configure CFLAGS="-O3 -DNDEBUG" CXXFLAGS="-O3 -DNDEBUG" --enable-fast-math
+
+Checking for memory usage issues
+--------------------------------
+If your compiler supports it, you can enable the address sanitizer to check for memory
+issues:
+
+    % ./configure CFLAGS="-fsanitize=address -g -O2" CXXFLAGS="-fsanitize=address -g -O2"
+
+The resulting binary will be instrumented with additional memory checks, which have a
+measurable overhead. Please report if you get warnings or errors when using the sanitizer.
 
 Nearly as simple install procedure using repository:
 ====================================================
