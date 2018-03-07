@@ -342,7 +342,7 @@ unsigned EdiReader::getFct()
     if (not m_fc_valid) {
         throw std::runtime_error("Trying to access FCT before it is ready!");
     }
-    return m_fc.fct;
+    return m_fc.fct();
 }
 
 const std::vector<std::shared_ptr<SubchannelSource> > EdiReader::getSubchannels() const
