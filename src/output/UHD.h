@@ -37,7 +37,6 @@ DESCRIPTION:
 
 #ifdef HAVE_OUTPUT_UHD
 
-#include <uhd/utils/thread_priority.hpp>
 #include <uhd/utils/safe_main.hpp>
 #include <uhd/usrp/multi_usrp.hpp>
 #include <chrono>

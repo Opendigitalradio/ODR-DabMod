@@ -38,7 +38,19 @@
 
 #include <boost/thread/future.hpp>
 
-#include <uhd/utils/msg.hpp>
+#include <uhd/version.hpp>
+// 3.11.0.0 introduces the API breaking change, where
+// uhd::msg is replaced by the new log API
+#if UHD_VERSION >= 3110000
+# define UHD_HAS_LOG_API 1
+# include <uhd/utils/log_add.hpp>
+# include <uhd/utils/thread.hpp>
+#else
+# define UHD_HAS_LOG_API 0
+# include <uhd/utils/msg.hpp>
+# include <uhd/utils/thread_priority.hpp>
+#endif
+
 
 #include <cmath>
 #include <iostream>
@@ -67,6 +79,19 @@ static std::string stringtrim(const std::string &s)
                 [](int c){ return std::isspace(c);} ).base());
 }
 
+#if UHD_HAS_LOG_API == 1
+static void uhd_log_handler(const uhd::log::logging_info& info)
+{
+    // do not print very short U messages, nor those of
+    // verbosity trace or debug
+    if (info.verbosity >= uhd::log::info and
+            stringtrim(info.message).size() != 1) {
+        etiLog.level(debug) << "UHD Message (" <<
+            (int)info.verbosity << ") " <<
+            info.component << ": " << info.message;
+    }
+}
+#else
 static void uhd_msg_handler(uhd::msg::type_t type, const std::string &msg)
 {
     if (type == uhd::msg::warning) {
@@ -82,6 +107,7 @@ static void uhd_msg_handler(uhd::msg::type_t type, const std::string &msg)
         }
     }
 }
+#endif // UHD_HAS_LOG_API
 
 
 
@@ -103,7 +129,17 @@ UHD::UHD(SDRDeviceConfig& config) :
     MDEBUG("OutputUHD::OutputUHD(device: %s) @ %p\n",
             device.str().c_str(), this);
 
+#if UHD_HAS_LOG_API == 1
+    uhd::log::add_logger("dabmod", uhd_log_handler);
+    try {
+        uhd::log::set_console_level(uhd::log::fatal);
+    }
+    catch (const uhd::key_error&) {
+        etiLog.level(warn) << "OutputUHD: Could not set UHD console loglevel";
+    }
+#else
     uhd::msg::register_handler(uhd_msg_handler);
+#endif
 
     uhd::set_thread_priority_safe();
 
