@@ -147,13 +147,6 @@ void printVersion(void)
 void printStartupInfo()
 {
     printHeader();
-
-    etiLog.level(info) << "Starting up version " <<
-#if defined(GITVERSION)
-            GITVERSION;
-#else
-            VERSION;
-#endif
 }
 
 int set_realtime_prio(int prio)

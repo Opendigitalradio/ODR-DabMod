@@ -254,10 +254,17 @@ int launch_modulator(int argc, char* argv[])
         throw runtime_error("Could not set signal handler: " + errstr);
     }
 
+    printStartupInfo();
+
     mod_settings_t mod_settings;
     parse_args(argc, argv, mod_settings);
 
-    printStartupInfo();
+    etiLog.level(info) << "Configuration parsed. Starting up version " <<
+#if defined(GITVERSION)
+            GITVERSION;
+#else
+            VERSION;
+#endif
 
     if (not (mod_settings.useFileOutput or
              mod_settings.useUHDOutput or

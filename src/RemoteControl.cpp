@@ -388,7 +388,6 @@ void RemoteControllerZmq::send_fail_reply(zmq::socket_t &pSocket, const std::str
 void RemoteControllerZmq::process()
 {
     // create zmq reply socket for receiving ctrl parameters
-    etiLog.level(info) << "Starting zmq remote control thread";
     try {
         zmq::socket_t repSocket(m_zmqContext, ZMQ_REP);
 

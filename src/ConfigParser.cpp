@@ -99,7 +99,6 @@ static void parse_configfile(
     if (pt.get("remotecontrol.zmqctrl", 0) == 1) {
         try {
             std::string zmqCtrlEndpoint = pt.get("remotecontrol.zmqctrlendpoint", "");
-            std::cerr << "ZmqCtrlEndpoint: " << zmqCtrlEndpoint << std::endl;
             auto zmqrc = make_shared<RemoteControllerZmq>(zmqCtrlEndpoint);
             rcs.add_controller(zmqrc);
         }
