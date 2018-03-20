@@ -34,6 +34,11 @@
 
 using namespace std;
 
+/* This is called etiLog because it was copy-pasted from ODR-DabMux, even
+ * though it doesn't make any more sense there than here.
+ *
+ * It is a singleton used in all parts of ODR-DabMod to output log messages.
+ */
 Logger etiLog;
 
 

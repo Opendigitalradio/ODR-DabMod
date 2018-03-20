@@ -256,7 +256,7 @@ Flowgraph::~Flowgraph()
                 myProcessTime);
         ss << node_time_sz;
 
-        fprintf(stderr, "%s", ss.str().c_str());
+        etiLog.level(debug) << ss.str();
     }
 }
 

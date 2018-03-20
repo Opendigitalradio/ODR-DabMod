@@ -400,8 +400,7 @@ void parse_args(int argc, char **argv, mod_settings_t& mod_settings)
         case 'f':
 #if defined(HAVE_OUTPUT_UHD)
             if (mod_settings.useUHDOutput) {
-                fprintf(stderr, "Options -u and -f are mutually exclusive\n");
-                throw std::invalid_argument("Invalid command line options");
+                throw std::invalid_argument("Options -u and -f are mutually exclusive");
             }
 #endif
             mod_settings.outputName = optarg;
@@ -417,8 +416,7 @@ void parse_args(int argc, char **argv, mod_settings_t& mod_settings)
             }
 #endif
             else {
-                fprintf(stderr, "Cannot use -F before setting output!\n");
-                throw std::invalid_argument("Invalid command line options");
+                throw std::invalid_argument("Cannot use -F before setting output!");
             }
             break;
         case 'g':
@@ -450,8 +448,7 @@ void parse_args(int argc, char **argv, mod_settings_t& mod_settings)
         case 'u':
 #if defined(HAVE_OUTPUT_UHD)
             if (mod_settings.useFileOutput) {
-                fprintf(stderr, "Options -u and -f are mutually exclusive\n");
-                throw std::invalid_argument("Invalid command line options");
+                throw std::invalid_argument("Options -u and -f are mutually exclusive");
             }
             mod_settings.sdr_device_config.device = optarg;
             mod_settings.sdr_device_config.refclk_src = "internal";
@@ -472,8 +469,10 @@ void parse_args(int argc, char **argv, mod_settings_t& mod_settings)
             throw std::invalid_argument("");
             break;
         default:
-            fprintf(stderr, "Option '%c' not coded yet!\n", c);
-            throw std::invalid_argument("Invalid command line options");
+            {
+                string optstr(1, c);
+                throw std::invalid_argument("Invalid command line option: -" + optstr);
+            }
         }
     }
 
@@ -514,13 +513,12 @@ void parse_args(int argc, char **argv, mod_settings_t& mod_settings)
 
     // Checking unused arguments
     if (use_configuration_cmdline && optind != argc) {
-        fprintf(stderr, "Invalid arguments:");
+        string invalid = "Invalid arguments:";
         while (optind != argc) {
-            fprintf(stderr, " %s", argv[optind++]);
+            invalid += argv[optind++];
         }
-        fprintf(stderr, "\n");
         printUsage(argv[0]);
-        etiLog.level(error) << "Received invalid command line arguments";
+        etiLog.level(error) << "Received invalid command line arguments: " + invalid;
         throw std::invalid_argument("Invalid command line options");
     }
 

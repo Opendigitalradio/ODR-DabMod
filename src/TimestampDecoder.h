@@ -88,7 +88,7 @@ struct frame_timestamp
     }
 
     void print(const char* t) const {
-        fprintf(stderr,
+        etiLog.log(debug,
                 "%s <frame_timestamp(%s, %d, %.9f, %d)>\n",
                 t, this->timestamp_valid ? "valid" : "invalid",
                  this->timestamp_sec, pps_offset(),

@@ -61,11 +61,6 @@ Smaller things
 Remove GuardIntervalInserter implementation for window==0, as it was shown both are equivalent.
 
 
-Replace all prints to stderr
-----------------------------
-We have a nice logging subsystem, use it to avoid that fprintf(stderr, ...) and
-logging to stderr messages collide.
-
 Finalise EDI input
 ------------------
 The EDI input, based on work started in http://git.mpb.li/git/odr-edilib/

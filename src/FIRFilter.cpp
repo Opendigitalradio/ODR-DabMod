@@ -101,23 +101,21 @@ void FIRFilter::load_filter_taps(const std::string &tapsFile)
     }
     else {
         std::ifstream taps_fstream(tapsFile.c_str());
-        if(!taps_fstream) {
-            fprintf(stderr, "FIRFilter: file %s could not be opened !\n", tapsFile.c_str());
-            throw std::runtime_error("FIRFilter: Could not open file with taps! ");
+        if (!taps_fstream) {
+            throw std::runtime_error("FIRFilter: Could not open taps file " + tapsFile);
         }
         int n_taps;
         taps_fstream >> n_taps;
 
         if (n_taps <= 0) {
-            fprintf(stderr, "FIRFilter: warning: taps file has invalid format\n");
             throw std::runtime_error("FIRFilter: taps file has invalid format.");
         }
 
         if (n_taps > 100) {
-            fprintf(stderr, "FIRFilter: warning: taps file has more than 100 taps\n");
+            etiLog.level(warn) << "FIRFilter: warning: taps file has more than 100 taps";
         }
 
-        fprintf(stderr, "FIRFilter: Reading %d taps...\n", n_taps);
+        etiLog.level(debug) << "FIRFilter: Reading " << n_taps << " taps...";
 
         filter_taps.resize(n_taps);
 
@@ -126,9 +124,11 @@ void FIRFilter::load_filter_taps(const std::string &tapsFile)
             taps_fstream >> filter_taps[n];
             PDEBUG("FIRFilter: tap: %f\n",  (double)filter_taps[n] );
             if (taps_fstream.eof()) {
-                fprintf(stderr, "FIRFilter: file %s should contains %d taps, but EOF reached "\
-                        "after %d taps !\n", tapsFile.c_str(), n_taps, n);
-                throw std::runtime_error("FIRFilter: filtertaps file invalid ! ");
+                throw std::runtime_error(
+                        "FIRFilter: file " + tapsFile +
+                        " should contain " + to_string(n_taps) +
+                        " taps, but EOF reached after " + to_string(n) +
+                        " taps!");
             }
         }
     }
@@ -156,7 +156,6 @@ int FIRFilter::internal_process(Buffer* const dataIn, Buffer* dataOut)
         size_t sizeIn   = dataIn->getLength() / sizeof(float);
 
         if ((uintptr_t)(&out[0]) % 16 != 0) {
-            fprintf(stderr, "FIRFilterWorker: out not aligned %p ", out);
             throw std::runtime_error("FIRFilterWorker: out not aligned");
         }
 
