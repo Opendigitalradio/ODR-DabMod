@@ -19,36 +19,25 @@
    along with ODR-DabMod.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "QpskSymbolMapper.h"
-#include "PcDebug.h"
-
-#include <stdio.h>
-#include <string.h>
+#include <string>
+#include <cstdio>
+#include <cstring>
 #include <stdexcept>
 #include <complex>
-#include <math.h>
+#include <cmath>
 #ifdef __SSE__
 #   include <xmmintrin.h>
 #endif // __SSE__
 
-typedef std::complex<float> complexf;
+#include "QpskSymbolMapper.h"
+#include "PcDebug.h"
 
+
+typedef std::complex<float> complexf;
 
 QpskSymbolMapper::QpskSymbolMapper(size_t carriers) :
     ModCodec(),
-    d_carriers(carriers)
-{
-    PDEBUG("QpskSymbolMapper::QpskSymbolMapper(%zu) @ %p\n", carriers, this);
-
-}
-
-
-QpskSymbolMapper::~QpskSymbolMapper()
-{
-    PDEBUG("QpskSymbolMapper::~QpskSymbolMapper() @ %p\n", this);
-
-}
-
+    d_carriers(carriers) { }
 
 int QpskSymbolMapper::process(Buffer* const dataIn, Buffer* dataOut)
 {
@@ -62,10 +51,11 @@ int QpskSymbolMapper::process(Buffer* const dataIn, Buffer* dataOut)
     __m128* out = reinterpret_cast<__m128*>(dataOut->getData());
 
     if (dataIn->getLength() % (d_carriers / 4) != 0) {
-        fprintf(stderr, "%zu (input size) %% (%zu (carriers) / 4) != 0\n",
-                dataIn->getLength(), d_carriers);
         throw std::runtime_error(
-                "QpskSymbolMapper::process input size not valid!");
+                "QpskSymbolMapper::process input size not valid: " +
+                std::to_string(dataIn->getLength()) +
+                "(input size) % (" + std::to_string(d_carriers) +
+                " (carriers) / 4) != 0");
     }
 
     const static __m128 symbols[16] = {

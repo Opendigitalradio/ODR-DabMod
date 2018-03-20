@@ -25,20 +25,13 @@
 #   include <config.h>
 #endif
 
-
 #include "ModPlugin.h"
-
 #include <sys/types.h>
-
 
 class QpskSymbolMapper : public ModCodec
 {
 public:
     QpskSymbolMapper(size_t carriers);
-    virtual ~QpskSymbolMapper();
-    QpskSymbolMapper(QpskSymbolMapper&);
-    QpskSymbolMapper& operator=(QpskSymbolMapper&);
-
 
     int process(Buffer* const dataIn, Buffer* dataOut);
     const char* name() { return "QpskSymbolMapper"; }
