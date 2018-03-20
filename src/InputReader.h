@@ -33,15 +33,16 @@
 
 #include <cstdio>
 #include <vector>
+#include <string>
 #include <atomic>
 #include <memory>
+#include <unistd.h>
 #if defined(HAVE_ZEROMQ)
 #  include "zmq.hpp"
 #  include "ThreadsafeQueue.h"
 #endif
 #include "Log.h"
 #include "Socket.h"
-#include <unistd.h>
 #define INVALID_SOCKET   -1
 
 class InputReader
@@ -52,8 +53,8 @@ class InputReader
         // returns number of bytes written to buffer, 0 on eof, -1 on error
         virtual int GetNextFrame(void* buffer) = 0;
 
-        // Print some information
-        virtual void PrintInfo() const = 0;
+        // Get some information
+        virtual std::string GetPrintableInfo() const = 0;
 };
 
 class InputFileReader : public InputReader
@@ -68,8 +69,8 @@ class InputFileReader : public InputReader
         int Open(std::string filename, bool loop);
 
         // Print information about the file opened
-        void PrintInfo() const;
-        int GetNextFrame(void* buffer);
+        virtual std::string GetPrintableInfo() const override;
+        virtual int GetNextFrame(void* buffer) override;
 
     private:
         int IdentifyType();
@@ -136,10 +137,9 @@ class InputTcpReader : public InputReader
         // Put next frame into buffer. This function will never write more than
         // 6144 bytes into buffer.
         // returns number of bytes written to buffer, 0 on eof, -1 on error
-        virtual int GetNextFrame(void* buffer);
+        virtual int GetNextFrame(void* buffer) override;
 
-        // Print some information
-        virtual void PrintInfo() const;
+        virtual std::string GetPrintableInfo() const override;
 
     private:
         TCPClient m_tcpclient;
@@ -166,8 +166,8 @@ class InputZeroMQReader : public InputReader
         ~InputZeroMQReader();
 
         int Open(const std::string& uri, size_t max_queued_frames);
-        int GetNextFrame(void* buffer);
-        void PrintInfo() const;
+        virtual int GetNextFrame(void* buffer) override;
+        virtual std::string GetPrintableInfo() const override;
 
     private:
         std::atomic<bool> m_running = ATOMIC_VAR_INIT(false);

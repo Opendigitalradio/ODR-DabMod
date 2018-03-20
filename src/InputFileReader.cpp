@@ -190,31 +190,31 @@ int InputFileReader::IdentifyType()
     return -1;
 }
 
-void InputFileReader::PrintInfo() const
+std::string InputFileReader::GetPrintableInfo() const
 {
-    fprintf(stderr, "Input file format: ");
+    std::string info = "Input file format: ";
     switch (streamtype_) {
         case EtiStreamType::Raw:
-            fprintf(stderr, "raw");
+            info += "raw";
             break;
         case EtiStreamType::Streamed:
-            fprintf(stderr, "streamed");
+            info += "streamed";
             break;
         case EtiStreamType::Framed:
-            fprintf(stderr, "framed");
+            info += "framed";
             break;
         default:
-            fprintf(stderr, "unknown!");
+            info += "unknown!";
             break;
     }
-    fprintf(stderr, "\n");
-    fprintf(stderr, "Input file length: %zu\n", inputfilelength_);
+    info += ", length: " + std::to_string(inputfilelength_);
     if (~nbframes_ != 0) {
-        fprintf(stderr, "Input file nb frames: %lu\n", nbframes_);
+        info += ", nb frames: " + std::to_string(nbframes_);
     }
     else {
-        fprintf(stderr, "Input file nb frames: endless\n");
+        info += ", nb frames: endless";
     }
+    return info;
 }
 
 int InputFileReader::GetNextFrame(void* buffer)

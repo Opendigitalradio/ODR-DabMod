@@ -83,9 +83,8 @@ int InputTcpReader::GetNextFrame(void* buffer)
     return ret;
 }
 
-void InputTcpReader::PrintInfo() const
+std::string InputTcpReader::GetPrintableInfo() const
 {
-    fprintf(stderr, "Input TCP:\n");
-    fprintf(stderr, "  Receiving from %s\n\n", m_uri.c_str());
+    return "Input TCP: Receiving from " + m_uri;
 }
 

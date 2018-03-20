@@ -413,7 +413,7 @@ int launch_modulator(int argc, char* argv[])
                 flowgraph.connect(modulator, output);
             }
 
-            inputReader->PrintInfo();
+            etiLog.level(info) << inputReader->GetPrintableInfo();
 
             run_modulator_state_t st = run_modulator(m);
             etiLog.log(trace, "DABMOD,run_modulator() = %d", st);
