@@ -1,11 +1,11 @@
 This file contains information about the changes done to
 ODR-DabMod in this repository
 
-2018-01-20: Matthias P. Braendli <matthias@mpb.li>
-	(upcoming version):
+2018-03-21: Matthias P. Braendli <matthias@mpb.li>
+	(v2.0.0):
 		Big rework of the SDR device handling, putting in common more
 		logic between UHD and SoapySDR. Goal is to enable SoapySDR devices
-		to be used for SFN and for DPD.
+		to be used for SFN and for DPD. (Not yet possible)
 		Replace the old timestamp path that went around the process flowgraph
 		by a new metadata path that goes through the flowgraph, to avoid the
 		issues with misalignment of frame and timestamps. Do not mix different
@@ -17,11 +17,13 @@ ODR-DabMod in this repository
 		Add a timeout to the ZeroMQ input to quit on SIGINT (Ctrl-C).
 		Optionally show the flowgraph metadata in the file output for
 		test purposes.
-		Replace usage of non-portable Linux-only clock_gettime().
 		Add antenna selection to UHD and SoapySDR outputs.
 		Make EDI input optional (it's not well tested, unfinished and slows
 		compile time)
 		Improve portability for non-Linux POSIX systems.
+		Default to TM 1, do not read from ETI anymore.
+		Add support for UHD 3.11.
+		Implement auto-reconnect for the TCP input.
 
 2017-11-18: Matthias P. Braendli <matthias@mpb.li>
 	(v1.1.0):
