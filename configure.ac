@@ -190,7 +190,7 @@ echo "***********************************************"
 echo
 enabled=""
 disabled=""
-for feat in edi debug prof trace output_uhd zeromq soapysdr
+for feat in edi prof trace output_uhd zeromq soapysdr
 do
     eval var=\$enable_$feat
     AS_IF([test "x$var" = "xyes"],
