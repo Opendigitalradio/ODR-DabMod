@@ -40,55 +40,28 @@
 
 FormatConverter::FormatConverter(const std::string& format) :
     ModCodec(),
-    m_offset_by_127(format == "u8")
+    m_format(format)
 { }
 
-/* Expect the input samples to be in the range [-255.0, 255.0] */
+/* Expect the input samples to be in the correct range for the required format */
 int FormatConverter::process(Buffer* const dataIn, Buffer* dataOut)
 {
     PDEBUG("FormatConverter::process(dataIn: %p, dataOut: %p)\n",
             dataIn, dataOut);
 
     size_t sizeIn = dataIn->getLength() / sizeof(float);
-    dataOut->setLength(sizeIn * sizeof(int8_t));
-
     float* in = reinterpret_cast<float*>(dataIn->getData());
 
-#if 0
-#error "TODO: SSE FormatConvert does not support u8 yet"
+    if (m_format == "s16") {
+        dataOut->setLength(sizeIn * sizeof(int16_t));
+        uint16_t* out = reinterpret_cast<uint16_t*>(dataOut->getData());
 
-    // Disabled because subscripting a __m64 doesn't seem to work
-    // on all platforms.
-
-    /*
-      _mm_cvtps_pi8 does:
-             |<----------- 128 bits ------------>|
-      __m128 |   I1   |   Q1   |   I2   |   Q2   | in float
-      __m64  |I1Q1I2Q2|00000000|                   in int8_t
-     */
-
-    uint32_t* out = reinterpret_cast<uint32_t*>(dataOut->getData());
-
-    assert(sizeIn % 16 == 0);
-    assert((uintptr_t)in % 16 == 0);
-    for(size_t i = 0, j = 0; i < sizeIn; i+=16, j+=4)
-    {
-        __m128 a1 = _mm_load_ps(in+i+0);
-        __m128 a2 = _mm_load_ps(in+i+4);
-        __m128 a3 = _mm_load_ps(in+i+8);
-        __m128 a4 = _mm_load_ps(in+i+12);
-        __m64 b1 = _mm_cvtps_pi8(a1);
-        __m64 b2 = _mm_cvtps_pi8(a2);
-        __m64 b3 = _mm_cvtps_pi8(a3);
-        __m64 b4 = _mm_cvtps_pi8(a4);
-        out[j+0]  = b1[0];
-        out[j+1]  = b2[0];
-        out[j+2]  = b3[0];
-        out[j+3]  = b4[0];
+        for (size_t i = 0; i < sizeIn; i++) {
+            out[i] = in[i];
+        }
     }
-#else
-    // Slow implementation that uses _ftol()
-    if (m_offset_by_127) {
+    else if (m_format == "u8") {
+        dataOut->setLength(sizeIn * sizeof(int8_t));
         uint8_t* out = reinterpret_cast<uint8_t*>(dataOut->getData());
 
         for (size_t i = 0; i < sizeIn; i++) {
@@ -96,15 +69,15 @@ int FormatConverter::process(Buffer* const dataIn, Buffer* dataOut)
         }
     }
     else {
+        dataOut->setLength(sizeIn * sizeof(int8_t));
         int8_t* out = reinterpret_cast<int8_t*>(dataOut->getData());
 
         for (size_t i = 0; i < sizeIn; i++) {
             out[i] = in[i];
         }
     }
-#endif
 
-    return 1;
+    return dataOut->getLength();
 }
 
 const char* FormatConverter::name()

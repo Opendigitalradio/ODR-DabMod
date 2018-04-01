@@ -187,6 +187,12 @@ static shared_ptr<ModOutput> prepare_output(
                 s.normalise = 1.0f / normalise_factor_file_var;
             output = make_shared<OutputFile>(s.outputName, s.fileOutputShowMetadata);
         }
+        else if (s.fileOutputFormat == "s16") {
+            // We must normalise the samples to the interval [-32767.0; 32767.0]
+            s.normalise = 32767.0f / normalise_factor;
+
+            output = make_shared<OutputFile>(s.outputName, s.fileOutputShowMetadata);
+        }
         else if (s.fileOutputFormat == "s8" or
                 s.fileOutputFormat == "u8") {
             // We must normalise the samples to the interval [-127.0; 127.0]
@@ -278,7 +284,8 @@ int launch_modulator(int argc, char* argv[])
     shared_ptr<FormatConverter> format_converter;
     if (mod_settings.useFileOutput and
             (mod_settings.fileOutputFormat == "s8" or
-             mod_settings.fileOutputFormat == "u8")) {
+             mod_settings.fileOutputFormat == "u8" or
+             mod_settings.fileOutputFormat == "s16")) {
         format_converter = make_shared<FormatConverter>(mod_settings.fileOutputFormat);
     }
 

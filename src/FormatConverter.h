@@ -35,9 +35,7 @@
 #include "ModPlugin.h"
 #include <complex>
 #include <string>
-#include <stdint.h>
-
-typedef std::complex<float> complexf;
+#include <cstdint>
 
 class FormatConverter : public ModCodec
 {
@@ -48,7 +46,7 @@ class FormatConverter : public ModCodec
         const char* name();
 
     private:
-        bool m_offset_by_127 = false;
+        std::string m_format;
 };
 
 
