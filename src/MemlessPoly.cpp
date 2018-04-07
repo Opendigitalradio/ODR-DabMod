@@ -275,6 +275,9 @@ static void apply_lut(
 
 void MemlessPoly::worker_thread(MemlessPoly::worker_t *workerdata)
 {
+    set_realtime_prio(1);
+    set_thread_name("MemlessPoly");
+
     while (true) {
         worker_t::input_data_t in_data;
         workerdata->in_queue.wait_and_pop(in_data);
