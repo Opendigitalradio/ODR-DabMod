@@ -43,6 +43,7 @@ DESCRIPTION:
 #include <memory>
 #include <string>
 #include <atomic>
+#include <thread>
 
 #include "Log.h"
 #include "output/SDR.h"
@@ -115,7 +116,7 @@ class UHD : public Output::SDRDevice
 
         // Poll asynchronous metadata from UHD
         std::atomic<bool> m_running;
-        boost::thread m_async_rx_thread;
+        std::thread m_async_rx_thread;
         void stop_threads(void);
         void print_async_thread(void);
 };

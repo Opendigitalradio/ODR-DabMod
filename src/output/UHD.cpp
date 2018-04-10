@@ -36,7 +36,7 @@
 #include "RemoteControl.h"
 #include "Utils.h"
 
-#include <boost/thread/future.hpp>
+#include <thread>
 
 #include <uhd/version.hpp>
 // 3.11.0.0 introduces the API breaking change, where
@@ -231,7 +231,7 @@ UHD::UHD(SDRDeviceConfig& config) :
     m_tx_stream = m_usrp->get_tx_stream(stream_args);
 
     m_running.store(true);
-    m_async_rx_thread = boost::thread(&UHD::print_async_thread, this);
+    m_async_rx_thread = std::thread(&UHD::print_async_thread, this);
 
     MDEBUG("OutputUHD:UHD ready.\n");
 }
