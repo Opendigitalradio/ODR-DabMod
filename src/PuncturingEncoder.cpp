@@ -2,7 +2,7 @@
    Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010, 2011 Her Majesty
    the Queen in Right of Canada (Communications Research Center Canada)
 
-   Copyright (C) 2016
+   Copyright (C) 2018
    Matthias P. Braendli, matthias.braendli@mpb.li
 
     http://opendigitalradio.org
@@ -24,22 +24,20 @@
    along with ODR-DabMod.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <string>
+#include <stdexcept>
+#include <cstdio>
+#include <cstdint>
+#include <cassert>
+
 #include "PuncturingEncoder.h"
 #include "PcDebug.h"
-
-#include <string>
-#include <stdio.h>
-#include <stdexcept>
-#include <stdint.h>
-#include <assert.h>
-
 
 PuncturingEncoder::PuncturingEncoder() :
     ModCodec(),
     d_num_cu(0),
     d_in_block_size(0),
-    d_out_block_size(0),
-    d_tail_rule()
+    d_out_block_size(0)
 {
     PDEBUG("PuncturingEncoder() @ %p\n", this);
 }
@@ -49,8 +47,7 @@ PuncturingEncoder::PuncturingEncoder(
     ModCodec(),
     d_num_cu(num_cu),
     d_in_block_size(0),
-    d_out_block_size(0),
-    d_tail_rule()
+    d_out_block_size(0)
 {
     PDEBUG("PuncturingEncoder(%zu) @ %p\n", num_cu, this);
 }
@@ -93,8 +90,10 @@ void PuncturingEncoder::append_rule(const PuncturingRule& rule)
 
 void PuncturingEncoder::append_tail_rule(const PuncturingRule& rule)
 {
-    PDEBUG("append_tail_rule(rule(%zu, 0x%x))\n", rule.length(), rule.pattern());
-    d_tail_rule = rule;
+    PDEBUG("append_tail_rule(rule(%zu, 0x%x))\n",
+            rule.length(), rule.pattern());
+
+    d_tail_rule.reset(new PuncturingRule(rule));
 
     adjust_item_size();
 }

@@ -2,7 +2,7 @@
    Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010, 2011 Her Majesty
    the Queen in Right of Canada (Communications Research Center Canada)
 
-   Copyright (C) 2016
+   Copyright (C) 2018
    Matthias P. Braendli, matthias.braendli@mpb.li
 
     http://opendigitalradio.org
@@ -30,14 +30,14 @@
 #   include <config.h>
 #endif
 
+#include <vector>
+#include <memory>
+#include <string>
+#include <cstddef>
 
 #include "PuncturingRule.h"
 #include "ModPlugin.h"
 
-#include <vector>
-#include <string>
-#include <sys/types.h>
-#include <boost/optional.hpp>
 
 class PuncturingEncoder : public ModCodec
 {
@@ -68,7 +68,10 @@ private:
     size_t d_in_block_size;
     size_t d_out_block_size;
     std::vector<PuncturingRule> d_rules;
-    boost::optional<PuncturingRule> d_tail_rule;
+
+    // We use a unique_ptr because we don't want to depend
+    // on boost::optional here
+    std::unique_ptr<PuncturingRule> d_tail_rule;
 
     void adjust_item_size();
 };
