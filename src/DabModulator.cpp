@@ -132,6 +132,7 @@ int DabModulator::process(Buffer* dataOut)
         auto cifMux = make_shared<FrameMultiplexer>(myEtiSource);
         auto cifPart = make_shared<BlockPartitioner>(mode);
 
+#if !defined(BUILD_FOR_EASYDABV3)
         auto cifMap = make_shared<QpskSymbolMapper>(myNbCarriers);
         auto cifRef = make_shared<PhaseReference>(mode);
         auto cifFreq = make_shared<FrequencyInterleaver>(mode);
@@ -215,8 +216,6 @@ int DabModulator::process(Buffer* dataOut)
             rcs.enrol(cifPoly.get());
         }
 
-        myOutput = make_shared<OutputMemory>(dataOut);
-
         shared_ptr<Resampler> cifRes;
         if (m_settings.outputRate != 2048000) {
             cifRes = make_shared<Resampler>(
@@ -224,6 +223,9 @@ int DabModulator::process(Buffer* dataOut)
                     m_settings.outputRate,
                     mySpacing);
         }
+#endif
+
+        myOutput = make_shared<OutputMemory>(dataOut);
 
         myFlowgraph->connect(cifPrbs, cifMux);
 
@@ -330,6 +332,9 @@ int DabModulator::process(Buffer* dataOut)
         }
 
         myFlowgraph->connect(cifMux, cifPart);
+#if defined(BUILD_FOR_EASYDABV3)
+        myFlowgraph->connect(cifPart, myOutput);
+#else
         myFlowgraph->connect(cifPart, cifMap);
         myFlowgraph->connect(cifMap, cifFreq);
         myFlowgraph->connect(cifRef, cifDiff);
@@ -359,6 +364,7 @@ int DabModulator::process(Buffer* dataOut)
                 prev_plugin = p;
             }
         }
+#endif
     }
 
     ////////////////////////////////////////////////////////////////////
