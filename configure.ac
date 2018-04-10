@@ -55,6 +55,9 @@ AC_ARG_ENABLE([edi],
 AC_ARG_ENABLE([native],
         [AS_HELP_STRING([--disable-native], [Do not compile with -march=native])],
         [], [enable_native=yes])
+AC_ARG_ENABLE([easydabv3],
+        [AS_HELP_STRING([--enable-easydabv3], [Build for EasyDABv3 board])],
+        [], [enable_easydabv3=no])
 
 # UHD support control
 AC_ARG_ENABLE([output_uhd],
@@ -120,9 +123,14 @@ AS_IF([test "x$enable_edi" = "xyes"],
 
 AM_CONDITIONAL([COMPILE_EDI], [test "x$enable_edi" = "xyes"])
 
-AX_BOOST_BASE([1.54.0], [], AC_MSG_ERROR([BOOST 1.54 or later is required]))
-AX_BOOST_SYSTEM
-AX_BOOST_THREAD
+AS_IF([test "x$enable_easydabv3" = "xno"],
+    [ AX_BOOST_BASE([1.54.0], [], AC_MSG_ERROR([BOOST 1.54 or later is required]))
+      AX_BOOST_SYSTEM
+      AX_BOOST_THREAD ])
+
+AC_DEFINE(HAVE_BOOST, [test "x$enable_easydabv3" = "xno"], [Define if boost is available])
+AC_DEFINE(BUILD_FOR_EASYDABV3, [test "x$enable_easydabv3" = "xyes"], [Define if we are building for EasyDABv3])
+
 
 # Checks for header files.
 AC_HEADER_STDC
@@ -165,8 +173,6 @@ AC_COMPILE_IFELSE([ AC_LANG_PROGRAM([[
                      AC_DEFINE(HAVE_SO_NOSIGPIPE, 1, [Define this symbol if you have SO_NOSIGPIPE]) ],
                    [ AC_MSG_RESULT(no) ])
 
-AC_DEFINE(HAVE_BOOST, [1], [Define if boost is available])
-
 # Check for march
 AS_IF([test "x$enable_native" = "xyes"],
       [AC_MSG_CHECKING(if we can add -march=native to CFLAGS)
@@ -192,7 +198,7 @@ echo "***********************************************"
 echo
 enabled=""
 disabled=""
-for feat in edi prof trace output_uhd zeromq soapysdr
+for feat in edi prof trace output_uhd zeromq soapysdr easydabv3
 do
     eval var=\$enable_$feat
     AS_IF([test "x$var" = "xyes"],
