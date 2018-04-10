@@ -126,7 +126,7 @@ AM_CONDITIONAL([COMPILE_EDI], [test "x$enable_edi" = "xyes"])
 AS_IF([test "x$enable_easydabv3" = "xno"],
     [ AX_BOOST_BASE([1.54.0], [], AC_MSG_ERROR([BOOST 1.54 or later is required]))
       AX_BOOST_SYSTEM
-      AX_BOOST_THREAD ])
+      AX_BOOST_ASIO ])
 
 AC_DEFINE(HAVE_BOOST, [test "x$enable_easydabv3" = "xno"], [Define if boost is available])
 AC_DEFINE(BUILD_FOR_EASYDABV3, [test "x$enable_easydabv3" = "xyes"], [Define if we are building for EasyDABv3])
