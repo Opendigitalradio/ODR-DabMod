@@ -36,6 +36,7 @@
 #include <string>
 #include <atomic>
 #include <memory>
+#include <thread>
 #include <unistd.h>
 #if defined(HAVE_ZEROMQ)
 #  include "zmq.hpp"

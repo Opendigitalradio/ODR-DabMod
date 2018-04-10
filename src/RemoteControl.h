@@ -43,11 +43,14 @@
 #include <string>
 #include <atomic>
 #include <iostream>
+#include <thread>
+#if defined(HAVE_BOOST)
 #include <boost/bind.hpp>
 #include <boost/asio.hpp>
 #include <boost/foreach.hpp>
 #include <boost/tokenizer.hpp>
 #include <boost/thread.hpp>
+#endif
 #include <stdexcept>
 
 #include "Log.h"
@@ -192,7 +195,7 @@ class RemoteControllers {
 
 extern RemoteControllers rcs;
 
-
+#if defined(HAVE_BOOST)
 /* Implements a Remote controller based on a simple telnet CLI
  * that listens on localhost
  */
@@ -254,12 +257,13 @@ class RemoteControllerTelnet : public BaseRemoteController {
 
         /* This is set to true if a fault occurred */
         std::atomic<bool> m_fault;
-        boost::thread m_restarter_thread;
+        std::thread m_restarter_thread;
 
-        boost::thread m_child_thread;
+        std::thread m_child_thread;
 
         int m_port;
 };
+#endif
 
 #if defined(HAVE_ZEROMQ)
 /* Implements a Remote controller using zmq transportlayer
@@ -299,12 +303,12 @@ class RemoteControllerZmq : public BaseRemoteController {
 
         /* This is set to true if a fault occurred */
         std::atomic<bool> m_fault;
-        boost::thread m_restarter_thread;
+        std::thread m_restarter_thread;
 
         zmq::context_t m_zmqContext;
 
         std::string m_endpoint;
-        boost::thread m_child_thread;
+        std::thread m_child_thread;
 };
 #endif
 

@@ -165,6 +165,8 @@ AC_COMPILE_IFELSE([ AC_LANG_PROGRAM([[
                      AC_DEFINE(HAVE_SO_NOSIGPIPE, 1, [Define this symbol if you have SO_NOSIGPIPE]) ],
                    [ AC_MSG_RESULT(no) ])
 
+AC_DEFINE(HAVE_BOOST, [1], [Define if boost is available])
+
 # Check for march
 AS_IF([test "x$enable_native" = "xyes"],
       [AC_MSG_CHECKING(if we can add -march=native to CFLAGS)

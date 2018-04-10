@@ -28,16 +28,22 @@
 #include <string>
 #include <iostream>
 #include <string>
-#include <boost/asio.hpp>
-#include <boost/thread.hpp>
-
+#include <thread>
+#if defined(HAVE_BOOST)
+#  include <boost/asio.hpp>
+#  include <boost/thread.hpp>
+#endif
 #include "RemoteControl.h"
 
+#if defined(HAVE_BOOST)
 using boost::asio::ip::tcp;
+#endif
+
 using namespace std;
 
 RemoteControllers rcs;
 
+#if defined(HAVE_BOOST)
 RemoteControllerTelnet::~RemoteControllerTelnet()
 {
     m_active = false;
@@ -47,10 +53,11 @@ RemoteControllerTelnet::~RemoteControllerTelnet()
 
 void RemoteControllerTelnet::restart()
 {
-    m_restarter_thread = boost::thread(
+    m_restarter_thread = std::thread(
             &RemoteControllerTelnet::restart_thread,
             this, 0);
 }
+#endif
 
 RemoteControllable::~RemoteControllable() {
     rcs.remove_controllable(this);
@@ -89,6 +96,7 @@ void RemoteControllers::set_param(
     return controllable->set_parameter(param, value);
 }
 
+#if defined(HAVE_BOOST)
 // This runs in a separate thread, because
 // it would take too long to be done in the main loop
 // thread.
@@ -99,7 +107,7 @@ void RemoteControllerTelnet::restart_thread(long)
 
     m_child_thread.join();
 
-    m_child_thread = boost::thread(&RemoteControllerTelnet::process, this, 0);
+    m_child_thread = std::thread(&RemoteControllerTelnet::process, this, 0);
 }
 
 void RemoteControllerTelnet::handle_accept(
@@ -319,7 +327,7 @@ void RemoteControllerTelnet::reply(tcp::socket& socket, string message)
             boost::asio::transfer_all(),
             ignored_error);
 }
-
+#endif
 
 #if defined(HAVE_ZEROMQ)
 
@@ -327,15 +335,14 @@ RemoteControllerZmq::~RemoteControllerZmq() {
     m_active = false;
     m_fault = false;
 
-    if (!m_endpoint.empty()) {
-        m_child_thread.interrupt();
+    if (m_child_thread.joinable()) {
         m_child_thread.join();
     }
 }
 
 void RemoteControllerZmq::restart()
 {
-    m_restarter_thread = boost::thread(&RemoteControllerZmq::restart_thread, this);
+    m_restarter_thread = std::thread(&RemoteControllerZmq::restart_thread, this);
 }
 
 // This runs in a separate thread, because
@@ -345,12 +352,11 @@ void RemoteControllerZmq::restart_thread()
 {
     m_active = false;
 
-    if (!m_endpoint.empty()) {
-        m_child_thread.interrupt();
+    if (m_child_thread.joinable()) {
         m_child_thread.join();
     }
 
-    m_child_thread = boost::thread(&RemoteControllerZmq::process, this);
+    m_child_thread = std::thread(&RemoteControllerZmq::process, this);
 }
 
 void RemoteControllerZmq::recv_all(zmq::socket_t& pSocket, std::vector<std::string> &message)
@@ -479,13 +485,9 @@ void RemoteControllerZmq::process()
                             "Unsupported command. commands: list, show, get, set");
                 }
             }
-
-            // check if thread is interrupted
-            boost::this_thread::interruption_point();
         }
         repSocket.close();
     }
-    catch (boost::thread_interrupted&) {}
     catch (zmq::error_t &e) {
         etiLog.level(error) << "ZMQ RC error: " << std::string(e.what());
     }

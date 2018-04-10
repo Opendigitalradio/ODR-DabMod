@@ -72,13 +72,14 @@ static void parse_configfile(
 
     int line_err = pt.ParseError();
 
-    if (line_err)
-    {
+    if (line_err) {
         std::cerr << "Error, cannot read configuration file '" << configuration_file.c_str() << "'" << std::endl;
         std::cerr << "At line:       " << line_err << std::endl;
         throw std::runtime_error("Cannot read configuration file");
     }
-    // remote controller:
+
+    // remote controller interfaces:
+#if defined(HAVE_BOOST)
     if (pt.GetInteger("remotecontrol.telnet", 0) == 1) {
         try {
             int telnetport = pt.GetInteger("remotecontrol.telnetport", 0);
@@ -91,6 +92,7 @@ static void parse_configfile(
             throw std::runtime_error("Configuration error");
         }
     }
+#endif
 #if defined(HAVE_ZEROMQ)
     if (pt.GetInteger("remotecontrol.zmqctrl", 0) == 1) {
         try {
