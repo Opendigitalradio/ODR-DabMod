@@ -36,7 +36,9 @@ DESCRIPTION:
 #   include <config.h>
 #endif
 
-#include <boost/thread.hpp>
+#include <thread>
+#include <condition_variable>
+#include <mutex>
 #include <memory>
 #include <string>
 #include <atomic>
@@ -56,8 +58,8 @@ enum class BurstRequestState {
 
 struct FeedbackBurstRequest {
     // All fields in this struct are protected
-    mutable boost::mutex mutex;
-    boost::condition_variable mutex_notification;
+    mutable std::mutex mutex;
+    std::condition_variable mutex_notification;
 
     BurstRequestState state = BurstRequestState::None;
 
@@ -102,8 +104,8 @@ class DPDFeedbackServer {
         void ServeFeedbackThread(void);
         void ServeFeedback(void);
 
-        boost::thread rx_burst_thread;
-        boost::thread burst_tcp_thread;
+        std::thread rx_burst_thread;
+        std::thread burst_tcp_thread;
 
         FeedbackBurstRequest burstRequest;
 

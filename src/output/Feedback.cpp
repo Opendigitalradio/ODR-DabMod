@@ -40,7 +40,6 @@ DESCRIPTION:
 #include <sys/socket.h>
 #include <errno.h>
 #include <poll.h>
-#include <boost/date_time/posix_time/posix_time.hpp>
 #include "output/Feedback.h"
 #include "Utils.h"
 #include "Socket.h"
@@ -60,10 +59,10 @@ DPDFeedbackServer::DPDFeedbackServer(
     if (m_port) {
         m_running.store(true);
 
-        rx_burst_thread = boost::thread(
+        rx_burst_thread = std::thread(
                 &DPDFeedbackServer::ReceiveBurstThread, this);
 
-        burst_tcp_thread = boost::thread(
+        burst_tcp_thread = std::thread(
                 &DPDFeedbackServer::ServeFeedbackThread, this);
     }
 }
@@ -72,12 +71,12 @@ DPDFeedbackServer::~DPDFeedbackServer()
 {
     m_running.store(false);
 
-    rx_burst_thread.interrupt();
+    burstRequest.mutex_notification.notify_all();
+
     if (rx_burst_thread.joinable()) {
         rx_burst_thread.join();
     }
 
-    burst_tcp_thread.interrupt();
     if (burst_tcp_thread.joinable()) {
         burst_tcp_thread.join();
     }
@@ -91,7 +90,7 @@ void DPDFeedbackServer::set_tx_frame(
         throw runtime_error("DPDFeedbackServer not running");
     }
 
-    boost::mutex::scoped_lock lock(burstRequest.mutex);
+    unique_lock<mutex> lock(burstRequest.mutex);
 
     if (buf.size() % sizeof(complexf) != 0) {
         throw logic_error("Buffer for tx frame has incorrect size");
@@ -137,7 +136,7 @@ void DPDFeedbackServer::ReceiveBurstThread()
         set_thread_name("dpdreceiveburst");
 
         while (m_running) {
-            boost::mutex::scoped_lock lock(burstRequest.mutex);
+            unique_lock<mutex> lock(burstRequest.mutex);
             while (burstRequest.state != BurstRequestState::SaveReceiveFrame) {
                 if (not m_running) break;
                 burstRequest.mutex_notification.wait(lock);
@@ -192,9 +191,6 @@ void DPDFeedbackServer::ReceiveBurstThread()
     catch (const std::exception &e) {
         etiLog.level(error) << "DPD Feedback RX exception: " << e.what();
     }
-    catch (const boost::thread_interrupted& e) {
-        etiLog.level(info) << "DPD Feedback RX stopping.";
-    }
     catch (...) {
         etiLog.level(error) << "DPD Feedback RX unknown exception!";
     }
@@ -212,6 +208,10 @@ void DPDFeedbackServer::ServeFeedback()
     while (m_running) {
         struct sockaddr_in client;
         TCPSocket client_sock = m_server_sock.accept_with_timeout(1000, &client);
+
+        if (not m_running) {
+            break;
+        }
 
         if (not client_sock.valid()) {
             // No connection request received
@@ -243,15 +243,13 @@ void DPDFeedbackServer::ServeFeedback()
 
         // We are ready to issue the request now
         {
-            boost::mutex::scoped_lock lock(burstRequest.mutex);
+            unique_lock<mutex> lock(burstRequest.mutex);
             burstRequest.num_samples = num_samples;
             burstRequest.state = BurstRequestState::SaveTransmitFrame;
-
-            lock.unlock();
         }
 
         // Wait for the result to be ready
-        boost::mutex::scoped_lock lock(burstRequest.mutex);
+        unique_lock<mutex> lock(burstRequest.mutex);
         while (burstRequest.state != BurstRequestState::Acquired) {
             if (not m_running) break;
             burstRequest.mutex_notification.wait(lock);
@@ -350,7 +348,7 @@ void DPDFeedbackServer::ServeFeedbackThread()
             etiLog.level(error) << "DPD Feedback Server unknown exception!";
         }
 
-        boost::this_thread::sleep(boost::posix_time::seconds(5));
+        this_thread::sleep_for(chrono::seconds(5));
     }
 
     m_running.store(false);
