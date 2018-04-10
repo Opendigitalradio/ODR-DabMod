@@ -30,8 +30,8 @@
 #endif
 
 #include <cstdint>
-#include <boost/property_tree/ptree.hpp>
-#include <boost/property_tree/ini_parser.hpp>
+
+#include "INIReader.h"
 
 #include "ConfigParser.h"
 #include "Utils.h"
@@ -68,23 +68,20 @@ static void parse_configfile(
         mod_settings_t& mod_settings)
 {
     // First read parameters from the file
-    using boost::property_tree::ptree;
-    ptree pt;
+    INIReader pt(configuration_file);
 
-    try {
-        read_ini(configuration_file, pt);
-    }
-    catch (boost::property_tree::ini_parser::ini_parser_error &e)
+    int line_err = pt.ParseError();
+
+    if (line_err)
     {
         std::cerr << "Error, cannot read configuration file '" << configuration_file.c_str() << "'" << std::endl;
-        std::cerr << "       " << e.what() << std::endl;
+        std::cerr << "At line:       " << line_err << std::endl;
         throw std::runtime_error("Cannot read configuration file");
     }
-
     // remote controller:
-    if (pt.get("remotecontrol.telnet", 0) == 1) {
+    if (pt.GetInteger("remotecontrol.telnet", 0) == 1) {
         try {
-            int telnetport = pt.get<int>("remotecontrol.telnetport");
+            int telnetport = pt.GetInteger("remotecontrol.telnetport", 0);
             auto telnetrc = make_shared<RemoteControllerTelnet>(telnetport);
             rcs.add_controller(telnetrc);
         }
@@ -94,11 +91,10 @@ static void parse_configfile(
             throw std::runtime_error("Configuration error");
         }
     }
-
 #if defined(HAVE_ZEROMQ)
-    if (pt.get("remotecontrol.zmqctrl", 0) == 1) {
+    if (pt.GetInteger("remotecontrol.zmqctrl", 0) == 1) {
         try {
-            std::string zmqCtrlEndpoint = pt.get("remotecontrol.zmqctrlendpoint", "");
+            std::string zmqCtrlEndpoint = pt.Get("remotecontrol.zmqctrlendpoint", "");
             auto zmqrc = make_shared<RemoteControllerZmq>(zmqCtrlEndpoint);
             rcs.add_controller(zmqrc);
         }
@@ -111,28 +107,28 @@ static void parse_configfile(
 #endif
 
     // input params:
-    if (pt.get("input.loop", 0) == 1) {
+    if (pt.GetInteger("input.loop", 0) == 1) {
         mod_settings.loop = true;
     }
 
-    mod_settings.inputTransport = pt.get("input.transport", "file");
-    mod_settings.inputMaxFramesQueued = pt.get("input.max_frames_queued",
+    mod_settings.inputTransport = pt.Get("input.transport", "file");
+    mod_settings.inputMaxFramesQueued = pt.GetInteger("input.max_frames_queued",
             ZMQ_INPUT_MAX_FRAME_QUEUE);
 
-    mod_settings.edi_max_delay_ms = pt.get("input.edi_max_delay", 0.0f);
+    mod_settings.edi_max_delay_ms = pt.GetReal("input.edi_max_delay", 0.0f);
 
-    mod_settings.inputName = pt.get("input.source", "/dev/stdin");
+    mod_settings.inputName = pt.Get("input.source", "/dev/stdin");
 
     // log parameters:
-    if (pt.get("log.syslog", 0) == 1) {
+    if (pt.GetInteger("log.syslog", 0) == 1) {
         LogToSyslog* log_syslog = new LogToSyslog();
         etiLog.register_backend(log_syslog);
     }
 
-    if (pt.get("log.filelog", 0) == 1) {
+    if (pt.GetInteger("log.filelog", 0) == 1) {
         std::string logfilename;
         try {
-            logfilename = pt.get<std::string>("log.filename");
+            logfilename = pt.Get("log.filename", "");
         }
         catch (std::exception &e) {
             std::cerr << "Error: " << e.what() << "\n";
@@ -144,7 +140,7 @@ static void parse_configfile(
         etiLog.register_backend(log_file);
     }
 
-    auto trace_filename = pt.get<std::string>("log.trace", "");
+    std::string trace_filename = pt.Get("log.trace", "");
     if (not trace_filename.empty()) {
         LogTracer* tracer = new LogTracer(trace_filename);
         etiLog.register_backend(tracer);
@@ -152,75 +148,70 @@ static void parse_configfile(
 
 
     // modulator parameters:
-    const string gainMode_setting = pt.get("modulator.gainmode", "var");
+    const string gainMode_setting = pt.Get("modulator.gainmode", "var");
     mod_settings.gainMode = parse_gainmode(gainMode_setting);
-    mod_settings.gainmodeVariance = pt.get("modulator.normalise_variance",
+    mod_settings.gainmodeVariance = pt.GetReal("modulator.normalise_variance",
             mod_settings.gainmodeVariance);
 
-    mod_settings.dabMode = pt.get("modulator.mode", mod_settings.dabMode);
-    mod_settings.clockRate = pt.get("modulator.dac_clk_rate", (size_t)0);
-    mod_settings.digitalgain = pt.get("modulator.digital_gain",
+    mod_settings.dabMode = pt.GetInteger("modulator.mode", mod_settings.dabMode);
+    mod_settings.clockRate = pt.GetInteger("modulator.dac_clk_rate", (size_t)0);
+    mod_settings.digitalgain = pt.GetReal("modulator.digital_gain",
             mod_settings.digitalgain);
 
-    mod_settings.outputRate = pt.get("modulator.rate", mod_settings.outputRate);
-    mod_settings.ofdmWindowOverlap = pt.get("modulator.ofdmwindowing",
+    mod_settings.outputRate = pt.GetInteger("modulator.rate", mod_settings.outputRate);
+    mod_settings.ofdmWindowOverlap = pt.GetInteger("modulator.ofdmwindowing",
             mod_settings.ofdmWindowOverlap);
 
     // FIR Filter parameters:
-    if (pt.get("firfilter.enabled", 0) == 1) {
+    if (pt.GetInteger("firfilter.enabled", 0) == 1) {
         mod_settings.filterTapsFilename =
-            pt.get<std::string>("firfilter.filtertapsfile", "default");
+            pt.Get("firfilter.filtertapsfile", "default");
     }
 
     // Poly coefficients:
-    if (pt.get("poly.enabled", 0) == 1) {
+    if (pt.GetInteger("poly.enabled", 0) == 1) {
         mod_settings.polyCoefFilename =
-            pt.get<std::string>("poly.polycoeffile", "dpd/poly.coef");
+            pt.Get("poly.polycoeffile", "dpd/poly.coef");
 
         mod_settings.polyNumThreads =
-            pt.get<int>("poly.num_threads", 0);
+            pt.GetInteger("poly.num_threads", 0);
     }
 
     // Crest factor reduction
-    if (pt.get("cfr.enabled", 0) == 1) {
+    if (pt.GetInteger("cfr.enabled", 0) == 1) {
         mod_settings.enableCfr = true;
-        mod_settings.cfrClip = pt.get<float>("cfr.clip");
-        mod_settings.cfrErrorClip = pt.get<float>("cfr.error_clip");
+        mod_settings.cfrClip = pt.GetReal("cfr.clip", 0.0);
+        mod_settings.cfrErrorClip = pt.GetReal("cfr.error_clip", 0.0);
     }
 
     // Output options
-    std::string output_selected;
-    try {
-        output_selected = pt.get<std::string>("output.output");
-    }
-    catch (std::exception &e) {
-        std::cerr << "Error: " << e.what() << "\n";
+    std::string output_selected = pt.Get("output.output", "");
+    if(output_selected == "") {
+        std::cerr << "Error:\n";
         std::cerr << "       Configuration does not specify output\n";
         throw std::runtime_error("Configuration error");
     }
 
     if (output_selected == "file") {
-        try {
-            mod_settings.outputName = pt.get<std::string>("fileoutput.filename");
-            mod_settings.fileOutputShowMetadata =
-                (pt.get("fileoutput.show_metadata", 0) > 0);
-        }
-        catch (std::exception &e) {
-            std::cerr << "Error: " << e.what() << "\n";
+        mod_settings.outputName = pt.Get("fileoutput.filename", "");
+        if(mod_settings.outputName == "") {
+            std::cerr << "Error:\n";
             std::cerr << "       Configuration does not specify file name for file output\n";
             throw std::runtime_error("Configuration error");
         }
+        mod_settings.fileOutputShowMetadata =
+                (pt.GetInteger("fileoutput.show_metadata", 0) > 0);
         mod_settings.useFileOutput = true;
 
-        mod_settings.fileOutputFormat = pt.get("fileoutput.format",
+        mod_settings.fileOutputFormat = pt.Get("fileoutput.format",
                 mod_settings.fileOutputFormat);
     }
 #if defined(HAVE_OUTPUT_UHD)
     else if (output_selected == "uhd") {
         Output::SDRDeviceConfig sdr_device_config;
 
-        string device = pt.get("uhdoutput.device", "");
-        const auto usrpType = pt.get("uhdoutput.type", "");
+        string device = pt.Get("uhdoutput.device", "");
+        const auto usrpType = pt.Get("uhdoutput.type", "");
         if (usrpType != "") {
             if (not device.empty()) {
                 device += ",";
@@ -229,8 +220,8 @@ static void parse_configfile(
         }
         sdr_device_config.device = device;
 
-        sdr_device_config.subDevice = pt.get("uhdoutput.subdevice", "");
-        sdr_device_config.masterClockRate = pt.get<long>("uhdoutput.master_clock_rate", 0);
+        sdr_device_config.subDevice = pt.Get("uhdoutput.subdevice", "");
+        sdr_device_config.masterClockRate = pt.GetInteger("uhdoutput.master_clock_rate", 0);
 
         if (sdr_device_config.device.find("master_clock_rate") != std::string::npos) {
             std::cerr << "Warning:"
@@ -242,12 +233,12 @@ static void parse_configfile(
                 "setting type in [uhd] device is deprecated !\n";
         }
 
-        sdr_device_config.txgain = pt.get("uhdoutput.txgain", 0.0);
-        sdr_device_config.tx_antenna = pt.get("uhdoutput.tx_antenna", "");
-        sdr_device_config.rx_antenna = pt.get("uhdoutput.rx_antenna", "RX2");
-        sdr_device_config.rxgain = pt.get("uhdoutput.rxgain", 0.0);
-        sdr_device_config.frequency = pt.get<double>("uhdoutput.frequency", 0);
-        std::string chan = pt.get<std::string>("uhdoutput.channel", "");
+        sdr_device_config.txgain = pt.GetReal("uhdoutput.txgain", 0.0);
+        sdr_device_config.tx_antenna = pt.Get("uhdoutput.tx_antenna", "");
+        sdr_device_config.rx_antenna = pt.Get("uhdoutput.rx_antenna", "RX2");
+        sdr_device_config.rxgain = pt.GetReal("uhdoutput.rxgain", 0.0);
+        sdr_device_config.frequency = pt.GetReal("uhdoutput.frequency", 0);
+        std::string chan = pt.Get("uhdoutput.channel", "");
         sdr_device_config.dabMode = mod_settings.dabMode;
 
         if (sdr_device_config.frequency == 0 && chan == "") {
@@ -262,13 +253,13 @@ static void parse_configfile(
             throw std::runtime_error("Configuration error");
         }
 
-        sdr_device_config.lo_offset = pt.get<double>("uhdoutput.lo_offset", 0);
+        sdr_device_config.lo_offset = pt.GetReal("uhdoutput.lo_offset", 0);
 
-        sdr_device_config.refclk_src = pt.get("uhdoutput.refclk_source", "internal");
-        sdr_device_config.pps_src = pt.get("uhdoutput.pps_source", "none");
-        sdr_device_config.pps_polarity = pt.get("uhdoutput.pps_polarity", "pos");
+        sdr_device_config.refclk_src = pt.Get("uhdoutput.refclk_source", "internal");
+        sdr_device_config.pps_src = pt.Get("uhdoutput.pps_source", "none");
+        sdr_device_config.pps_polarity = pt.Get("uhdoutput.pps_polarity", "pos");
 
-        std::string behave = pt.get("uhdoutput.behaviour_refclk_lock_lost", "ignore");
+        std::string behave = pt.Get("uhdoutput.behaviour_refclk_lock_lost", "ignore");
 
         if (behave == "crash") {
             sdr_device_config.refclk_lock_loss_behaviour = Output::CRASH;
@@ -281,9 +272,9 @@ static void parse_configfile(
             throw std::runtime_error("Configuration error");
         }
 
-        sdr_device_config.maxGPSHoldoverTime = pt.get("uhdoutput.max_gps_holdover_time", 0);
+        sdr_device_config.maxGPSHoldoverTime = pt.GetInteger("uhdoutput.max_gps_holdover_time", 0);
 
-        sdr_device_config.dpdFeedbackServerPort = pt.get<long>("uhdoutput.dpd_port", 0);
+        sdr_device_config.dpdFeedbackServerPort = pt.GetInteger("uhdoutput.dpd_port", 0);
 
         mod_settings.sdr_device_config = sdr_device_config;
         mod_settings.useUHDOutput = true;
@@ -292,14 +283,14 @@ static void parse_configfile(
 #if defined(HAVE_SOAPYSDR)
     else if (output_selected == "soapysdr") {
         auto& outputsoapy_conf = mod_settings.sdr_device_config;
-        outputsoapy_conf.device = pt.get("soapyoutput.device", "");
-        outputsoapy_conf.masterClockRate = pt.get<long>("soapyoutput.master_clock_rate", 0);
+        outputsoapy_conf.device = pt.Get("soapyoutput.device", "");
+        outputsoapy_conf.masterClockRate = pt.GetInteger("soapyoutput.master_clock_rate", 0);
 
-        outputsoapy_conf.txgain = pt.get("soapyoutput.txgain", 0.0);
-        outputsoapy_conf.tx_antenna = pt.get("soapyoutput.tx_antenna", "");
-        outputsoapy_conf.lo_offset = pt.get<double>("soapyoutput.lo_offset", 0.0);
-        outputsoapy_conf.frequency = pt.get<double>("soapyoutput.frequency", 0);
-        std::string chan = pt.get<std::string>("soapyoutput.channel", "");
+        outputsoapy_conf.txgain = pt.GetReal("soapyoutput.txgain", 0.0);
+        outputsoapy_conf.tx_antenna = pt.Get("soapyoutput.tx_antenna", "");
+        outputsoapy_conf.lo_offset = pt.GetReal("soapyoutput.lo_offset", 0.0);
+        outputsoapy_conf.frequency = pt.GetReal("soapyoutput.frequency", 0);
+        std::string chan = pt.Get("soapyoutput.channel", "");
         outputsoapy_conf.dabMode = mod_settings.dabMode;
 
         if (outputsoapy_conf.frequency == 0 && chan == "") {
@@ -314,15 +305,15 @@ static void parse_configfile(
             throw std::runtime_error("Configuration error");
         }
 
-        outputsoapy_conf.dpdFeedbackServerPort = pt.get<long>("soapyoutput.dpd_port", 0);
+        outputsoapy_conf.dpdFeedbackServerPort = pt.GetInteger("soapyoutput.dpd_port", 0);
 
         mod_settings.useSoapyOutput = true;
     }
 #endif
 #if defined(HAVE_ZEROMQ)
     else if (output_selected == "zmq") {
-        mod_settings.outputName = pt.get<std::string>("zmqoutput.listen");
-        mod_settings.zmqOutputSocketType = pt.get<std::string>("zmqoutput.socket_type");
+        mod_settings.outputName = pt.Get("zmqoutput.listen", "");
+        mod_settings.zmqOutputSocketType = pt.Get("zmqoutput.socket_type", "");
         mod_settings.useZeroMQOutput = true;
     }
 #endif
@@ -332,12 +323,12 @@ static void parse_configfile(
     }
 
 #if defined(HAVE_OUTPUT_UHD)
-    mod_settings.sdr_device_config.enableSync = (pt.get("delaymanagement.synchronous", 0) == 1);
-    mod_settings.sdr_device_config.muteNoTimestamps = (pt.get("delaymanagement.mutenotimestamps", 0) == 1);
+    mod_settings.sdr_device_config.enableSync = (pt.GetInteger("delaymanagement.synchronous", 0) == 1);
+    mod_settings.sdr_device_config.muteNoTimestamps = (pt.GetInteger("delaymanagement.mutenotimestamps", 0) == 1);
     if (mod_settings.sdr_device_config.enableSync) {
-        std::string delay_mgmt = pt.get<std::string>("delaymanagement.management", "");
-        std::string fixedoffset = pt.get<std::string>("delaymanagement.fixedoffset", "");
-        std::string offset_filename = pt.get<std::string>("delaymanagement.dynamicoffsetfile", "");
+        std::string delay_mgmt = pt.Get("delaymanagement.management", "");
+        std::string fixedoffset = pt.Get("delaymanagement.fixedoffset", "");
+        std::string offset_filename = pt.Get("delaymanagement.dynamicoffsetfile", "");
 
         if (not(delay_mgmt.empty() and fixedoffset.empty() and offset_filename.empty())) {
             std::cerr << "Warning: you are using the old config syntax for the offset management.\n";
@@ -345,7 +336,7 @@ static void parse_configfile(
         }
 
         try {
-            mod_settings.tist_offset_s = pt.get<double>("delaymanagement.offset");
+            mod_settings.tist_offset_s = pt.GetReal("delaymanagement.offset", 0.0);
         }
         catch (std::exception &e) {
             std::cerr << "Error: delaymanagement: synchronous is enabled, but no offset defined!\n";
@@ -356,10 +347,10 @@ static void parse_configfile(
 #endif
 
     /* Read TII parameters from config file */
-    mod_settings.tiiConfig.enable = pt.get("tii.enable", 0);
-    mod_settings.tiiConfig.comb = pt.get("tii.comb", 0);
-    mod_settings.tiiConfig.pattern = pt.get("tii.pattern", 0);
-    mod_settings.tiiConfig.old_variant = pt.get("tii.old_variant", 0);
+    mod_settings.tiiConfig.enable = pt.GetInteger("tii.enable", 0);
+    mod_settings.tiiConfig.comb = pt.GetInteger("tii.comb", 0);
+    mod_settings.tiiConfig.pattern = pt.GetInteger("tii.pattern", 0);
+    mod_settings.tiiConfig.old_variant = pt.GetInteger("tii.old_variant", 0);
 }
 
 

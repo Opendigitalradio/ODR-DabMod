@@ -143,6 +143,7 @@ odr_dabmod_SOURCES  = src/DabMod.cpp \
 					  src/PAPRStats.cpp \
 					  src/PAPRStats.h \
 					  src/zmq.hpp \
+					  lib/INIReader.h \
 					  lib/crc.h \
 					  lib/crc.c \
 					  lib/fec/char.h \
