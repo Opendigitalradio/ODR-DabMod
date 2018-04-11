@@ -41,6 +41,7 @@
 #if defined(HAVE_ZEROMQ)
 #  include "zmq.hpp"
 #  include "ThreadsafeQueue.h"
+#  include "RemoteControl.h"
 #endif
 #include "Log.h"
 #include "Socket.h"
@@ -158,10 +159,10 @@ struct zmq_input_overflow : public std::exception
 #if defined(HAVE_ZEROMQ)
 /* A ZeroMQ input. See www.zeromq.org for more info */
 
-class InputZeroMQReader : public InputReader
+class InputZeroMQReader : public InputReader, public RemoteControllable
 {
     public:
-        InputZeroMQReader() = default;
+        InputZeroMQReader();
         InputZeroMQReader(const InputZeroMQReader& other) = delete;
         InputZeroMQReader& operator=(const InputZeroMQReader& other) = delete;
         ~InputZeroMQReader();
@@ -170,11 +171,23 @@ class InputZeroMQReader : public InputReader
         virtual int GetNextFrame(void* buffer) override;
         virtual std::string GetPrintableInfo() const override;
 
+        /* Base function to set parameters. */
+        virtual void set_parameter(
+                const std::string& parameter,
+                const std::string& value) override;
+
+        /* Getting a parameter always returns a string. */
+        virtual const std::string get_parameter(
+                const std::string& parameter) const override;
+
     private:
         std::atomic<bool> m_running = ATOMIC_VAR_INIT(false);
         std::string m_uri;
         size_t m_max_queued_frames = 0;
         ThreadsafeQueue<std::vector<uint8_t> > m_in_messages;
+
+        mutable std::mutex m_last_in_messages_size_mutex;
+        size_t m_last_in_messages_size = 0;
 
         void RecvProcess(void);
 

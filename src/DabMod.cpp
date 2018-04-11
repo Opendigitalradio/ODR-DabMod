@@ -383,6 +383,7 @@ int launch_modulator(int argc, char* argv[])
 #else
             auto inputZeroMQReader = make_shared<InputZeroMQReader>();
             inputZeroMQReader->Open(mod_settings.inputName, mod_settings.inputMaxFramesQueued);
+            rcs.enrol(inputZeroMQReader.get());
             inputReader = inputZeroMQReader;
 #endif
         }
@@ -444,11 +445,13 @@ int launch_modulator(int argc, char* argv[])
                         }
                     }
 #if defined(HAVE_ZEROMQ)
-                    else if (dynamic_pointer_cast<InputZeroMQReader>(inputReader)) {
+                    else if (auto in_zmq = dynamic_pointer_cast<InputZeroMQReader>(inputReader)) {
                         run_again = true;
                         // Create a new input reader
+                        rcs.remove_controllable(in_zmq.get());
                         auto inputZeroMQReader = make_shared<InputZeroMQReader>();
                         inputZeroMQReader->Open(mod_settings.inputName, mod_settings.inputMaxFramesQueued);
+                        rcs.enrol(inputZeroMQReader.get());
                         inputReader = inputZeroMQReader;
                     }
 #endif
