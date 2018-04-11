@@ -53,6 +53,10 @@ RemoteControllerTelnet::~RemoteControllerTelnet()
 
 void RemoteControllerTelnet::restart()
 {
+    if (m_restarter_thread.joinable()) {
+        m_restarter_thread.join();
+    }
+
     m_restarter_thread = std::thread(
             &RemoteControllerTelnet::restart_thread,
             this, 0);
@@ -105,7 +109,9 @@ void RemoteControllerTelnet::restart_thread(long)
     m_active = false;
     m_io_service.stop();
 
-    m_child_thread.join();
+    if (m_child_thread.joinable()) {
+        m_child_thread.join();
+    }
 
     m_child_thread = std::thread(&RemoteControllerTelnet::process, this, 0);
 }
@@ -342,6 +348,10 @@ RemoteControllerZmq::~RemoteControllerZmq() {
 
 void RemoteControllerZmq::restart()
 {
+    if (m_restarter_thread.joinable()) {
+        m_restarter_thread.join();
+    }
+
     m_restarter_thread = std::thread(&RemoteControllerZmq::restart_thread, this);
 }
 
