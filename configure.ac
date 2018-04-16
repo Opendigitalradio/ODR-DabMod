@@ -75,7 +75,8 @@ AX_CHECK_COMPILE_FLAG(["-Wformat=2"], [CXXFLAGS="$CXXFLAGS -Wformat=2"], [], ["-
 AC_LANG_POP([C++])
 
 
-PKG_CHECK_MODULES([FFTW], [fftw3f], [], [AC_MSG_ERROR([FFTW is required])])
+AS_IF([test "x$enable_easydabv3" = "xno"],
+    [PKG_CHECK_MODULES([FFTW], [fftw3f], [], [AC_MSG_ERROR([FFTW is required])])])
 
 echo "Checking zeromq"
 
@@ -143,6 +144,7 @@ AS_IF([test "x$enable_easydabv3" = "xyes"],
 AC_HEADER_STDC
 AC_CHECK_HEADERS([fcntl.h limits.h memory.h netinet/in.h stdint.h stdlib.h string.h sys/time.h sys/timeb.h unistd.h])
 
+AC_MSG_CHECKING(for M_PIl existence)
 AC_LANG_PUSH([C++])
 AC_COMPILE_IFELSE(
         [AC_LANG_PROGRAM([[#include <math.h>]], [[double pi = M_PIl;]])],
