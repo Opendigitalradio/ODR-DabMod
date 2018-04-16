@@ -60,10 +60,6 @@ odr_dabmod_SOURCES  = src/DabMod.cpp \
 					  src/Eti.h \
 					  src/FicSource.cpp \
 					  src/FicSource.h \
-					  src/FIRFilter.cpp \
-					  src/FIRFilter.h \
-					  src/MemlessPoly.cpp \
-					  src/MemlessPoly.h \
 					  src/PuncturingRule.cpp \
 					  src/PuncturingRule.h \
 					  src/PuncturingEncoder.cpp \
@@ -72,25 +68,12 @@ odr_dabmod_SOURCES  = src/DabMod.cpp \
 					  src/SubchannelSource.h \
 					  src/Flowgraph.cpp \
 					  src/Flowgraph.h \
-					  src/GainControl.cpp \
-					  src/GainControl.h \
 					  src/OutputMemory.cpp \
 					  src/OutputMemory.h \
 					  src/OutputZeroMQ.cpp \
 					  src/OutputZeroMQ.h \
 					  src/TimestampDecoder.h \
 					  src/TimestampDecoder.cpp \
-					  src/output/Feedback.cpp \
-					  src/output/Feedback.h \
-					  src/output/SDR.cpp \
-					  src/output/SDR.h \
-					  src/output/SDRDevice.h \
-					  src/output/Soapy.cpp \
-					  src/output/Soapy.h \
-					  src/output/UHD.cpp \
-					  src/output/UHD.h \
-					  src/output/USRPTime.cpp \
-					  src/output/USRPTime.h \
 					  src/InputFileReader.cpp \
 					  src/InputMemory.cpp \
 					  src/InputMemory.h \
@@ -105,26 +88,8 @@ odr_dabmod_SOURCES  = src/DabMod.cpp \
 					  src/PrbsGenerator.h \
 					  src/BlockPartitioner.cpp \
 					  src/BlockPartitioner.h \
-					  src/QpskSymbolMapper.cpp \
-					  src/QpskSymbolMapper.h \
-					  src/FrequencyInterleaver.cpp \
-					  src/FrequencyInterleaver.h \
-					  src/PhaseReference.cpp \
-					  src/PhaseReference.h \
-					  src/DifferentialModulator.cpp \
-					  src/DifferentialModulator.h \
-					  src/NullSymbol.cpp \
-					  src/NullSymbol.h \
 					  src/SignalMultiplexer.cpp \
 					  src/SignalMultiplexer.h \
-					  src/CicEqualizer.cpp \
-					  src/CicEqualizer.h \
-					  src/OfdmGenerator.cpp \
-					  src/OfdmGenerator.h \
-					  src/GuardIntervalInserter.cpp \
-					  src/GuardIntervalInserter.h \
-					  src/Resampler.cpp \
-					  src/Resampler.h \
 					  src/ConvEncoder.cpp \
 					  src/ConvEncoder.h \
 					  src/TimeInterleaver.cpp \
@@ -138,10 +103,6 @@ odr_dabmod_SOURCES  = src/DabMod.cpp \
 					  src/FormatConverter.h \
 					  src/Utils.cpp \
 					  src/Utils.h \
-					  src/TII.cpp \
-					  src/TII.h \
-					  src/PAPRStats.cpp \
-					  src/PAPRStats.h \
 					  src/zmq.hpp \
 					  lib/INIReader.h \
 					  lib/crc.h \
@@ -155,6 +116,49 @@ odr_dabmod_SOURCES  = src/DabMod.cpp \
 					  lib/fec/init_rs_char.c \
 					  lib/fec/init_rs.h \
 					  lib/fec/rs-common.h
+
+if !COMPILE_FOR_EASYDABV3
+odr_dabmod_SOURCES += \
+					  src/FIRFilter.cpp \
+					  src/FIRFilter.h \
+					  src/MemlessPoly.cpp \
+					  src/MemlessPoly.h \
+					  src/GainControl.cpp \
+					  src/GainControl.h \
+					  src/output/Feedback.cpp \
+					  src/output/Feedback.h \
+					  src/output/SDR.cpp \
+					  src/output/SDR.h \
+					  src/output/SDRDevice.h \
+					  src/output/Soapy.cpp \
+					  src/output/Soapy.h \
+					  src/output/UHD.cpp \
+					  src/output/UHD.h \
+					  src/output/USRPTime.cpp \
+					  src/output/USRPTime.h \
+					  src/PhaseReference.cpp \
+					  src/PhaseReference.h \
+					  src/QpskSymbolMapper.cpp \
+					  src/QpskSymbolMapper.h \
+					  src/FrequencyInterleaver.cpp \
+					  src/FrequencyInterleaver.h \
+					  src/DifferentialModulator.cpp \
+					  src/DifferentialModulator.h \
+					  src/NullSymbol.cpp \
+					  src/NullSymbol.h \
+					  src/CicEqualizer.cpp \
+					  src/CicEqualizer.h \
+					  src/OfdmGenerator.cpp \
+					  src/OfdmGenerator.h \
+					  src/GuardIntervalInserter.cpp \
+					  src/GuardIntervalInserter.h \
+					  src/Resampler.cpp \
+					  src/Resampler.h \
+					  src/PAPRStats.cpp \
+					  src/PAPRStats.h \
+					  src/TII.cpp \
+					  src/TII.h
+endif
 
 if COMPILE_EDI
 odr_dabmod_SOURCES += lib/edi/buffer_unpack.hpp \

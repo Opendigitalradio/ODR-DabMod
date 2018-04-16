@@ -97,15 +97,20 @@ AS_IF([test "x$enable_trace" != "xno"],
 
 # Define conditionals for Makefile.am
 AM_CONDITIONAL([IS_GIT_REPO], [test -d '.git'])
+AM_CONDITIONAL([COMPILE_FOR_EASYDABV3], [test "x$enable_easydabv3" = "xyes"])
 
 # Defines for config.h
 AX_PTHREAD([], AC_MSG_ERROR([requires pthread]))
 
-PKG_CHECK_MODULES([SOAPYSDR], [SoapySDR], enable_soapysdr=yes, enable_soapysdr=no)
+AS_IF([test "x$enable_easydabv3" = "xno"],
+    [PKG_CHECK_MODULES([SOAPYSDR], [SoapySDR], enable_soapysdr=yes, enable_soapysdr=no)])
 
 AC_SUBST([CFLAGS], ["$CFLAGS $EXTRA $FFTW_CFLAGS $SOAPYSDR_CFLAGS $PTHREAD_CFLAGS"])
 AC_SUBST([CXXFLAGS], ["$CXXFLAGS $EXTRA $FFTW_CFLAGS $SOAPYSDR_CFLAGS $PTHREAD_CFLAGS"])
 AC_SUBST([LIBS], ["$FFTW_LIBS $SOAPYSDR_LIBS $PTHREAD_LIBS $ZMQ_LIBS"])
+
+AS_IF([test "x$enable_easydabv3" = "xyes" && test "x$enable_output_uhd" == "xyes"],
+      AC_MSG_ERROR([Cannot enable both EasyDABv3 and UHD output]))
 
 # Checks for UHD.
 AS_IF([test "x$enable_output_uhd" = "xyes"],
@@ -128,8 +133,10 @@ AS_IF([test "x$enable_easydabv3" = "xno"],
       AX_BOOST_SYSTEM
       AX_BOOST_ASIO ])
 
-AC_DEFINE(HAVE_BOOST, [test "x$enable_easydabv3" = "xno"], [Define if boost is available])
-AC_DEFINE(BUILD_FOR_EASYDABV3, [test "x$enable_easydabv3" = "xyes"], [Define if we are building for EasyDABv3])
+AS_IF([test "x$enable_easydabv3" = "xno"],
+      AC_DEFINE(HAVE_BOOST, [1], [Define if boost is available]))
+AS_IF([test "x$enable_easydabv3" = "xyes"],
+      AC_DEFINE(BUILD_FOR_EASYDABV3, [1], [Define if we are building for EasyDABv3]))
 
 
 # Checks for header files.
