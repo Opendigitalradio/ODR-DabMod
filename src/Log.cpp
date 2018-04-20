@@ -82,14 +82,14 @@ void Logger::io_process()
     set_thread_name("logger");
     while (1) {
         log_message_t m;
-        m_message_queue.wait_and_pop(m);
-
-        auto message = m.message;
-
-        if (m.level == trace and m.message.empty()) {
-            // Special message to stop thread
+        try {
+            m_message_queue.wait_and_pop(m);
+        }
+        catch (const ThreadsafeQueueWakeup&) {
             break;
         }
+
+        auto message = m.message;
 
         /* Remove a potential trailing newline.
          * It doesn't look good in syslog

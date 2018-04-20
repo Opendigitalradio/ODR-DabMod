@@ -48,7 +48,6 @@ DESCRIPTION:
 #include "ModPlugin.h"
 #include "EtiReader.h"
 #include "RemoteControl.h"
-#include "ThreadsafeQueue.h"
 
 namespace Output {
 

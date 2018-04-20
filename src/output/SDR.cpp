@@ -84,9 +84,7 @@ SDR::~SDR()
 {
     m_running.store(false);
 
-    FrameData end_marker;
-    end_marker.buf.clear();
-    m_queue.push(end_marker);
+    m_queue.trigger_wakeup();
 
     if (m_device_thread.joinable()) {
         m_device_thread.join();
@@ -181,7 +179,7 @@ void SDR::process_thread_entry()
             m_queue.wait_and_pop(frame, pop_prebuffering);
             etiLog.log(trace, "SDR,pop");
 
-            if (m_running.load() == false or frame.buf.empty()) {
+            if (m_running.load() == false) {
                 break;
             }
 
@@ -203,8 +201,10 @@ void SDR::process_thread_entry()
             }
         }
     }
+    catch (const ThreadsafeQueueWakeup& e) { }
     catch (const runtime_error& e) {
-        etiLog.level(error) << "SDR output thread caught runtime error: " << e.what();
+        etiLog.level(error) << "SDR output thread caught runtime error: " <<
+            e.what();
     }
 
     m_running.store(false);

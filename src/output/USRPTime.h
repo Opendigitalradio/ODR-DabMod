@@ -48,7 +48,6 @@ DESCRIPTION:
 #include "output/SDR.h"
 #include "TimestampDecoder.h"
 #include "RemoteControl.h"
-#include "ThreadsafeQueue.h"
 
 #include <stdio.h>
 #include <sys/types.h>

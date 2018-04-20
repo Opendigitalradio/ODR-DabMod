@@ -78,8 +78,6 @@ private:
 
     struct worker_t {
         struct input_data_t {
-            bool terminate = false;
-
             dpd_type_t dpd_type;
 
             // Valid for polynomial types
@@ -112,9 +110,7 @@ private:
 
         ~worker_t() {
             if (thread.joinable()) {
-                input_data_t terminate_tag;
-                terminate_tag.terminate = true;
-                in_queue.push(terminate_tag);
+                in_queue.trigger_wakeup();
                 thread.join();
             }
         }

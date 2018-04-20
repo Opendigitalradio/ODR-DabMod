@@ -40,7 +40,6 @@
 #ifdef HAVE_EDI
 #  include "lib/UdpSocket.h"
 #endif
-#include "ThreadsafeQueue.h"
 
 #include <vector>
 #include <memory>

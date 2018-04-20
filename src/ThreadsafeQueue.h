@@ -40,8 +40,12 @@
  * retrieves the elements.
  *
  * The queue can make the consumer block until an element
- * is available.
+ * is available, or a wakeup requested.
  */
+
+/* Class thrown by blocking pop to tell the consumer
+ * that there's a wakeup requested. */
+class ThreadsafeQueueWakeup {};
 
 template<typename T>
 class ThreadsafeQueue
@@ -98,6 +102,17 @@ public:
         return queue_size;
     }
 
+    /* Trigger a wakeup event on a blocking consumer, which
+     * will receive a ThreadsafeQueueWakeup exception.
+     */
+    void trigger_wakeup(void)
+    {
+        std::unique_lock<std::mutex> lock(the_mutex);
+        wakeup_requested = true;
+        lock.unlock();
+        the_rx_notification.notify_one();
+    }
+
     /* Send a notification for the receiver thread */
     void notify(void)
     {
@@ -135,15 +150,22 @@ public:
     void wait_and_pop(T& popped_value, size_t prebuffering = 1)
     {
         std::unique_lock<std::mutex> lock(the_mutex);
-        while (the_queue.size() < prebuffering) {
+        while (the_queue.size() < prebuffering and
+                not wakeup_requested) {
             the_rx_notification.wait(lock);
         }
 
-        std::swap(popped_value, the_queue.front());
-        the_queue.pop();
+        if (wakeup_requested) {
+            wakeup_requested = false;
+            throw ThreadsafeQueueWakeup();
+        }
+        else {
+            std::swap(popped_value, the_queue.front());
+            the_queue.pop();
 
-        lock.unlock();
-        the_tx_notification.notify_one();
+            lock.unlock();
+            the_tx_notification.notify_one();
+        }
     }
 
 private:
@@ -151,5 +173,6 @@ private:
     mutable std::mutex the_mutex;
     std::condition_variable the_rx_notification;
     std::condition_variable the_tx_notification;
+    bool wakeup_requested = false;
 };
 

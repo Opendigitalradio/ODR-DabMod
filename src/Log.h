@@ -138,10 +138,7 @@ class Logger {
         Logger(const Logger& other) = delete;
         const Logger& operator=(const Logger& other) = delete;
         ~Logger() {
-            // Special message to stop the thread
-            log_message_t m(trace, "");
-
-            m_message_queue.push(m);
+            m_message_queue.trigger_wakeup();
             m_io_thread.join();
         }
 

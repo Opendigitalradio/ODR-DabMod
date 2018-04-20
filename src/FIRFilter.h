@@ -34,7 +34,6 @@
 #include "RemoteControl.h"
 #include "ModPlugin.h"
 #include "PcDebug.h"
-#include "ThreadsafeQueue.h"
 
 #include <sys/types.h>
 #include <complex>

@@ -280,9 +280,10 @@ void MemlessPoly::worker_thread(MemlessPoly::worker_t *workerdata)
 
     while (true) {
         worker_t::input_data_t in_data;
-        workerdata->in_queue.wait_and_pop(in_data);
-
-        if (in_data.terminate) {
+        try {
+            workerdata->in_queue.wait_and_pop(in_data);
+        }
+        catch (const ThreadsafeQueueWakeup&) {
             break;
         }
 
@@ -322,7 +323,6 @@ int MemlessPoly::internal_process(Buffer* const dataIn, Buffer* dataOut)
             size_t start = 0;
             for (auto& worker : m_workers) {
                 worker_t::input_data_t dat;
-                dat.terminate = false;
                 dat.dpd_type = m_dpd_type;
                 dat.lut_scalefactor = m_lut_scalefactor;
                 dat.lut = m_lut.data();
