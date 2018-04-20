@@ -48,7 +48,14 @@ RemoteControllerTelnet::~RemoteControllerTelnet()
 {
     m_active = false;
     m_io_service.stop();
-    m_child_thread.join();
+
+    if (m_restarter_thread.joinable()) {
+        m_restarter_thread.join();
+    }
+
+    if (m_child_thread.joinable()) {
+        m_child_thread.join();
+    }
 }
 
 void RemoteControllerTelnet::restart()
@@ -340,6 +347,10 @@ void RemoteControllerTelnet::reply(tcp::socket& socket, string message)
 RemoteControllerZmq::~RemoteControllerZmq() {
     m_active = false;
     m_fault = false;
+
+    if (m_restarter_thread.joinable()) {
+        m_restarter_thread.join();
+    }
 
     if (m_child_thread.joinable()) {
         m_child_thread.join();
