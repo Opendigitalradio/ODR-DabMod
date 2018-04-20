@@ -5,7 +5,7 @@
    Copyright (C) 2018
    Matthias P. Braendli, matthias.braendli@mpb.li
 
-   An implementation for a threadsafe queue using std thread library
+   An implementation for a threadsafe queue, depends on C++11
 
    When creating a ThreadsafeQueue, one can specify the minimal number
    of elements it must contain before it is possible to take one
