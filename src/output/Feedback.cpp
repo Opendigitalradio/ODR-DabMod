@@ -348,7 +348,9 @@ void DPDFeedbackServer::ServeFeedbackThread()
             etiLog.level(error) << "DPD Feedback Server unknown exception!";
         }
 
-        this_thread::sleep_for(chrono::seconds(5));
+        if (m_running) {
+            this_thread::sleep_for(chrono::seconds(5));
+        }
     }
 
     m_running.store(false);
