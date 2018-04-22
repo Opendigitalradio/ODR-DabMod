@@ -3,10 +3,10 @@
    Her Majesty the Queen in Right of Canada (Communications Research
    Center Canada)
 
-   Copyright (C) 2016
+   Copyright (C) 2018
    Matthias P. Braendli, matthias.braendli@mpb.li
 
-    http://opendigitalradio.org
+    http://www.opendigitalradio.org
  */
 /*
    This file is part of ODR-DabMod.
@@ -26,7 +26,7 @@
  */
 
 #include <list>
-#include <stdarg.h>
+#include <cstdarg>
 #include <chrono>
 
 #include "Log.h"
@@ -41,10 +41,9 @@ using namespace std;
  */
 Logger etiLog;
 
-
-void Logger::register_backend(LogBackend* backend) {
+void Logger::register_backend(std::shared_ptr<LogBackend> backend)
+{
     backends.push_back(backend);
-    //log(info, "Registered new logger " + backend->get_name());
 }
 
 
@@ -68,13 +67,13 @@ void Logger::log(log_level_t level, const char* fmt, ...)
             size *= 2;
     }
 
-    logstr(level, str);
+    logstr(level, move(str));
 }
 
-void Logger::logstr(log_level_t level, std::string message)
+void Logger::logstr(log_level_t level, std::string&& message)
 {
-    log_message_t m(level, message);
-    m_message_queue.push(std::move(m));
+    log_message_t m(level, move(message));
+    m_message_queue.push(move(m));
 }
 
 void Logger::io_process()

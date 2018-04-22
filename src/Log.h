@@ -3,10 +3,10 @@
    Her Majesty the Queen in Right of Canada (Communications Research
    Center Canada)
 
-   Copyright (C) 2016
+   Copyright (C) 2018
    Matthias P. Braendli, matthias.braendli@mpb.li
 
-    http://opendigitalradio.org
+    http://www.opendigitalradio.org
  */
 /*
    This file is part of ODR-DabMod.
@@ -42,6 +42,7 @@
 #include <string>
 #include <map>
 #include <mutex>
+#include <memory>
 #include <thread>
 #include "ThreadsafeQueue.h"
 
@@ -56,6 +57,7 @@ static const std::string levels_as_str[] =
 /** Abstract class all backends must inherit from */
 class LogBackend {
     public:
+        virtual ~LogBackend() {};
         virtual void log(log_level_t level, const std::string& message) = 0;
         virtual std::string get_name() const = 0;
 };
@@ -67,7 +69,7 @@ class LogToSyslog : public LogBackend {
             openlog(SYSLOG_IDENT, LOG_PID, SYSLOG_FACILITY);
         }
 
-        ~LogToSyslog() {
+        virtual ~LogToSyslog() {
             closelog();
         }
 
@@ -117,9 +119,9 @@ class LogTracer : public LogBackend {
 class LogLine;
 
 struct log_message_t {
-    log_message_t(log_level_t _level, const std::string& _message) :
+    log_message_t(log_level_t _level, std::string&& _message) :
         level(_level),
-        message(_message) {}
+        message(move(_message)) {}
 
     log_message_t() :
         level(debug),
@@ -142,12 +144,12 @@ class Logger {
             m_io_thread.join();
         }
 
-        void register_backend(LogBackend* backend);
+        void register_backend(std::shared_ptr<LogBackend> backend);
 
         /* Log the message to all backends */
         void log(log_level_t level, const char* fmt, ...);
 
-        void logstr(log_level_t level, std::string message);
+        void logstr(log_level_t level, std::string&& message);
 
         /* All logging IO is done in another thread */
         void io_process(void);
@@ -157,7 +159,7 @@ class Logger {
         LogLine level(log_level_t level);
 
     private:
-        std::list<LogBackend*> backends;
+        std::list<std::shared_ptr<LogBackend> > backends;
 
         ThreadsafeQueue<log_message_t> m_message_queue;
         std::thread m_io_thread;

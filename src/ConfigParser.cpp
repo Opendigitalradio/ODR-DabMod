@@ -123,8 +123,7 @@ static void parse_configfile(
 
     // log parameters:
     if (pt.GetInteger("log.syslog", 0) == 1) {
-        LogToSyslog* log_syslog = new LogToSyslog();
-        etiLog.register_backend(log_syslog);
+        etiLog.register_backend(make_shared<LogToSyslog>());
     }
 
     if (pt.GetInteger("log.filelog", 0) == 1) {
@@ -138,14 +137,12 @@ static void parse_configfile(
             throw std::runtime_error("Configuration error");
         }
 
-        LogToFile* log_file = new LogToFile(logfilename);
-        etiLog.register_backend(log_file);
+        etiLog.register_backend(make_shared<LogToFile>(logfilename));
     }
 
     std::string trace_filename = pt.Get("log.trace", "");
     if (not trace_filename.empty()) {
-        LogTracer* tracer = new LogTracer(trace_filename);
-        etiLog.register_backend(tracer);
+        etiLog.register_backend(make_shared<LogTracer>(trace_filename));
     }
 
 
