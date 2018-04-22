@@ -50,6 +50,10 @@ matrix:
       compiler: gcc
       addons: *linuxaddons
 
+    - env: MATRIX_EVAL="CC=gcc-6 CXX=g++-6" CONF="--enable-easydabv3 --disable-output-uhd --enable-fast-math --disable-native"
+      compiler: gcc
+      addons: *linuxaddons
+
 before_install:
   - eval "${MATRIX_EVAL}"
   - |
