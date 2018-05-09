@@ -18,11 +18,12 @@ class GlobalConfig:
 
         # DAB frame
         # Time domain
-        self.T_F = self.sample_rate / 2048000 * 196608  # Transmission frame duration
-        self.T_NULL = self.sample_rate / 2048000 * 2656  # Null symbol duration
-        self.T_S = self.sample_rate / 2048000 * 2552  # Duration of OFDM symbols of indices l = 1, 2, 3,... L;
-        self.T_U = self.sample_rate / 2048000 * 2048  # Inverse of carrier spacing
-        self.T_C = self.sample_rate / 2048000 * 504  # Duration of cyclic prefix
+        oversample = int(self.sample_rate / 2048000)
+        self.T_F = oversample * 196608  # Transmission frame duration
+        self.T_NULL = oversample * 2656  # Null symbol duration
+        self.T_S = oversample * 2552  # Duration of OFDM symbols of indices l = 1, 2, 3,... L;
+        self.T_U = oversample * 2048  # Inverse of carrier spacing
+        self.T_C = oversample * 504  # Duration of cyclic prefix
 
         # Frequency Domain
         # example: np.delete(fft[3328:4865], 768)
