@@ -5,7 +5,6 @@
 #
 # http://www.opendigitalradio.org
 # Licence: The MIT License, see notice at the end of this file
-# noinspection PyBroadException
 
 """This Python script is the main file for ODR-DabMod's DPD Computation Engine.
 This engine calculates and updates the parameter of the digital
@@ -41,7 +40,7 @@ parser.add_argument('--rxgain', default=30,
                     help='TX Gain, -1 to leave unchanged',
                     required=False,
                     type=int)
-parser.add_argument('--digital_gain', default=0.6,
+parser.add_argument('--digital_gain', default=0.01,
                     help='Digital Gain',
                     required=False,
                     type=float)
@@ -67,6 +66,8 @@ parser.add_argument('-r', '--reset', action="store_true",
                     help='Reset the DPD settings to the defaults.')
 parser.add_argument('-s', '--status', action="store_true",
                     help='Display the currently running DPD settings.')
+parser.add_argument('--measure', action="store_true",
+                    help='Only measure metrics once')
 
 cli_args = parser.parse_args()
 
@@ -87,7 +88,7 @@ plot = cli_args.plot
 import logging
 
 # Simple usage scenarios don't need to clutter /tmp
-if not (cli_args.status or cli_args.reset):
+if not (cli_args.status or cli_args.reset or cli_args.measure):
     dt = datetime.datetime.now().isoformat()
     logging_path = '/tmp/dpd_{}'.format(dt).replace('.', '_').replace(':', '-')
     if name:
@@ -183,11 +184,36 @@ if cli_args.reset:
     logging.info("DPD Settings were reset to default values.")
     sys.exit(0)
 
-tx_agc = TX_Agc(adapt, c)
-
 # Automatic Gain Control
 agc = Agc(meas, adapt, c)
 agc.run()
+
+if cli_args.measure:
+    txframe_aligned, tx_ts, rxframe_aligned, rx_ts, rx_median = meas.get_samples()
+
+    print("TX signal median {}".format(np.median(np.abs(txframe_aligned))))
+    print("RX signal median {}".format(rx_median))
+
+    tx, rx, phase_diff, n_per_bin = extStat.extract(txframe_aligned, rxframe_aligned)
+
+    off = SA.calc_offset(txframe_aligned)
+    print("off {}".format(off))
+    tx_mer = MER.calc_mer(txframe_aligned[off:off + c.T_U], debug_name='TX')
+    print("tx_mer {}".format(tx_mer))
+    rx_mer = MER.calc_mer(rxframe_aligned[off:off + c.T_U], debug_name='RX')
+    print("rx_mer {}".format(rx_mer))
+
+    mse = np.mean(np.abs((txframe_aligned - rxframe_aligned) ** 2))
+    print("mse {}".format(mse))
+
+    digital_gain = adapt.get_digital_gain()
+    print("digital_gain {}".format(digital_gain))
+
+    #rx_shoulder_tuple = MS.average_shoulders(rxframe_aligned)
+    #tx_shoulder_tuple = MS.average_shoulders(txframe_aligned)
+    sys.exit(0)
+
+tx_agc = TX_Agc(adapt, c)
 
 state = 'report'
 i = 0
