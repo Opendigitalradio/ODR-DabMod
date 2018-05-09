@@ -94,9 +94,7 @@ class Measure:
     def get_samples(self):
         """Connect to ODR-DabMod, retrieve TX and RX samples, load
         into numpy arrays, and return a tuple
-        (tx_timestamp, tx_samples, rx_timestamp, rx_samples)
-        where the timestamps are doubles, and the samples are numpy
-        arrays of complex floats, both having the same size
+        (txframe_aligned, tx_ts, rxframe_aligned, rx_ts, rx_median)
         """
 
         txframe, tx_ts, rxframe, rx_ts = self.receive_tcp()

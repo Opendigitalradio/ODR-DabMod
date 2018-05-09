@@ -29,7 +29,7 @@ def poly(sig):
 
 
 def fit_poly(tx_abs, rx_abs):
-    return np.linalg.lstsq(poly(rx_abs), tx_abs)[0]
+    return np.linalg.lstsq(poly(rx_abs), tx_abs, rcond=None)[0]
 
 
 def calc_line(coefs, min_amp, max_amp):

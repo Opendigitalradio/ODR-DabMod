@@ -81,7 +81,7 @@ class Model_PM:
         return np.array([sig ** i for i in range(0, 5)]).T
 
     def fit_poly(self, tx_abs, phase_diff):
-        return np.linalg.lstsq(self.poly(tx_abs), phase_diff)[0]
+        return np.linalg.lstsq(self.poly(tx_abs), phase_diff, rcond=None)[0]
 
     def calc_line(self, coefs, min_amp, max_amp):
         tx_range = np.linspace(min_amp, max_amp)
