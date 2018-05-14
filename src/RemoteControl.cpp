@@ -3,7 +3,7 @@
    Her Majesty the Queen in Right of Canada (Communications Research
    Center Canada)
 
-   Copyright (C) 2016
+   Copyright (C) 2018
    Matthias P. Braendli, matthias.braendli@mpb.li
 
     http://www.opendigitalradio.org
@@ -101,10 +101,15 @@ void RemoteControllers::set_param(
         const std::string& param,
         const std::string& value)
 {
-    etiLog.level(info) << "RC: Setting " << name << " " << param
-        << " to " << value;
     RemoteControllable* controllable = get_controllable_(name);
-    return controllable->set_parameter(param, value);
+    try {
+        return controllable->set_parameter(param, value);
+    }
+    catch (const ios_base::failure& e) {
+        etiLog.level(info) << "RC: Failed to set " << name << " " << param
+        << " to " << value << ": " << e.what();
+        throw ParameterError("Cannot understand value");
+    }
 }
 
 #if defined(HAVE_BOOST)
@@ -414,6 +419,8 @@ void RemoteControllerZmq::send_fail_reply(zmq::socket_t &pSocket, const std::str
 
 void RemoteControllerZmq::process()
 {
+    m_fault = false;
+
     // create zmq reply socket for receiving ctrl parameters
     try {
         zmq::socket_t repSocket(m_zmqContext, ZMQ_REP);
