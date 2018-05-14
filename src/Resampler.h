@@ -62,8 +62,8 @@ protected:
     size_t myFftSizeOut;
     FFT_TYPE* myFftIn;
     FFT_TYPE* myFftOut;
-    complexf* myBufferIn;
-    complexf* myBufferOut;
+    FFT_TYPE* myBufferIn;
+    FFT_TYPE* myBufferOut;
     FFT_TYPE* myFront;
     FFT_TYPE* myBack;
     float *myWindow;

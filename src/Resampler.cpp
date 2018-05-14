@@ -50,15 +50,15 @@ T gcd(T a, T b)
 
 Resampler::Resampler(size_t inputRate, size_t outputRate, size_t resolution) :
     ModCodec(),
-    myFftPlan1(NULL),
-    myFftPlan2(NULL),
-    myFftIn(NULL),
-    myFftOut(NULL),
-    myBufferIn(NULL),
-    myBufferOut(NULL),
-    myFront(NULL),
-    myBack(NULL),
-    myWindow(NULL)
+    myFftPlan1(nullptr),
+    myFftPlan2(nullptr),
+    myFftIn(nullptr),
+    myFftOut(nullptr),
+    myBufferIn(nullptr),
+    myBufferOut(nullptr),
+    myFront(nullptr),
+    myBack(nullptr),
+    myWindow(nullptr)
 {
     PDEBUG("Resampler::Resampler(%zu, %zu) @ %p\n", inputRate, outputRate, this);
 
@@ -103,8 +103,8 @@ Resampler::Resampler(size_t inputRate, size_t outputRate, size_t resolution) :
             myBack, myFftOut,
             FFTW_BACKWARD, FFTW_MEASURE);
 
-    myBufferIn = (complexf*)fftwf_malloc(sizeof(FFT_TYPE) * myFftSizeIn / 2);
-    myBufferOut = (complexf*)fftwf_malloc(sizeof(FFT_TYPE) * myFftSizeOut / 2);
+    myBufferIn = (FFT_TYPE*)fftwf_malloc(sizeof(FFT_TYPE) * myFftSizeIn / 2);
+    myBufferOut = (FFT_TYPE*)fftwf_malloc(sizeof(FFT_TYPE) * myFftSizeOut / 2);
 
     memset(myBufferIn, 0, myFftSizeIn / 2 * sizeof(FFT_TYPE));
     memset(myBufferOut, 0, myFftSizeOut / 2 * sizeof(FFT_TYPE));
@@ -115,13 +115,13 @@ Resampler::~Resampler()
 {
     PDEBUG("Resampler::~Resampler() @ %p\n", this);
 
-    if (myFftIn != NULL) { fftwf_free(myFftIn); }
-    if (myFftOut != NULL) { fftwf_free(myFftOut); }
-    if (myBufferIn != NULL) { fftwf_free(myBufferIn); }
-    if (myBufferOut != NULL) { fftwf_free(myBufferOut); }
-    if (myFront != NULL) { fftwf_free(myFront); }
-    if (myBack != NULL) { fftwf_free(myBack); }
-    if (myWindow != NULL) { fftwf_free(myWindow); }
+    if (myFftIn != nullptr) { fftwf_free(myFftIn); }
+    if (myFftOut != nullptr) { fftwf_free(myFftOut); }
+    if (myBufferIn != nullptr) { fftwf_free(myBufferIn); }
+    if (myBufferOut != nullptr) { fftwf_free(myBufferOut); }
+    if (myFront != nullptr) { fftwf_free(myFront); }
+    if (myBack != nullptr) { fftwf_free(myBack); }
+    if (myWindow != nullptr) { fftwf_free(myWindow); }
     fftwf_destroy_plan(myFftPlan1);
     fftwf_destroy_plan(myFftPlan2);
 }
@@ -160,7 +160,8 @@ int Resampler::process(Buffer* const dataIn, Buffer* dataOut)
                 FFT_REAL(myFront[myFftSizeIn / 2]);
             FFT_IMAG(myBack[myFftSizeIn / 2]) =
                 FFT_IMAG(myFront[myFftSizeIn / 2]);
-        } else {
+        }
+        else {
             memcpy(myBack, myFront, myFftSizeOut / 2 * sizeof(FFT_TYPE));
             memcpy(&myBack[myFftSizeOut / 2],
                     &myFront[myFftSizeIn - (myFftSizeOut / 2)],
@@ -181,10 +182,12 @@ int Resampler::process(Buffer* const dataIn, Buffer* dataOut)
         fftwf_execute(myFftPlan2);
 
         for (size_t k = 0; k < myFftSizeOut / 2; ++k) {
-            FFT_REAL(out[j + k]) = myBufferOut[k].real() + FFT_REAL(myFftOut[k]);
-            FFT_IMAG(out[j + k]) = myBufferOut[k].imag() + FFT_IMAG(myFftOut[k]);
+            FFT_REAL(out[j + k]) = FFT_REAL(myBufferOut[k]) + FFT_REAL(myFftOut[k]);
+            FFT_IMAG(out[j + k]) = FFT_IMAG(myBufferOut[k]) + FFT_IMAG(myFftOut[k]);
         }
-        memcpy(myBufferOut, myFftOut + (myFftSizeOut / 2), (myFftSizeOut / 2) * sizeof(FFT_TYPE));
+        memcpy(myBufferOut,
+                myFftOut + (myFftSizeOut / 2),
+                (myFftSizeOut / 2) * sizeof(FFT_TYPE));
     }
 
     return 1;
