@@ -57,6 +57,9 @@ parser.add_argument('-i', '--iterations', default=10, type=int,
 parser.add_argument('-L', '--lut',
                     help='Use lookup table instead of polynomial predistorter',
                     action="store_true")
+parser.add_argument('--enable-txgain-agc',
+                    help='Enable the TX gain AGC',
+                    action="store_true")
 parser.add_argument('--plot',
                     help='Enable all plots, to be more selective choose plots in GlobalConfig.py',
                     action="store_true")
@@ -113,7 +116,7 @@ else:
     dt = datetime.datetime.now().isoformat()
     logging.basicConfig(format='%(asctime)s - %(module)s - %(levelname)s - %(message)s',
                         datefmt='%Y-%m-%d %H:%M:%S',
-                        level=logging.DEBUG)
+                        level=logging.INFO)
     logging_path = None
 
 logging.info("DPDCE starting up with options: {}".format(cli_args))
@@ -213,7 +216,11 @@ if cli_args.measure:
     #tx_shoulder_tuple = MS.average_shoulders(txframe_aligned)
     sys.exit(0)
 
-tx_agc = TX_Agc(adapt, c)
+# Disable TXGain AGC by default, so that the experiments are controlled
+# better.
+tx_agc = None
+if cli_args.enable_txgain_agc:
+    tx_agc = TX_Agc(adapt, c)
 
 state = 'report'
 i = 0
@@ -225,7 +232,7 @@ while i < num_iter:
         if state == 'measure':
             # Get Samples and check gain
             txframe_aligned, tx_ts, rxframe_aligned, rx_ts, rx_median = meas.get_samples()
-            if tx_agc.adapt_if_necessary(txframe_aligned):
+            if tx_agc and tx_agc.adapt_if_necessary(txframe_aligned):
                 continue
 
             # Extract usable data from measurement

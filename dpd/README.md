@@ -103,14 +103,12 @@ This configuration file is different from usual defaults in several respects:
  * 4x oversampling: 8192000 sample rate
  * a very small digital gain, which will be overridden by the DPDCE
  * predistorter enabled
- * UHD output with a rather low TX gain, which will be overridden by DPDCE
 
-The DPDCE uses automatic gain control for both TX and RX gain to get both a
-high quantisation quality for the most frequent amplitude regions and a high
-enough back-off so the peaks are also quantised correctly. This means that the
-output power will stay at the same level, but the DPDCE may change TX gain to
-trade it with digital gain and also change RX gain. This also implies that you
-should *not modify txgain, rxgain, digital gain or coefficient settings manually!*
+The TX gain should be chosen so that you can drive your amplifier into
+saturation with a digital gain of 0.1, so that there is margin for the DPD to
+operate.
+
+You should *not modify txgain, rxgain, digital gain or coefficient settings manually!*
 When the DPDCE is used, it controls these settings, and there are command line
 options for you to define initial values.
 
