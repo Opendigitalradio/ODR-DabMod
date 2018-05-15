@@ -58,7 +58,7 @@ When a frame arrives with a timestamp that is in the past, the frame is dropped.
 If the timestamp is too far in the future, the output module waits a short
 delay.
 
-Synchonisation can be verified by using an oscilloscope and a receiver. It is
+Synchronisation can be verified by using an oscilloscope and a receiver. It is
 very easy to see if the null symbols align. Then tune the receiver to the
 ensemble, and alternatively lower the tx gain of each modulator to see if the
 receiver is still able to receive the ensemble without hiccup.
