@@ -114,6 +114,8 @@ int GainControl::internal_process(Buffer* const dataIn, Buffer* dataOut)
         }
     }
 
+    const float constantGain = m_normalise * m_digGain;
+
 #ifdef __SSE__
     const __m128* in  = reinterpret_cast<const __m128*>(dataIn->getData());
     __m128* out       = reinterpret_cast<__m128*>(dataOut->getData());
@@ -128,9 +130,11 @@ int GainControl::internal_process(Buffer* const dataIn, Buffer* dataOut)
                 "GainControl::process input size not valid!");
     }
 
+    const auto constantGain4 = _mm_set1_ps(constantGain);
+
     for (size_t i = 0; i < sizeIn; i += m_frameSize) {
         gain128.m = computeGain(in, m_frameSize);
-        gain128.m = _mm_mul_ps(gain128.m, _mm_set1_ps(m_normalise * m_digGain));
+        gain128.m = _mm_mul_ps(gain128.m, constantGain4);
 
         PDEBUG("********** Gain: %10f **********\n", gain128.f[0]);
 
@@ -158,7 +162,7 @@ int GainControl::internal_process(Buffer* const dataIn, Buffer* dataOut)
     }
 
     for (size_t i = 0; i < sizeIn; i += m_frameSize) {
-        gain = m_normalise * m_digGain * computeGain(in, m_frameSize);
+        gain = constantGain * computeGain(in, m_frameSize);
 
         PDEBUG("********** Gain: %10f **********\n", gain);
 
@@ -402,10 +406,10 @@ float GainControl::computeGainVar(const complexf* in, size_t sizeIn)
     mean = complexf(0.0f, 0.0f);
 
     for (size_t sample = 0; sample < sizeIn; ++sample) {
-        complexf delta = in[sample] - mean;
-        float i = sample + 1;
-        complexf q = delta / i;
-        mean = mean + q;
+        const complexf delta = in[sample] - mean;
+        const float i = sample + 1;
+        const complexf q = delta / i;
+        mean += q;
 
         /*
         printf("F %zu, %.2f+%.2fj\t",
@@ -424,7 +428,7 @@ float GainControl::computeGainVar(const complexf* in, size_t sizeIn)
     var1 = complexf(0.0f, 0.0f);
     var2 = complexf(0.0f, 0.0f);
     for (size_t sample = 0; sample < sizeIn; ++sample) {
-        complexf diff  = in[sample] - mean;
+        const complexf diff  = in[sample] - mean;
         complexf delta;
         complexf q;
 
