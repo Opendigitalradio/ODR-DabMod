@@ -221,7 +221,8 @@ int OfdmGenerator::process(Buffer* const dataIn, Buffer* dataOut)
 
         if (myCfr) {
             reference.resize(mySpacing);
-            memcpy(reference.data(), myFftIn, mySpacing * sizeof(FFT_TYPE));
+            memcpy(reinterpret_cast<fftwf_complex*>(reference.data()),
+                    myFftIn, mySpacing * sizeof(FFT_TYPE));
         }
 
         fftwf_execute(myFftPlan); // IFFT from myFftIn to myFftOut
@@ -232,7 +233,8 @@ int OfdmGenerator::process(Buffer* const dataIn, Buffer* dataOut)
         if (myCfr) {
             if (myMERCalcIndex == i) {
                 before_cfr.resize(mySpacing);
-                memcpy(before_cfr.data(), myFftOut, mySpacing * sizeof(FFT_TYPE));
+                memcpy(reinterpret_cast<fftwf_complex*>(reference.data()),
+                        myFftOut, mySpacing * sizeof(FFT_TYPE));
             }
 
             /* cfr_one_iteration runs the myFftPlan again at the end, and
