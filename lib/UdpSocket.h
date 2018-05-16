@@ -107,7 +107,7 @@ class UdpSocket
         /** Receive an UDP packet.
          *  @param packet The packet that will receive the data. The address will be set
          *                to the source address.
-         *  @return 0 if ok, -1 if error
+         *  @return 0 if ok or timeout, -1 if error
          */
         int receive(UdpPacket& packet);
 

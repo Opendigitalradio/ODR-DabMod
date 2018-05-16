@@ -25,6 +25,7 @@
    */
 
 #include "UdpSocket.h"
+#include "Utils.h"
 
 #include <iostream>
 #include <stdio.h>
@@ -116,29 +117,50 @@ UdpSocket::~UdpSocket()
     }
 }
 
+static inline bool wait_for_recv_ready(int sock_fd, const size_t timeout_ms)
+{
+    //setup timeval for timeout
+    timeval tv;
+    tv.tv_sec = 0;
+    tv.tv_usec = timeout_ms*1000;
+
+    //setup rset for timeout
+    fd_set rset;
+    FD_ZERO(&rset);
+    FD_SET(sock_fd, &rset);
+
+    return ::select(sock_fd+1, &rset, NULL, NULL, &tv) > 0;
+}
 
 int UdpSocket::receive(UdpPacket& packet)
 {
-    socklen_t addrSize;
-    addrSize = sizeof(*packet.getAddress().getAddress());
-    ssize_t ret = recvfrom(listenSocket,
-            packet.getData(),
-            packet.getSize(),
-            0,
-            packet.getAddress().getAddress(),
-            &addrSize);
+    bool ready = wait_for_recv_ready(listenSocket, 2000);
 
-    if (ret == SOCKET_ERROR) {
-        packet.setSize(0);
-        if (errno == EAGAIN) {
-            return 0;
+    if (ready) {
+        socklen_t addrSize;
+        addrSize = sizeof(*packet.getAddress().getAddress());
+        ssize_t ret = recvfrom(listenSocket,
+                packet.getData(),
+                packet.getSize(),
+                0,
+                packet.getAddress().getAddress(),
+                &addrSize);
+
+        if (ret == SOCKET_ERROR) {
+            packet.setSize(0);
+            if (errno == EAGAIN) {
+                return 0;
+            }
+            setInetError("Can't receive UDP packet");
+            return -1;
         }
-        setInetError("Can't receive UDP packet");
-        return -1;
+        packet.setSize(ret);
+        return 0;
     }
-
-    packet.setSize(ret);
-    return 0;
+    else {
+        packet.setSize(0);
+        return 0;
+    }
 }
 
 int UdpSocket::send(UdpPacket& packet)
@@ -290,6 +312,8 @@ void UdpReceiver::m_run()
         private: atomic<bool>& m_stop;
     } autoSetStop(m_stop);
 
+    set_thread_name("udp_rx");
+
     if (IN_MULTICAST(ntohl(inet_addr(m_mcastaddr.c_str())))) {
         m_sock.reinit(m_port, m_mcastaddr);
         m_sock.setMulticastSource(m_bindto.c_str());
@@ -313,8 +337,7 @@ void UdpReceiver::m_run()
             // If this blocks, the UDP socket will lose incoming packets
             m_packets.push_wait_if_full(packet, m_max_packets_queued);
         }
-        else
-        {
+        else {
             if (inetErrNo != EINTR) {
                 // TODO replace fprintf
                 fprintf(stderr, "Socket error: %s\n", inetErrMsg);

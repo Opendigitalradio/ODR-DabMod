@@ -330,12 +330,19 @@ int launch_modulator(int argc, char* argv[])
         bool first_frame = true;
 
         while (running) {
-            while (not ediReader.isFrameReady()) {
-                bool success = ediUdpInput.rxPacket();
-                if (not success) {
+            while (running and not ediReader.isFrameReady()) {
+                try {
+                    ediUdpInput.rxPacket();
+                }
+                catch (std::runtime_error& e) {
+                    etiLog.level(warn) << "EDI input: " << e.what();
                     running = 0;
                     break;
                 }
+            }
+
+            if (not running) {
+                break;
             }
 
             if (first_frame) {

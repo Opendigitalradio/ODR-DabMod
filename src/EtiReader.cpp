@@ -591,14 +591,13 @@ void EdiUdpInput::Open(const std::string& uri)
 
 bool EdiUdpInput::rxPacket()
 {
-    try {
-        auto udp_data = m_udp_rx.get_packet_buffer();
-        m_decoder.push_packet(udp_data);
-        return true;
-    }
-    catch (std::runtime_error& e) {
-        etiLog.level(warn) << "EDI input: " << e.what();
+    auto udp_data = m_udp_rx.get_packet_buffer();
+
+    if (udp_data.empty()) {
         return false;
     }
+
+    m_decoder.push_packet(udp_data);
+    return true;
 }
 #endif // HAVE_EDI
