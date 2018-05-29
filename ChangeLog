@@ -1,6 +1,14 @@
 This file contains information about the changes done to
 ODR-DabMod in this repository
 
+2018-05-29: Matthias P. Braendli <matthias@mpb.li>
+	(v2.1.0):
+		Add s16 output format.
+		Add compilation target for the EasyDABv3, which
+		doesn't have boost and requires constellation points
+		output. This required changing the configuration file parser.
+		Avoid RC crash when setting invalid values.
+
 2018-03-21: Matthias P. Braendli <matthias@mpb.li>
 	(v2.0.0):
 		Big rework of the SDR device handling, putting in common more
