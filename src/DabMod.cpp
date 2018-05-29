@@ -297,7 +297,6 @@ int launch_modulator(int argc, char* argv[])
     if (int r = set_realtime_prio(1)) {
         etiLog.level(error) << "Could not set priority for modulator:" << r;
     }
-    set_thread_name("modulator");
 
     if (mod_settings.inputTransport == "edi") {
 #ifdef HAVE_EDI
