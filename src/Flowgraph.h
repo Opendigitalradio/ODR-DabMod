@@ -51,10 +51,8 @@ public:
     std::shared_ptr<ModPlugin> plugin() { return myPlugin; }
 
     int process();
-    time_t processTime() { return myProcessTime; }
-    void addProcessTime(time_t processTime) {
-        myProcessTime += processTime;
-    }
+    time_t processTime() const;
+    void addProcessTime(time_t time);
 
     void addOutputBuffer(Buffer::sptr& buffer, Metadata_vec_sptr& md);
     void removeOutputBuffer(Buffer::sptr& buffer, Metadata_vec_sptr& md);

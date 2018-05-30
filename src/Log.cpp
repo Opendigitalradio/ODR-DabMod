@@ -47,7 +47,7 @@ void Logger::register_backend(std::shared_ptr<LogBackend> backend)
 }
 
 
-void Logger::log(log_level_t level, const char* fmt, ...)
+void Logger::log(log_level_t lvl, const char* fmt, ...)
 {
     int size = 100;
     std::string str;
@@ -67,12 +67,12 @@ void Logger::log(log_level_t level, const char* fmt, ...)
             size *= 2;
     }
 
-    logstr(level, move(str));
+    logstr(lvl, move(str));
 }
 
-void Logger::logstr(log_level_t level, std::string&& message)
+void Logger::logstr(log_level_t lvl, std::string&& message)
 {
-    log_message_t m(level, move(message));
+    log_message_t m(lvl, move(message));
     m_message_queue.push(move(m));
 }
 
@@ -108,9 +108,9 @@ void Logger::io_process()
     }
 }
 
-LogLine Logger::level(log_level_t level)
+LogLine Logger::level(log_level_t lvl)
 {
-    return LogLine(this, level);
+    return LogLine(this, lvl);
 }
 
 LogToFile::LogToFile(const std::string& filename) : name("FILE")

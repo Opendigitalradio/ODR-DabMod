@@ -198,6 +198,16 @@ int Node::process()
     return ret;
 }
 
+time_t Node::processTime() const
+{
+    return myProcessTime;
+}
+
+void Node::addProcessTime(time_t time)
+{
+    myProcessTime += time;
+}
+
 Edge::Edge(shared_ptr<Node>& srcNode, shared_ptr<Node>& dstNode) :
     mySrcNode(srcNode),
     myDstNode(dstNode)
