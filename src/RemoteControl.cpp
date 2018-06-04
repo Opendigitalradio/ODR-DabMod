@@ -451,7 +451,23 @@ void RemoteControllerZmq::process()
                     size_t cohort_size = rcs.controllables.size();
                     for (auto &controllable : rcs.controllables) {
                         std::stringstream ss;
-                        ss << controllable->get_rc_name();
+                        ss << "{ \"name\": \"" << controllable->get_rc_name() << "\"," <<
+                            " \"params\": { ";
+
+                        list< vector<string> > params = controllable->get_parameter_descriptions();
+                        size_t i = 0;
+                        for (auto &param : params) {
+                            if (i > 0) {
+                                ss << ", ";
+                            }
+
+                            ss << "\"" << param[0] << "\": " <<
+                                "\"" << param[1] << "\"";
+
+                            i++;
+                        }
+
+                        ss << " } }";
 
                         std::string msg_s = ss.str();
 
