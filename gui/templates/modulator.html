@@ -1,0 +1,65 @@
+<!--
+   Copyright (C) 2018
+   Matthias P. Braendli, matthias.braendli@mpb.li
+
+This file is part of ODR-DabMod.
+
+ODR-DabMod is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+ODR-DabMod is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with ODR-DabMod.  If not, see <http://www.gnu.org/licenses/>.
+-->
+
+<!DOCTYPE html>
+<html lang="en">
+
+{% include 'head.html' %}
+
+<body>
+    {% include 'body-nav.html' %}
+
+    <div class="container-fluid">
+        <div class="panel-group">
+            <div class="panel panel-default">
+                <div class="panel-body">
+                    <h3>OFDM Windowing</h3>
+                    <div class="form-group">
+                        <label for="windowlength">Window length:</label>
+                        <input type="text" class="form-control" id="windowlength">
+                        <button type="button" class="btn btn-sm btn-info" id="setwindowlength">Set</button>
+                    </div>
+                </div>
+                <div class="panel-body">
+                    <h3>CFR</h3>
+                    <div class="form-group">
+                        <div class="checkbox">
+                            <label><input type="checkbox" value="1" id="cfrenable">Enable</label>
+                        </div>
+
+                        <label for="cfrclip">clip:</label>
+                        <input type="text" class="form-control" id="cfrclip">
+
+                        <label for="errorclip">error clip:</label>
+                        <input type="text" class="form-control" id="cfrerrorclip">
+                        <input type="text" readonly class="form-control" id="cfrstats">
+                        <input type="text" readonly class="form-control" id="paprstats">
+                        <button type="button" class="btn btn-sm btn-info" id="setclip">
+                            Set
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+        <button type="button" class="btn btn-sm btn-info" id="refresh">Refresh</button>
+    </div>
+</body>
+</html>

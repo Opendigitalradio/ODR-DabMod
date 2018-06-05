@@ -1,0 +1,48 @@
+<!--
+   Copyright (C) 2018
+   Matthias P. Braendli, matthias.braendli@mpb.li
+
+This file is part of ODR-DabMod.
+
+ODR-DabMod is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+ODR-DabMod is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with ODR-DabMod.  If not, see <http://www.gnu.org/licenses/>.
+-->
+
+<!DOCTYPE html>
+<html lang="en">
+
+{% include 'head.html' %}
+
+<body>
+    {% include 'body-nav.html' %}
+
+    <div class="container-fluid">
+        <div class="container">
+            <h1>RC Values</h1>
+            <table id="rctable" class="table">
+                <thead>
+                    <tr>
+                        <th scope="col">RC entry</th>
+                        <th scope="col">Value</th>
+                        <th scope="col">Help</th>
+                    </tr>
+                </thead>
+                <tbody>
+                </tbody>
+            </table>
+        </div>
+
+        <button type="button" class="btn btn-sm btn-info" id="refresh">Refresh</button>
+    </div>
+</body>
+</html>

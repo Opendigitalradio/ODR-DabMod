@@ -1,0 +1,38 @@
+        <div class="container-fluid">
+        <nav class="navbar navbar-inverse">
+                <div class="container-fluid">
+                        <div class="navbar-header">
+                                <a class="navbar-brand" href="/">ODR-DabMod UI</a>
+                        </div>
+                        <div>
+                        <ul class="nav navbar-nav">
+                                <li{% if tab == 'home' %} class="active"{% endif %}><a href="/">Home</a></li>
+                                <li{% if tab == 'rcvalues' %} class="active"{% endif %}><a href="/rcvalues">RC values</a></li>
+                                <li{% if tab == 'modulator' %} class="active"{% endif %}><a href="/modulator">Modulator</a></li>
+                                <li class="dropdown{% if tab == 'help' or tab == 'about' %} active"{% endif %}">
+                                        <a class="dropdown-toggle" data-toggle="dropdown" href="#">Help
+                                        <span class="caret"></span></a>
+                                        <ul class="dropdown-menu">
+                                                <li class="dropdown-header">Open Digital Radio</li>
+                                                <li><a href="http://www.opendigitalradio.org/">Website</a></li>
+                                                <li><a href="http://wiki.opendigitalradio.org/">Documentation</a></li>
+                                                <li><a href="https://github.com/Opendigitalradio/">GitHub</a></li>
+                                                <li class="divider"></li>
+                                                <li class="dropdown-header">ODR-DabMod</li>
+                                                <li><a href="/about">About</a></li>
+                                        </ul>
+                                </li>
+                        </ul>
+                        <ul class="nav navbar-nav navbar-right">
+                            <!--
+                                {% if is_login is sameas true %}
+                                        <li><a href="/auth/logout"><span class="glyphicon glyphicon-log-in"></span> Logout</a></li>
+                                {% else %}
+                                        <li><a href="/auth/login"><span class="glyphicon glyphicon-log-in"></span> Login</a></li>
+                                {% endif %}
+                            -->
+                        </ul>
+                        </div>
+                </div>
+        </nav>
+        </div>
