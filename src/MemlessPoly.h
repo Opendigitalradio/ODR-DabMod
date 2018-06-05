@@ -2,7 +2,7 @@
    Copyright (C) 2007, 2008, 2009, 2010, 2011 Her Majesty the Queen in
    Right of Canada (Communications Research Center Canada)
 
-   Copyright (C) 2017
+   Copyright (C) 2018
    Matthias P. Braendli, matthias.braendli@mpb.li
 
     http://opendigitalradio.org
@@ -74,7 +74,8 @@ public:
 
 private:
     int internal_process(Buffer* const dataIn, Buffer* dataOut);
-    void load_coefficients(const std::string &coefFile);
+    void load_coefficients(std::istream& coefData);
+    std::string serialise_coefficients() const;
 
     struct worker_t {
         struct input_data_t {

@@ -2,7 +2,7 @@
    Copyright (C) 2007, 2008, 2009, 2010, 2011 Her Majesty the Queen in
    Right of Canada (Communications Research Center Canada)
 
-   Copyright (C) 2017
+   Copyright (C) 2018
    Matthias P. Braendli, matthias.braendli@mpb.li
    Andreas Steger, andreas.steger@digris.ch
 
@@ -63,6 +63,7 @@ MemlessPoly::MemlessPoly(const std::string& coefs_file, unsigned int num_threads
             coefs_file.c_str(), this);
 
     RC_ADD_PARAMETER(ncoefs, "(Read-only) number of coefficients.");
+    RC_ADD_PARAMETER(coefs, "Predistortion coefficients, same format as file.");
     RC_ADD_PARAMETER(coeffile, "Filename containing coefficients. "
             "When set, the file gets loaded.");
 
@@ -94,7 +95,8 @@ MemlessPoly::MemlessPoly(const std::string& coefs_file, unsigned int num_threads
         }
     }
 
-    load_coefficients(m_coefs_file);
+    auto coefs_fstream = fstream(m_coefs_file);
+    load_coefficients(coefs_fstream);
 
     start_pipeline_thread();
 }
@@ -104,21 +106,53 @@ MemlessPoly::~MemlessPoly()
     stop_pipeline_thread();
 }
 
-void MemlessPoly::load_coefficients(const std::string &coefFile)
+constexpr uint8_t file_format_odd_poly = 1;
+constexpr uint8_t file_format_lut = 2;
+
+std::string MemlessPoly::serialise_coefficients() const
 {
-    std::ifstream coef_fstream(coefFile.c_str());
-    if (!coef_fstream) {
+    stringstream ss;
+
+    std::lock_guard<std::mutex> lock(m_coefs_mutex);
+
+    if (m_dpd_settings_valid) {
+        switch (m_dpd_type) {
+            case dpd_type_t::odd_only_poly:
+                ss << (int)file_format_odd_poly << endl;
+                ss << m_coefs_am.size() << endl;
+                for (const auto& coef : m_coefs_am) {
+                    ss << coef << endl;
+                }
+                for (const auto& coef : m_coefs_pm) {
+                    ss << coef << endl;
+                }
+                break;
+            case dpd_type_t::lookup_table:
+                ss << (int)file_format_lut << endl;
+                ss << m_lut.size() << endl;
+                ss << m_lut_scalefactor << endl;
+                for (const auto& l : m_lut) {
+                    ss << l << endl;
+                }
+                break;
+        }
+    }
+
+    return ss.str();
+}
+
+void MemlessPoly::load_coefficients(std::istream& coef_stream)
+{
+    if (!coef_stream) {
         throw std::runtime_error("MemlessPoly: Could not open file with coefs!");
     }
 
     uint32_t file_format_indicator;
-    const uint8_t file_format_odd_poly = 1;
-    const uint8_t file_format_lut = 2;
-    coef_fstream >> file_format_indicator;
+    coef_stream >> file_format_indicator;
 
     if (file_format_indicator == file_format_odd_poly) {
         int n_coefs;
-        coef_fstream >> n_coefs;
+        coef_stream >> n_coefs;
 
         if (n_coefs <= 0) {
             throw std::runtime_error("MemlessPoly: coefs file has invalid format.");
@@ -137,7 +171,7 @@ void MemlessPoly::load_coefficients(const std::string &coefFile)
 
         for (int n = 0; n < n_entries; n++) {
             float a;
-            coef_fstream >> a;
+            coef_stream >> a;
 
             if (n < n_coefs) {
                 coefs_am[n] = a;
@@ -146,10 +180,10 @@ void MemlessPoly::load_coefficients(const std::string &coefFile)
                 coefs_pm[n - n_coefs] = a;
             }
 
-            if (coef_fstream.eof()) {
-                etiLog.log(error, "MemlessPoly: file %s should contains %d coefs, "
+            if (coef_stream.eof()) {
+                etiLog.log(error, "MemlessPoly: coefs should contains %d coefs, "
                         "but EOF reached after %d coefs !",
-                        coefFile.c_str(), n_entries, n);
+                        n_entries, n);
                 throw std::runtime_error("MemlessPoly: coefs file invalid !");
             }
         }
@@ -167,13 +201,13 @@ void MemlessPoly::load_coefficients(const std::string &coefFile)
     }
     else if (file_format_indicator == file_format_lut) {
         float scalefactor;
-        coef_fstream >> scalefactor;
+        coef_stream >> scalefactor;
 
         std::array<complexf, lut_entries> lut;
 
         for (size_t n = 0; n < lut_entries; n++) {
             float a;
-            coef_fstream >> a;
+            coef_stream >> a;
 
             lut[n] = a;
         }
@@ -312,8 +346,7 @@ int MemlessPoly::internal_process(Buffer* const dataIn, Buffer* dataOut)
     complexf* out = reinterpret_cast<complexf*>(dataOut->getData());
     size_t sizeOut = dataOut->getLength() / sizeof(complexf);
 
-    if (m_dpd_settings_valid)
-    {
+    if (m_dpd_settings_valid) {
         std::lock_guard<std::mutex> lock(m_coefs_mutex);
         const size_t num_threads = m_workers.size();
 
@@ -383,8 +416,23 @@ void MemlessPoly::set_parameter(const string& parameter, const string& value)
     }
     else if (parameter == "coeffile") {
         try {
-            load_coefficients(value);
+            auto coefs_fstream = fstream(value);
+            load_coefficients(coefs_fstream);
             m_coefs_file = value;
+        }
+        catch (std::runtime_error &e) {
+            throw ParameterError(e.what());
+        }
+    }
+    else if (parameter == "coefs") {
+        try {
+            stringstream ss(value);
+            load_coefficients(ss);
+
+            // Write back to the file to ensure we will start up
+            // with the same settings next time
+            auto coefs_fstream = ofstream(m_coefs_file);
+            coefs_fstream << value;
         }
         catch (std::runtime_error &e) {
             throw ParameterError(e.what());
@@ -403,6 +451,9 @@ const string MemlessPoly::get_parameter(const string& parameter) const
     stringstream ss;
     if (parameter == "ncoefs") {
         ss << m_coefs_am.size();
+    }
+    else if (parameter == "coefs") {
+        ss << serialise_coefficients();
     }
     else if (parameter == "coeffile") {
         ss << m_coefs_file;
