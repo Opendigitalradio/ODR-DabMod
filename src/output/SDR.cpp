@@ -78,6 +78,8 @@ SDR::SDR(SDRDeviceConfig& config, std::shared_ptr<SDRDevice> device) :
     RC_ADD_PARAMETER(underruns, "Counter of number of underruns");
     RC_ADD_PARAMETER(latepackets, "Counter of number of late packets");
     RC_ADD_PARAMETER(frames, "Counter of number of frames modulated");
+    RC_ADD_PARAMETER(gpsdo_num_sv, "Number of Satellite Vehicles tracked by GPSDO");
+    RC_ADD_PARAMETER(gpsdo_holdover, "1 if the GPSDO is in holdover, 0 if it is using gnss");
 }
 
 SDR::~SDR()
@@ -381,7 +383,9 @@ void SDR::set_parameter(const string& parameter, const string& value)
     }
     else if (parameter == "underruns" or
              parameter == "latepackets" or
-             parameter == "frames") {
+             parameter == "frames" or
+             parameter == "gpsdo_num_sv" or
+             parameter == "gpsdo_holdover") {
         throw ParameterError("Parameter " + parameter + " is read-only.");
     }
     else {
@@ -425,6 +429,14 @@ const string SDR::get_parameter(const string& parameter) const
         else if (parameter == "frames") {
             ss << stat.num_frames_modulated;
         }
+    }
+    else if (parameter == "gpsdo_num_sv") {
+        const auto stat = m_device->get_run_statistics();
+        ss << stat.gpsdo_num_sv;
+    }
+    else if (parameter == "gpsdo_holdover") {
+        const auto stat = m_device->get_run_statistics();
+        ss << (stat.gpsdo_holdover ? 1 : 0);
     }
     else {
         ss << "Parameter '" << parameter <<

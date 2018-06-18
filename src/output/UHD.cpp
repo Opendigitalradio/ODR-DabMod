@@ -362,6 +362,12 @@ SDRDevice::RunStatistics UHD::get_run_statistics(void) const
     rs.num_overruns = num_overflows;
     rs.num_late_packets = num_late_packets;
     rs.num_frames_modulated = num_frames_modulated;
+
+    if (m_device_time) {
+        const auto gpsdo_stat = m_device_time->get_gnss_stats();
+        rs.gpsdo_holdover = gpsdo_stat.holdover;
+        rs.gpsdo_num_sv = gpsdo_stat.num_sv;
+    }
     return rs;
 }
 
@@ -433,7 +439,7 @@ bool UHD::is_clk_source_ok(void) const
     }
 
     if (m_device_time) {
-        ok |= m_device_time->verify_time();
+        ok &= m_device_time->verify_time();
     }
 
     return ok;

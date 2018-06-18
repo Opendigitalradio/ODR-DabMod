@@ -106,10 +106,13 @@ struct FrameData {
 class SDRDevice {
     public:
         struct RunStatistics {
-            size_t num_underruns;
-            size_t num_late_packets;
-            size_t num_overruns;
-            size_t num_frames_modulated;
+            size_t num_underruns = 0;
+            size_t num_late_packets = 0;
+            size_t num_overruns = 0;
+            size_t num_frames_modulated = 0;
+
+            int gpsdo_num_sv = 0;
+            bool gpsdo_holdover = false;
         };
 
         virtual void tune(double lo_offset, double frequency) = 0;

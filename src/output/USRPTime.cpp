@@ -39,64 +39,6 @@ namespace Output {
 
 using namespace std;
 
-
-// Check function for GPS TIMELOCK sensor from the ODR LEA-M8F board GPSDO
-static bool check_gps_timelock(uhd::usrp::multi_usrp::sptr& usrp)
-{
-    try {
-        const string sensor_value =
-            usrp->get_mboard_sensor("gps_timelock", 0).to_pp_string();
-
-        if (sensor_value.find("TIME LOCKED") == string::npos) {
-
-            const string gngga =
-                usrp->get_mboard_sensor("gps_gngga", 0).to_pp_string();
-
-            std::stringstream ss(gngga);
-            std::string item;
-            std::vector<std::string> elems;
-            while (std::getline(ss, item, ',')) {
-                elems.push_back(item);
-            }
-
-            const auto num_svs = (elems.size() >= 7) ? elems[7] : "?";
-
-            etiLog.level(info) << "OutputUHD: " << num_svs << " SVs,"
-                " gps_timelock " << sensor_value;
-            return false;
-        }
-
-        return true;
-    }
-    catch (const uhd::exception &e) {
-        etiLog.level(warn) << "OutputUHD: no gps_timelock sensor: " <<
-            e.what();
-        return false;
-    }
-}
-
-// Check function for GPS LOCKED sensor from the Ettus GPSDO
-static bool check_gps_locked(uhd::usrp::multi_usrp::sptr& usrp)
-{
-    try {
-        const uhd::sensor_value_t sensor_value(
-                usrp->get_mboard_sensor("gps_locked", 0));
-        if (not sensor_value.to_bool()) {
-            etiLog.level(warn) << "OutputUHD: gps_locked " <<
-                sensor_value.to_pp_string();
-            return false;
-        }
-
-        return true;
-    }
-    catch (const uhd::exception &e) {
-        etiLog.level(warn) << "OutputUHD: no gps_locked sensor" <<
-            e.what();
-        return false;
-    }
-}
-
-
 USRPTime::USRPTime(
         uhd::usrp::multi_usrp::sptr usrp,
         SDRDeviceConfig& conf) :
@@ -104,26 +46,6 @@ USRPTime::USRPTime(
     m_conf(conf),
     time_last_check(timepoint_t::clock::now())
 {
-
-    if (m_conf.pps_src == "gpsdo") {
-        using namespace std::chrono;
-        auto now = system_clock::now();
-        auto expiry = now + seconds(m_conf.maxGPSHoldoverTime);
-        auto checkfunc = gpsdo_is_ettus() ? check_gps_locked : check_gps_timelock;
-        while (now < expiry) {
-            if (checkfunc(m_usrp)) {
-                break;
-            }
-
-            now = system_clock::now();
-            this_thread::sleep_for(seconds(2));
-        }
-
-        if (not checkfunc(m_usrp)) {
-            throw runtime_error("GPSDO did not lock during startup");
-        }
-    }
-
     if (m_conf.pps_src == "none") {
         if (m_conf.enableSync) {
             etiLog.level(warn) <<
@@ -133,8 +55,18 @@ USRPTime::USRPTime(
 
         set_usrp_time_from_localtime();
     }
-    else if (m_conf.pps_src == "pps" or m_conf.pps_src == "gpsdo") {
-        set_usrp_time_from_pps();
+    else if (m_conf.pps_src == "pps") {
+        // let verify_time handle time setup
+    }
+    else if (m_conf.pps_src == "gpsdo") {
+        if (gpsdo_is_ettus() ? check_gps_locked() : check_gps_timelock()) {
+            set_usrp_time_from_pps();
+            gps_state = gps_state_e::monitor_fix;
+            num_checks_without_gps_fix = 0;
+        }
+        else {
+            // let verify_time handle time setup
+        }
     }
     else {
         throw std::runtime_error("USRPTime not implemented yet: " +
@@ -193,6 +125,11 @@ bool USRPTime::verify_time()
     throw logic_error("End of USRPTime::verify_time() reached");
 }
 
+gnss_stats_t USRPTime::get_gnss_stats(void) const
+{
+    return gnss_stats;
+}
+
 void USRPTime::check_gps()
 {
     timepoint_t time_now = timepoint_t::clock::now();
@@ -224,11 +161,11 @@ void USRPTime::check_gps()
             // time, it has to be done in a separate thread.
             if (gpsdo_is_ettus()) {
                 gps_fix_future = std::async(std::launch::async,
-                        std::bind(check_gps_locked, m_usrp) );
+                        std::bind(&USRPTime::check_gps_locked, this) );
             }
             else {
                 gps_fix_future = std::async(std::launch::async,
-                        std::bind(check_gps_timelock, m_usrp) );
+                        std::bind(&USRPTime::check_gps_timelock, this) );
             }
         }
     }
@@ -239,11 +176,15 @@ bool USRPTime::gpsfix_needs_check() const
     if (m_conf.refclk_src == "internal") {
         return false;
     }
-    else if (m_conf.refclk_src == "gpsdo") {
+    else if (gps_state == gps_state_e::monitor_fix and
+            (m_conf.refclk_src == "gpsdo" or
+             m_conf.refclk_src == "gpsdo-ettus")) {
         return (m_conf.maxGPSHoldoverTime != 0);
     }
-    else if (m_conf.refclk_src == "gpsdo-ettus") {
-        return (m_conf.maxGPSHoldoverTime != 0);
+    else if (gps_state == gps_state_e::bootup and
+            (m_conf.refclk_src == "gpsdo" or
+             m_conf.refclk_src == "gpsdo-ettus")) {
+        return true;
     }
     else {
         return false;
@@ -307,6 +248,78 @@ void USRPTime::set_usrp_time_from_pps()
         throw runtime_error("OutputUHD: Unable to set USRP time!");
     }
 }
+
+
+// Check functionality of GPS sensors applicable to the ODR LEA-M8F board GPSDO
+bool USRPTime::check_gps_timelock()
+{
+    bool locked = false;
+
+    try {
+        const string sensor_value =
+            m_usrp->get_mboard_sensor("gps_timelock", 0).to_pp_string();
+
+        const string gngga =
+            m_usrp->get_mboard_sensor("gps_gngga", 0).to_pp_string();
+
+        std::stringstream ss(gngga);
+        std::string item;
+        std::vector<std::string> elems;
+        while (std::getline(ss, item, ',')) {
+            elems.push_back(item);
+        }
+
+        const auto num_svs = (elems.size() > 7) ? elems[7] : "0";
+        gnss_stats.num_sv = std::stoi(num_svs);
+
+        locked = (sensor_value.find("TIME LOCKED") != string::npos);
+    }
+    catch (const uhd::exception &e) {
+        etiLog.level(warn) << "OutputUHD: no gps_timelock sensor: " <<
+            e.what();
+    }
+
+    // LEA-M8F-patched UHD 3.12.0 has this additional sensor, that can
+    // be used to distinguish holdover operation. Previous versions
+    // did a config reset at startup to ensure we would not startup while
+    // in holdover.
+    try {
+        const string disc_src =
+            m_usrp->get_mboard_sensor("gps_discsrc", 0).to_pp_string();
+
+        locked &= (disc_src.find("gnss") != string::npos);
+    }
+    catch (const uhd::exception &e) {
+        etiLog.level(warn) << "OutputUHD: no gps_timelock sensor: " <<
+            e.what();
+    }
+
+    gnss_stats.holdover = not locked;
+
+    return locked;
+}
+
+// Check function for GPS LOCKED sensor from the Ettus GPSDO
+bool USRPTime::check_gps_locked()
+{
+    try {
+        const uhd::sensor_value_t sensor_value(
+                m_usrp->get_mboard_sensor("gps_locked", 0));
+        if (not sensor_value.to_bool()) {
+            etiLog.level(warn) << "OutputUHD: gps_locked " <<
+                sensor_value.to_pp_string();
+            return false;
+        }
+
+        return true;
+    }
+    catch (const uhd::exception &e) {
+        etiLog.level(warn) << "OutputUHD: no gps_locked sensor" <<
+            e.what();
+        return false;
+    }
+}
+
 
 } // namespace Output
 

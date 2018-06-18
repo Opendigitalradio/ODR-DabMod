@@ -2,7 +2,7 @@
    Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010 Her Majesty the
    Queen in Right of Canada (Communications Research Center Canada)
 
-   Copyright (C) 2017
+   Copyright (C) 2018
    Matthias P. Braendli, matthias.braendli@mpb.li
 
     http://opendigitalradio.org
@@ -54,15 +54,23 @@ DESCRIPTION:
 
 namespace Output {
 
+struct gnss_stats_t {
+    int num_sv = 0; // Number of Satellite Vehicles used
+    bool holdover = false; // True if LEA-M8F uses its internal time reference
+};
+
 class USRPTime {
     public:
         USRPTime( uhd::usrp::multi_usrp::sptr usrp,
                 SDRDeviceConfig& conf);
 
         // Verifies the GPSDO state, that the device time is ok.
-        // Returns true if all ok.
+        // Returns true if all ok. Needs to be called so the device
+        // time gets properly set.
         // Should be called more often than the gps_fix_check_interval
         bool verify_time(void);
+
+        gnss_stats_t get_gnss_stats(void) const;
 
         // Wait time in seconds to get fix
         static const int initial_gps_fix_wait = 180;
@@ -72,10 +80,8 @@ class USRPTime {
 
     private:
         enum class gps_state_e {
-            /* At startup, the LEA-M8F GPSDO gets issued a hotstart request to
-             * make sure we will not sync time on a PPS edge that is generated
-             * while the GPSDO is in holdover. In the bootup state, we wait for
-             * the first PPS after hotstart, and then sync time.
+            /* In the bootup state, we wait for correct time lock and
+             * the first PPS, and then sync time.
              */
             bootup,
 
@@ -93,6 +99,8 @@ class USRPTime {
         gps_state_e gps_state = gps_state_e::bootup;
         int num_checks_without_gps_fix = 1;
 
+        gnss_stats_t gnss_stats;
+
         using timepoint_t = std::chrono::time_point<std::chrono::steady_clock>;
         timepoint_t time_last_check;
 
@@ -107,6 +115,9 @@ class USRPTime {
 
         void set_usrp_time_from_localtime(void);
         void set_usrp_time_from_pps(void);
+
+        bool check_gps_timelock(void);
+        bool check_gps_locked(void);
 };
 
 } // namespace Output
