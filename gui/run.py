@@ -28,6 +28,7 @@ import argparse
 from jinja2 import Environment, FileSystemLoader
 from api import API
 import zmqrc
+import dpd
 
 env = Environment(loader=FileSystemLoader('templates'))
 
@@ -36,7 +37,8 @@ class Root:
         self.config_file = config_file
         self.conf = configuration.Configuration(self.config_file)
         self.mod_rc = zmqrc.ModRemoteControl("localhost")
-        self.api = API(self.mod_rc)
+        self.dpd = dpd.DPD()
+        self.api = API(self.mod_rc, self.dpd)
 
     @cherrypy.expose
     def index(self):
@@ -65,6 +67,12 @@ class Root:
         tmpl = env.get_template("modulator.html")
         js = ["js/odr-modulator.js"]
         return tmpl.render(tab='modulator', js=js, is_login=False)
+
+    @cherrypy.expose
+    def predistortion(self):
+        tmpl = env.get_template("predistortion.html")
+        js = ["js/odr-predistortion.js"]
+        return tmpl.render(tab='predistortion', js=js, is_login=False)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='ODR-DabMod Web GUI')

@@ -29,6 +29,7 @@ Todo
 * Integrate DPDCE
   * Show DPD settings and effect visually
   * Allow load/store of DPD settings
+  * Make ports configurable
 * Use Feedback Server interface and make spectrum and constellation plots
 * Get authentication to work
 * Read and write config file, and add forms to change ODR-DabMod configuration

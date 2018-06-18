@@ -31,8 +31,9 @@ import io
 import datetime
 
 class API:
-    def __init__(self, mod_rc):
+    def __init__(self, mod_rc, dpd):
         self.mod_rc = mod_rc
+        self.dpd = dpd
 
     @cherrypy.expose
     def index(self):
@@ -60,3 +61,13 @@ class API:
             cherrypy.response.headers["Content-Type"] = "application/json"
             cherrypy.response.status = 400
             return json.dumps("POST only").encode()
+
+    @cherrypy.expose
+    def trigger_capture(self, **kwargs):
+        if cherrypy.request.method == 'POST':
+            cherrypy.response.headers["Content-Type"] = "text/plain"
+            return self.dpd.capture_samples()
+        else:
+            cherrypy.response.headers["Content-Type"] = "text/plain"
+            cherrypy.response.status = 400
+            return "POST only"
