@@ -95,7 +95,7 @@ MemlessPoly::MemlessPoly(const std::string& coefs_file, unsigned int num_threads
         }
     }
 
-    auto coefs_fstream = fstream(m_coefs_file);
+    ifstream coefs_fstream(m_coefs_file);
     load_coefficients(coefs_fstream);
 
     start_pipeline_thread();
@@ -416,7 +416,7 @@ void MemlessPoly::set_parameter(const string& parameter, const string& value)
     }
     else if (parameter == "coeffile") {
         try {
-            auto coefs_fstream = fstream(value);
+            ifstream coefs_fstream(value);
             load_coefficients(coefs_fstream);
             m_coefs_file = value;
         }
@@ -431,7 +431,7 @@ void MemlessPoly::set_parameter(const string& parameter, const string& value)
 
             // Write back to the file to ensure we will start up
             // with the same settings next time
-            auto coefs_fstream = ofstream(m_coefs_file);
+            ofstream coefs_fstream(m_coefs_file);
             coefs_fstream << value;
         }
         catch (std::runtime_error &e) {
