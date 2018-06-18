@@ -142,14 +142,30 @@ frames.label Number of SoapySDR/UHD frames
 frames.type DERIVE
 frames.min 0"""
 
+# One GAUGE multigraph
+#   sdr gpsdo_num_sv
+config_all += """
+multigraph sdr_gpsdo_sv_holdover
+graph_title Number of GNSS SVs used and holdover state
+graph_order num_sv holdover
+graph_vlabel Number of GNSS SVs and holdover state
+graph_category dabmod
+graph_info This graph shows the number of Satellite Vehicles the GNSS receiver uses (Field 7 of GNGGA NMEA sentence), and if it is in holdover
+
+num_sv.info Num SVs
+num_sv.label Num SVs
+num_sv.min 0
+num_sv.max 20
+
+holdover.info Holdover
+holdover.label Holdover
+holdover.min 0
+holdover.max 1"""
+
 ctx = zmq.Context()
 
 class RCException(Exception):
     pass
-
-if not os.environ.get("MUNIN_CAP_MULTIGRAPH"):
-    sys.stderr.write("This needs munin version 1.4 at least\n")
-    sys.exit(1)
 
 def do_transaction(message_parts, sock):
     """To a send + receive transaction, quit whole program on timeout"""
@@ -286,6 +302,19 @@ if len(sys.argv) == 1:
     munin_values += handle_re("underruns", re_int_value, sdr_underruns)
     sdr_latepackets = get_rc_value("sdr", "latepackets", sock)
     munin_values += handle_re("latepackets", re_int_value, sdr_latepackets)
+
+    munin_values += "multigraph sdr_gpsdo_sv_holdover\n"
+    try:
+        gps_num_sv = get_rc_value("sdr", "gpsdo_num_sv", sock)
+        munin_values += "num_sv.value {}\n".format(gps_num_sv)
+    except:
+        munin_values += "num_sv.value U\n"
+
+    try:
+        gps_holdover = get_rc_value("sdr", "gpsdo_holdover", sock)
+        munin_values += "holdover.value {}\n".format(gps_holdover)
+    except:
+        munin_values += "holdover.value U\n"
 
     munin_values += "multigraph sdr_frames\n"
     sdr_frames = get_rc_value("sdr", "frames", sock)
