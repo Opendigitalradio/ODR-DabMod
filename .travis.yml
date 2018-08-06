@@ -28,7 +28,6 @@ matrix:
             - libzmq3
             - automake
             - libtool
-            - libboost1.55-all-dev
             - libcurl4-openssl-dev
             - libfftw3-dev
             # libuhd-dev is not allowed
@@ -61,7 +60,6 @@ before_install:
     brew update
     brew install automake || true
     brew install zeromq || true
-    brew install boost || true
     brew install fftw || true
     brew install uhd || true
     fi
