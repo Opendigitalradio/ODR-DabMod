@@ -29,6 +29,7 @@
 #include <iostream>
 #include <string>
 #include <thread>
+#include <functional>
 #include <asio.hpp>
 #include "RemoteControl.h"
 

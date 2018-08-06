@@ -524,7 +524,7 @@ odr_dabmod_CFLAGS   = -Wall -Isrc -Ilib \
 					  $(GITVERSION_FLAGS)
 odr_dabmod_CXXFLAGS = -Wall -Isrc -Ilib -std=c++11 \
 					  $(GITVERSION_FLAGS) \
-					  -DASIO_HEADER_ONLY
+					  -DASIO_STANDALONE
 odr_dabmod_LDADD    = $(FFT_LDADD)
 odr_dabmod_SOURCES  = src/DabMod.cpp \
 					  src/PcDebug.h \
