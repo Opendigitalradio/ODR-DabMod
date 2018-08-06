@@ -3,7 +3,7 @@
    Her Majesty the Queen in Right of Canada (Communications Research
    Center Canada)
 
-   Copyright (C) 2016
+   Copyright (C) 2018
    Matthias P. Braendli, matthias.braendli@mpb.li
 
     http://www.opendigitalradio.org
@@ -44,13 +44,7 @@
 #include <atomic>
 #include <iostream>
 #include <thread>
-#if defined(HAVE_BOOST)
-#include <boost/bind.hpp>
-#include <boost/asio.hpp>
-#include <boost/foreach.hpp>
-#include <boost/tokenizer.hpp>
-#include <boost/thread.hpp>
-#endif
+#include <asio.hpp>
 #include <stdexcept>
 
 #include "Log.h"
@@ -195,7 +189,6 @@ class RemoteControllers {
 
 extern RemoteControllers rcs;
 
-#if defined(HAVE_BOOST)
 /* Implements a Remote controller based on a simple telnet CLI
  * that listens on localhost
  */
@@ -231,29 +224,18 @@ class RemoteControllerTelnet : public BaseRemoteController {
 
         void process(long);
 
-        void dispatch_command(boost::asio::ip::tcp::socket& socket,
+        void dispatch_command(asio::ip::tcp::socket& socket,
                 std::string command);
 
-        void reply(boost::asio::ip::tcp::socket& socket, std::string message);
+        void reply(asio::ip::tcp::socket& socket, std::string message);
 
         void handle_accept(
-                const boost::system::error_code& boost_error,
-                boost::shared_ptr< boost::asio::ip::tcp::socket > socket,
-                boost::asio::ip::tcp::acceptor& acceptor);
-        std::vector<std::string> tokenise_(std::string message) {
-            std::vector<std::string> all_tokens;
-
-            boost::char_separator<char> sep(" ");
-            boost::tokenizer< boost::char_separator<char> > tokens(message, sep);
-            BOOST_FOREACH (const std::string& t, tokens) {
-                all_tokens.push_back(t);
-            }
-            return all_tokens;
-        }
+                std::shared_ptr<asio::ip::tcp::socket> socket,
+                const asio::error_code& asio_error);
 
         std::atomic<bool> m_active;
 
-        boost::asio::io_service m_io_service;
+        asio::io_service m_io_service;
 
         /* This is set to true if a fault occurred */
         std::atomic<bool> m_fault;
@@ -263,7 +245,6 @@ class RemoteControllerTelnet : public BaseRemoteController {
 
         int m_port;
 };
-#endif
 
 #if defined(HAVE_ZEROMQ)
 /* Implements a Remote controller using zmq transportlayer

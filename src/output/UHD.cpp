@@ -37,6 +37,7 @@
 #include "Utils.h"
 
 #include <thread>
+#include <iomanip>
 
 #include <uhd/version.hpp>
 // 3.11.0.0 introduces the API breaking change, where

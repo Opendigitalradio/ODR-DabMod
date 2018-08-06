@@ -115,7 +115,7 @@ AS_IF([test "x$enable_easydabv3" = "xyes" && test "x$enable_output_uhd" == "xyes
 
 # Checks for UHD.
 AS_IF([test "x$enable_output_uhd" = "xyes"],
-      [ AC_CHECK_LIB([uhd], [main], [], [AC_MSG_ERROR([library uhd is missing])])
+      [ PKG_CHECK_MODULES([UHD], [uhd], [], [AC_MSG_ERROR([UHD is required])])
       ])
 
 AS_IF([test "x$enable_output_uhd" = "xyes"],
@@ -129,13 +129,6 @@ AS_IF([test "x$enable_edi" = "xyes"],
 
 AM_CONDITIONAL([COMPILE_EDI], [test "x$enable_edi" = "xyes"])
 
-AS_IF([test "x$enable_easydabv3" = "xno"],
-    [ AX_BOOST_BASE([1.54.0], [], AC_MSG_ERROR([BOOST 1.54 or later is required]))
-      AX_BOOST_SYSTEM
-      AX_BOOST_ASIO ])
-
-AS_IF([test "x$enable_easydabv3" = "xno"],
-      AC_DEFINE(HAVE_BOOST, [1], [Define if boost is available]))
 AS_IF([test "x$enable_easydabv3" = "xyes"],
       AC_DEFINE(BUILD_FOR_EASYDABV3, [1], [Define if we are building for EasyDABv3]))
 

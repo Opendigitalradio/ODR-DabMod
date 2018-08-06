@@ -79,7 +79,6 @@ static void parse_configfile(
     }
 
     // remote controller interfaces:
-#if defined(HAVE_BOOST)
     if (pt.GetInteger("remotecontrol.telnet", 0) == 1) {
         try {
             int telnetport = pt.GetInteger("remotecontrol.telnetport", 0);
@@ -92,7 +91,6 @@ static void parse_configfile(
             throw std::runtime_error("Configuration error");
         }
     }
-#endif
 #if defined(HAVE_ZEROMQ)
     if (pt.GetInteger("remotecontrol.zmqctrl", 0) == 1) {
         try {

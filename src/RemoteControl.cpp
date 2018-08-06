@@ -29,21 +29,15 @@
 #include <iostream>
 #include <string>
 #include <thread>
-#if defined(HAVE_BOOST)
-#  include <boost/asio.hpp>
-#  include <boost/thread.hpp>
-#endif
+#include <asio.hpp>
 #include "RemoteControl.h"
 
-#if defined(HAVE_BOOST)
-using boost::asio::ip::tcp;
-#endif
+using asio::ip::tcp;
 
 using namespace std;
 
 RemoteControllers rcs;
 
-#if defined(HAVE_BOOST)
 RemoteControllerTelnet::~RemoteControllerTelnet()
 {
     m_active = false;
@@ -68,7 +62,6 @@ void RemoteControllerTelnet::restart()
             &RemoteControllerTelnet::restart_thread,
             this, 0);
 }
-#endif
 
 RemoteControllable::~RemoteControllable() {
     rcs.remove_controllable(this);
@@ -112,7 +105,6 @@ void RemoteControllers::set_param(
     }
 }
 
-#if defined(HAVE_BOOST)
 // This runs in a separate thread, because
 // it would take too long to be done in the main loop
 // thread.
@@ -129,9 +121,8 @@ void RemoteControllerTelnet::restart_thread(long)
 }
 
 void RemoteControllerTelnet::handle_accept(
-        const boost::system::error_code& boost_error,
-        boost::shared_ptr< boost::asio::ip::tcp::socket > socket,
-        boost::asio::ip::tcp::acceptor& acceptor)
+        std::shared_ptr<asio::ip::tcp::socket> socket,
+        const asio::error_code& asio_error)
 {
 
     const std::string welcome = "ODR-DabMod Remote Control CLI\n"
@@ -142,8 +133,7 @@ void RemoteControllerTelnet::handle_accept(
     std::string in_message;
     size_t length;
 
-    if (boost_error)
-    {
+    if (asio_error) {
         etiLog.level(error) << "RC: Error accepting connection";
         return;
     }
@@ -151,21 +141,21 @@ void RemoteControllerTelnet::handle_accept(
     try {
         etiLog.level(info) << "RC: Accepted";
 
-        boost::system::error_code ignored_error;
+        asio::error_code ignored_error;
 
-        boost::asio::write(*socket, boost::asio::buffer(welcome),
-                boost::asio::transfer_all(),
+        asio::write(*socket, asio::buffer(welcome),
+                asio::transfer_all(),
                 ignored_error);
 
         while (m_active && in_message != "quit") {
-            boost::asio::write(*socket, boost::asio::buffer(prompt),
-                    boost::asio::transfer_all(),
+            asio::write(*socket, asio::buffer(prompt),
+                    asio::transfer_all(),
                     ignored_error);
 
             in_message = "";
 
-            boost::asio::streambuf buffer;
-            length = boost::asio::read_until(*socket, buffer, "\n", ignored_error);
+            asio::streambuf buffer;
+            length = asio::read_until(*socket, buffer, "\n", ignored_error);
 
             std::istream str(&buffer);
             std::getline(str, in_message);
@@ -206,22 +196,18 @@ void RemoteControllerTelnet::process(long)
         m_io_service.reset();
 
         tcp::acceptor acceptor(m_io_service, tcp::endpoint(
-                    boost::asio::ip::address::from_string("127.0.0.1"), m_port) );
-
+                    asio::ip::address::from_string("127.0.0.1"), m_port) );
 
         // Add a job to start accepting connections.
-        boost::shared_ptr<tcp::socket> socket(
-                new tcp::socket(acceptor.get_io_service()));
+        auto socket = make_shared<tcp::socket>(acceptor.get_io_service());
 
         // Add an accept call to the service.  This will prevent io_service::run()
         // from returning.
         etiLog.level(info) << "RC: Waiting for connection on port " << m_port;
         acceptor.async_accept(*socket,
-                boost::bind(&RemoteControllerTelnet::handle_accept,
-                    this,
-                    boost::asio::placeholders::error,
+                bind(&RemoteControllerTelnet::handle_accept, this,
                     socket,
-                    boost::ref(acceptor)));
+                    std::placeholders::_1));
 
         // Process event loop.
         m_io_service.run();
@@ -231,9 +217,21 @@ void RemoteControllerTelnet::process(long)
     m_fault = true;
 }
 
+static std::vector<std::string> tokenise(const std::string& message) {
+    stringstream ss(message);
+    std::vector<std::string> all_tokens;
+    std::string item;
+
+    while (std::getline(ss, item, ' ')) {
+        all_tokens.push_back(move(item));
+    }
+    return all_tokens;
+}
+
+
 void RemoteControllerTelnet::dispatch_command(tcp::socket& socket, string command)
 {
-    vector<string> cmd = tokenise_(command);
+    vector<string> cmd = tokenise(command);
 
     if (cmd[0] == "help") {
         reply(socket,
@@ -338,14 +336,13 @@ void RemoteControllerTelnet::dispatch_command(tcp::socket& socket, string comman
 
 void RemoteControllerTelnet::reply(tcp::socket& socket, string message)
 {
-    boost::system::error_code ignored_error;
+    asio::error_code ignored_error;
     stringstream ss;
     ss << message << "\r\n";
-    boost::asio::write(socket, boost::asio::buffer(ss.str()),
-            boost::asio::transfer_all(),
+    asio::write(socket, asio::buffer(ss.str()),
+            asio::transfer_all(),
             ignored_error);
 }
-#endif
 
 #if defined(HAVE_ZEROMQ)
 

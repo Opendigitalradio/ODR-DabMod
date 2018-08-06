@@ -2,7 +2,6 @@ Required dependencies:
 ======================
 
     * A C++11 capable compiler
-    * Boost 1.54 or later
     * FFTW 3.x
     * Optional UHD for USRP
     * Optional SoapySDR (see below)
