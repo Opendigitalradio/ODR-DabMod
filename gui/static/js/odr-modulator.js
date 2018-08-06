@@ -64,6 +64,7 @@ function getRc(callback) {
 function requestAllParams(callback) {
     getRc(function(data) {
         $('#windowlength').val(data.guardinterval.windowlen.value);
+        $('#digitalgain').val(data.gain.digital.value);
         $('#cfrenable').prop("checked", data.ofdm.cfr.value == 1);
         $('#cfrclip').val(data.ofdm.clip.value);
         $('#cfrerrorclip').val(data.ofdm.errorclip.value);
@@ -83,6 +84,11 @@ var updateTimer = setInterval(requestStats, 2000);
 
 $(function(){
     requestAllParams();
+
+    $('#setdigitalgain').click(function() {
+        set_rc("gain", "digital", $('#digitalgain').val(),
+            requestAllParams);
+    });
 
     $('#setwindowlength').click(function() {
         set_rc("guardinterval", "windowlen", $('#windowlength').val(),

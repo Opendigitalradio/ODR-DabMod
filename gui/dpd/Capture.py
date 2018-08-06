@@ -77,8 +77,12 @@ class Capture:
         self.binning_n_bins = 64  # Number of bins between binning_start and binning_end
         self.binning_n_per_bin = 128  # Number of measurements pre bin
 
+        self.target_median = 0.01
+        self.median_max = self.target_median * 1.4
+        self.median_min = self.target_median / 1.4
+
         # axis 1: 0=tx, 1=rx
-        self.accumulated_samples = np.zeros((0, 2), dtype=np.complex64)
+        self.accumulated_bins = [np.zeros((0, 2), dtype=np.complex64) for i in range(self.binning_n_bins)]
 
     def _recv_exact(self, sock, num_bytes):
         """Receive an exact number of bytes from a socket. This is
@@ -156,42 +160,45 @@ class Capture:
         txframe, tx_ts, rxframe, rx_ts = self.receive_tcp()
 
         # Normalize received signal with sent signal
-        rx_median = np.median(np.abs(rxframe))
         tx_median = np.median(np.abs(txframe))
-        rxframe = rxframe / rx_median * tx_median
 
-        txframe_aligned, rxframe_aligned = align_samples(txframe, rxframe)
+        if self.median_max < tx_median:
+            raise ValueError("Median {} too high, decrease digital_gain!".format(tx_median))
+        elif tx_median < self.median_min:
+            raise ValueError("Median {} too low, increase digital_gain!".format(tx_median))
+        else:
+            rx_median = np.median(np.abs(rxframe))
+            rxframe = rxframe / rx_median * tx_median
 
-        self._bin_and_accumulate(txframe_aligned, rxframe_aligned)
+            txframe_aligned, rxframe_aligned = align_samples(txframe, rxframe)
 
-        return txframe_aligned, tx_ts, tx_median, rxframe_aligned, rx_ts, rx_median
+            self._bin_and_accumulate(txframe_aligned, rxframe_aligned)
 
-    def num_accumulated(self):
-        return self.accumulated_samples.shape[0]
+            return txframe_aligned, tx_ts, tx_median, rxframe_aligned, rx_ts, rx_median
+
+    def bin_histogram(self):
+        return [b.shape[0] for b in self.accumulated_bins]
 
     def _bin_and_accumulate(self, txframe, rxframe):
         """Bin the samples and extend the accumulated samples"""
 
         bin_edges = np.linspace(self.binning_start, self.binning_end, self.binning_n_bins)
 
-        binned_sample_pairs = {}
-
         minsize = self.num_samples_to_request
 
         for i, (tx_start, tx_end) in enumerate(zip(bin_edges, bin_edges[1:])):
-            indices = np.bitwise_and(tx_start < txframe, txframe <= tx_end)
-            binned_sample_pairs[i] = (txframe[indices], rxframe[indices])
-            len_bin = len(txframe[indices])
+            txframe_abs = np.abs(txframe)
+            indices = np.bitwise_and(tx_start < txframe_abs, txframe_abs <= tx_end)
+            txsamples = np.asmatrix(txframe[indices])
+            rxsamples = np.asmatrix(rxframe[indices])
+            binned_sample_pairs = np.concatenate((txsamples, rxsamples)).T
 
-            #TODO this doesn't work, the min is always 0
-            if len_bin < minsize:
-                minsize = len_bin
+            missing_in_bin = self.binning_n_per_bin - self.accumulated_bins[i].shape[0]
+            num_to_append = min(missing_in_bin, binned_sample_pairs.shape[0])
+            print("Handling bin {} {}-{}, {} available, {} missing".format(i, tx_start, tx_end, binned_sample_pairs.shape[0], missing_in_bin))
+            if num_to_append:
+                print("Appending {} to bin {} with shape {}".format(num_to_append, i, self.accumulated_bins[i].shape))
 
-        # axis 0: bins, axis 1: sample index, axis 2: tx(0) and rx(1)
-        samples = np.zeros((self.binning_n_bins, len_bin, 2), dtype=np.complex64)
-
-        for i in binned_sample_pairs:
-            tx, rx = binned_sample_pairs[i]
-            new_samples = np.array((tx[:minsize], rx[:minsize]), dtype=np.complex64)
-            self.accumulated_samples = np.concatenate((self.accumulated_samples, new_samples.T))
+                self.accumulated_bins[i] = np.concatenate((self.accumulated_bins[i], binned_sample_pairs[:num_to_append,...]))
+                print("{} now has shape {}".format(i, self.accumulated_bins[i].shape))
 

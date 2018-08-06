@@ -35,19 +35,31 @@ class DPD:
         self.T_U = oversample * 2048  # Inverse of carrier spacing
         self.T_C = oversample * 504  # Duration of cyclic prefix
 
+        self.last_capture_info = {}
+
         port = 50055
         samples_to_capture = 81920
         self.capture = Capture.Capture(self.samplerate, port, samples_to_capture)
 
+    def status(self):
+        r = {}
+        r['histogram'] = self.capture.bin_histogram()
+        r['capture'] = self.last_capture_info
+        return r
+
     def capture_samples(self):
         """Captures samples and store them in the accumulated samples,
         returns a string with some info"""
-        txframe_aligned, tx_ts, tx_median, rxframe_aligned, rx_ts, rx_median = self.capture.get_samples()
-
-        num_acc = self.capture.num_accumulated()
-
-        return "Captured {} with median {}/{}, accumulated {} samples".format(
-                len(txframe_aligned), tx_median, rx_median, num_acc)
+        try:
+            txframe_aligned, tx_ts, tx_median, rxframe_aligned, rx_ts, rx_median = self.capture.get_samples()
+            self.last_capture_info['length'] = len(txframe_aligned)
+            self.last_capture_info['tx_median'] = tx_median
+            self.last_capture_info['rx_median'] = rx_median
+            self.last_capture_info['tx_ts'] = tx_ts
+            self.last_capture_info['rx_ts'] = rx_ts
+            return "Captured {} samples, tx median {}, rx median {}".format(len(txframe_aligned, tx_median, rx_median))
+        except ValueError as e:
+            return "Error: {}".format(e)
 
         # tx, rx, phase_diff, n_per_bin = extStat.extract(txframe_aligned, rxframe_aligned)
         # off = SA.calc_offset(txframe_aligned)

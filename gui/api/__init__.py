@@ -71,3 +71,8 @@ class API:
             cherrypy.response.headers["Content-Type"] = "text/plain"
             cherrypy.response.status = 400
             return "POST only"
+
+    @cherrypy.expose
+    def dpd_status(self, **kwargs):
+        cherrypy.response.headers["Content-Type"] = "application/json"
+        return json.dumps(self.dpd.status()).encode()

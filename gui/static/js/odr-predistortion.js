@@ -40,6 +40,28 @@ $(function(){
             },
         });
     });
+
+    $('#dpdstatusbutton').click(function() {
+        $.ajax({
+            type: "GET",
+            url: "/api/dpd_status",
+            contentType: 'application/json',
+            dataType: '',
+            data: '',
+
+            error: function(data) {
+                $.gritter.add({
+                    title: 'DPD Status Update',
+                    text: "ERROR",
+                    image: '/fonts/warning.png',
+                    sticky: true,
+                });
+            },
+            success: function(data) {
+                $('#dpdstatus').val(data);
+            },
+        });
+    });
 });
 
 
