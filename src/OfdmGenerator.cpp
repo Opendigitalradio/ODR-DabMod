@@ -232,7 +232,7 @@ int OfdmGenerator::process(Buffer* const dataIn, Buffer* dataOut)
         if (myCfr) {
             if (myMERCalcIndex == i) {
                 before_cfr.resize(mySpacing);
-                memcpy(reinterpret_cast<fftwf_complex*>(reference.data()),
+                memcpy(reinterpret_cast<fftwf_complex*>(before_cfr.data()),
                         myFftOut, mySpacing * sizeof(FFT_TYPE));
             }
 
