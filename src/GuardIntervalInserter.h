@@ -50,7 +50,7 @@ class GuardIntervalInserter : public ModCodec, public RemoteControllable
                 size_t spacing,
                 size_t nullSize,
                 size_t symSize,
-                size_t windowOverlap = 0);
+                size_t& windowOverlap);
 
         int process(Buffer* const dataIn, Buffer* dataOut);
         const char* name() { return "GuardIntervalInserter"; }
@@ -71,7 +71,7 @@ class GuardIntervalInserter : public ModCodec, public RemoteControllable
         size_t d_symSize;
 
         mutable std::mutex d_windowMutex;
-        size_t d_windowOverlap;
+        size_t& d_windowOverlap;
         std::vector<float> d_window;
 };
 

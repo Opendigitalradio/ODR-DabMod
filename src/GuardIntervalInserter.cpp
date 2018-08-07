@@ -38,14 +38,14 @@ GuardIntervalInserter::GuardIntervalInserter(
         size_t spacing,
         size_t nullSize,
         size_t symSize,
-        size_t windowOverlap) :
+        size_t& windowOverlap) :
     ModCodec(),
     RemoteControllable("guardinterval"),
     d_nbSymbols(nbSymbols),
     d_spacing(spacing),
     d_nullSize(nullSize),
     d_symSize(symSize),
-    d_windowOverlap(0)
+    d_windowOverlap(windowOverlap)
 {
     if (d_nullSize == 0) {
         throw std::logic_error("NULL symbol must be present");

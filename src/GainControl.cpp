@@ -46,10 +46,10 @@ using namespace std;
 static float var_variance;
 
 GainControl::GainControl(size_t framesize,
-                         GainMode gainMode,
-                         float digGain,
+                         GainMode& gainMode,
+                         float& digGain,
                          float normalise,
-                         float varVariance) :
+                         float& varVariance) :
     PipelinedModCodec(),
     RemoteControllable("gain"),
 #ifdef __SSE__

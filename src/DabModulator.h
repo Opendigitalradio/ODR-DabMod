@@ -50,7 +50,7 @@ class DabModulator : public ModInput, public ModMetadata
 {
 public:
     DabModulator(EtiSource& etiSource,
-                 const mod_settings_t& settings);
+                 mod_settings_t& settings);
 
     int process(Buffer* dataOut);
     const char* name() { return "DabModulator"; }
@@ -64,7 +64,7 @@ public:
 protected:
     void setMode(unsigned mode);
 
-    const mod_settings_t& m_settings;
+    mod_settings_t& m_settings;
 
     EtiSource& myEtiSource;
     std::shared_ptr<Flowgraph> myFlowgraph;

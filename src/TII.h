@@ -81,7 +81,7 @@ class TIIError : public std::runtime_error {
 class TII : public ModCodec, public RemoteControllable
 {
     public:
-        TII(unsigned int dabmode, const tii_config_t& tii_config);
+        TII(unsigned int dabmode, tii_config_t& tii_config);
 
         int process(Buffer* dataIn, Buffer* dataOut);
         const char* name();
@@ -105,7 +105,7 @@ class TII : public ModCodec, public RemoteControllable
         unsigned int m_dabmode;
 
         // Remote-controllable settings
-        tii_config_t m_conf;
+        tii_config_t& m_conf;
 
         // Internal flag when to insert TII
         bool m_insert = true;

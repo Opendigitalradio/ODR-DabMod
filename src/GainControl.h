@@ -51,10 +51,10 @@ class GainControl : public PipelinedModCodec, public RemoteControllable
 {
     public:
         GainControl(size_t framesize,
-                    GainMode gainMode,
-                    float digGain,
+                    GainMode& gainMode,
+                    float& digGain,
                     float normalise,
-                    float varVariance);
+                    float& varVariance);
 
         virtual ~GainControl();
         GainControl(const GainControl&) = delete;
@@ -80,8 +80,8 @@ class GainControl : public PipelinedModCodec, public RemoteControllable
         float m_normalise;
 
         // The following variables are accessed from the RC thread
-        float m_var_variance_rc;
-        GainMode m_gainmode;
+        float& m_var_variance_rc;
+        GainMode& m_gainmode;
         mutable std::mutex m_mutex;
 
 #ifdef __SSE__

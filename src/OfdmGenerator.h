@@ -47,9 +47,9 @@ class OfdmGenerator : public ModCodec, public RemoteControllable
         OfdmGenerator(size_t nbSymbols,
                       size_t nbCarriers,
                       size_t spacing,
-                      bool enableCfr,
-                      float cfrClip,
-                      float cfrErrorClip,
+                      bool& enableCfr,
+                      float& cfrClip,
+                      float& cfrErrorClip,
                       bool inverse = true);
         virtual ~OfdmGenerator();
         OfdmGenerator(const OfdmGenerator&) = delete;
@@ -91,10 +91,10 @@ class OfdmGenerator : public ModCodec, public RemoteControllable
         unsigned myZeroDst;
         unsigned myZeroSize;
 
-        bool myCfr; // Whether to enable crest factor reduction
+        bool& myCfr; // Whether to enable crest factor reduction
         mutable std::mutex myCfrRcMutex;
-        float myCfrClip;
-        float myCfrErrorClip;
+        float& myCfrClip;
+        float& myCfrErrorClip;
         fftwf_plan myCfrFft;
         fftwf_complex *myCfrPostClip;
         fftwf_complex *myCfrPostFft;

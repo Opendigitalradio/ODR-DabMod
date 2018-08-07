@@ -58,7 +58,7 @@ enum class dpd_type_t {
 class MemlessPoly : public PipelinedModCodec, public RemoteControllable
 {
 public:
-    MemlessPoly(const std::string& coefs_file, unsigned int num_threads);
+    MemlessPoly(std::string& coefs_file, unsigned int num_threads);
     MemlessPoly(const MemlessPoly& other) = delete;
     MemlessPoly& operator=(const MemlessPoly& other) = delete;
     virtual ~MemlessPoly();
@@ -136,7 +136,7 @@ private:
     static constexpr size_t lut_entries = 32;
     std::array<complexf, lut_entries> m_lut; // Lookup table correction factors
 
-    std::string m_coefs_file;
+    std::string& m_coefs_file;
     mutable std::mutex m_coefs_mutex;
 };
 

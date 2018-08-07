@@ -71,7 +71,7 @@ static const std::array<float, 45> default_filter_taps({
         -0.00110450468492});
 
 
-FIRFilter::FIRFilter(const std::string& taps_file) :
+FIRFilter::FIRFilter(std::string& taps_file) :
     PipelinedModCodec(),
     RemoteControllable("firfilter"),
     m_taps_file(taps_file)

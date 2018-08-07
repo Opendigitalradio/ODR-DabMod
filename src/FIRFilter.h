@@ -51,7 +51,7 @@ typedef std::complex<float> complexf;
 class FIRFilter : public PipelinedModCodec, public RemoteControllable
 {
 public:
-    FIRFilter(const std::string& taps_file);
+    FIRFilter(std::string& taps_file);
     FIRFilter(const FIRFilter& other) = delete;
     FIRFilter& operator=(const FIRFilter& other) = delete;
     virtual ~FIRFilter();
@@ -69,7 +69,7 @@ protected:
     virtual int internal_process(Buffer* const dataIn, Buffer* dataOut) override;
     void load_filter_taps(const std::string &tapsFile);
 
-    std::string m_taps_file;
+    std::string& m_taps_file;
 
     mutable std::mutex m_taps_mutex;
     std::vector<float> m_taps;

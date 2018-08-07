@@ -51,7 +51,7 @@ using namespace std;
 // Number of AM/AM coefs, identical to number of AM/PM coefs
 #define NUM_COEFS 5
 
-MemlessPoly::MemlessPoly(const std::string& coefs_file, unsigned int num_threads) :
+MemlessPoly::MemlessPoly(std::string& coefs_file, unsigned int num_threads) :
     PipelinedModCodec(),
     RemoteControllable("memlesspoly"),
     m_coefs_am(),

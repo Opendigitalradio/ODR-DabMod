@@ -106,7 +106,7 @@ const int pattern_tm1_2_4[][8] = { // {{{
     {1,1,1,0,1,0,0,0},
     {1,1,1,1,0,0,0,0} }; // }}}
 
-TII::TII(unsigned int dabmode, const tii_config_t& tii_config) :
+TII::TII(unsigned int dabmode, tii_config_t& tii_config) :
     ModCodec(),
     RemoteControllable("tii"),
     m_dabmode(dabmode),

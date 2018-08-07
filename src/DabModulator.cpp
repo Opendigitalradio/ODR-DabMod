@@ -59,7 +59,7 @@
 #include "Log.h"
 
 DabModulator::DabModulator(EtiSource& etiSource,
-                           const mod_settings_t& settings) :
+                           mod_settings_t& settings) :
     ModInput(),
     m_settings(settings),
     myEtiSource(etiSource),

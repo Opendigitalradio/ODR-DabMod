@@ -40,9 +40,9 @@ static const size_t MAX_CLIP_STATS = 10;
 OfdmGenerator::OfdmGenerator(size_t nbSymbols,
                              size_t nbCarriers,
                              size_t spacing,
-                             bool enableCfr,
-                             float cfrClip,
-                             float cfrErrorClip,
+                             bool& enableCfr,
+                             float& cfrClip,
+                             float& cfrErrorClip,
                              bool inverse) :
     ModCodec(), RemoteControllable("ofdm"),
     myFftPlan(nullptr),
@@ -197,10 +197,9 @@ int OfdmGenerator::process(Buffer* const dataIn, Buffer* dataOut)
 
     // The PAPRStats' clear() is not threadsafe, do not access it
     // from the RC functions.
-    if (myPaprClearRequest.load()) {
+    if (myPaprClearRequest.exchange(false)) {
         myPaprBeforeCFR.clear();
         myPaprAfterCFR.clear();
-        myPaprClearRequest.store(false);
     }
 
     for (size_t i = 0; i < myNbSymbols; ++i) {
