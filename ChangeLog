@@ -1,6 +1,14 @@
 This file contains information about the changes done to
 ODR-DabMod in this repository
 
+2018-08-07: Matthias P. Braendli <matthias@mpb.li>
+	(v2.2.0):
+		Fix bug in CFR implementation that was introduced in v2.1.0.
+		Make the ZeroMQ list command return JSON.
+		Add a few GPSDO stats to munin.
+		Make sure changes applied through RC stay after an internal modulator reset.
+		Remove the boost dependency.
+
 2018-05-29: Matthias P. Braendli <matthias@mpb.li>
 	(v2.1.0):
 		Add s16 output format.
