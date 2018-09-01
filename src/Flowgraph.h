@@ -66,7 +66,7 @@ protected:
     std::list<Metadata_vec_sptr> myInputMetadata;
     std::list<Metadata_vec_sptr> myOutputMetadata;
 
-#if DEBUG
+#if TRACE
     std::list<FILE*> myDebugFiles;
 #endif
 

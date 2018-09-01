@@ -52,7 +52,7 @@ int FrameMultiplexer::process(std::vector<Buffer*> dataIn, Buffer* dataOut)
     assert(dataIn[0]->getLength() == 864 * 8);
     dataOut->setLength(dataIn[0]->getLength());
 
-#ifdef DEBUG
+#ifdef TRACE
     fprintf(stderr, "FrameMultiplexer::process(dataIn:");
     for (size_t i = 0; i < dataIn.size(); ++i) {
         fprintf(stderr, " %p", dataIn[i]);

@@ -94,7 +94,7 @@ AS_IF([test "x$enable_fast_math" != "xno"],
         [EXTRA="$EXTRA -ffast-math"])
 
 AS_IF([test "x$enable_trace" != "xno"],
-        [EXTRA="$EXTRA -DDEBUG"])
+        AC_DEFINE(TRACE, [1], [Enable trace output for all blocks]))
 
 # Define conditionals for Makefile.am
 AM_CONDITIONAL([IS_GIT_REPO], [test -d '.git'])

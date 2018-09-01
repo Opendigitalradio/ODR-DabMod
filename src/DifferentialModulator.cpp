@@ -50,7 +50,7 @@ DifferentialModulator::~DifferentialModulator()
 // dataIn[1] -> data symbols
 int DifferentialModulator::process(std::vector<Buffer*> dataIn, Buffer* dataOut)
 {
-#ifdef DEBUG
+#ifdef TRACE
     fprintf(stderr, "DifferentialModulator::process (dataIn:");
     for (size_t i = 0; i < dataIn.size(); ++i) {
         fprintf(stderr, " %p", dataIn[i]);

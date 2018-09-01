@@ -80,7 +80,7 @@ int BlockPartitioner::process(std::vector<Buffer*> dataIn, Buffer* dataOut)
     assert(dataIn.size() == 2);
     dataOut->setLength(d_cifCount * (d_ficSize + d_cifSize));
 
-#ifdef DEBUG
+#ifdef TRACE
     fprintf(stderr, "BlockPartitioner::process(dataIn:");
     for (size_t i = 0; i < dataIn.size(); ++i) {
         fprintf(stderr, " %p", dataIn[i]);

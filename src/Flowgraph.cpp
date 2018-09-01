@@ -62,7 +62,7 @@ void Node::addOutputBuffer(Buffer::sptr& buffer, Metadata_vec_sptr& md)
 {
     myOutputBuffers.push_back(buffer);
     myOutputMetadata.push_back(md);
-#if DEBUG
+#if TRACE
     std::string fname = string(myPlugin->name()) +
         "-" + to_string(myDebugFiles.size()) +
         "-" + to_string((size_t)(void*)myPlugin.get()) +
@@ -80,7 +80,7 @@ void Node::removeOutputBuffer(Buffer::sptr& buffer, Metadata_vec_sptr& md)
             myOutputBuffers.end(),
             buffer);
     if (it != myOutputBuffers.end()) {
-#if DEBUG
+#if TRACE
         size_t pos = std::distance(myOutputBuffers.begin(),
                 it);
 
@@ -177,7 +177,7 @@ int Node::process()
     }
 
 
-#if DEBUG
+#if TRACE
     assert(myDebugFiles.size() == myOutputBuffers.size());
 
     auto buf   = myOutputBuffers.begin();

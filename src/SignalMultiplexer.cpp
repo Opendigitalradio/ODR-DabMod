@@ -49,7 +49,7 @@ SignalMultiplexer::~SignalMultiplexer()
 // dataIn[2] -> (optional) TII symbol
 int SignalMultiplexer::process(std::vector<Buffer*> dataIn, Buffer* dataOut)
 {
-#ifdef DEBUG
+#ifdef TRACE
     fprintf(stderr, "SignalMultiplexer::process (dataIn:");
     for (unsigned i = 0; i < dataIn.size(); ++i) {
         fprintf(stderr, " %p", dataIn[i]);
