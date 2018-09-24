@@ -13,7 +13,7 @@ Make it easier to discover the tuning possibilities of the modulator.
 Install
 -------
 
-Install dependencies: cherrypy and jinja2 python modules
+Install dependencies: cherrypy, jinja2, scipy, matplotlib, zmq python modules
 
 Run
 ---

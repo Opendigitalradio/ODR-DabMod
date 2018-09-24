@@ -18,48 +18,6 @@
 //   You should have received a copy of the GNU General Public License
 //   along with ODR-DabMod.  If not, see <http://www.gnu.org/licenses/>.
 
-function set_rc(controllable, param, value, callback) {
-    $.ajax({
-        type: "POST",
-        url: "/api/parameter",
-        contentType: 'application/json',
-        dataType: 'json',
-        data: JSON.stringify({
-            controllable: controllable,
-            param: param,
-            value: value
-        }),
-
-        error: function(data) {
-            $.gritter.add({
-                title: 'RC set',
-                text: "ERROR",
-                image: '/fonts/warning.png',
-                sticky: true,
-            });
-        },
-        success: callback
-    });
-}
-
-function getRc(callback) {
-    $.ajax({
-        type: "GET",
-        url: "/api/rc_parameters",
-        contentType: 'application/json',
-        dataType: 'json',
-
-        error: function(data) {
-            $.gritter.add({
-                title: 'RC info',
-                text: "ERROR: ",
-                image: '/fonts/warning.png',
-                sticky: true,
-            });
-        },
-        success: callback
-    });
-}
 
 function requestAllParams(callback) {
     getRc(function(data) {
@@ -86,21 +44,21 @@ $(function(){
     requestAllParams();
 
     $('#setdigitalgain').click(function() {
-        set_rc("gain", "digital", $('#digitalgain').val(),
+        setRc("gain", "digital", $('#digitalgain').val(),
             requestAllParams);
     });
 
     $('#setwindowlength').click(function() {
-        set_rc("guardinterval", "windowlen", $('#windowlength').val(),
+        setRc("guardinterval", "windowlen", $('#windowlength').val(),
             requestAllParams);
     });
 
     $('#setclip').click(function() {
-        set_rc("ofdm", "clip", $('#cfrclip').val(),
+        setRc("ofdm", "clip", $('#cfrclip').val(),
             requestAllParams);
-        set_rc("ofdm", "errorclip", $('#cfrerrorclip').val(),
+        setRc("ofdm", "errorclip", $('#cfrerrorclip').val(),
             requestAllParams);
-        set_rc("ofdm", "cfr",
+        setRc("ofdm", "cfr",
             ($('#cfrenable').prop("checked") ? "1" : "0"),
             requestAllParams);
     });

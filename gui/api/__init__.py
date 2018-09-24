@@ -30,6 +30,12 @@ import os
 import io
 import datetime
 
+def send_ok(data):
+    return json.dumps({'status' : 'ok', 'data': data}).encode()
+
+def send_error(data, reason=""):
+    return json.dumps({'status' : 'error', 'reason': reason}).encode()
+
 class API:
     def __init__(self, mod_rc, dpd):
         self.mod_rc = mod_rc
@@ -42,7 +48,7 @@ class API:
     @cherrypy.expose
     def rc_parameters(self):
         cherrypy.response.headers["Content-Type"] = "application/json"
-        return json.dumps(self.mod_rc.get_modules()).encode()
+        return send_ok(self.mod_rc.get_modules())
 
     @cherrypy.expose
     def parameter(self, **kwargs):
@@ -55,24 +61,24 @@ class API:
                 self.mod_rc.set_param_value(params['controllable'], params['param'], params['value'])
             except ValueError as e:
                 cherrypy.response.status = 400
-                return "{}".format(e)
-            return json.dumps("ok").encode()
+                return send_error(str(e))
+            return send_ok(None)
         else:
             cherrypy.response.headers["Content-Type"] = "application/json"
             cherrypy.response.status = 400
-            return json.dumps("POST only").encode()
+            return send_error("POST only")
 
     @cherrypy.expose
     def trigger_capture(self, **kwargs):
         if cherrypy.request.method == 'POST':
-            cherrypy.response.headers["Content-Type"] = "text/plain"
-            return self.dpd.capture_samples()
+            cherrypy.response.headers["Content-Type"] = "application/json"
+            return send_ok(self.dpd.capture_samples())
         else:
-            cherrypy.response.headers["Content-Type"] = "text/plain"
+            cherrypy.response.headers["Content-Type"] = "application/json"
             cherrypy.response.status = 400
-            return "POST only"
+            return send_error("POST only")
 
     @cherrypy.expose
     def dpd_status(self, **kwargs):
         cherrypy.response.headers["Content-Type"] = "application/json"
-        return json.dumps(self.dpd.status()).encode()
+        return send_ok(self.dpd.status())

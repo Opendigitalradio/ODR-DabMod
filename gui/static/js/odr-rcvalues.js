@@ -21,30 +21,15 @@
 function requestStatus(callback) {
     $('#rctable > tbody').empty();
 
-    $.ajax({
-        type: "GET",
-        url: "/api/rc_parameters",
-        contentType: 'application/json',
-        dataType: 'json',
-
-        error: function(data) {
-            $.gritter.add({
-                title: 'RC info',
-                text: "ERROR: ",
-                image: '/fonts/warning.png',
-                sticky: true,
+    doApiRequestGET("/api/rc_parameters", function(data) {
+        $.each( data, function( key1, controllable ) {
+            $.each( controllable, function( key2, param ) {
+                $('#rctable > tbody:last').append(
+                    '<tr><td>'+key1+'.'+key2+'</td>'+
+                    '<td>'+param['value']+'</td>'+
+                    '<td>'+param['help']+'</td></tr>');
             });
-        },
-        success: function(data) {
-                $.each( data, function( key1, controllable ) {
-                    $.each( controllable, function( key2, param ) {
-                    $('#rctable > tbody:last').append(
-                        '<tr><td>'+key1+'.'+key2+'</td>'+
-                        '<td>'+param['value']+'</td>'+
-                        '<td>'+param['help']+'</td></tr>');
-                });
-            });
-        }
+        });
     });
 }
 

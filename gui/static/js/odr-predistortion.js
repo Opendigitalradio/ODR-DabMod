@@ -20,46 +20,14 @@
 
 $(function(){
     $('#capturebutton').click(function() {
-        $.ajax({
-            type: "POST",
-            url: "/api/trigger_capture",
-            contentType: 'text/plain',
-            dataType: '',
-            data: '',
-
-            error: function(data) {
-                $.gritter.add({
-                    title: 'Capture trigger',
-                    text: "ERROR",
-                    image: '/fonts/warning.png',
-                    sticky: true,
-                });
-            },
-            success: function(data) {
-                $('#capturestatus').val(data);
-            },
+        doApiRequestPOST("/api/trigger_capture", {}, function(data) {
+            $('#capturestatus').val(data);
         });
     });
 
     $('#dpdstatusbutton').click(function() {
-        $.ajax({
-            type: "GET",
-            url: "/api/dpd_status",
-            contentType: 'application/json',
-            dataType: '',
-            data: '',
-
-            error: function(data) {
-                $.gritter.add({
-                    title: 'DPD Status Update',
-                    text: "ERROR",
-                    image: '/fonts/warning.png',
-                    sticky: true,
-                });
-            },
-            success: function(data) {
-                $('#dpdstatus').val(data);
-            },
+        doApiRequestGET("/api/dpd_status", function(data) {
+            $('#dpdstatus').val(data);
         });
     });
 });

@@ -32,6 +32,8 @@ import dpd
 
 env = Environment(loader=FileSystemLoader('templates'))
 
+base_js = ["js/odr.js"]
+
 class Root:
     def __init__(self, config_file):
         self.config_file = config_file
@@ -47,31 +49,29 @@ class Root:
     @cherrypy.expose
     def about(self):
         tmpl = env.get_template("about.html")
-        js = []
-        return tmpl.render(tab='about', js=js, is_login=False)
+        return tmpl.render(tab='about', js=base_js, is_login=False)
 
     @cherrypy.expose
     def home(self):
         tmpl = env.get_template("home.html")
-        js = []
-        return tmpl.render(tab='home', js=js, is_login=False)
+        return tmpl.render(tab='home', js=base_js, is_login=False)
 
     @cherrypy.expose
     def rcvalues(self):
         tmpl = env.get_template("rcvalues.html")
-        js = ["js/odr-rcvalues.js"]
+        js = base_js + ["js/odr-rcvalues.js"]
         return tmpl.render(tab='rcvalues', js=js, is_login=False)
 
     @cherrypy.expose
     def modulator(self):
         tmpl = env.get_template("modulator.html")
-        js = ["js/odr-modulator.js"]
+        js = base_js + ["js/odr-modulator.js"]
         return tmpl.render(tab='modulator', js=js, is_login=False)
 
     @cherrypy.expose
     def predistortion(self):
         tmpl = env.get_template("predistortion.html")
-        js = ["js/odr-predistortion.js"]
+        js = base_js + ["js/odr-predistortion.js"]
         return tmpl.render(tab='predistortion', js=js, is_login=False)
 
 if __name__ == '__main__':
@@ -93,10 +93,10 @@ if __name__ == '__main__':
     errorlog = os.path.realpath(os.path.join(config.config['global']['logs_directory'], 'error.log'))
 
     cherrypy.config.update({
+            'engine.autoreload.on': True,
             'server.socket_host': config.config['global']['host'],
             'server.socket_port': int(config.config['global']['port']),
             'request.show_tracebacks' : True,
-            'environment': 'production',
             'tools.sessions.on': False,
             'tools.encode.on': True,
             'tools.encode.encoding': "utf-8",

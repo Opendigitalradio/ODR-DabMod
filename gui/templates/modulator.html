@@ -24,50 +24,50 @@ along with ODR-DabMod.  If not, see <http://www.gnu.org/licenses/>.
 {% include 'head.html' %}
 
 <body>
-    {% include 'body-nav.html' %}
+  {% include 'body-nav.html' %}
 
-    <div class="container-fluid">
-        <div class="panel-group">
-            <div class="panel panel-default">
-                <div class="panel-body">
-                    <h3>Gain</h3>
-                    <div class="form-group">
-                        <label for="digitalgain">Digital Gain:</label>
-                        <input type="text" class="form-control" id="digitalgain">
-                        <button type="button" class="btn btn-sm btn-info" id="setdigitalgain">Set</button>
-                    </div>
-                </div>
-                <div class="panel-body">
-                    <h3>OFDM Windowing</h3>
-                    <div class="form-group">
-                        <label for="windowlength">Window length:</label>
-                        <input type="text" class="form-control" id="windowlength">
-                        <button type="button" class="btn btn-sm btn-info" id="setwindowlength">Set</button>
-                    </div>
-                </div>
-                <div class="panel-body">
-                    <h3>CFR</h3>
-                    <div class="form-group">
-                        <div class="checkbox">
-                            <label><input type="checkbox" value="1" id="cfrenable">Enable</label>
-                        </div>
-
-                        <label for="cfrclip">clip:</label>
-                        <input type="text" class="form-control" id="cfrclip">
-
-                        <label for="errorclip">error clip:</label>
-                        <input type="text" class="form-control" id="cfrerrorclip">
-                        <input type="text" readonly class="form-control" id="cfrstats">
-                        <input type="text" readonly class="form-control" id="paprstats">
-                        <button type="button" class="btn btn-sm btn-info" id="setclip">
-                            Set
-                        </button>
-                    </div>
-                </div>
+  <div class="container-fluid">
+    <div class="panel-group">
+      <div class="panel panel-default">
+        <div class="panel-body">
+          <h3>Gain</h3>
+          <div class="form-group">
+            <label for="digitalgain">Digital Gain:</label>
+            <input type="text" class="form-control" id="digitalgain">
+            <button type="button" class="btn btn-sm btn-info" id="setdigitalgain">Set</button>
+          </div>
+        </div>
+        <div class="panel-body">
+          <h3>OFDM Windowing</h3>
+          <div class="form-group">
+            <label for="windowlength">Window length:</label>
+            <input type="text" class="form-control" id="windowlength">
+            <button type="button" class="btn btn-sm btn-info" id="setwindowlength">Set</button>
+          </div>
+        </div>
+        <div class="panel-body">
+          <h3>CFR</h3>
+          <div class="form-group">
+            <div class="checkbox">
+              <label><input type="checkbox" value="1" id="cfrenable">Enable</label>
             </div>
 
+            <label for="cfrclip">clip:</label>
+            <input type="text" class="form-control" id="cfrclip">
+
+            <label for="errorclip">error clip:</label>
+            <input type="text" class="form-control" id="cfrerrorclip">
+            <input type="text" readonly class="form-control" id="cfrstats">
+            <input type="text" readonly class="form-control" id="paprstats">
+            <button type="button" class="btn btn-sm btn-info" id="setclip">
+              Set
+            </button>
+          </div>
         </div>
-        <button type="button" class="btn btn-sm btn-info" id="refresh">Refresh</button>
+      </div>
+
     </div>
+    <button type="button" class="btn btn-sm btn-info" id="refresh">Refresh</button>
+  </div>
 </body>
 </html>
