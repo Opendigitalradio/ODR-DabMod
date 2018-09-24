@@ -31,11 +31,12 @@ along with ODR-DabMod.  If not, see <http://www.gnu.org/licenses/>.
       <div class="panel panel-default">
         <div class="panel-body">
           <h3>Capture</h3>
-          <div class="form-group">
-            <label for="capturestatus">Capture status:</label>
-            <input type="text" class="form-control" id="capturestatus">
-            <button type="button" class="btn btn-sm btn-info" id="capturebutton">Capture</button>
-          </div>
+          <div>Number of samples captured: <span id="capturelength">None</span></div>
+
+          <div><span class="glyphicons glyphicons-question-sign"></span>On pressing this button,
+            the DPDCE will trigger a capture and a quick data
+            analysis, without updating any DPD models.</div>
+          <button type="button" class="btn btn-sm btn-info" id="capturebutton">Capture</button>
         </div>
         <div class="panel-body">
           <h3>Status</h3>

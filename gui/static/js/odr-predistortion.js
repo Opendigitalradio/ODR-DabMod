@@ -21,7 +21,7 @@
 $(function(){
     $('#capturebutton').click(function() {
         doApiRequestPOST("/api/trigger_capture", {}, function(data) {
-            $('#capturestatus').val(data);
+            $('#capturelength').val(data.length);
         });
     });
 
