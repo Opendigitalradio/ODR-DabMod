@@ -33,7 +33,7 @@ import datetime
 def send_ok(data):
     return json.dumps({'status' : 'ok', 'data': data}).encode()
 
-def send_error(data, reason=""):
+def send_error(reason=""):
     return json.dumps({'status' : 'error', 'reason': reason}).encode()
 
 class API:
@@ -72,7 +72,10 @@ class API:
     def trigger_capture(self, **kwargs):
         if cherrypy.request.method == 'POST':
             cherrypy.response.headers["Content-Type"] = "application/json"
-            return send_ok(self.dpd.capture_samples())
+            try:
+                return send_ok(self.dpd.capture_samples())
+            except ValueError as e:
+                return send_error(str(e))
         else:
             cherrypy.response.headers["Content-Type"] = "application/json"
             cherrypy.response.status = 400

@@ -21,13 +21,17 @@
 $(function(){
     $('#capturebutton').click(function() {
         doApiRequestPOST("/api/trigger_capture", {}, function(data) {
-            $('#capturelength').val(data.length);
+            console.log("trigger_capture succeeded: " + JSON.stringify(data));
+            $('#capturelength').text(data.length);
+            $('#tx_median').text(data.tx_median);
+            $('#rx_median').text(data.rx_median);
         });
     });
 
     $('#dpdstatusbutton').click(function() {
         doApiRequestGET("/api/dpd_status", function(data) {
-            $('#dpdstatus').val(data);
+            console.log("dpd_status succeeded: " + JSON.stringify(data));
+            $('#histogram').text(data.histogram);
         });
     });
 });

@@ -18,16 +18,34 @@
 //   You should have received a copy of the GNU General Public License
 //   along with ODR-DabMod.  If not, see <http://www.gnu.org/licenses/>.
 
-function requestStatus(callback) {
+function buttonSetRc(key, controllable, param) {
+    var value = $("#" + key).val();
+
+    setRc(controllable, param, value, function(data) {
+        requestStatus();
+    });
+}
+
+function requestStatus() {
     $('#rctable > tbody').empty();
 
     doApiRequestGET("/api/rc_parameters", function(data) {
         $.each( data, function( key1, controllable ) {
             $.each( controllable, function( key2, param ) {
+                var key = key1 + "_" + key2;
+                var valueentry = '<input type="text" id="input'+key+'" ' +
+                    'value="' + param['value'] + '">' +
+                    '<button type="button" class="btn btn-xs btn-warning"' +
+                    'id="button'+key+'" >upd</button>';
+
                 $('#rctable > tbody:last').append(
-                    '<tr><td>'+key1+'.'+key2+'</td>'+
-                    '<td>'+param['value']+'</td>'+
+                    '<tr><td>'+key+'</td>'+
+                    '<td>'+valueentry+'</td>'+
                     '<td>'+param['help']+'</td></tr>');
+
+                $('#button'+key).click(function() {
+                    buttonSetRc("input"+key, key1, key2);
+                });
             });
         });
     });

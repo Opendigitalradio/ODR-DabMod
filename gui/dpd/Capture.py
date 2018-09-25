@@ -163,9 +163,9 @@ class Capture:
         tx_median = np.median(np.abs(txframe))
 
         if self.median_max < tx_median:
-            raise ValueError("Median {} too high, decrease digital_gain!".format(tx_median))
+            raise ValueError("TX median {} too high, decrease digital_gain!".format(tx_median))
         elif tx_median < self.median_min:
-            raise ValueError("Median {} too low, increase digital_gain!".format(tx_median))
+            raise ValueError("TX median {} too low, increase digital_gain!".format(tx_median))
         else:
             rx_median = np.median(np.abs(rxframe))
             rxframe = rxframe / rx_median * tx_median

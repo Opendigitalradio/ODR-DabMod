@@ -24,13 +24,6 @@
 
 from . import Capture
 
-class DPDError:
-    def __init__(self, reason):
-        self.reason = reason
-
-    def __str__(self):
-        return "DPD Error: {}".format(self.reason)
-
 class DPD:
     def __init__(self, samplerate=8192000):
         self.samplerate = samplerate
@@ -56,7 +49,7 @@ class DPD:
 
     def capture_samples(self):
         """Captures samples and store them in the accumulated samples,
-        returns a string with some info"""
+        returns a dict with some info"""
         try:
             txframe_aligned, tx_ts, tx_median, rxframe_aligned, rx_ts, rx_median = self.capture.get_samples()
             self.last_capture_info['length'] = len(txframe_aligned)
@@ -66,7 +59,7 @@ class DPD:
             self.last_capture_info['rx_ts'] = rx_ts
             return self.last_capture_info
         except ValueError as e:
-            raise DPDError("Capture failed: {}".format(e))
+            raise ValueError("Capture failed: {}".format(e))
 
         # tx, rx, phase_diff, n_per_bin = extStat.extract(txframe_aligned, rxframe_aligned)
         # off = SA.calc_offset(txframe_aligned)
