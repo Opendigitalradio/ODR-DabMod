@@ -144,6 +144,8 @@ frames.min 0"""
 
 # One GAUGE multigraph
 #   sdr gpsdo_num_sv
+# and one for device sensors
+#   sdr temp
 config_all += """
 multigraph sdr_gpsdo_sv_holdover
 graph_title Number of GNSS SVs used and holdover state
@@ -160,7 +162,19 @@ num_sv.max 20
 holdover.info Holdover
 holdover.label Holdover
 holdover.min 0
-holdover.max 1"""
+holdover.max 1
+
+multigraph sdr_sensors
+graph_title SDR Sensors
+graph_order temp
+graph_vlabel SDR Sensors
+graph_category dabmod
+graph_info This graph shows the device temperature in Celsius
+
+temp.info Device temperature in Celsius
+temp.label Celsius
+temp.min 0
+temp.max 100"""
 
 ctx = zmq.Context()
 
@@ -315,6 +329,13 @@ if len(sys.argv) == 1:
         munin_values += "holdover.value {}\n".format(gps_holdover)
     except:
         munin_values += "holdover.value U\n"
+
+    munin_values += "multigraph sdr_sensors\n"
+    try:
+        sdr_temp = get_rc_value("sdr", "temp", sock)
+        munin_values += "temp.value {}\n".format(sdr_temp)
+    except:
+        munin_values += "temp.value U\n"
 
     munin_values += "multigraph sdr_frames\n"
     sdr_frames = get_rc_value("sdr", "frames", sock)
