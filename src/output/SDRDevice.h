@@ -130,6 +130,8 @@ class SDRDevice {
                 struct frame_timestamp& ts,
                 double timeout_secs) = 0;
 
+        // Returns device temperature in degrees C or NaN if not available
+        virtual double get_temperature(void) const = 0;
 
         // Return true if GPS and reference clock inputs are ok
         virtual bool is_clk_source_ok(void) const = 0;

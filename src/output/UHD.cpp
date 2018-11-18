@@ -451,6 +451,15 @@ const char* UHD::device_name(void) const
     return "UHD";
 }
 
+double UHD::get_temperature(void) const
+{
+    try {
+        return std::round(m_usrp->get_tx_sensor("temp", 0).to_real());
+    }
+    catch (uhd::lookup_error &e) {
+        return std::numeric_limits<double>::quiet_NaN();
+    }
+}
 
 bool UHD::refclk_loss_needs_check() const
 {

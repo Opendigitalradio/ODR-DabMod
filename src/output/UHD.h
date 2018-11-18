@@ -93,6 +93,8 @@ class UHD : public Output::SDRDevice
         virtual bool is_clk_source_ok(void) const override;
         virtual const char* device_name(void) const override;
 
+        virtual double get_temperature(void) const override;
+
     private:
         SDRDeviceConfig& m_conf;
         uhd::usrp::multi_usrp::sptr m_usrp;

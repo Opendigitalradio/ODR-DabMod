@@ -35,6 +35,7 @@ DESCRIPTION:
 
 #include <SoapySDR/Errors.hpp>
 #include <chrono>
+#include <limits>
 #include <cstdio>
 #include <iomanip>
 
@@ -237,6 +238,13 @@ bool Soapy::is_clk_source_ok() const
 const char* Soapy::device_name(void) const
 {
     return "Soapy";
+}
+
+double Soapy::get_temperature(void) const
+{
+    // TODO Unimplemented
+    // LimeSDR exports 'lms7_temp'
+    return std::numeric_limits<double>::quiet_NaN();
 }
 
 void Soapy::transmit_frame(const struct FrameData& frame)

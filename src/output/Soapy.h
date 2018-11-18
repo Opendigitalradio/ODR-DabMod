@@ -79,6 +79,8 @@ class Soapy : public Output::SDRDevice
         virtual bool is_clk_source_ok(void) const override;
         virtual const char* device_name(void) const override;
 
+        virtual double get_temperature(void) const override;
+
     private:
         SDRDeviceConfig& m_conf;
         SoapySDR::Device *m_device = nullptr;

@@ -75,6 +75,7 @@ SDR::SDR(SDRDeviceConfig& config, std::shared_ptr<SDRDevice> device) :
     RC_ADD_PARAMETER(rxgain, "RX gain for DPD feedback");
     RC_ADD_PARAMETER(freq, "Transmission frequency");
     RC_ADD_PARAMETER(muting, "Mute the output by stopping the transmitter");
+    RC_ADD_PARAMETER(temp, "Temperature in degrees C of the device");
     RC_ADD_PARAMETER(underruns, "Counter of number of underruns");
     RC_ADD_PARAMETER(latepackets, "Counter of number of late packets");
     RC_ADD_PARAMETER(frames, "Counter of number of frames modulated");
@@ -411,6 +412,18 @@ const string SDR::get_parameter(const string& parameter) const
     }
     else if (parameter == "muting") {
         ss << m_config.muting;
+    }
+    else if (parameter == "temp") {
+        if (not m_device) {
+            throw ParameterError("OutputSDR has no device");
+        }
+        const double temp = m_device->get_temperature();
+        if (std::isnan(temp)) {
+            throw ParameterError("Temperature not available");
+        }
+        else {
+            ss << temp;
+        }
     }
     else if (parameter == "underruns" or
             parameter == "latepackets" or
