@@ -125,7 +125,6 @@ class API:
             return send_ok()
         else:
             if self.calibration_result is not None:
-                print("cal result", repr(self.calibration_result))
                 return send_ok(self.calibration_result)
             else:
                 return send_error("DPD calibration result unknown")

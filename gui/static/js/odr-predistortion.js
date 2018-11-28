@@ -18,16 +18,31 @@
 //   You should have received a copy of the GNU General Public License
 //   along with ODR-DabMod.  If not, see <http://www.gnu.org/licenses/>.
 
+function calibraterefresh() {
+    doApiRequestGET("/api/calibrate", function(data) {
+        var text = "Captured TX signal and feedback." +
+            " TX median: " + data['tx_median'] +
+            " RX median: " + data['rx_median'] +
+            " with relative timestamp offset " +
+            (data['tx_ts'] - data['rx_ts']) +
+            " and measured offset " + data['coarse_offset'] +
+            ". Correlation: " + data['correlation'];
+        $('#calibrationresults').text(text);
+    });
+}
+
 $(function(){
+    $('#calibraterefreshbtn').click(calibraterefresh);
+
     $('#calibratebtn').click(function() {
         doApiRequestPOST("/api/calibrate", {}, function(data) {
             console.log("calibrate succeeded: " + JSON.stringify(data));
 
+            $('#calibrationresults').text("Processing...");
+
             setTimeout(function() {
-                doApiRequestGET("/api/calibrate", function(data) {
-                    $('#calibrationresults').text(data);
-                });
-            }, 2000);
+                calibraterefresh();
+            }, 3000);
         });
     });
 
