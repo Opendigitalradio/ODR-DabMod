@@ -25,7 +25,7 @@
 
 import socket
 import struct
-import os
+import os.path
 import logging
 import numpy as np
 from scipy import signal
@@ -68,11 +68,12 @@ def align_samples(sig_tx, sig_rx):
 
 class Capture:
     """Capture samples from ODR-DabMod"""
-    def __init__(self, samplerate, port, num_samples_to_request):
+    def __init__(self, samplerate, port, num_samples_to_request, plot_dir):
         self.samplerate = samplerate
         self.sizeof_sample = 8 # complex floats
         self.port = port
         self.num_samples_to_request = num_samples_to_request
+        self.plot_dir = plot_dir
 
         # Before we run the samples through the model, we want to accumulate
         # them into bins depending on their amplitude, and keep only n_per_bin
@@ -161,6 +162,19 @@ class Capture:
 
         return txframe, tx_ts, rxframe, rx_ts
 
+    def _plot_spectrum(self, signal, filename, title):
+        fig = plt.figure()
+        ax = plt.subplot(1, 1, 1)
+
+        fft = np.fft.fftshift(np.fft.fft(signal))
+        fft_db = 20 * np.log10(np.abs(fft))
+
+        ax.plot(fft_db)
+        ax.set_title(title)
+        fig.tight_layout()
+        fig.savefig(os.path.join(self.plot_dir, filename))
+        plt.close(fig)
+
     def calibrate(self):
         txframe, tx_ts, rxframe, rx_ts = self.receive_tcp()
 
@@ -171,6 +185,9 @@ class Capture:
 
         rxframe = rxframe * self.rx_normalisation
         txframe_aligned, rxframe_aligned, coarse_offset = align_samples(txframe, rxframe)
+
+        self._plot_spectrum(rxframe[:8192], "rxframe.png", "RX Frame")
+        self._plot_spectrum(txframe[:8192], "txframe.png", "RX Frame")
 
         return tx_ts, tx_median, rx_ts, rx_median, np.abs(coarse_offset), correlation_coefficient(txframe_aligned, rxframe_aligned)
 
@@ -208,11 +225,8 @@ class Capture:
         ax.set_xlim(0, 1.1)
         ax.legend(loc=4)
         fig.tight_layout()
-        buf = io.BytesIO()
-        fig.savefig(buf)
+        fig.savefig(os.path.join(self.plot_dir, "pointcloud.png"))
         plt.close(fig)
-
-        return buf.getvalue()
 
     def _bin_and_accumulate(self, txframe, rxframe):
         """Bin the samples and extend the accumulated samples"""

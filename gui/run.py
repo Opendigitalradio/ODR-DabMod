@@ -75,9 +75,9 @@ class Root:
         return tmpl.render(tab='predistortion', js=js, is_login=False)
 
 class DPDRunner:
-    def __init__(self):
+    def __init__(self, static_dir):
         self.web_end, self.dpd_end = Pipe()
-        self.dpd = dpd.DPD()
+        self.dpd = dpd.DPD(static_dir)
 
     def __enter__(self):
         self.p = Process(target=self._handle_messages)
@@ -134,10 +134,14 @@ if __name__ == '__main__':
 
     staticdir = os.path.realpath(config.config['global']['static_directory'])
 
-    with DPDRunner() as dpd_pipe:
+    with DPDRunner(os.path.join(staticdir, "dpd")) as dpd_pipe:
         cherrypy.tree.mount(
                 Root(cli_args.config, dpd_pipe), config={
                     '/': { },
+                    '/dpd': {
+                        'tools.staticdir.on': True,
+                        'tools.staticdir.dir': os.path.join(staticdir, u"dpd/")
+                        },
                     '/css': {
                         'tools.staticdir.on': True,
                         'tools.staticdir.dir': os.path.join(staticdir, u"css/")

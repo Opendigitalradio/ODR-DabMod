@@ -26,7 +26,7 @@ from . import Capture
 import numpy as np
 
 class DPD:
-    def __init__(self, samplerate=8192000):
+    def __init__(self, plot_dir, samplerate=8192000):
         self.samplerate = samplerate
 
         oversample = int(self.samplerate / 2048000)
@@ -40,7 +40,7 @@ class DPD:
 
         port = 50055
         samples_to_capture = 81920
-        self.capture = Capture.Capture(self.samplerate, port, samples_to_capture)
+        self.capture = Capture.Capture(self.samplerate, port, samples_to_capture, plot_dir)
 
     def status(self):
         r = {}

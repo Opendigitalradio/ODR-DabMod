@@ -33,6 +33,10 @@ function calibraterefresh() {
 
 $(function(){
     $('#calibraterefreshbtn').click(calibraterefresh);
+    $('#refreshframesbtn').click(function() {
+        $('#txframeimg').src("dpd/txframe.png");
+        $('#rxframeimg').src("dpd/rxframe.png");
+    });
 
     $('#calibratebtn').click(function() {
         doApiRequestPOST("/api/calibrate", {}, function(data) {
