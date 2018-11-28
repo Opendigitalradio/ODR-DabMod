@@ -29,6 +29,10 @@ import os
 import logging
 import numpy as np
 from scipy import signal
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+import io
 
 from . import Align as sa
 
@@ -77,10 +81,11 @@ class Capture:
         self.binning_n_bins = 64  # Number of bins between binning_start and binning_end
         self.binning_n_per_bin = 128  # Number of measurements pre bin
 
-        self.target_median = 0.01
+        self.target_median = 0.05
         self.median_max = self.target_median * 1.4
         self.median_min = self.target_median / 1.4
 
+        # axis 0: bins
         # axis 1: 0=tx, 1=rx
         self.accumulated_bins = [np.zeros((0, 2), dtype=np.complex64) for i in range(self.binning_n_bins)]
 
@@ -178,6 +183,29 @@ class Capture:
 
     def bin_histogram(self):
         return [b.shape[0] for b in self.accumulated_bins]
+
+    def pointcloud_png(self):
+        fig = plt.figure()
+        ax = plt.subplot(1, 1, 1)
+        for b in self.accumulated_bins:
+            if b:
+                ax.scatter(
+                        np.abs(b[0]),
+                        np.abs(b[1]),
+                        s=0.1,
+                        color="black")
+        ax.set_title("Captured and Binned Samples")
+        ax.set_xlabel("TX Amplitude")
+        ax.set_ylabel("RX Amplitude")
+        ax.set_ylim(0, 0.8)
+        ax.set_xlim(0, 1.1)
+        ax.legend(loc=4)
+        fig.tight_layout()
+        buf = io.BytesIO()
+        fig.savefig(buf)
+        plt.close(fig)
+
+        return buf.getvalue()
 
     def _bin_and_accumulate(self, txframe, rxframe):
         """Bin the samples and extend the accumulated samples"""

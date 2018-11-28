@@ -24,6 +24,7 @@
 import configuration
 import os.path
 import cherrypy
+from cherrypy.process import wspbus, plugins
 import argparse
 from jinja2 import Environment, FileSystemLoader
 from api import API
@@ -39,8 +40,8 @@ class Root:
         self.config_file = config_file
         self.conf = configuration.Configuration(self.config_file)
         self.mod_rc = zmqrc.ModRemoteControl("localhost")
-        self.dpd = dpd.DPD()
-        self.api = API(self.mod_rc, self.dpd)
+        self.api = API(self.mod_rc, cherrypy.engine)
+        self.api.subscribe()
 
     @cherrypy.expose
     def index(self):
@@ -74,6 +75,20 @@ class Root:
         js = base_js + ["js/odr-predistortion.js"]
         return tmpl.render(tab='predistortion', js=js, is_login=False)
 
+class DPDPlugin(plugins.SimplePlugin):
+    def __init__(self, bus):
+        plugins.SimplePlugin.__init__(self, bus)
+        self.dpd = dpd.DPD()
+
+    def start(self):
+        self.bus.subscribe("dpd-capture", self.trigger_capture)
+
+    def stop(self):
+        self.bus.unsubscribe("dpd-capture", self.trigger_capture)
+
+    def trigger_capture(self, param):
+        print("trigger_capture({})".format(param))
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='ODR-DabMod Web GUI')
     parser.add_argument('-c', '--config',
@@ -106,6 +121,8 @@ if __name__ == '__main__':
             })
 
     staticdir = os.path.realpath(config.config['global']['static_directory'])
+
+    DPDPlugin(cherrypy.engine).subscribe()
 
     cherrypy.tree.mount(
             Root(cli_args.config), config={

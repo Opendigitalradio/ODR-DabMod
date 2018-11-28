@@ -22,9 +22,6 @@ $(function(){
     $('#capturebutton').click(function() {
         doApiRequestPOST("/api/trigger_capture", {}, function(data) {
             console.log("trigger_capture succeeded: " + JSON.stringify(data));
-            $('#capturelength').text(data.length);
-            $('#tx_median').text(data.tx_median);
-            $('#rx_median').text(data.rx_median);
         });
     });
 
@@ -32,7 +29,33 @@ $(function(){
         doApiRequestGET("/api/dpd_status", function(data) {
             console.log("dpd_status succeeded: " + JSON.stringify(data));
             $('#histogram').text(data.histogram);
+            $('#capturestatus').text(data.capture.status);
+            $('#capturelength').text(data.capture.length);
+            $('#tx_median').text(data.capture.tx_median);
+            $('#rx_median').text(data.capture.rx_median);
         });
+
+    $.ajax({
+        type: "GET",
+        url: "/api/dpd_capture_pointcloud",
+
+        error: function(data) {
+            if (data.status == 500) {
+                var errorWindow = window.open("", "_self");
+                errorWindow.document.write(data.responseText);
+            }
+            else {
+                $.gritter.add({ title: 'API',
+                    text: "AJAX failed: " + data.statusText,
+                    image: '/fonts/warning.png',
+                    sticky: true,
+                });
+            }
+        },
+        success: function(data) {
+            $('#dpd_pointcloud').value(data)
+        }
+    })
     });
 });
 

@@ -47,19 +47,25 @@ class DPD:
         r['capture'] = self.last_capture_info
         return r
 
+    def pointcloud_png(self):
+        return self.capture.pointcloud_png()
+
     def capture_samples(self):
         """Captures samples and store them in the accumulated samples,
         returns a dict with some info"""
+        result = {}
         try:
             txframe_aligned, tx_ts, tx_median, rxframe_aligned, rx_ts, rx_median = self.capture.get_samples()
-            self.last_capture_info['length'] = len(txframe_aligned)
-            self.last_capture_info['tx_median'] = float(tx_median)
-            self.last_capture_info['rx_median'] = float(rx_median)
-            self.last_capture_info['tx_ts'] = tx_ts
-            self.last_capture_info['rx_ts'] = rx_ts
-            return self.last_capture_info
+            result['status'] = "ok"
+            result['length'] = len(txframe_aligned)
+            result['tx_median'] = float(tx_median)
+            result['rx_median'] = float(rx_median)
+            result['tx_ts'] = tx_ts
+            result['rx_ts'] = rx_ts
         except ValueError as e:
-            raise ValueError("Capture failed: {}".format(e))
+            result['status'] = "Capture failed: {}".format(e)
+
+        self.last_capture_info = result
 
         # tx, rx, phase_diff, n_per_bin = extStat.extract(txframe_aligned, rxframe_aligned)
         # off = SA.calc_offset(txframe_aligned)
