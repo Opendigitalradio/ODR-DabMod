@@ -34,8 +34,10 @@ function calibraterefresh() {
 $(function(){
     $('#calibraterefreshbtn').click(calibraterefresh);
     $('#refreshframesbtn').click(function() {
-        $('#txframeimg').src("dpd/txframe.png");
-        $('#rxframeimg').src("dpd/rxframe.png");
+        var d = new Date();
+        var n = d.getTime();
+        $('#txframeimg').src = "dpd/txframe.png?cachebreak=" + n;
+        $('#rxframeimg').src = "dpd/rxframe.png?cachebreak=" + n;
     });
 
     $('#calibratebtn').click(function() {
