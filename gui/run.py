@@ -22,9 +22,9 @@
 #   along with ODR-DabMod.  If not, see <http://www.gnu.org/licenses/>.
 
 import configuration
+from multiprocessing import Process, Pipe
 import os.path
 import cherrypy
-from cherrypy.process import wspbus, plugins
 import argparse
 from jinja2 import Environment, FileSystemLoader
 from api import API
@@ -36,12 +36,11 @@ env = Environment(loader=FileSystemLoader('templates'))
 base_js = ["js/odr.js"]
 
 class Root:
-    def __init__(self, config_file):
+    def __init__(self, config_file, dpd_pipe):
         self.config_file = config_file
         self.conf = configuration.Configuration(self.config_file)
         self.mod_rc = zmqrc.ModRemoteControl("localhost")
-        self.api = API(self.mod_rc, cherrypy.engine)
-        self.api.subscribe()
+        self.api = API(self.mod_rc, dpd_pipe)
 
     @cherrypy.expose
     def index(self):
@@ -75,24 +74,32 @@ class Root:
         js = base_js + ["js/odr-predistortion.js"]
         return tmpl.render(tab='predistortion', js=js, is_login=False)
 
-class DPDPlugin(plugins.SimplePlugin):
-    def __init__(self, bus):
-        plugins.SimplePlugin.__init__(self, bus)
+class DPDRunner:
+    def __init__(self):
+        self.web_end, self.dpd_end = Pipe()
         self.dpd = dpd.DPD()
 
-    def start(self):
-        self.bus.subscribe("dpd-capture", self.trigger_capture)
-        self.bus.subscribe("dpd-calibrate", self.trigger_calibrate)
+    def __enter__(self):
+        self.p = Process(target=self._handle_messages)
+        self.p.start()
+        return self.web_end
 
-    def stop(self):
-        self.bus.unsubscribe("dpd-capture", self.trigger_capture)
-        self.bus.unsubscribe("dpd-calibrate", self.trigger_calibrate)
+    def _handle_messages(self):
+        while True:
+            rx = self.dpd_end.recv()
+            if rx['cmd'] == "quit":
+                break
+            elif rx['cmd'] == "dpd-capture":
+                self.dpd.capture_samples()
+            elif rx['cmd'] == "dpd-calibrate":
+                self.dpd_end.send({'cmd': "dpd-calibration-result",
+                    'data': self.dpd.capture_calibration()})
 
-    def trigger_capture(self, param):
-        print("trigger_capture({})".format(param))
 
-    def trigger_calibrate(self, param):
-        cherrypy.engine.publish('dpd-calibration-result', self.dpd.capture_calibration())
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.web_end.send({'cmd': "quit"})
+        self.p.join()
+        return False
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='ODR-DabMod Web GUI')
@@ -127,30 +134,29 @@ if __name__ == '__main__':
 
     staticdir = os.path.realpath(config.config['global']['static_directory'])
 
-    DPDPlugin(cherrypy.engine).subscribe()
+    with DPDRunner() as dpd_pipe:
+        cherrypy.tree.mount(
+                Root(cli_args.config, dpd_pipe), config={
+                    '/': { },
+                    '/css': {
+                        'tools.staticdir.on': True,
+                        'tools.staticdir.dir': os.path.join(staticdir, u"css/")
+                        },
+                    '/js': {
+                        'tools.staticdir.on': True,
+                        'tools.staticdir.dir': os.path.join(staticdir, u"js/")
+                        },
+                    '/fonts': {
+                        'tools.staticdir.on': True,
+                        'tools.staticdir.dir': os.path.join(staticdir, u"fonts/")
+                        },
+                    '/favicon.ico': {
+                        'tools.staticfile.on': True,
+                        'tools.staticfile.filename': os.path.join(staticdir, u"fonts/favicon.ico")
+                        },
+                    }
+                )
 
-    cherrypy.tree.mount(
-            Root(cli_args.config), config={
-                '/': { },
-                '/css': {
-                    'tools.staticdir.on': True,
-                    'tools.staticdir.dir': os.path.join(staticdir, u"css/")
-                    },
-                '/js': {
-                    'tools.staticdir.on': True,
-                    'tools.staticdir.dir': os.path.join(staticdir, u"js/")
-                    },
-                '/fonts': {
-                    'tools.staticdir.on': True,
-                    'tools.staticdir.dir': os.path.join(staticdir, u"fonts/")
-                    },
-                '/favicon.ico': {
-                    'tools.staticfile.on': True,
-                    'tools.staticfile.filename': os.path.join(staticdir, u"fonts/favicon.ico")
-                    },
-                }
-            )
-
-    cherrypy.engine.start()
-    cherrypy.engine.block()
+        cherrypy.engine.start()
+        cherrypy.engine.block()
 

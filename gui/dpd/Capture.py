@@ -172,7 +172,7 @@ class Capture:
         rxframe = rxframe * self.rx_normalisation
         txframe_aligned, rxframe_aligned, coarse_offset = align_samples(txframe, rxframe)
 
-        return tx_ts, tx_median, rx_ts, rx_median, coarse_offset, correlation_coefficient(txframe_aligned, rxframe_aligned)
+        return tx_ts, tx_median, rx_ts, rx_median, np.abs(coarse_offset), correlation_coefficient(txframe_aligned, rxframe_aligned)
 
     def get_samples(self):
         """Connect to ODR-DabMod, retrieve TX and RX samples, load

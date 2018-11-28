@@ -19,7 +19,7 @@
 //   along with ODR-DabMod.  If not, see <http://www.gnu.org/licenses/>.
 
 $(function(){
-    $('#calibrate').click(function() {
+    $('#calibratebtn').click(function() {
         doApiRequestPOST("/api/calibrate", {}, function(data) {
             console.log("calibrate succeeded: " + JSON.stringify(data));
 

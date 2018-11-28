@@ -21,7 +21,6 @@
 #   along with ODR-DabMod.  If not, see <http://www.gnu.org/licenses/>.
 
 import cherrypy
-from cherrypy.process import wspbus, plugins
 from cherrypy.lib.httputil import parse_query_string
 
 import urllib
@@ -29,6 +28,7 @@ import os
 
 import io
 import datetime
+import threading
 
 def send_ok(data=None):
     if data is not None:
@@ -42,26 +42,36 @@ def send_error(reason=""):
     else:
         return {'status' : 'error'}
 
-class API(plugins.SimplePlugin):
-    def __init__(self, mod_rc, bus):
-        plugins.SimplePlugin.__init__(self, bus)
+class RXThread(threading.Thread):
+    def __init__(self, api):
+        super(RXThread, self).__init__()
+        self.api = api
+        self.running = False
+        self.daemon = True
+
+    def cancel(self):
+        self.running = False
+
+    def run(self):
+        self.running = True
+        while self.running:
+            if self.api.dpd_pipe.poll(1):
+                rx = self.api.dpd_pipe.recv()
+                if rx['cmd'] == "quit":
+                    break
+                elif rx['cmd'] == "dpd-state":
+                    self.api.dpd_state = rx['data']
+                elif rx['cmd'] == "dpd-calibration-result":
+                    self.api.calibration_result = rx['data']
+
+class API:
+    def __init__(self, mod_rc, dpd_pipe):
         self.mod_rc = mod_rc
+        self.dpd_pipe = dpd_pipe
         self.dpd_state = None
         self.calibration_result = None
-
-    def start(self):
-        self.bus.subscribe("dpd-state", self.dpd_state)
-        self.bus.subscribe("dpd-calibration-result", self.calibration_result)
-
-    def stop(self):
-        self.bus.unsubscribe("dpd-state", self.dpd_state)
-        self.bus.unsubscribe("dpd-calibration-result", self.calibration_result)
-
-    def calibration_result(self, new_result):
-        self.calibration_result = new_result
-
-    def dpd_state(self, new_state):
-        self.dpd_state = new_state
+        self.receive_thread = RXThread(self)
+        self.receive_thread.start()
 
     @cherrypy.expose
     def index(self):
@@ -93,7 +103,7 @@ class API(plugins.SimplePlugin):
     @cherrypy.tools.json_out()
     def trigger_capture(self, **kwargs):
         if cherrypy.request.method == 'POST':
-            cherrypy.engine.publish('dpd-capture', None)
+            self.dpd_pipe.send({'cmd': "dpd-capture"})
             return send_ok()
         else:
             cherrypy.response.status = 400
@@ -109,12 +119,13 @@ class API(plugins.SimplePlugin):
 
     @cherrypy.expose
     @cherrypy.tools.json_out()
-    def dpd_calibrate(self, **kwargs):
+    def calibrate(self, **kwargs):
         if cherrypy.request.method == 'POST':
-            cherrypy.engine.publish('dpd-calibrate', None)
+            self.dpd_pipe.send({'cmd': "dpd-calibrate"})
             return send_ok()
         else:
-            if self.dpd_state is not None:
+            if self.calibration_result is not None:
+                print("cal result", repr(self.calibration_result))
                 return send_ok(self.calibration_result)
             else:
                 return send_error("DPD calibration result unknown")

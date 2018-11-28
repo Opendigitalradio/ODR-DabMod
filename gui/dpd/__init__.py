@@ -57,12 +57,13 @@ class DPD:
     def capture_calibration(self):
         tx_ts, tx_median, rx_ts, rx_median, coarse_offset, correlation_coefficient = self.capture.calibrate()
         result = {'status': "ok"}
-        result['length'] = len(txframe_aligned)
         result['tx_median'] = "{:.2}dB".format(20*np.log10(tx_median))
         result['rx_median'] = "{:.2}dB".format(20*np.log10(rx_median))
         result['tx_ts'] = tx_ts
         result['rx_ts'] = rx_ts
-        result['correlation'] = correlation_coefficient
+        result['coarse_offset'] = int(coarse_offset)
+        result['correlation'] = float(correlation_coefficient)
+        return result
 
     def capture_samples(self):
         """Captures samples and store them in the accumulated samples,
