@@ -82,12 +82,17 @@ class DPDPlugin(plugins.SimplePlugin):
 
     def start(self):
         self.bus.subscribe("dpd-capture", self.trigger_capture)
+        self.bus.subscribe("dpd-calibrate", self.trigger_calibrate)
 
     def stop(self):
         self.bus.unsubscribe("dpd-capture", self.trigger_capture)
+        self.bus.unsubscribe("dpd-calibrate", self.trigger_calibrate)
 
     def trigger_capture(self, param):
         print("trigger_capture({})".format(param))
+
+    def trigger_calibrate(self, param):
+        cherrypy.engine.publish('dpd-calibration-result', self.dpd.capture_calibration())
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='ODR-DabMod Web GUI')

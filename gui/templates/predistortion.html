@@ -29,16 +29,31 @@ along with ODR-DabMod.  If not, see <http://www.gnu.org/licenses/>.
   <div class="container-fluid">
     <div class="panel-group">
       <div class="panel panel-default">
+        <div class="panel-heading">Calibration</div>
         <div class="panel-body">
-          <h3>Capture</h3>
+          <div>Calibration needs to be done once before the PA model
+          can be trained. Every time calibration is changed, the predistortion
+          parameters are invalidated!</div>
+          <button type="button" class="btn btn-sm btn-info" id="calibratebtn">
+            Calibrate</button>
+          <div>Calibration results:<span id="calibrationresults">N/A<span></div>
+        </div>
+      </div>
+
+      <!--
+      <div class="panel panel-default">
+        <div class="panel-heading">Capture</div>
+        <div class="panel-body">
           <div>On pressing this button,
             the DPDCE will trigger a capture and a quick data
             analysis, without updating any DPD models.</div>
           <button type="button" class="btn btn-sm btn-info" id="capturebutton">
             Capture</button>
         </div>
+      </div>
+      <div class="panel panel-default">
+        <div class="panel-heading">Status</div>
         <div class="panel-body">
-          <h3>Status</h3>
           <button type="button" class="btn btn-sm btn-info" id="dpdstatusbutton">
             Update</button>
           <div>Histogram: <span id="histogram">N/A</span></div>
@@ -51,6 +66,7 @@ along with ODR-DabMod.  If not, see <http://www.gnu.org/licenses/>.
           <div>Point cloud: <img id="dpd_pointcloud" /></div>
         </div>
       </div>
+      -->
     </div>
   </div>
 </body>

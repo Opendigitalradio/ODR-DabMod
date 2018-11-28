@@ -36,6 +36,9 @@ import io
 
 from . import Align as sa
 
+def correlation_coefficient(sig_tx, sig_rx):
+    return np.corrcoef(sig_tx, sig_rx)[0, 1]
+
 def align_samples(sig_tx, sig_rx):
     """
     Returns an aligned version of sig_tx and sig_rx by cropping, subsample alignment and
@@ -61,7 +64,7 @@ def align_samples(sig_tx, sig_rx):
     # Fine subsample alignment and phase offset
     sig_rx = sa.subsample_align(sig_rx, sig_tx)
     sig_rx = sa.phase_align(sig_rx, sig_tx)
-    return sig_tx, sig_rx
+    return sig_tx, sig_rx, abs(off_meas)
 
 class Capture:
     """Capture samples from ODR-DabMod"""
@@ -76,14 +79,16 @@ class Capture:
         # samples to avoid that the polynomial gets overfitted in the low-amplitude
         # part, which is less interesting than the high-amplitude part, where
         # non-linearities become apparent.
-        self.binning_start = 0.0
-        self.binning_end = 1.0
         self.binning_n_bins = 64  # Number of bins between binning_start and binning_end
         self.binning_n_per_bin = 128  # Number of measurements pre bin
 
-        self.target_median = 0.05
-        self.median_max = self.target_median * 1.4
-        self.median_min = self.target_median / 1.4
+        self.rx_normalisation = 1.0
+
+        self.clear_accumulated()
+
+    def clear_accumulated(self):
+        self.binning_start = 0.0
+        self.binning_end = 1.0
 
         # axis 0: bins
         # axis 1: 0=tx, 1=rx
@@ -156,6 +161,19 @@ class Capture:
 
         return txframe, tx_ts, rxframe, rx_ts
 
+    def calibrate(self):
+        txframe, tx_ts, rxframe, rx_ts = self.receive_tcp()
+
+        # Normalize received signal with sent signal
+        tx_median = np.median(np.abs(txframe))
+        rx_median = np.median(np.abs(rxframe))
+        self.rx_normalisation = tx_median / rx_median
+
+        rxframe = rxframe * self.rx_normalisation
+        txframe_aligned, rxframe_aligned, coarse_offset = align_samples(txframe, rxframe)
+
+        return tx_ts, tx_median, rx_ts, rx_median, coarse_offset, correlation_coefficient(txframe_aligned, rxframe_aligned)
+
     def get_samples(self):
         """Connect to ODR-DabMod, retrieve TX and RX samples, load
         into numpy arrays, and return a tuple
@@ -164,22 +182,11 @@ class Capture:
 
         txframe, tx_ts, rxframe, rx_ts = self.receive_tcp()
 
-        # Normalize received signal with sent signal
-        tx_median = np.median(np.abs(txframe))
-
-        if self.median_max < tx_median:
-            raise ValueError("TX median {} too high, decrease digital_gain!".format(tx_median))
-        elif tx_median < self.median_min:
-            raise ValueError("TX median {} too low, increase digital_gain!".format(tx_median))
-        else:
-            rx_median = np.median(np.abs(rxframe))
-            rxframe = rxframe / rx_median * tx_median
-
-            txframe_aligned, rxframe_aligned = align_samples(txframe, rxframe)
-
-            self._bin_and_accumulate(txframe_aligned, rxframe_aligned)
-
-            return txframe_aligned, tx_ts, tx_median, rxframe_aligned, rx_ts, rx_median
+        # Normalize received signal with calibrated normalisation
+        rxframe = rxframe * self.rx_normalisation
+        txframe_aligned, rxframe_aligned, coarse_offset = align_samples(txframe, rxframe)
+        self._bin_and_accumulate(txframe_aligned, rxframe_aligned)
+        return txframe_aligned, tx_ts, tx_median, rxframe_aligned, rx_ts, rx_median
 
     def bin_histogram(self):
         return [b.shape[0] for b in self.accumulated_bins]

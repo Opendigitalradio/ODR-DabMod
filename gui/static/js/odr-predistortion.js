@@ -19,6 +19,18 @@
 //   along with ODR-DabMod.  If not, see <http://www.gnu.org/licenses/>.
 
 $(function(){
+    $('#calibrate').click(function() {
+        doApiRequestPOST("/api/calibrate", {}, function(data) {
+            console.log("calibrate succeeded: " + JSON.stringify(data));
+
+            setTimeout(function() {
+                doApiRequestGET("/api/calibrate", function(data) {
+                    $('#calibrationresults').text(data);
+                });
+            }, 2000);
+        });
+    });
+
     $('#capturebutton').click(function() {
         doApiRequestPOST("/api/trigger_capture", {}, function(data) {
             console.log("trigger_capture succeeded: " + JSON.stringify(data));

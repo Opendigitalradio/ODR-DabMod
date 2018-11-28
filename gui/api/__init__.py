@@ -47,15 +47,20 @@ class API(plugins.SimplePlugin):
         plugins.SimplePlugin.__init__(self, bus)
         self.mod_rc = mod_rc
         self.dpd_state = None
+        self.calibration_result = None
 
     def start(self):
         self.bus.subscribe("dpd-state", self.dpd_state)
+        self.bus.subscribe("dpd-calibration-result", self.calibration_result)
 
     def stop(self):
         self.bus.unsubscribe("dpd-state", self.dpd_state)
+        self.bus.unsubscribe("dpd-calibration-result", self.calibration_result)
+
+    def calibration_result(self, new_result):
+        self.calibration_result = new_result
 
     def dpd_state(self, new_state):
-        print("API got new dpd-state {}".format(new_state))
         self.dpd_state = new_state
 
     @cherrypy.expose
@@ -101,4 +106,16 @@ class API(plugins.SimplePlugin):
             return send_ok(self.dpd_state)
         else:
             return send_error("DPD state unknown")
+
+    @cherrypy.expose
+    @cherrypy.tools.json_out()
+    def dpd_calibrate(self, **kwargs):
+        if cherrypy.request.method == 'POST':
+            cherrypy.engine.publish('dpd-calibrate', None)
+            return send_ok()
+        else:
+            if self.dpd_state is not None:
+                return send_ok(self.calibration_result)
+            else:
+                return send_error("DPD calibration result unknown")
 

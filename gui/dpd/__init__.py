@@ -23,6 +23,7 @@
 #   along with ODR-DabMod.  If not, see <http://www.gnu.org/licenses/>.
 
 from . import Capture
+import numpy as np
 
 class DPD:
     def __init__(self, samplerate=8192000):
@@ -49,6 +50,19 @@ class DPD:
 
     def pointcloud_png(self):
         return self.capture.pointcloud_png()
+
+    def clear_accumulated(self):
+        return self.capture.clear_accumulated()
+
+    def capture_calibration(self):
+        tx_ts, tx_median, rx_ts, rx_median, coarse_offset, correlation_coefficient = self.capture.calibrate()
+        result = {'status': "ok"}
+        result['length'] = len(txframe_aligned)
+        result['tx_median'] = "{:.2}dB".format(20*np.log10(tx_median))
+        result['rx_median'] = "{:.2}dB".format(20*np.log10(rx_median))
+        result['tx_ts'] = tx_ts
+        result['rx_ts'] = rx_ts
+        result['correlation'] = correlation_coefficient
 
     def capture_samples(self):
         """Captures samples and store them in the accumulated samples,
