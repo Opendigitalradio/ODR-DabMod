@@ -23,6 +23,7 @@
 import cherrypy
 from cherrypy.lib.httputil import parse_query_string
 
+import json
 import urllib
 import os
 
@@ -88,7 +89,7 @@ class API:
         if cherrypy.request.method == 'POST':
             cl = cherrypy.request.headers['Content-Length']
             rawbody = cherrypy.request.body.read(int(cl))
-            params = json.loads(rawbody)
+            params = json.loads(rawbody.decode())
             try:
                 self.mod_rc.set_param_value(params['controllable'], params['param'], params['value'])
             except ValueError as e:

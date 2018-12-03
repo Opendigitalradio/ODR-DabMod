@@ -30,9 +30,19 @@ function requestStatus() {
     $('#rctable > tbody').empty();
 
     doApiRequestGET("/api/rc_parameters", function(data) {
-        $.each( data, function( key1, controllable ) {
-            $.each( controllable, function( key2, param ) {
-                var key = key1 + "_" + key2;
+        console.log(data);
+        let keys = Object.keys(data);
+        keys.sort();
+
+        var key1;
+        for (key1 in keys) {
+            let keys2 = Object.keys(data[keys[key1]]);
+            keys2.sort();
+
+            var key2;
+            for (key2 in keys2) {
+                var param = data[keys[key1]][keys2[key2]];
+                var key = keys[key1] + "_" + keys2[key2];
                 var valueentry = '<input type="text" id="input'+key+'" ' +
                     'value="' + param['value'] + '">' +
                     '<button type="button" class="btn btn-xs btn-warning"' +
@@ -46,8 +56,8 @@ function requestStatus() {
                 $('#button'+key).click(function() {
                     buttonSetRc("input"+key, key1, key2);
                 });
-            });
-        });
+            }
+        }
     });
 }
 

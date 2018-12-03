@@ -30,7 +30,7 @@ class Configuration:
         self.config = None
 
         try:
-            fd = open(configfilename, "rb")
+            fd = open(configfilename, "r")
             self.config = json.load(fd)
         except json.JSONDecodeError:
             pass
