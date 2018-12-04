@@ -1,12 +1,14 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
-# DPD Computation Engine main file.
+# DPD Computation Engine standalone main file.
 #
 # http://www.opendigitalradio.org
 # Licence: The MIT License, see notice at the end of this file
 
-"""This Python script is the main file for ODR-DabMod's DPD Computation Engine.
+"""This Python script is the main file for ODR-DabMod's DPD Computation Engine running
+in stand-alone mode.
+
 This engine calculates and updates the parameter of the digital
 predistortion module of ODR-DabMod."""
 

@@ -34,7 +34,8 @@ Features
   See doc/README-RC.md for more information
 - ZeroMQ PUB and REP output.
 - Ongoing work about digital predistortion for PA linearisation.
-  See dpd/README.md
+  See python/dpd/README.md
+- Ongoign work for a web GUI. See python/gui/README.md
 - A prototype algorithm for crest factor reduction.
 
 The src/ directory contains the source code of ODR-DabMod.
@@ -45,7 +46,8 @@ configuration file and a script for munin integration.
 The lib/ directory contains source code of libraries needed to build
 ODR-DabMod.
 
-The dpd/ directory contains the digital predistortion project. It's goal is to reduce distortion that is caused by the non-linearity of the PA.
+The python/ directory contains a web-based graphical control interface and
+the digital predistortion project.
 
 INSTALL
 =======
