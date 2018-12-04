@@ -9,7 +9,7 @@
 import socket
 import struct
 import numpy as np
-import src.Dab_Util as DU
+import dpd.Dab_Util as DU
 import os
 import logging
 

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
-from src.Model_Poly import Poly
-from src.Model_Lut import Lut
+from dpd.Model_Poly import Poly
+from dpd.Model_Lut import Lut
 
 def select_model_from_dpddata(dpddata):
     if dpddata[0] == 'lut':

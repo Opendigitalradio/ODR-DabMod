@@ -1,9 +1,0 @@
-{
-    "global": {
-        "daemon": false,
-        "host": "127.0.0.1",
-        "port": "8099",
-        "logs_directory": "logs",
-        "static_directory": "static"
-    }
-}

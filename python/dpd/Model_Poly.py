@@ -9,8 +9,8 @@ import os
 import logging
 import numpy as np
 
-import src.Model_AM as Model_AM
-import src.Model_PM as Model_PM
+import dpd.Model_AM as Model_AM
+import dpd.Model_PM as Model_PM
 
 
 def assert_np_float32(x):

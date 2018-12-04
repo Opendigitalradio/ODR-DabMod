@@ -66,11 +66,11 @@ class Adapt:
         ZMQ remote control.
     """
 
-    def __init__(self, config, port, coef_path):
+    def __init__(self, port, coef_path, plot_location):
         logging.debug("Instantiate Adapt object")
-        self.c = config
         self.port = port
         self.coef_path = coef_path
+        self.plot_location = plot_location
         self.host = "localhost"
         self._context = zmq.Context()
 
@@ -238,8 +238,8 @@ class Adapt:
         """Backup current settings to a file"""
         dt = datetime.datetime.now().isoformat()
         if path is None:
-            if self.c.plot_location is not None:
-                path = self.c.plot_location + "/" + dt + "_adapt.pkl"
+            if self.plot_location is not None:
+                path = self.plot_location + "/" + dt + "_adapt.pkl"
             else:
                 raise Exception("Cannot dump Adapt without either plot_location or path set")
         d = {

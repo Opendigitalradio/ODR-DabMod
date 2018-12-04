@@ -14,8 +14,8 @@ import matplotlib
 matplotlib.use('agg')
 import matplotlib.pyplot as plt
 
-import src.Adapt as Adapt
-import src.Measure as Measure
+import dpd.Adapt as Adapt
+import dpd.Measure as Measure
 
 class Agc:
     """The goal of the automatic gain control is to set the 
@@ -59,7 +59,7 @@ class Agc:
                 self.rxgain, self.min_rxgain))
 
             logging.info("RX Median {:1.4f}, estimated peak {:1.4f}, correction factor {:1.4f}, new RX gain {:1.4f}".format(
-            rx_median, rx_peak, correction_factor, self.rxgain
+                rx_median, rx_peak, correction_factor, self.rxgain
             ))
 
             self.adapt.set_rxgain(self.rxgain)

@@ -22,5 +22,5 @@ __pycache__/
 *.so
 .Python
 
-gui/logs/access.log
-gui/logs/error.log
+python/gui/logs/access.log
+python/gui/logs/error.log

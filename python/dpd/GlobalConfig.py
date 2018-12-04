@@ -10,11 +10,12 @@
 import numpy as np
 
 class GlobalConfig:
-    def __init__(self, cli_args, plot_location):
-        self.sample_rate = cli_args.samplerate
+    def __init__(self, args, plot_location: str):
+        self.sample_rate = args['samplerate']
         assert self.sample_rate == 8192000  # By now only constants for 8192000
 
         self.plot_location = plot_location
+        plot = len(plot_location) > 0
 
         # DAB frame
         # Time domain
@@ -39,7 +40,7 @@ class GlobalConfig:
         self.phase_offset_per_sample = 1. / self.sample_rate * 2 * np.pi * 1000
 
         # Constants for ExtractStatistic
-        self.ES_plot = cli_args.plot
+        self.ES_plot = plot
         self.ES_start = 0.0
         self.ES_end = 1.0
         self.ES_n_bins = 64  # Number of bins between ES_start and ES_end
@@ -47,7 +48,7 @@ class GlobalConfig:
 
         # Constants for Measure_Shoulder
         self.MS_enable = False
-        self.MS_plot = cli_args.plot
+        self.MS_plot = plot
 
         meas_offset = 976  # Offset from center frequency to measure shoulder [kHz]
         meas_width = 100  # Size of frequency delta to measure shoulder [kHz]
@@ -65,24 +66,18 @@ class GlobalConfig:
         self.MS_n_proc = 4
 
         # Constants for MER
-        self.MER_plot = cli_args.plot
+        self.MER_plot = plot
 
         # Constants for Model
-        self.MDL_plot = cli_args.plot
+        self.MDL_plot = plot
 
         # Constants for Model_PM
         # Set all phase offsets to zero for TX amplitude < MPM_tx_min
         self.MPM_tx_min = 0.1
 
-        # Constants for TX_Agc
-        self.TAGC_max_txgain = 89  # USRP B200 specific
-        self.TAGC_tx_median_target = cli_args.target_median
-        self.TAGC_tx_median_max = self.TAGC_tx_median_target * 1.4
-        self.TAGC_tx_median_min = self.TAGC_tx_median_target / 1.4
-
         # Constants for RX_AGC
         self.RAGC_min_rxgain = 25  # USRP B200 specific
-        self.RAGC_rx_median_target = cli_args.target_median
+        self.RAGC_rx_median_target = 0.05
 
 # The MIT License (MIT)
 #

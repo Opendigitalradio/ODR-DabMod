@@ -13,8 +13,8 @@ import matplotlib
 
 matplotlib.use('agg')
 import matplotlib.pyplot as plt
-import src.subsample_align as sa
-import src.phase_align as pa
+import dpd.subsample_align as sa
+import dpd.phase_align as pa
 from scipy import signal
 
 

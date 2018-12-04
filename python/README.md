@@ -1,9 +1,35 @@
+GUI and DPDCE
+=============
+
+This folder contains a web-based GUI and a DPD computation engine.
+The Digital Predistortion Computation Engine and the web GUI can
+run independently, and communicate through UDP socket.
+
+ODR-DabMod Web UI
+=================
+
+Goals
+-----
+
+Enable users to play with digital predistortion settings, through a
+visualisation of the settings and the parameters.
+
+Make it easier to discover the tuning possibilities of the modulator.
+
+The Web GUI presents a control interface that connects to ODR-DabMod and the
+DPD computation engine. It is the main frontend for the DPDCE.
+
+Prerequisites: python 3 with CherryPy, Jinja2, `python-zeromq`, `python-yaml`
+
+
 Digital Predistortion Computation Engine for ODR-DabMod
-=======================================================
+-------------------------------------------------------
 
 This folder contains a digital predistortion prototype.
 It was only tested in a laboratory system, and is not ready
 for production usage.
+
+Prerequisites: python 3 with SciPy, Matplotlib, `python-zeromq`, `python-yaml`
 
 Concept
 -------
@@ -20,16 +46,16 @@ efficient computation. Its sources reside in the *dpd* folder.
 The predistorter in ODR-DabMod supports two modes: polynomial and lookup table.
 In the DPDCE, only the polynomial model is implemented at the moment.
 
-The *dpd/main.py* script is the entry point for the *DPD Computation Engine*
-into which these features will be implemented. The tool uses modules from the
-*dpd/src/* folder:
-
 - Sample transfer and time alignment with subsample accuracy is done by *Measure.py*
 - Estimating the effects of the PA using some model and calculation of the updated
   polynomial coefficients is done in *Model.py* and other specific *Model_XXX.py* files
 - Finally, *Adapt.py* updates the ODR-DabMod predistortion setting and digital gain
 
-These modules themselves use additional helper scripts in the *dpd/src/* folder.
+The DPDCE can be controlled through a UDP interface from the web GUI.
+
+The *old/main.py* script was the entry point for the *DPD Computation Engine*
+stand-alone prototype, used to develop the DPDCE, and is not functional anymore.
+
 
 Requirements
 ------------
@@ -44,16 +70,16 @@ Requirements
   are sufficient (not GPSDO necessary).
 - A live mux source with TIST enabled.
 
-See dpd/dpd.ini for an example.
+See `dpd.ini` for an example.
 
-The DPD server port can be tested with the *dpd/show_spectrum.py* helper tool, which can also display
+The DPD server port can be tested with the *show_spectrum.py* helper tool, which can also display
 a constellation diagram.
 
 Hardware Setup
 --------------
 
-![setup diagram](img/setup_diagram.svg)
-![setup photo](img/setup_photo.svg)
+![setup diagram](dpd/img/setup_diagram.svg)
+![setup photo](dpd/img/setup_photo.svg)
 
 Our setup is depicted in the Figure above. We used components with the following properties:
  1. USRP TX (max +20dBm)
@@ -94,7 +120,7 @@ Make sure you have a ODR-DabMux running with a TCP output on port 9200.
 Then run the modulator, with the example dpd configuration file.
 
 ```
-./odr-dabmod dpd/dpd.ini
+./odr-dabmod dpd.ini
 ```
 
 This configuration file is different from usual defaults in several respects:
@@ -103,41 +129,23 @@ This configuration file is different from usual defaults in several respects:
  * 4x oversampling: 8192000 sample rate
  * a very small digital gain, which will be overridden by the DPDCE
  * predistorter enabled
+ * enables zmq rc
 
 The TX gain should be chosen so that you can drive your amplifier into
 saturation with a digital gain of 0.1, so that there is margin for the DPD to
 operate.
 
-You should *not modify txgain, rxgain, digital gain or coefficient settings manually!*
+You should *not modify txgain, rxgain, digital gain or coefficient settings in the dpd.ini file!*
 When the DPDCE is used, it controls these settings, and there are command line
 options for you to define initial values.
 
-To verify that the communication between the DPDCE and ODR-DabMod is ok,
-you can use the status and reset options:
-
-```
-cd dpd
-python main.py --status
-python main.py --reset
-```
-
-The reset option sets all DPD-related settings to the defaults (as shown in the
-`--help` usage screen) and stops.
-
-When neither `--status` nor `--reset` is given, the DPDCE will run the predistortion
-algorithm. As a first test you should run the DPDCE with the `--plot`
-parameter. It preserves the output power and generates all available
+When plotting is enabled, it generates all available
 visualisation plots in the newly created logging directory
 `/tmp/dpd_<time_stamp>`. As the predistortion should increase the peak to
 shoulder ratio, you should select a *txgain* in the ODR-DabMod configuration
 file such that the initial peak-to-soulder ratio visible on your spectrum
 analyser. This way, you will be able to see a the
 change.
-
-```
-cd dpd
-python main.py --plot
-```
 
 The DPDCE now does 10 iterations, and tries to improve the predistortion effectiveness.
 In each step the learning rate is decreased. The learning rate is the factor
@@ -160,16 +168,13 @@ difference has increased on your spectrum analyzer, similar to the figure below.
 
 Without digital predistortion:
 
-![shoulder_measurement_before](img/shoulder_measurement_before.png)
+![shoulder_measurement_before](dpd/img/shoulder_measurement_before.png)
 
 With digital predistortion, computed by the DPDCE:
 
-![shoulder_measurement_after](img/shoulder_measurement_after.png)
+![shoulder_measurement_after](dpd/img/shoulder_measurement_after.png)
 
 Now see what happens if you apply the predistortions for different TX gains.
-You can either set the TX gain before you start the predistortion or using the
-command line option `--txgain gain`. You can also try to adjust other
-parameters. To see their documentation run `python main.py --help`.
 
 File format for coefficients
 ----------------------------
@@ -261,4 +266,5 @@ Models with memory:
  - Parallel Wiener: input goes to N delays, each delay goes to a NL, all NL outputs summed.
 
 Taken from slide 36 of [ECE218C Lecture 15](http://www.ece.ucsb.edu/Faculty/rodwell/Classes/ece218c/notes/Lecture15_Digital%20Predistortion_and_Future%20Challenges.pdf)
+
 

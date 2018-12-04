@@ -23,6 +23,8 @@
 import cherrypy
 from cherrypy.lib.httputil import parse_query_string
 
+from lib import yamlrpc
+
 import json
 import urllib
 import os
@@ -43,36 +45,9 @@ def send_error(reason=""):
     else:
         return {'status' : 'error'}
 
-class RXThread(threading.Thread):
-    def __init__(self, api):
-        super(RXThread, self).__init__()
-        self.api = api
-        self.running = False
-        self.daemon = True
-
-    def cancel(self):
-        self.running = False
-
-    def run(self):
-        self.running = True
-        while self.running:
-            if self.api.dpd_pipe.poll(1):
-                rx = self.api.dpd_pipe.recv()
-                if rx['cmd'] == "quit":
-                    break
-                elif rx['cmd'] == "dpd-state":
-                    self.api.dpd_state = rx['data']
-                elif rx['cmd'] == "dpd-calibration-result":
-                    self.api.calibration_result = rx['data']
-
 class API:
-    def __init__(self, mod_rc, dpd_pipe):
+    def __init__(self, mod_rc):
         self.mod_rc = mod_rc
-        self.dpd_pipe = dpd_pipe
-        self.dpd_state = None
-        self.calibration_result = None
-        self.receive_thread = RXThread(self)
-        self.receive_thread.start()
 
     @cherrypy.expose
     def index(self):
@@ -81,7 +56,10 @@ class API:
     @cherrypy.expose
     @cherrypy.tools.json_out()
     def rc_parameters(self):
-        return send_ok(self.mod_rc.get_modules())
+        try:
+            return send_ok(self.mod_rc.get_modules())
+        except IOError as e:
+            return send_error(str(e))
 
     @cherrypy.expose
     @cherrypy.tools.json_out()
@@ -92,6 +70,8 @@ class API:
             params = json.loads(rawbody.decode())
             try:
                 self.mod_rc.set_param_value(params['controllable'], params['param'], params['value'])
+            except IOError as e:
+                return send_error(str(e))
             except ValueError as e:
                 cherrypy.response.status = 400
                 return send_error(str(e))
@@ -104,7 +84,7 @@ class API:
     @cherrypy.tools.json_out()
     def trigger_capture(self, **kwargs):
         if cherrypy.request.method == 'POST':
-            self.dpd_pipe.send({'cmd': "dpd-capture"})
+            # TODO dpd send capture
             return send_ok()
         else:
             cherrypy.response.status = 400
@@ -113,20 +93,16 @@ class API:
     @cherrypy.expose
     @cherrypy.tools.json_out()
     def dpd_status(self, **kwargs):
-        if self.dpd_state is not None:
-            return send_ok(self.dpd_state)
-        else:
-            return send_error("DPD state unknown")
+        # TODO Request DPD state
+        return send_error("DPD state unknown")
 
     @cherrypy.expose
     @cherrypy.tools.json_out()
     def calibrate(self, **kwargs):
         if cherrypy.request.method == 'POST':
-            self.dpd_pipe.send({'cmd': "dpd-calibrate"})
+            # TODO dpd send capture
             return send_ok()
         else:
-            if self.calibration_result is not None:
-                return send_ok(self.calibration_result)
-            else:
-                return send_error("DPD calibration result unknown")
+            # Fetch dpd status
+            return send_error("DPD calibration result unknown")
 
