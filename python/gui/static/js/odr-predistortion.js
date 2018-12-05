@@ -20,7 +20,15 @@
 
 function resultrefresh() {
     var jqxhr = doApiRequestGET("/api/dpd_results", function(data) {
-        $('#dpdresults').text(data['summary']);
+        var summary = "";
+        console.log(data);
+        for (k in data['summary']) {
+            summary += data['summary'][k];
+            summary += "<br />";
+        }
+        $('#dpdresults').html(summary);
+
+        $('#dpdstatus').text(data['state']);
     });
 
     jqxhr.always(function() {
@@ -30,6 +38,13 @@ function resultrefresh() {
 
 $(function(){
     setTimeout(resultrefresh, 2000);
+
+    $('#calibratebtn').click(function() {
+        doApiRequestPOST("/api/dpd_calibrate", {}, function(data) {
+            console.log("calibrate succeeded: " + JSON.stringify(data));
+        });
+    });
+
 });
 
 /*
@@ -47,24 +62,11 @@ function calibraterefresh() {
 }
 
 $(function(){
-    $('#calibraterefreshbtn').click(calibraterefresh);
     $('#refreshframesbtn').click(function() {
         var d = new Date();
         var n = d.getTime();
         $('#txframeimg').src = "dpd/txframe.png?cachebreak=" + n;
         $('#rxframeimg').src = "dpd/rxframe.png?cachebreak=" + n;
-    });
-
-    $('#calibratebtn').click(function() {
-        doApiRequestPOST("/api/calibrate", {}, function(data) {
-            console.log("calibrate succeeded: " + JSON.stringify(data));
-
-            $('#calibrationresults').text("Processing...");
-
-            setTimeout(function() {
-                calibraterefresh();
-            }, 3000);
-        });
     });
 
     $('#capturebutton').click(function() {

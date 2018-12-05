@@ -48,7 +48,7 @@ class Agc:
         self.adapt.set_rxgain(self.rxgain)
 
         # Measure
-        txframe_aligned, tx_ts, rxframe_aligned, rx_ts, rx_median=self.measure.get_samples()
+        txframe_aligned, tx_ts, rxframe_aligned, rx_ts, rx_median, tx_median = self.measure.get_samples()
 
         # Estimate Maximum
         rx_peak = self.peak_to_median * rx_median
@@ -89,8 +89,7 @@ class Agc:
         axs = axs.ravel()
 
         for j in range(5):
-            txframe_aligned, tx_ts, rxframe_aligned, rx_ts, rx_median =\
-                self.measure.get_samples()
+            txframe_aligned, tx_ts, rxframe_aligned, rx_ts, rx_median, tx_median = self.measure.get_samples()
 
             rxframe_aligned_abs = np.abs(rxframe_aligned)
 

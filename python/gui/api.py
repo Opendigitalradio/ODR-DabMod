@@ -134,5 +134,6 @@ class API:
         if cherrypy.request.method == 'POST':
             return self._wrap_dpd("calibrate")
         else:
-            return self._wrap_dpd("get_calibration_result")
+            cherrypy.response.status = 400
+            return send_error("POST only")
 

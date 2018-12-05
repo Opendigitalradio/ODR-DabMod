@@ -137,8 +137,8 @@ settings = {
 results = {
         'tx_median': 0,
         'rx_median': 0,
-        'state': 'idle',
-        'summary': 'DPD has not been calibrated yet',
+        'state': 'Idle',
+        'summary': ['DPD has not been calibrated yet'],
         }
 lock = Lock()
 command_queue = Queue(maxsize=1)
@@ -155,23 +155,23 @@ def engine_worker():
                 break
             elif cmd == "calibrate":
                 with lock:
-                    results['state'] = 'rx agc'
+                    results['state'] = 'rx gain calibration'
 
                 agc_success, agc_summary = agc.run()
-                summary = ["First calibration run: " + agc_summary]
+                summary = ["First calibration run:"] + agc_summary.split("\n")
                 if agc_success:
                     agc_success, agc_summary = agc.run()
-                    summary.append("Second calibration run: " + agc_summary)
+                    summary += ["Second calibration run: "] + agc_summary.split("\n")
 
-                txframe_aligned, tx_ts, rxframe_aligned, rx_ts, rx_median = self.measure.get_samples()
+                txframe_aligned, tx_ts, rxframe_aligned, rx_ts, rx_median, tx_median = meas.get_samples()
 
                 with lock:
                     settings['rx_gain'] = adapt.get_rxgain()
                     settings['digital_gain'] = adapt.get_digital_gain()
-                    results['tx_median'] = tx_median
-                    results['rx_median'] = rx_median
-                    results['state'] = 'idle'
-                    results['summary'] = "Calibration was done:\n" + "\n".join(agc_summary)
+                    results['tx_median'] = float(tx_median)
+                    results['rx_median'] = float(rx_median)
+                    results['state'] = 'Idle'
+                    results['summary'] = ["Calibration was done:"] + summary
 
     finally:
         with lock:
@@ -190,17 +190,21 @@ try:
             continue
         except TimeoutError:
             continue
+        except KeyboardInterrupt:
+            logging.info('Caught KeyboardInterrupt')
+            break
         except:
             logging.error('YAML-RPC unknown error')
             break
 
-        logging.info('YAML-RPC request : {}'.format(method))
-
         if method == 'trigger_run':
+            logging.info('YAML-RPC request : {}'.format(method))
             command_queue.put('trigger_run')
         elif method == 'reset':
+            logging.info('YAML-RPC request : {}'.format(method))
             command_queue.put('reset')
         elif method == 'set_setting':
+            logging.info('YAML-RPC request : {} -> {}'.format(method, params))
             # params == {'setting': ..., 'value': ...}
             pass
         elif method == 'get_settings':
@@ -210,20 +214,20 @@ try:
             with lock:
                 cmd_socket.send_success_response(addr, msg_id, results)
         elif method == 'calibrate':
+            logging.info('YAML-RPC request : {}'.format(method))
             command_queue.put('calibrate')
-        elif method == "get_calibration_result":
-            pass
         else:
             cmd_socket.send_error_response(addr, msg_id, "request not understood")
 finally:
     command_queue.put('quit')
+    logging.info('Waiting for DPDCE to stop')
     engine.join()
 
 # Make code below unreachable
 sys.exit(0)
 
 def measure_once():
-    txframe_aligned, tx_ts, rxframe_aligned, rx_ts, rx_median = meas.get_samples()
+    txframe_aligned, tx_ts, rxframe_aligned, rx_ts, rx_median, tx_median = meas.get_samples()
 
     print("TX signal median {}".format(np.median(np.abs(txframe_aligned))))
     print("RX signal median {}".format(rx_median))
@@ -255,7 +259,7 @@ while i < num_iter:
         # Measure
         if state == 'measure':
             # Get Samples and check gain
-            txframe_aligned, tx_ts, rxframe_aligned, rx_ts, rx_median = meas.get_samples()
+            txframe_aligned, tx_ts, rxframe_aligned, rx_ts, rx_median, tx_median = meas.get_samples()
             # TODO Check TX median
 
             # Extract usable data from measurement
@@ -288,7 +292,7 @@ while i < num_iter:
         # Report
         elif state == 'report':
             try:
-                txframe_aligned, tx_ts, rxframe_aligned, rx_ts, rx_median = meas.get_samples()
+                txframe_aligned, tx_ts, rxframe_aligned, rx_ts, rx_median, tx_median = meas.get_samples()
 
                 # Store all settings for pre-distortion, tx and rx
                 adapt.dump()

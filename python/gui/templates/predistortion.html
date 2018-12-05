@@ -29,27 +29,20 @@ along with ODR-DabMod.  If not, see <http://www.gnu.org/licenses/>.
   <div class="container-fluid">
     <div class="panel-group">
       <div class="panel panel-default">
-        <div class="panel-heading">Status</div>
+        <div class="panel-heading">Status and calibration</div>
         <div class="panel-body">
-          <div>Current DPDCE status:
-            <div class="well well-sm" id="dpdresults">N/A<div>
+          <div>Current DPDCE status: <span id="dpdstatus" style="font-weight:bold;">N/A</span>
+            <div class="well well-sm" id="dpdresults">N/A</div>
           </div>
-        </div>
-      </div>
-      <!--
-      <div class="panel panel-default">
-        <div class="panel-heading">Calibration</div>
-        <div class="panel-body">
+
           <div>Calibration needs to be done once before the PA model
           can be trained. Every time calibration is changed, the predistortion
           parameters are invalidated!</div>
-          <button type="button" class="btn btn-sm btn-info" id="calibratebtn">
+          <button type="button" class="btn btn-sm btn-warning" id="calibratebtn">
             Calibrate</button>
-          <button type="button" class="btn btn-sm btn-info" id="calibraterefreshbtn">
-            Refresh results</button>
-          <div>Calibration results:<span id="calibrationresults">N/A<span></div>
         </div>
       </div>
+      <!--
       <div class="panel panel-default">
         <div class="panel-heading">Capture TX and RX frames</div>
         <div class="panel-body">

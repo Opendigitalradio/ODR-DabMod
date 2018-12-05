@@ -27,19 +27,14 @@ function doApiRequestGET(uri, callback) {
         dataType: 'json',
 
         error: function(data) {
-            if (data.status == 500) {
-                var errorWindow = window.open("", "_self");
-                errorWindow.document.write(data.responseText);
-            }
-            else {
-                console.log(data.responseText);
+            console.log(data.responseText);
 
-                $.gritter.add({ title: 'API',
-                    text: "AJAX failed: " + data.statusText,
-                    image: '/fonts/warning.png',
-                    sticky: true,
-                });
-            }
+            $.gritter.add({ title: 'API',
+                text: "AJAX failed: " + data.statusText,
+                image: '/fonts/warning.png',
+                sticky: false,
+                time: 4000,
+            });
         },
         success: function(data) {
             if (data.status == 'ok') {
@@ -50,7 +45,8 @@ function doApiRequestGET(uri, callback) {
                     title: 'API',
                     text: "API ERROR: " + data.reason,
                     image: '/fonts/warning.png',
-                    sticky: true,
+                    sticky: false,
+                    time: 4000,
                 });
             }
         }
@@ -66,22 +62,15 @@ function doApiRequestPOST(uri, data, callback) {
         data: JSON.stringify(data),
 
         error: function(data) {
-            if (data.status == 500) {
-                var windowObjectReference;
-                var winFeatures = "menubar=yes,location=yes,resizable=yes,scrollbars=yes,status=yes";
-                var errorWindow = window.open("", "Error 500", winFeatures);
-                errorWindow.document.write(data.responseText);
-            }
-            else {
-                console.log(data.responseText);
+            console.log(data.responseText);
 
-                $.gritter.add({
-                    title: 'API',
-                    text: "AJAX failed: " + data.statusText,
-                    image: '/fonts/warning.png',
-                    sticky: true,
-                });
-            }
+            $.gritter.add({
+                title: 'API',
+                text: "AJAX failed: " + data.statusText,
+                image: '/fonts/warning.png',
+                sticky: false,
+                time: 4000,
+            });
         },
 
         success: function(data_in) {
@@ -93,7 +82,8 @@ function doApiRequestPOST(uri, data, callback) {
                     title: 'API',
                     text: "API ERROR: " + data_in.reason,
                     image: '/fonts/warning.png',
-                    sticky: true,
+                    sticky: false,
+                    time: 4000,
                 });
             }
         }

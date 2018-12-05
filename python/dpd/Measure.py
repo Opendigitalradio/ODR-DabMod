@@ -94,14 +94,15 @@ class Measure:
     def get_samples(self):
         """Connect to ODR-DabMod, retrieve TX and RX samples, load
         into numpy arrays, and return a tuple
-        (txframe_aligned, tx_ts, rxframe_aligned, rx_ts, rx_median)
+        (txframe_aligned, tx_ts, rxframe_aligned, rx_ts, rx_median, tx_median)
         """
 
         txframe, tx_ts, rxframe, rx_ts = self.receive_tcp()
 
         # Normalize received signal with sent signal
         rx_median = np.median(np.abs(rxframe))
-        rxframe = rxframe / rx_median * np.median(np.abs(txframe))
+        tx_median = np.median(np.abs(txframe))
+        rxframe = rxframe / rx_median * tx_median
 
         du = DU.Dab_Util(self.c, self.samplerate)
         txframe_aligned, rxframe_aligned = du.subsample_align(txframe, rxframe)
@@ -111,7 +112,7 @@ class Measure:
             % (len(txframe), txframe.dtype, len(rxframe), rxframe.dtype,
             len(txframe_aligned), txframe_aligned.dtype, len(rxframe_aligned), rxframe_aligned.dtype) )
 
-        return txframe_aligned, tx_ts, rxframe_aligned, rx_ts, rx_median
+        return txframe_aligned, tx_ts, rxframe_aligned, rx_ts, rx_median, tx_median
 
 # The MIT License (MIT)
 #
