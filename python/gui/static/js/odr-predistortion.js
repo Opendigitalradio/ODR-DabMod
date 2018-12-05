@@ -18,6 +18,21 @@
 //   You should have received a copy of the GNU General Public License
 //   along with ODR-DabMod.  If not, see <http://www.gnu.org/licenses/>.
 
+function resultrefresh() {
+    var jqxhr = doApiRequestGET("/api/dpd_results", function(data) {
+        $('#dpdresults').text(data['summary']);
+    });
+
+    jqxhr.always(function() {
+        setTimeout(resultrefresh, 2000);
+    });
+}
+
+$(function(){
+    setTimeout(resultrefresh, 2000);
+});
+
+/*
 function calibraterefresh() {
     doApiRequestGET("/api/calibrate", function(data) {
         var text = "Captured TX signal and feedback." +
@@ -91,6 +106,8 @@ $(function(){
     })
     });
 });
+
+*/
 
 
 // ToolTip init

@@ -35,9 +35,9 @@ env = Environment(loader=FileSystemLoader('gui/templates'))
 base_js = ["js/odr.js"]
 
 class Root:
-    def __init__(self):
+    def __init__(self, dpd_port):
         self.mod_rc = zmqrc.ModRemoteControl("localhost")
-        self.api = API(self.mod_rc)
+        self.api = API(self.mod_rc, dpd_port)
 
     @cherrypy.expose
     def index(self):
@@ -81,6 +81,7 @@ if __name__ == '__main__':
     allconfig = configparser.ConfigParser()
     allconfig.read(cli_args.config)
     config = allconfig['gui']
+    dpd_port = allconfig['dpdce'].getint('control_port')
 
     daemon = False
     if daemon:
@@ -105,7 +106,7 @@ if __name__ == '__main__':
     staticdir = os.path.realpath(config['static_directory'])
 
     cherrypy.tree.mount(
-            Root(), config={
+            Root(dpd_port), config={
                 '/': { },
                 '/dpd': {
                     'tools.staticdir.on': True,

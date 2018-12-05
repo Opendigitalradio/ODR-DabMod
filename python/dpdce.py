@@ -37,11 +37,11 @@ config = allconfig['dpdce']
 # removed options:
 # txgain, rxgain, digital_gain, target_median, iterations, lut, enable-txgain-agc, plot, measure
 
-control_port = config['control_port']
-dpd_port = config['dpd_port']
-rc_port = config['rc_port']
-samplerate = config['samplerate']
-samps = config['samps']
+control_port = config.getint('control_port')
+dpd_port = config.getint('dpd_port')
+rc_port = config.getint('rc_port')
+samplerate = config.getint('samplerate')
+samps = config.getint('samps')
 coef_file = config['coef_file']
 log_folder = config['log_folder']
 
@@ -96,7 +96,7 @@ from dpd.GlobalConfig import GlobalConfig
 from dpd.MER import MER
 from dpd.Measure_Shoulders import Measure_Shoulders
 
-c = GlobalConfig(config, logging_path)
+c = GlobalConfig(samplerate, logging_path)
 symbol_align = Symbol_align(c)
 mer = MER(c)
 meas_shoulders = Measure_Shoulders(c)
@@ -125,7 +125,7 @@ if cli_args.reset:
     logging.info("DPD Settings were reset to default values.")
     sys.exit(0)
 
-cmd_socket = yamlrpc.Socket(bind_port=config.getint(control_port))
+cmd_socket = yamlrpc.Socket(bind_port=control_port)
 
 # The following is accessed by both threads and need to be locked
 settings = {
@@ -138,6 +138,7 @@ results = {
         'tx_median': 0,
         'rx_median': 0,
         'state': 'idle',
+        'summary': 'DPD has not been calibrated yet',
         }
 lock = Lock()
 command_queue = Queue(maxsize=1)
@@ -156,7 +157,11 @@ def engine_worker():
                 with lock:
                     results['state'] = 'rx agc'
 
-                agc.run()
+                agc_success, agc_summary = agc.run()
+                summary = ["First calibration run: " + agc_summary]
+                if agc_success:
+                    agc_success, agc_summary = agc.run()
+                    summary.append("Second calibration run: " + agc_summary)
 
                 txframe_aligned, tx_ts, rxframe_aligned, rx_ts, rx_median = self.measure.get_samples()
 
@@ -166,6 +171,7 @@ def engine_worker():
                     results['tx_median'] = tx_median
                     results['rx_median'] = rx_median
                     results['state'] = 'idle'
+                    results['summary'] = "Calibration was done:\n" + "\n".join(agc_summary)
 
     finally:
         with lock:
@@ -177,9 +183,27 @@ engine.start()
 
 try:
     while True:
-        addr, msg_id, method, params = cmd_socket.receive_request()
+        try:
+            addr, msg_id, method, params = cmd_socket.receive_request()
+        except ValueError as e:
+            logging.warning('YAML-RPC request error: {}'.format(e))
+            continue
+        except TimeoutError:
+            continue
+        except:
+            logging.error('YAML-RPC unknown error')
+            break
 
-        if method == 'get_settings':
+        logging.info('YAML-RPC request : {}'.format(method))
+
+        if method == 'trigger_run':
+            command_queue.put('trigger_run')
+        elif method == 'reset':
+            command_queue.put('reset')
+        elif method == 'set_setting':
+            # params == {'setting': ..., 'value': ...}
+            pass
+        elif method == 'get_settings':
             with lock:
                 cmd_socket.send_success_response(addr, msg_id, settings)
         elif method == 'get_results':
@@ -187,6 +211,8 @@ try:
                 cmd_socket.send_success_response(addr, msg_id, results)
         elif method == 'calibrate':
             command_queue.put('calibrate')
+        elif method == "get_calibration_result":
+            pass
         else:
             cmd_socket.send_error_response(addr, msg_id, "request not understood")
 finally:

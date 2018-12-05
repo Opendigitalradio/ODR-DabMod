@@ -13,6 +13,7 @@ import numpy as np
 import matplotlib
 matplotlib.use('agg')
 import matplotlib.pyplot as plt
+from typing import Tuple
 
 import dpd.Adapt as Adapt
 import dpd.Measure as Measure
@@ -39,31 +40,39 @@ class Agc:
         self.measure = measure
         self.adapt = adapt
         self.min_rxgain = c.RAGC_min_rxgain
+        self.max_rxgain = c.RAGC_max_rxgain
         self.rxgain = self.min_rxgain
         self.peak_to_median = 1./c.RAGC_rx_median_target
 
-    def run(self):
+    def run(self) -> Tuple[bool, str]:
         self.adapt.set_rxgain(self.rxgain)
 
-        for i in range(2):
-            # Measure
-            txframe_aligned, tx_ts, rxframe_aligned, rx_ts, rx_median= \
-                self.measure.get_samples()
+        # Measure
+        txframe_aligned, tx_ts, rxframe_aligned, rx_ts, rx_median=self.measure.get_samples()
 
-            # Estimate Maximum
-            rx_peak = self.peak_to_median * rx_median
-            correction_factor = 20*np.log10(1/rx_peak)
-            self.rxgain = self.rxgain + correction_factor
+        # Estimate Maximum
+        rx_peak = self.peak_to_median * rx_median
+        correction_factor = 20*np.log10(1/rx_peak)
+        self.rxgain = self.rxgain + correction_factor
 
-            assert self.min_rxgain <= self.rxgain, ("Desired RX Gain is {} which is smaller than the minimum of {}".format(
-                self.rxgain, self.min_rxgain))
+        measurements = "RX Median {:1.4f}, estimated peak {:1.4f}, correction factor {:1.4f}, new RX gain {:1.4f}".format(
+            rx_median, rx_peak, correction_factor, self.rxgain)
+        logging.info(measurements)
 
-            logging.info("RX Median {:1.4f}, estimated peak {:1.4f}, correction factor {:1.4f}, new RX gain {:1.4f}".format(
-                rx_median, rx_peak, correction_factor, self.rxgain
-            ))
-
+        if self.rxgain < self.min_rxgain:
+            w = "Warning: calculated RX Gain={} is lower than minimum={}. RX feedback power is too high!".format(
+                self.rxgain, self.min_rxgain)
+            logging.warning(w)
+            return (False, "\n".join([measurements, w]))
+        elif self.rxgain > self.max_rxgain:
+            w = "Warning: calculated RX Gain={} is higher than maximum={}. RX feedback power should be increased.".format(
+                self.rxgain, self.max_rxgain)
+            logging.warning(w)
+            return (False, "\n".join([measurements, w]))
+        else:
             self.adapt.set_rxgain(self.rxgain)
             time.sleep(0.5)
+        return (True, measurements)
 
     def plot_estimates(self):
         """Plots the estimate of for Max, Median, Mean for different

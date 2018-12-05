@@ -46,8 +46,10 @@ def send_error(reason=""):
         return {'status' : 'error'}
 
 class API:
-    def __init__(self, mod_rc):
+    def __init__(self, mod_rc, dpd_port):
         self.mod_rc = mod_rc
+        self.dpd_port = dpd_port
+        self.dpd_rpc = yamlrpc.Socket(bind_port=0)
 
     @cherrypy.expose
     def index(self):
@@ -71,38 +73,66 @@ class API:
             try:
                 self.mod_rc.set_param_value(params['controllable'], params['param'], params['value'])
             except IOError as e:
+                cherrypy.response.status = 503
                 return send_error(str(e))
             except ValueError as e:
-                cherrypy.response.status = 400
+                cherrypy.response.status = 503
                 return send_error(str(e))
             return send_ok()
         else:
             cherrypy.response.status = 400
             return send_error("POST only")
 
+    def _wrap_dpd(self, method, data=None):
+        try:
+            reply = self.dpd_rpc.call_rpc_method(self.dpd_port, method, data)
+            return send_ok(reply)
+        except ValueError as e:
+            cherrypy.response.status = 503
+            return send_error("YAML-RPC call error: {}".format(e))
+        except TimeoutError as e:
+            cherrypy.response.status = 503
+            return send_error("YAML-RPC timeout: {}".format(e))
+        cherrypy.response.status = 500
+        return send_error("YAML-RPC unknown error")
+
     @cherrypy.expose
     @cherrypy.tools.json_out()
-    def trigger_capture(self, **kwargs):
+    def dpd_trigger_run(self, **kwargs):
         if cherrypy.request.method == 'POST':
-            # TODO dpd send capture
-            return send_ok()
+            return self._wrap_dpd("trigger_run")
         else:
             cherrypy.response.status = 400
             return send_error("POST only")
 
     @cherrypy.expose
     @cherrypy.tools.json_out()
-    def dpd_status(self, **kwargs):
-        # TODO Request DPD state
-        return send_error("DPD state unknown")
+    def dpd_reset(self, **kwargs):
+        if cherrypy.request.method == 'POST':
+            return self._wrap_dpd("reset")
+        else:
+            cherrypy.response.status = 400
+            return send_error("POST only")
 
     @cherrypy.expose
     @cherrypy.tools.json_out()
-    def calibrate(self, **kwargs):
+    def dpd_settings(self, setting: str, value: str, **kwargs):
         if cherrypy.request.method == 'POST':
-            # TODO dpd send capture
-            return send_ok()
+            data = {'setting': setting, 'value': value}
+            return self._wrap_dpd("set_setting", data)
         else:
-            # Fetch dpd status
-            return send_error("DPD calibration result unknown")
+            return self._wrap_dpd("get_settings")
+
+    @cherrypy.expose
+    @cherrypy.tools.json_out()
+    def dpd_results(self, **kwargs):
+        return self._wrap_dpd("get_results")
+
+    @cherrypy.expose
+    @cherrypy.tools.json_out()
+    def dpd_calibrate(self, **kwargs):
+        if cherrypy.request.method == 'POST':
+            return self._wrap_dpd("calibrate")
+        else:
+            return self._wrap_dpd("get_calibration_result")
 

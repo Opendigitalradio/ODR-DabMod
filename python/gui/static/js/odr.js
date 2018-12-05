@@ -20,7 +20,7 @@
 
 
 function doApiRequestGET(uri, callback) {
-    $.ajax({
+    return $.ajax({
         type: "GET",
         url: uri,
         contentType: 'application/json',
@@ -32,6 +32,8 @@ function doApiRequestGET(uri, callback) {
                 errorWindow.document.write(data.responseText);
             }
             else {
+                console.log(data.responseText);
+
                 $.gritter.add({ title: 'API',
                     text: "AJAX failed: " + data.statusText,
                     image: '/fonts/warning.png',
@@ -56,7 +58,7 @@ function doApiRequestGET(uri, callback) {
 }
 
 function doApiRequestPOST(uri, data, callback) {
-    $.ajax({
+    return $.ajax({
         type: "POST",
         url: uri,
         contentType: 'application/json',
@@ -65,10 +67,14 @@ function doApiRequestPOST(uri, data, callback) {
 
         error: function(data) {
             if (data.status == 500) {
-                var errorWindow = window.open("", "_self");
+                var windowObjectReference;
+                var winFeatures = "menubar=yes,location=yes,resizable=yes,scrollbars=yes,status=yes";
+                var errorWindow = window.open("", "Error 500", winFeatures);
                 errorWindow.document.write(data.responseText);
             }
             else {
+                console.log(data.responseText);
+
                 $.gritter.add({
                     title: 'API',
                     text: "AJAX failed: " + data.statusText,
@@ -100,10 +106,10 @@ function setRc(controllable, param, value, callback) {
         param: param,
         value: value
     };
-    doApiRequestPOST("/api/parameter/", data, callback);
+    return doApiRequestPOST("/api/parameter/", data, callback);
 }
 
 function getRc(callback) {
-    doApiRequestGET("/api/rc_parameters", callback);
+    return doApiRequestGET("/api/rc_parameters", callback);
 }
 

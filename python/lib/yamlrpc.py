@@ -30,6 +30,11 @@ import yaml
 import socket
 import struct
 
+class ResponseError(Exception):
+    """The response contains an error"""
+    def __init__(self, message):
+        self.message = message
+
 def request(request_id: int, method: str, params) -> bytes:
     r = {
             'yamlrpc': YAMLRPC_VERSION,
@@ -42,14 +47,12 @@ def response_success(request_id: int, result) -> bytes:
     r = {
             'yamlrpc': YAMLRPC_VERSION,
             'result': result,
-            'error': None,
             'id': request_id}
     return yaml.dump(r).encode()
 
 def response_error(request_id: int, error) -> bytes:
     r = {
             'yamlrpc': YAMLRPC_VERSION,
-            'result': None,
             'error': error,
             'id': request_id}
     return yaml.dump(r).encode()
@@ -66,9 +69,58 @@ class Socket:
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         if bind_port > 0:
             self.socket.bind(('127.0.0.1', bind_port))
+        self.socket.settimeout(3)
+        self._last_request_id = 0
+
+    def send_request(self, dest_port: int, method: str, params) -> int:
+        addr = ("127.0.0.1", dest_port)
+        self._last_request_id += 1
+        self.socket.sendto(request(self._last_request_id, method, params), addr)
+        return self._last_request_id
+
+    def receive_response(self, expected_msg_id: int):
+        try:
+            data, addr = self.socket.recvfrom(512)
+        except socket.timeout as to:
+            raise TimeoutError("Timeout: " + str(to))
+
+        y = yaml.load(data.decode())
+
+        if 'yamlrpc' not in y:
+            raise ValueError("Message is not yamlrpc")
+        if y['yamlrpc'] != YAMLRPC_VERSION:
+            raise ValueError("Invalid yamlrpc version")
+
+        # expect a response, with either 'error' or 'result' non-null
+        try:
+            msg_id = y['id']
+        except KeyError:
+            raise ValueError("Response is missing id")
+
+        if msg_id != expected_msg_id:
+            raise ValueError("Response id does not match request")
+
+        try:
+            result = y['result']
+        except KeyError:
+            try:
+                error = y['error']
+                raise ResponseError(error)
+            except KeyError:
+                raise ValueError("response is null")
+        return result
+
+    def call_rpc_method(self, dest_port: int, method: str, params):
+        msg_id = self.send_request(dest_port, method, params)
+        return self.receive_response(msg_id)
+
 
     def receive_request(self):
-        data, addr = self.socket.recvfrom(512)
+        try:
+            data, addr = self.socket.recvfrom(512)
+        except socket.timeout as to:
+            raise TimeoutError("Timeout: " + str(to))
+
         y = yaml.load(data.decode())
 
         if 'yamlrpc' not in y:

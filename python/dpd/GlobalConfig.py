@@ -10,9 +10,9 @@
 import numpy as np
 
 class GlobalConfig:
-    def __init__(self, args, plot_location: str):
-        self.sample_rate = args['samplerate']
-        assert self.sample_rate == 8192000  # By now only constants for 8192000
+    def __init__(self, samplerate, plot_location: str):
+        self.sample_rate = samplerate
+        assert self.sample_rate == 8192000, "We only support constants for 8192000 sample rate: {}".format(self.sample_rate)
 
         self.plot_location = plot_location
         plot = len(plot_location) > 0
@@ -77,12 +77,13 @@ class GlobalConfig:
 
         # Constants for RX_AGC
         self.RAGC_min_rxgain = 25  # USRP B200 specific
+        self.RAGC_max_rxgain = 65  # USRP B200 specific
         self.RAGC_rx_median_target = 0.05
 
 # The MIT License (MIT)
 #
 # Copyright (c) 2017 Andreas Steger
-# Copyright (c) 2017 Matthias P. Braendli
+# Copyright (c) 2018 Matthias P. Braendli
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
