@@ -54,7 +54,7 @@ int FormatConverter::process(Buffer* const dataIn, Buffer* dataOut)
 
     if (m_format == "s16") {
         dataOut->setLength(sizeIn * sizeof(int16_t));
-        uint16_t* out = reinterpret_cast<uint16_t*>(dataOut->getData());
+        int16_t* out = reinterpret_cast<int16_t*>(dataOut->getData());
 
         for (size_t i = 0; i < sizeIn; i++) {
             out[i] = in[i];
