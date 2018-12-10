@@ -307,6 +307,36 @@ static void parse_configfile(
         mod_settings.useSoapyOutput = true;
     }
 #endif
+#if defined(HAVE_LIMESDR)
+    else if (output_selected == "limesdr") {
+        auto& outputlime_conf = mod_settings.sdr_device_config;
+        outputlime_conf.device = pt.Get("soapyoutput.device", "");
+        outputlime_conf.masterClockRate = pt.GetInteger("soapyoutput.master_clock_rate", 0);
+
+        outputlime_conf.txgain = pt.GetReal("soapyoutput.txgain", 0.0);
+        outputlime_conf.tx_antenna = pt.Get("soapyoutput.tx_antenna", "");
+        outputlime_conf.lo_offset = pt.GetReal("soapyoutput.lo_offset", 0.0);
+        outputlime_conf.frequency = pt.GetReal("soapyoutput.frequency", 0);
+        std::string chan = pt.Get("soapyoutput.channel", "");
+        outputlime_conf.dabMode = mod_settings.dabMode;
+
+        if (outputlime_conf.frequency == 0 && chan == "") {
+            std::cerr << "       soapy output enabled, but neither frequency nor channel defined.\n";
+            throw std::runtime_error("Configuration error");
+        }
+        else if (outputlime_conf.frequency == 0) {
+            outputlime_conf.frequency =  parseChannel(chan);
+        }
+        else if (outputlime_conf.frequency != 0 && chan != "") {
+            std::cerr << "       soapy output: cannot define both frequency and channel.\n";
+            throw std::runtime_error("Configuration error");
+        }
+
+        outputlime_conf.dpdFeedbackServerPort = pt.GetInteger("soapyoutput.dpd_port", 0);
+
+        mod_settings.useLimeOutput = true;
+    }
+#endif
 #if defined(HAVE_ZEROMQ)
     else if (output_selected == "zmq") {
         mod_settings.outputName = pt.Get("zmqoutput.listen", "");

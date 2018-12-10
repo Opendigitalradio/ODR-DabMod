@@ -3,13 +3,11 @@
    Queen in Right of Canada (Communications Research Center Canada)
 
    Copyright (C) 2018
-   Matthias P. Braendli, matthias.braendli@mpb.li
+   Evariste F5OEO, evaristec@gmail.com
 
-    http://opendigitalradio.org
-
+   
 DESCRIPTION:
-   It is an output driver using the SoapySDR library that can output to
-   many devices.
+  It is an output driver using the LimeSDR library.
 */
 
 /*

@@ -53,22 +53,40 @@ Lime::Lime(SDRDeviceConfig& config) :
     etiLog.level(info) <<
         "Lime:Creating the device with: " <<
         m_conf.device;
-    /*
-    try {
-        m_device = SoapySDR::Device::make(m_conf.device);
-        stringstream ss;
-        ss << "SoapySDR driver=" << m_device->getDriverKey();
-        ss << " hardware=" << m_device->getHardwareKey();
-        for (const auto &it : m_device->getHardwareInfo()) {
-            ss << "  " << it.first << "=" << it.second;
-        }
-    }
-    catch (const std::exception &ex) {
-        etiLog.level(error) << "Error making SoapySDR device: " <<
-            ex.what();
-        throw std::runtime_error("Cannot create SoapySDR output");
-    }
+    int device_count = LMS_GetDeviceList(NULL);
+	if (device_count < 0)
+	{
+		etiLog.level(error) << "Error making LimeSDR device: " << LMS_GetLastErrorMessage();
+        throw std::runtime_error("Cannot find LimeSDR output device");
+		
+	}
+    lms_info_str_t device_list[device_count];
+	if (LMS_GetDeviceList(device_list) < 0)
+	{
+		etiLog.level(error) << "Error making LimeSDR device: %s " << LMS_GetLastErrorMessage();
+        throw std::runtime_error("Cannot find LimeSDR output device");
+		
+	}
+    unsigned int device_i=0; // If several cards, need to get device by configuration
+    if (LMS_Open(&m_device, device_list[device_i], NULL) < 0)
+	{
+		etiLog.level(error) << "Error making LimeSDR device: %s " << LMS_GetLastErrorMessage();
+        throw std::runtime_error("Cannot open LimeSDR output device");
+	}
+    if (LMS_Reset(m_device) < 0)
+	{
+		etiLog.level(error) << "Error making LimeSDR device: %s " << LMS_GetLastErrorMessage();
+        throw std::runtime_error("Cannot reset LimeSDR output device");
+	}
 
+	if (LMS_Init(m_device) < 0)
+	{
+		etiLog.level(error) << "Error making LimeSDR device: %s " << LMS_GetLastErrorMessage();
+        throw std::runtime_error("Cannot init LimeSDR output device");
+	}
+
+    
+    /*
     m_device->setMasterClockRate(m_conf.masterClockRate);
     etiLog.level(info) << "SoapySDR master clock rate set to " <<
         std::fixed << std::setprecision(4) <<
