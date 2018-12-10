@@ -226,10 +226,11 @@ int OfdmGenerator::process(Buffer* const dataIn, Buffer* dataOut)
 
         fftwf_execute(myFftPlan); // IFFT from myFftIn to myFftOut
 
-        complexf *symbol = reinterpret_cast<complexf*>(myFftOut);
+        
+        if (myCfr) {
+            complexf *symbol = reinterpret_cast<complexf*>(myFftOut);
         myPaprBeforeCFR.process_block(symbol, mySpacing);
 
-        if (myCfr) {
             if (myMERCalcIndex == i) {
                 before_cfr.resize(mySpacing);
                 memcpy(reinterpret_cast<fftwf_complex*>(before_cfr.data()),
