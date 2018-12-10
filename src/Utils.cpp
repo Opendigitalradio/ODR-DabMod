@@ -55,6 +55,9 @@ static void printHeader()
 #if defined(HAVE_SOAPYSDR)
         "output_soapysdr " <<
 #endif
+#if defined(HAVE_LIMESDR)
+        "output_limesdr " <<
+#endif
 #if defined(__FAST_MATH__)
         "fast-math " <<
 #endif

@@ -31,7 +31,6 @@ DESCRIPTION:
 
 #ifdef HAVE_LIMESDR
 
-//#include <SoapySDR/Errors.hpp>
 #include <chrono>
 #include <limits>
 #include <cstdio>
@@ -84,7 +83,66 @@ Lime::Lime(SDRDeviceConfig& config) :
 		etiLog.level(error) << "Error making LimeSDR device: %s " << LMS_GetLastErrorMessage();
         throw std::runtime_error("Cannot init LimeSDR output device");
 	}
+    
+    if (LMS_EnableChannel(m_device, LMS_CH_TX, m_channel, true) < 0)
+	{
+		etiLog.level(error) << "Error making LimeSDR device: %s " << LMS_GetLastErrorMessage();
+        throw std::runtime_error("Cannot channel LimeSDR output device");
+	}
 
+    if (LMS_SetSampleRate(m_device, m_conf.masterClockRate, 0) < 0)
+	{
+		etiLog.level(error) << "Error making LimeSDR device: %s " << LMS_GetLastErrorMessage();
+        throw std::runtime_error("Cannot channel LimeSDR output device");
+	}
+    float_type host_sample_rate=0.0;
+
+    if (LMS_GetSampleRate(m_device, LMS_CH_TX, m_channel, &host_sample_rate, NULL) < 0)
+	{
+		etiLog.level(error) << "Error making LimeSDR device: %s " << LMS_GetLastErrorMessage();
+        throw std::runtime_error("Cannot getsamplerate LimeSDR output device");
+	}
+    etiLog.level(info) << "LimeSDR master clock rate set to " <<
+        std::fixed << std::setprecision(4) <<
+        host_sample_rate/1000.0 << " kHz";
+
+    if (LMS_SetLOFrequency(m_device, LMS_CH_TX,m_channel, m_conf.frequency) < 0) 
+	{
+		etiLog.level(error) << "Error making LimeSDR device: %s " << LMS_GetLastErrorMessage();
+        throw std::runtime_error("Cannot Frequency LimeSDR output device");
+	}
+
+    float_type cur_frequency=0.0;
+
+    if (LMS_GetLOFrequency(m_device, LMS_CH_TX,m_channel, &cur_frequency)<0)
+    {
+        etiLog.level(error) << "Error making LimeSDR device: %s " << LMS_GetLastErrorMessage();
+        throw std::runtime_error("Cannot GetFrequency LimeSDR output device");   
+    }
+    etiLog.level(info) << "LimeSDR:Actual frequency: " <<
+        std::fixed << std::setprecision(3) <<
+        cur_frequency / 1000.0 << " kHz.";
+
+	if (LMS_SetNormalizedGain(m_device, LMS_CH_TX, m_channel, m_conf.txgain/100.0) < 0) //value 0..100 -> Normalize
+	{
+			etiLog.level(error) << "Error making LimeSDR device: %s " << LMS_GetLastErrorMessage();
+            throw std::runtime_error("Cannot Gain LimeSDR output device");
+	}
+	
+    
+    if (LMS_SetAntenna(m_device, LMS_CH_TX, m_channel, LMS_PATH_TX2) < 0)
+	{
+	    etiLog.level(error) << "Error making LimeSDR device: %s " << LMS_GetLastErrorMessage();
+        throw std::runtime_error("Cannot Antenna LimeSDR output device");
+	}
+
+
+    double  bandwidth_calibrating=2.5e6; // Minimal bandwidth
+	if (LMS_Calibrate(m_device, LMS_CH_TX, m_channel, bandwidth_calibrating, 0) < 0)
+	{
+		etiLog.level(error) << "Error making LimeSDR device: %s " << LMS_GetLastErrorMessage();
+        throw std::runtime_error("Cannot Gain LimeSDR output device");
+	}
     
     /*
     m_device->setMasterClockRate(m_conf.masterClockRate);
@@ -130,17 +188,23 @@ Lime::Lime(SDRDeviceConfig& config) :
 
 Lime::~Lime()
 {
-    /*
-    if (m_device != nullptr) {
-        if (m_tx_stream != nullptr) {
-            m_device->closeStream(m_tx_stream);
+    
+    if (m_device != nullptr)
+    {
+     
+        //if (m_tx_stream != nullptr)
+        {
+            LMS_StopStream(&m_tx_stream);
+            LMS_DestroyStream(m_device, &m_tx_stream);
         }
-
+        /*
         if (m_rx_stream != nullptr) {
             m_device->closeStream(m_rx_stream);
         }
-        SoapySDR::Device::unmake(m_device);
-    }*/
+        */
+        LMS_EnableChannel(m_device, LMS_CH_TX, m_channel, false);
+	    LMS_Close(m_device);
+    }
 }
 
 void Lime::tune(double lo_offset, double frequency)
@@ -277,49 +341,49 @@ void Lime::transmit_frame(const struct FrameData& frame)
     long long int timeNs = frame.ts.get_ns();
     // muting and mutenotimestamp is handled by SDR
     const bool has_time_spec = (m_conf.enableSync and frame.ts.timestamp_valid);
+*/
+    if (not m_tx_stream_active)
+    {
+        unsigned int buffer_size = 200000*2*sizeof(complexf);
 
-    if (not m_tx_stream_active) {
-        int flags = has_time_spec ? SOAPY_SDR_HAS_TIME : 0;
-        int ret = m_device->activateStream(m_tx_stream, flags, timeNs);
-        if (ret != 0) {
-            throw std::runtime_error(string("Soapy activate TX stream failed: ") +
-                    SoapySDR::errToStr(ret));
-        }
+        m_tx_stream.channel = m_channel;
+		m_tx_stream.fifoSize = buffer_size;
+		m_tx_stream.throughputVsLatency = 0.5;
+		m_tx_stream.isTx = LMS_CH_TX;
+		m_tx_stream.dataFmt = lms_stream_t::LMS_FMT_F32;
+	
+        if ( LMS_SetupStream(m_device, &m_tx_stream) < 0 )
+        {
+            etiLog.level(error) << "Error making LimeSDR device: %s " << LMS_GetLastErrorMessage();
+            throw std::runtime_error("Cannot Channel Activate LimeSDR output device");
+	    }
+        LMS_StartStream(&m_tx_stream);
         m_tx_stream_active = true;
     }
 
     // The frame buffer contains bytes representing FC32 samples
     const complexf *buf = reinterpret_cast<const complexf*>(frame.buf.data());
     const size_t numSamples = frame.buf.size() / sizeof(complexf);
-    if ((frame.buf.size() % sizeof(complexf)) != 0) {
-        throw std::runtime_error("Soapy: invalid buffer size");
+    if ((frame.buf.size() % sizeof(complexf)) != 0)
+    {
+        throw std::runtime_error("Lime: invalid buffer size");
     }
 
-    // Stream MTU is in samples, not bytes.
-    const size_t mtu = m_device->getStreamMTU(m_tx_stream);
+    //etiLog.level(info) << "LimeSDR:Buffer " << std::fixed << numSamples << " /" << m_tx_stream.fifoSize ;
 
-    size_t num_acc_samps = 0;
-    while (num_acc_samps < numSamples) {
+    auto num_sent = LMS_SendStream( &m_tx_stream, buf, numSamples, NULL, 1000 );
+     
+    if (num_sent <= 0)
+    {
+        etiLog.level(info) << num_sent;
+        //throw std::runtime_error("Lime: Too Loonnnngg");
+    }
+    else
+    {
+        //etiLog.level(info) << "OK" << num_sent;
+    }
 
-        const void *buffs[1];
-        buffs[0] = buf + num_acc_samps;
-
-        const size_t samps_to_send = std::min(numSamples - num_acc_samps, mtu);
-
-        const bool eob_because_muting = m_conf.muting;
-        const bool end_of_burst = eob_because_muting or (
-                frame.ts.timestamp_valid and
-                frame.ts.timestamp_refresh and
-                samps_to_send <= mtu );
-
-        int flags = 0;
-
-        auto num_sent = m_device->writeStream(
-                m_tx_stream, buffs, samps_to_send, flags, timeNs);
-
-        if (num_sent == SOAPY_SDR_TIMEOUT) {
-            continue;
-        }
+        /*
         else if (num_sent == SOAPY_SDR_OVERFLOW) {
             overflows++;
             continue;
@@ -338,7 +402,7 @@ void Lime::transmit_frame(const struct FrameData& frame)
         timeNs += 1e9 * num_sent/m_conf.sampleRate;
 
         num_acc_samps += num_sent;
-
+        
         if (end_of_burst) {
             int ret_deact = m_device->deactivateStream(m_tx_stream);
             if (ret_deact != 0) {
@@ -351,10 +415,10 @@ void Lime::transmit_frame(const struct FrameData& frame)
 
         if (eob_because_muting) {
             break;
-        }
-    }
+        }*/
+    //num_acc_samps += num_sent;
     num_frames_modulated++;
-    */
+    
 }
 
 } // namespace Output

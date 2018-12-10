@@ -310,11 +310,14 @@ static void parse_configfile(
 #if defined(HAVE_LIMESDR)
     else if (output_selected == "limesdr") {
         auto& outputlime_conf = mod_settings.sdr_device_config;
-        outputlime_conf.device = pt.Get("soapyoutput.device", "");
-        outputlime_conf.masterClockRate = pt.GetInteger("soapyoutput.master_clock_rate", 0);
+        outputlime_conf.device = pt.Get("limeoutput.device", "");
+        outputlime_conf.masterClockRate = pt.GetInteger("limeoutput.master_clock_rate", 0);
 
-        outputlime_conf.txgain = pt.GetReal("soapyoutput.txgain", 0.0);
-        outputlime_conf.tx_antenna = pt.Get("soapyoutput.tx_antenna", "");
+        outputlime_conf.txgain = pt.GetReal("limeoutput.txgain", 0.0);
+        outputlime_conf.txgain = pt.GetReal("limeoutput.txgain", 0.0);
+        outputlime_conf.txgain = pt.GetReal("limeoutput.txgain", 0.0);
+        outputlime_conf.txgain = pt.GetReal("limeoutput.txgain", 0.0);
+        outputlime_conf.tx_antenna = pt.Get("limeoutput.tx_antenna", "");
         outputlime_conf.lo_offset = pt.GetReal("soapyoutput.lo_offset", 0.0);
         outputlime_conf.frequency = pt.GetReal("soapyoutput.frequency", 0);
         std::string chan = pt.Get("soapyoutput.channel", "");

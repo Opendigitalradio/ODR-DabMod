@@ -79,13 +79,14 @@ class Lime : public Output::SDRDevice
     private:
         SDRDeviceConfig& m_conf;
         lms_device_t *m_device=nullptr;
+        size_t m_channel=0; // Should be set by config
         /*
         SoapySDR::Device *m_device = nullptr;
         SoapySDR::Stream *m_tx_stream = nullptr;
-        bool m_tx_stream_active = false;
-        SoapySDR::Stream *m_rx_stream = nullptr;
         */
-        bool m_rx_stream_active = false;
+       lms_stream_t m_tx_stream;
+        bool m_tx_stream_active = false;
+          
 
         size_t underflows = 0;
         size_t overflows = 0;
