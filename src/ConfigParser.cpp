@@ -318,24 +318,24 @@ static void parse_configfile(
         outputlime_conf.txgain = pt.GetReal("limeoutput.txgain", 0.0);
         outputlime_conf.txgain = pt.GetReal("limeoutput.txgain", 0.0);
         outputlime_conf.tx_antenna = pt.Get("limeoutput.tx_antenna", "");
-        outputlime_conf.lo_offset = pt.GetReal("soapyoutput.lo_offset", 0.0);
-        outputlime_conf.frequency = pt.GetReal("soapyoutput.frequency", 0);
-        std::string chan = pt.Get("soapyoutput.channel", "");
+        outputlime_conf.lo_offset = pt.GetReal("limeoutput.lo_offset", 0.0);
+        outputlime_conf.frequency = pt.GetReal("limeoutput.frequency", 0);
+        std::string chan = pt.Get("limeoutput.channel", "");
         outputlime_conf.dabMode = mod_settings.dabMode;
 
         if (outputlime_conf.frequency == 0 && chan == "") {
-            std::cerr << "       soapy output enabled, but neither frequency nor channel defined.\n";
+            std::cerr << "       Lime output enabled, but neither frequency nor channel defined.\n";
             throw std::runtime_error("Configuration error");
         }
         else if (outputlime_conf.frequency == 0) {
             outputlime_conf.frequency =  parseChannel(chan);
         }
         else if (outputlime_conf.frequency != 0 && chan != "") {
-            std::cerr << "       soapy output: cannot define both frequency and channel.\n";
+            std::cerr << "       Lime output: cannot define both frequency and channel.\n";
             throw std::runtime_error("Configuration error");
         }
 
-        outputlime_conf.dpdFeedbackServerPort = pt.GetInteger("soapyoutput.dpd_port", 0);
+        outputlime_conf.dpdFeedbackServerPort = pt.GetInteger("limeoutput.dpd_port", 0);
 
         mod_settings.useLimeOutput = true;
     }
