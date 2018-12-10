@@ -146,6 +146,14 @@ static void printModSettings(const mod_settings_t& mod_settings)
                 mod_settings.sdr_device_config.masterClockRate << "\n";
     }
 #endif
+#if defined(HAVE_LIMESDR)
+    else if (mod_settings.useLimeOutput) {
+        ss << " LimeSDR\n"
+            "  Device: " << mod_settings.sdr_device_config.device << "\n" <<
+            "  master_clock_rate: " <<
+                mod_settings.sdr_device_config.masterClockRate << "\n";
+    }
+#endif
     else if (mod_settings.useZeroMQOutput) {
         ss << " ZeroMQ\n" <<
             "  Listening on: " << mod_settings.outputName << "\n" <<
@@ -229,6 +237,16 @@ static shared_ptr<ModOutput> prepare_output(
         rcs.enrol((Output::SDR*)output.get());
     }
 #endif
+#if defined(HAVE_LIMESDR)
+    else if (s.useLimeOutput) {
+        /* We normalise the same way as for the UHD output */
+        s.normalise = 1.0f / normalise_factor;
+        s.sdr_device_config.sampleRate = s.outputRate;
+        auto limedevice = make_shared<Output::Lime>(s.sdr_device_config);
+        output = make_shared<Output::SDR>(s.sdr_device_config, limedevice);
+        rcs.enrol((Output::SDR*)output.get());
+    }
+#endif
 #if defined(HAVE_ZEROMQ)
     else if (s.useZeroMQOutput) {
         /* We normalise the same way as for the UHD output */
@@ -278,7 +296,8 @@ int launch_modulator(int argc, char* argv[])
     if (not (mod_settings.useFileOutput or
              mod_settings.useUHDOutput or
              mod_settings.useZeroMQOutput or
-             mod_settings.useSoapyOutput)) {
+             mod_settings.useSoapyOutput or
+             mod_settings.useLimeOutput)) {
         throw std::runtime_error("Configuration error: Output not specified");
     }
 
