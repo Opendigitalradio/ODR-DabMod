@@ -58,6 +58,9 @@ AC_ARG_ENABLE([native],
 AC_ARG_ENABLE([easydabv3],
         [AS_HELP_STRING([--enable-easydabv3], [Build for EasyDABv3 board])],
         [], [enable_easydabv3=no])
+AC_ARG_ENABLE([limesdr],
+        [AS_HELP_STRING([--enable-limesdr], [Build for LimeSDR board])],
+        [], [enable_limesdr=no])        
 
 # UHD support control
 AC_ARG_ENABLE([output_uhd],
@@ -106,9 +109,13 @@ AX_PTHREAD([], AC_MSG_ERROR([requires pthread]))
 AS_IF([test "x$enable_easydabv3" = "xno"],
     [PKG_CHECK_MODULES([SOAPYSDR], [SoapySDR], enable_soapysdr=yes, enable_soapysdr=no)])
 
+AS_IF([test "x$enable_limesdr" = "xyes"],
+         [AC_CHECK_LIB([LimeSuite], [LMS_Init], [LIMESDR_LIBS="-lLimeSuite"],
+                       [AC_MSG_ERROR([LimeSDR LimeSuite is required])])])
+
 AC_SUBST([CFLAGS], ["$CFLAGS $EXTRA $FFTW_CFLAGS $SOAPYSDR_CFLAGS $PTHREAD_CFLAGS"])
 AC_SUBST([CXXFLAGS], ["$CXXFLAGS $EXTRA $FFTW_CFLAGS $SOAPYSDR_CFLAGS $PTHREAD_CFLAGS"])
-AC_SUBST([LIBS], ["$FFTW_LIBS $SOAPYSDR_LIBS $PTHREAD_LIBS $ZMQ_LIBS"])
+AC_SUBST([LIBS], ["$FFTW_LIBS $SOAPYSDR_LIBS $PTHREAD_LIBS $ZMQ_LIBS $LIMESDR_LIBS"])
 
 AS_IF([test "x$enable_easydabv3" = "xyes" && test "x$enable_output_uhd" == "xyes"],
       AC_MSG_ERROR([Cannot enable both EasyDABv3 and UHD output]))
@@ -126,6 +133,11 @@ AS_IF([test "x$enable_soapysdr" = "xyes"],
 
 AS_IF([test "x$enable_edi" = "xyes"],
       [AC_DEFINE(HAVE_EDI, [1], [Define if EDI input is enabled]) ])
+
+AS_IF([test "x$enable_limesdr" = "xyes"],
+      [AC_DEFINE(HAVE_LIMESDR, [1], [Define if LimeSDR input is enabled]) ])
+
+
 
 AM_CONDITIONAL([COMPILE_EDI], [test "x$enable_edi" = "xyes"])
 
@@ -200,7 +212,7 @@ echo "***********************************************"
 echo
 enabled=""
 disabled=""
-for feat in edi prof trace output_uhd zeromq soapysdr easydabv3
+for feat in edi prof trace output_uhd zeromq soapysdr easydabv3 limesdr
 do
     eval var=\$enable_$feat
     AS_IF([test "x$var" = "xyes"],

@@ -621,6 +621,8 @@ odr_dabmod_SOURCES += \
 					  src/output/UHD.h \
 					  src/output/USRPTime.cpp \
 					  src/output/USRPTime.h \
+					  src/output/Lime.cpp \
+					  src/output/Lime.h \
 					  src/PhaseReference.cpp \
 					  src/PhaseReference.h \
 					  src/QpskSymbolMapper.cpp \
@@ -645,7 +647,7 @@ odr_dabmod_SOURCES += \
 					  src/TII.h \
 					  $(ASIO_FILES)
 
-odr_dabmod_LDADD   += $(UHD_LIBS)
+odr_dabmod_LDADD   += $(UHD_LIBS) $(LIMESDR_LIBS)
 endif
 
 if COMPILE_EDI

@@ -55,6 +55,7 @@
 #include "output/SDR.h"
 #include "output/UHD.h"
 #include "output/Soapy.h"
+#include "output/Lime.h"
 #include "OutputZeroMQ.h"
 #include "InputReader.h"
 #include "PcDebug.h"

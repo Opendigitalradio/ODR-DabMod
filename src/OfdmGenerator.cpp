@@ -229,7 +229,7 @@ int OfdmGenerator::process(Buffer* const dataIn, Buffer* dataOut)
         
         if (myCfr) {
             complexf *symbol = reinterpret_cast<complexf*>(myFftOut);
-        myPaprBeforeCFR.process_block(symbol, mySpacing);
+            myPaprBeforeCFR.process_block(symbol, mySpacing);
 
             if (myMERCalcIndex == i) {
                 before_cfr.resize(mySpacing);
