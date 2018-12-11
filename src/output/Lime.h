@@ -32,7 +32,7 @@ DESCRIPTION:
 #ifdef HAVE_CONFIG_H
 #   include <config.h>
 #endif
-
+//#define HAVE_LIMESDR
 #ifdef HAVE_LIMESDR
 
 #include <string>
@@ -84,9 +84,10 @@ class Lime : public Output::SDRDevice
         SoapySDR::Device *m_device = nullptr;
         SoapySDR::Stream *m_tx_stream = nullptr;
         */
-       lms_stream_t m_tx_stream;
+        lms_stream_t m_tx_stream;
         bool m_tx_stream_active = false;
-          
+        size_t m_interpolate=1;
+        complexf *interpolatebuf=nullptr;
 
         size_t underflows = 0;
         size_t overflows = 0;

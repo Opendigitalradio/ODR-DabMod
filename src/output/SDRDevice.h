@@ -63,7 +63,7 @@ struct SDRDeviceConfig {
     double txgain = 0.0;
     double rxgain = 0.0;
     bool enableSync = false;
-
+    unsigned upsample = 1;
     // When working with timestamps, mute the frames that
     // do not have a timestamp
     bool muteNoTimestamps = false;
