@@ -23,6 +23,9 @@
 
 """yamlrpc is json-rpc, except that it's yaml and not json."""
 
+# This maybe won't work over ethernet, but for localhost it's ok
+UDP_PACKETSIZE = 2048
+
 # Same as jsonrpc version we're aiming to mirror in YAML
 YAMLRPC_VERSION = "2.0"
 
@@ -80,7 +83,7 @@ class Socket:
 
     def receive_response(self, expected_msg_id: int):
         try:
-            data, addr = self.socket.recvfrom(512)
+            data, addr = self.socket.recvfrom(UDP_PACKETSIZE)
         except socket.timeout as to:
             raise TimeoutError("Timeout: " + str(to))
 
@@ -117,7 +120,7 @@ class Socket:
 
     def receive_request(self):
         try:
-            data, addr = self.socket.recvfrom(512)
+            data, addr = self.socket.recvfrom(UDP_PACKETSIZE)
         except socket.timeout as to:
             raise TimeoutError("Timeout: " + str(to))
 
