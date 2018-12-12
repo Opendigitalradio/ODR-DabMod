@@ -211,13 +211,15 @@ try:
         if method == 'trigger_run':
             logging.info('YAML-RPC request : {}'.format(method))
             command_queue.put('trigger_run')
+            cmd_socket.send_success_response(addr, msg_id, None)
         elif method == 'reset':
             logging.info('YAML-RPC request : {}'.format(method))
             command_queue.put('reset')
+            cmd_socket.send_success_response(addr, msg_id, None)
         elif method == 'set_setting':
             logging.info('YAML-RPC request : {} -> {}'.format(method, params))
             # params == {'setting': ..., 'value': ...}
-            pass
+            cmd_socket.send_success_response(addr, msg_id, None)
         elif method == 'get_settings':
             with lock:
                 cmd_socket.send_success_response(addr, msg_id, settings)
@@ -227,6 +229,7 @@ try:
         elif method == 'calibrate':
             logging.info('YAML-RPC request : {}'.format(method))
             command_queue.put('calibrate')
+            cmd_socket.send_success_response(addr, msg_id, None)
         else:
             cmd_socket.send_error_response(addr, msg_id, "request not understood")
 finally:
