@@ -138,6 +138,7 @@ results = {
         'tx_median': 0,
         'rx_median': 0,
         'state': 'Idle',
+        'stateprogress': 0, # in percent
         'summary': ['DPD has not been calibrated yet'],
         }
 lock = Lock()
@@ -155,13 +156,20 @@ def engine_worker():
                 break
             elif cmd == "calibrate":
                 with lock:
-                    results['state'] = 'rx gain calibration'
+                    results['state'] = 'RX Gain Calibration'
+                    results['stateprogress'] = 0
 
-                agc_success, agc_summary = agc.run()
-                summary = ["First calibration run:"] + agc_summary.split("\n")
-                if agc_success:
+                summary = []
+                N_ITER = 5
+                for i in range(N_ITER):
                     agc_success, agc_summary = agc.run()
-                    summary += ["Second calibration run: "] + agc_summary.split("\n")
+                    summary = ["calibration run {}:".format(i)] + agc_summary.split("\n")
+
+                    with lock:
+                        results['stateprogress'] = int((i + 1) * 100/N_ITER)
+
+                    if not agc_success:
+                        break
 
                 txframe_aligned, tx_ts, rxframe_aligned, rx_ts, rx_median, tx_median = meas.get_samples()
 
@@ -171,11 +179,13 @@ def engine_worker():
                     results['tx_median'] = float(tx_median)
                     results['rx_median'] = float(rx_median)
                     results['state'] = 'Idle'
+                    results['stateprogress'] = 0
                     results['summary'] = ["Calibration was done:"] + summary
 
     finally:
         with lock:
-            results['state'] = 'terminated'
+            results['state'] = 'Terminated'
+            results['stateprogress'] = 0
 
 
 engine = Thread(target=engine_worker)

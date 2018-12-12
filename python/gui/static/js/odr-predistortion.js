@@ -29,6 +29,12 @@ function resultrefresh() {
         $('#dpdresults').html(summary);
 
         $('#dpdstatus').text(data['state']);
+        var percentage = data['stateprogress'];
+        if (percentage > 100) {
+            percentage = 100;
+        }
+        $('#dpdprogress').css('width', percentage + '%');
+        $('#dpdprogresstext').text(percentage + '%');
     });
 
     jqxhr.always(function() {
