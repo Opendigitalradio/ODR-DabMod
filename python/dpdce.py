@@ -163,10 +163,11 @@ def engine_worker():
                 N_ITER = 5
                 for i in range(N_ITER):
                     agc_success, agc_summary = agc.run()
-                    summary = ["calibration run {}:".format(i)] + agc_summary.split("\n")
+                    summary += ["calibration run {}:".format(i)] + agc_summary.split("\n")
 
                     with lock:
                         results['stateprogress'] = int((i + 1) * 100/N_ITER)
+                        results['summary'] = ["Calibration ongoing:"] + summary
 
                     if not agc_success:
                         break

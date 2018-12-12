@@ -90,6 +90,26 @@ class Measure:
 
         return txframe, tx_ts, rxframe, rx_ts
 
+    def get_samples_unaligned(self, short=False):
+        """Connect to ODR-DabMod, retrieve TX and RX samples, load
+        into numpy arrays, and return a tuple
+        (txframe, tx_ts, rxframe, rx_ts, rx_median, tx_median)
+        """
+
+        n_samps = int(self.num_samples_to_request / 4) if short else self.num_samples_to_request
+        txframe, tx_ts, rxframe, rx_ts = self.receive_tcp(n_samps)
+
+        # Normalize received signal with sent signal
+        rx_median = np.median(np.abs(rxframe))
+        tx_median = np.median(np.abs(txframe))
+        rxframe = rxframe / rx_median * tx_median
+
+
+        logging.info(
+            "Measurement done, tx %d %s, rx %d %s" %
+            (len(txframe), txframe.dtype, len(rxframe), rxframe.dtype))
+
+        return txframe, tx_ts, rxframe, rx_ts, rx_median, tx_median
 
     def get_samples(self, short=False):
         """Connect to ODR-DabMod, retrieve TX and RX samples, load

@@ -45,10 +45,15 @@ class Agc:
         self.peak_to_median = 1./c.RAGC_rx_median_target
 
     def run(self) -> Tuple[bool, str]:
-        self.adapt.set_rxgain(self.rxgain)
+        try:
+            self.adapt.set_rxgain(self.rxgain)
+        except ValueError as e:
+            return (False, "Setting RX gain to {} failed: {}".format(self.rxgain, e))
+        time.sleep(0.5)
+
 
         # Measure
-        txframe_aligned, tx_ts, rxframe_aligned, rx_ts, rx_median, tx_median = self.measure.get_samples(short=True)
+        txframe, tx_ts, rxframe, rx_ts, rx_median, tx_median = self.measure.get_samples_unaligned(short=False)
 
         # Estimate Maximum
         rx_peak = self.peak_to_median * rx_median
@@ -70,9 +75,12 @@ class Agc:
             logging.warning(w)
             return (False, "\n".join([measurements, w]))
         else:
-            self.adapt.set_rxgain(self.rxgain)
+            try:
+                self.adapt.set_rxgain(self.rxgain)
+            except ValueError as e:
+                return (False, "Setting RX gain to {} failed: {}".format(self.rxgain, e))
             time.sleep(0.5)
-        return (True, measurements)
+            return (True, measurements)
 
     def plot_estimates(self):
         """Plots the estimate of for Max, Median, Mean for different
