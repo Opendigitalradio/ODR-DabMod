@@ -49,17 +49,21 @@ function requestStatus() {
                 var valueentry = '<input type="text" id="input'+key+'" ' +
                     'value="' + param['value'] + '">' +
                     '<button type="button" class="btn btn-xs btn-warning"' +
-                    'id="button'+key+'" >upd</button>';
+                    'id="button'+key+'" ' +
+                    'data-controllable="'+name_controllable+'" ' +
+                    'data-param="'+name_param+'" ' +
+                    '>upd</button>';
 
                 $('#rctable > tbody:last').append(
                     '<tr><td>'+key+'</td>'+
                     '<td>'+valueentry+'</td>'+
                     '<td>'+param['help']+'</td></tr>');
 
-
                 $('#button'+key).click(function() {
-                    console.log("trigger " + key + " with " + name_controllable + " " + name_param);
-                    buttonSetRc("input"+key, name_controllable, name_param);
+                    var attr_c = this.getAttribute('data-controllable');
+                    var attr_p = this.getAttribute('data-param');
+                    var k = attr_c + "_" + attr_p;
+                    buttonSetRc("input"+k, attr_c, attr_p);
                 });
             }
         }
