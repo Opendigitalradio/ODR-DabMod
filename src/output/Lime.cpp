@@ -50,7 +50,7 @@ Lime::Lime(SDRDeviceConfig& config) :
     m_conf(config)
 {
     m_interpolate=m_conf.upsample;
-    interpolatebuf=new complexf[200000*m_interpolate];  
+    
     etiLog.level(info) <<
         "Lime:Creating the device with: " <<
         m_conf.device;
@@ -162,6 +162,23 @@ Lime::Lime(SDRDeviceConfig& config) :
         }
         break;
     }
+    #define FRAME_LENGTH 196608
+    // FRAME DURATION is 96ms 
+    unsigned int buffer_size = FRAME_LENGTH*m_interpolate*10; // We take 10 Frame buffer size Fifo
+    interpolatebuf=new complexf[FRAME_LENGTH*m_interpolate];  
+    // Fifo seems to be round to multiple of SampleRate
+    m_tx_stream.channel = m_channel;
+	m_tx_stream.fifoSize = buffer_size;
+	m_tx_stream.throughputVsLatency = 1.0;
+	m_tx_stream.isTx = LMS_CH_TX;
+	m_tx_stream.dataFmt = lms_stream_t::LMS_FMT_F32;
+	if ( LMS_SetupStream(m_device, &m_tx_stream) < 0 )
+    {
+        etiLog.level(error) << "Error making LimeSDR device: %s " << LMS_GetLastErrorMessage();
+        throw std::runtime_error("Cannot Channel Activate LimeSDR output device");
+	}
+    LMS_StartStream(&m_tx_stream);
+    LMS_SetGFIR(m_device, LMS_CH_TX, m_channel, LMS_GFIR3, true);
 }
 
 Lime::~Lime()
@@ -316,15 +333,16 @@ double Lime::get_temperature(void) const
 
 void Lime::transmit_frame(const struct FrameData& frame)
 {
+    
     if (not m_device) throw runtime_error("Lime device not set up");
 
-    if (not m_tx_stream_active)
+    /*if (not m_tx_stream_active)
     {
-        unsigned int buffer_size = 200000*m_interpolate;
-
+        unsigned int buffer_size = FRAME_LENGTH*m_interpolate*10; // We take 10 Frame buffer size Fifo
+        // Fifo seems to be round to multiple of SampleRate
         m_tx_stream.channel = m_channel;
 		m_tx_stream.fifoSize = buffer_size;
-		m_tx_stream.throughputVsLatency = 0.5;
+		m_tx_stream.throughputVsLatency = 0.8;
 		m_tx_stream.isTx = LMS_CH_TX;
 		m_tx_stream.dataFmt = lms_stream_t::LMS_FMT_F32;
 	
@@ -333,10 +351,10 @@ void Lime::transmit_frame(const struct FrameData& frame)
             etiLog.level(error) << "Error making LimeSDR device: %s " << LMS_GetLastErrorMessage();
             throw std::runtime_error("Cannot Channel Activate LimeSDR output device");
 	    }
-        LMS_StartStream(&m_tx_stream);
+        //LMS_StartStream(&m_tx_stream);
         LMS_SetGFIR(m_device, LMS_CH_TX, m_channel, LMS_GFIR3, true);
-        m_tx_stream_active = true;
-    }
+        m_tx_stream_active = false;
+    }*/
 
     // The frame buffer contains bytes representing FC32 samples
     const complexf *buf = reinterpret_cast<const complexf*>(frame.buf.data());
@@ -345,6 +363,48 @@ void Lime::transmit_frame(const struct FrameData& frame)
     {
         throw std::runtime_error("Lime: invalid buffer size");
     }
+
+   
+    lms_stream_status_t LimeStatus;
+    LMS_GetStreamStatus(&m_tx_stream,&LimeStatus);
+    overflows=LimeStatus.overrun;
+    underflows=LimeStatus.underrun;
+    late_packets=LimeStatus.droppedPackets;
+
+  
+    etiLog.level(info) << LimeStatus.fifoFilledCount<< "/" << LimeStatus.fifoSize << ":" << numSamples << "Rate" << LimeStatus.linkRate /(2*2.0);
+    etiLog.level(info) << "overrun" << LimeStatus.overrun << "underun" << LimeStatus.underrun << "drop" << LimeStatus.droppedPackets;
+    
+   /* if(LimeStatus.fifoFilledCount>LimeStatus.fifoSize-2*FRAME_LENGTH*m_interpolate) // Drop if Fifo is just 2 frames before fullness 
+    {
+        etiLog.level(info) << "Fifo overflow : drop";
+        return;
+    }*/ 
+    
+
+ if(LimeStatus.fifoFilledCount<FRAME_LENGTH*2*m_interpolate) // Wait if Fifo is just 2 frames before fullness 
+    {
+        etiLog.level(info) << "Fifo underflow : duplicate for filling garbage";
+        for(size_t i=0;i<m_interpolate*10;i++)
+                LMS_SendStream( &m_tx_stream, buf, numSamples, NULL, 1000 );
+
+        
+        
+    }
+/*
+    if(LimeStatus.fifoFilledCount>=5*FRAME_LENGTH*m_interpolate) // Start if FIFO is half full
+    {
+        
+        if(not m_tx_stream_active)
+        {
+            etiLog.level(info) << "Fifo OK : Normal running";
+            LMS_StartStream(&m_tx_stream);
+            m_tx_stream_active = true;
+        }
+       
+    }
+*/
+    
 
     size_t num_sent=0;
     if(m_interpolate==1)
@@ -363,19 +423,15 @@ void Lime::transmit_frame(const struct FrameData& frame)
 
     if (num_sent <= 0)
     {
-        etiLog.level(info) << num_sent;
+        etiLog.level(info) << "Underflow" << num_sent;
         //throw std::runtime_error("Lime: Too Loonnnngg");
     }
     else
     {
-        //etiLog.level(info) << "OK" << num_sent;
+       //etiLog.level(info) << "OK" << num_sent;
     }
-    lms_stream_status_t LimeStatus;
-    LMS_GetStreamStatus(&m_tx_stream,&LimeStatus);
-    overflows=LimeStatus.overrun;
-    underflows=LimeStatus.underrun;
-    late_packets=LimeStatus.droppedPackets;
-      
+    
+    
     num_frames_modulated++;
     
 }
