@@ -30,7 +30,7 @@ DESCRIPTION:
 #pragma once
 
 #ifdef HAVE_CONFIG_H
-#   include <config.h>
+#include <config.h>
 #endif
 //#define HAVE_LIMESDR
 #ifdef HAVE_LIMESDR
@@ -44,58 +44,58 @@ DESCRIPTION:
 #include "RemoteControl.h"
 #include <lime/LimeSuite.h>
 
-namespace Output {
+namespace Output
+{
 
 class Lime : public Output::SDRDevice
 {
-    public:
-        Lime(SDRDeviceConfig& config);
-        Lime(const Lime& other) = delete;
-        Lime& operator=(const Lime& other) = delete;
-        ~Lime();
+  public:
+    Lime(SDRDeviceConfig &config);
+    Lime(const Lime &other) = delete;
+    Lime &operator=(const Lime &other) = delete;
+    ~Lime();
 
-        virtual void tune(double lo_offset, double frequency) override;
-        virtual double get_tx_freq(void) const override;
-        virtual void set_txgain(double txgain) override;
-        virtual double get_txgain(void) const override;
-        virtual void transmit_frame(const struct FrameData& frame) override;
-        virtual RunStatistics get_run_statistics(void) const override;
-        virtual double get_real_secs(void) const override;
+    virtual void tune(double lo_offset, double frequency) override;
+    virtual double get_tx_freq(void) const override;
+    virtual void set_txgain(double txgain) override;
+    virtual double get_txgain(void) const override;
+    virtual void transmit_frame(const struct FrameData &frame) override;
+    virtual RunStatistics get_run_statistics(void) const override;
+    virtual double get_real_secs(void) const override;
 
-        virtual void set_rxgain(double rxgain) override;
-        virtual double get_rxgain(void) const override;
-        virtual size_t receive_frame(
-                complexf *buf,
-                size_t num_samples,
-                struct frame_timestamp& ts,
-                double timeout_secs) override;
+    virtual void set_rxgain(double rxgain) override;
+    virtual double get_rxgain(void) const override;
+    virtual size_t receive_frame(
+        complexf *buf,
+        size_t num_samples,
+        struct frame_timestamp &ts,
+        double timeout_secs) override;
 
-        // Return true if GPS and reference clock inputs are ok
-        virtual bool is_clk_source_ok(void) const override;
-        virtual const char* device_name(void) const override;
+    // Return true if GPS and reference clock inputs are ok
+    virtual bool is_clk_source_ok(void) const override;
+    virtual const char *device_name(void) const override;
 
-        virtual double get_temperature(void) const override;
+    virtual double get_temperature(void) const override;
 
-    private:
-        SDRDeviceConfig& m_conf;
-        lms_device_t *m_device=nullptr;
-        size_t m_channel=0; // Should be set by config
-        /*
+  private:
+    SDRDeviceConfig &m_conf;
+    lms_device_t *m_device = nullptr;
+    size_t m_channel = 0; // Should be set by config
+    /*
         SoapySDR::Device *m_device = nullptr;
         SoapySDR::Stream *m_tx_stream = nullptr;
         */
-        lms_stream_t m_tx_stream;
-        bool m_tx_stream_active = false;
-        size_t m_interpolate=1;
-        complexf *interpolatebuf=nullptr;
+    lms_stream_t m_tx_stream;
+    bool m_tx_stream_active = false;
+    size_t m_interpolate = 1;
+    complexf *interpolatebuf = nullptr;
 
-        size_t underflows = 0;
-        size_t overflows = 0;
-        size_t late_packets = 0;
-        size_t num_frames_modulated = 0;
+    size_t underflows = 0;
+    size_t overflows = 0;
+    size_t late_packets = 0;
+    size_t num_frames_modulated = 0;
 };
 
 } // namespace Output
 
 #endif //HAVE_SOAPYSDR
-
