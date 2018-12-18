@@ -35,6 +35,10 @@ function resultrefresh() {
         }
         $('#dpdprogress').css('width', percentage + '%');
         $('#dpdprogresstext').text(percentage + '%');
+
+        if (data['statplot']) {
+            $('#dpdcapturestats').attr('src', data['statplot']);
+        }
     });
 
     jqxhr.always(function() {
@@ -43,7 +47,7 @@ function resultrefresh() {
 }
 
 $(function(){
-    setTimeout(resultrefresh, 2000);
+    setTimeout(resultrefresh, 20);
 
     $('#calibratebtn').click(function() {
         doApiRequestPOST("/api/dpd_calibrate", {}, function(data) {
@@ -51,6 +55,17 @@ $(function(){
         });
     });
 
+    $('#resetbtn').click(function() {
+        doApiRequestPOST("/api/dpd_reset", {}, function(data) {
+            console.log("reset succeeded: " + JSON.stringify(data));
+        });
+    });
+
+    $('#triggerbtn').click(function() {
+        doApiRequestPOST("/api/dpd_trigger_run", {}, function(data) {
+            console.log("run succeeded: " + JSON.stringify(data));
+        });
+    });
 });
 
 /*

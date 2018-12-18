@@ -41,6 +41,8 @@ class ExtractStatistic:
     def __init__(self, c):
         self.c = c
 
+        self._plot_data = None
+
         # Number of measurements used to extract the statistic
         self.n_meas = 0
 
@@ -58,12 +60,10 @@ class ExtractStatistic:
         for i in range(c.ES_n_bins):
             self.tx_values_lists.append([])
 
-        self.plot = c.ES_plot
+    def plot(self, plot_path, title):
+        if self._plot_data is not None:
+            tx_values, rx_values, phase_diffs_values, phase_diffs_values_lists = self._plot_data
 
-    def _plot_and_log(self, tx_values, rx_values, phase_diffs_values, phase_diffs_values_lists):
-        if self.plot and self.c.plot_location is not None:
-            dt = datetime.datetime.now().isoformat()
-            fig_path = self.c.plot_location + "/" + dt + "_ExtractStatistic.png"
             sub_rows = 3
             sub_cols = 1
             fig = plt.figure(figsize=(sub_cols * 6, sub_rows / 2. * 6))
@@ -80,7 +80,7 @@ class ExtractStatistic:
                            np.abs(rx_values_list),
                            s=0.1,
                            color="black")
-            ax.set_title("Extracted Statistic")
+            ax.set_title("Extracted Statistic {}".format(title))
             ax.set_xlabel("TX Amplitude")
             ax.set_ylabel("RX Amplitude")
             ax.set_ylim(0, 0.8)
@@ -116,7 +116,7 @@ class ExtractStatistic:
             ax.set_ylim(0, self.n_per_bin * 1.2)
 
             fig.tight_layout()
-            fig.savefig(fig_path)
+            fig.savefig(plot_path)
             plt.close(fig)
 
     def _rx_value_per_bin(self):
@@ -166,7 +166,7 @@ class ExtractStatistic:
         phase_diffs_values_lists = self._phase_diff_list_per_bin()
         phase_diffs_values = _phase_diff_value_per_bin(phase_diffs_values_lists)
 
-        self._plot_and_log(tx_values, rx_values, phase_diffs_values, phase_diffs_values_lists)
+        self._plot_data = (tx_values, rx_values, phase_diffs_values, phase_diffs_values_lists)
 
         tx_values_crop = np.array(tx_values, dtype=np.float32)[:idx_end]
         rx_values_crop = np.array(rx_values, dtype=np.float32)[:idx_end]
@@ -176,6 +176,7 @@ class ExtractStatistic:
 # The MIT License (MIT)
 #
 # Copyright (c) 2017 Andreas Steger
+# Copyright (c) 2018 Matthias P. Braendli
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal

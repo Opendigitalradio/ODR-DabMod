@@ -26,35 +26,26 @@
           <div>Calibration needs to be done once before the PA model
           can be trained. Every time calibration is changed, the predistortion
           parameters are invalidated!</div>
+          <div>Once calibration succeeded and correct RX gain is set, you
+            can trigger a capture and model the PA. Usually, several capture
+            runs are needed before the model can be trained.</div>
           <button type="button" class="btn btn-sm btn-warning" id="calibratebtn">
             Calibrate</button>
-        </div>
-      </div>
-      <!--
-      <div class="panel panel-default">
-        <div class="panel-heading">Capture TX and RX frames</div>
-        <div class="panel-body">
-          <div>
-            <img id="txframeimg" src="dpd/txframe.png" width="320" height="240" />
-            <img id="rxframeimg" src="dpd/rxframe.png" width="320" height="240" />
-          </div>
-          <div>
-            <button type="button" class="btn btn-sm btn-info" id="refreshframesbtn">
-              Refresh</button>
-          </div>
+          <button type="button" class="btn btn-sm btn-warning" id="triggerbtn">
+            Trigger Capture and PA Modeling</button>
+          <button type="button" class="btn btn-sm btn-info" id="resetbtn">
+            Reset captured data</button>
         </div>
       </div>
 
       <div class="panel panel-default">
-        <div class="panel-heading">Capture</div>
+        <div class="panel-heading">Capture Statistics</div>
         <div class="panel-body">
-          <div>On pressing this button,
-            the DPDCE will trigger a capture and a quick data
-            analysis, without updating any DPD models.</div>
-          <button type="button" class="btn btn-sm btn-info" id="capturebutton">
-            Capture</button>
+          <img id="dpdcapturestats" />
         </div>
       </div>
+
+      <!--
       <div class="panel panel-default">
         <div class="panel-heading">Status</div>
         <div class="panel-body">

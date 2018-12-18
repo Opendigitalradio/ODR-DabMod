@@ -10,7 +10,7 @@
 import numpy as np
 
 class GlobalConfig:
-    def __init__(self, samplerate, plot_location: str):
+    def __init__(self, samplerate: int, plot_location: str):
         self.sample_rate = samplerate
         assert self.sample_rate == 8192000, "We only support constants for 8192000 sample rate: {}".format(self.sample_rate)
 
