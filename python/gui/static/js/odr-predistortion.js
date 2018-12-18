@@ -39,6 +39,13 @@ function resultrefresh() {
         if (data['statplot']) {
             $('#dpdcapturestats').attr('src', data['statplot']);
         }
+
+        if (data['amplot']) {
+            $('#dpdamplot').attr('src', data['amplot']);
+        }
+        if (data['pmplot']) {
+            $('#dpdpmplot').attr('src', data['pmplot']);
+        }
     });
 
     jqxhr.always(function() {

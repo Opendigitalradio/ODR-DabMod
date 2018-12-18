@@ -42,22 +42,18 @@ class Model_AM:
     """Calculates new coefficients using the measurement and the previous
     coefficients"""
 
-    def __init__(self,
-                 c,
-                 learning_rate_am=1,
-                 plot=False):
+    def __init__(self, c, learning_rate_am=1):
         self.c = c
-
         self.learning_rate_am = learning_rate_am
-        self.plot = plot
+        self._plot_data = None
 
-    def _plot(self, tx_dpd, rx_received, coefs_am, coefs_am_new):
-        if self.plot and self.c.plot_location is not None:
+    def plot(self, plot_location, title):
+        if self._plot_data is not None:
+            tx_dpd, rx_received, coefs_am, coefs_am_new = self._plot_data
+
             tx_range, rx_est = calc_line(coefs_am, 0, 0.6)
             tx_range_new, rx_est_new = calc_line(coefs_am_new, 0, 0.6)
 
-            dt = datetime.datetime.now().isoformat()
-            fig_path = self.c.plot_location + "/" + dt + "_Model_AM.png"
             sub_rows = 1
             sub_cols = 1
             fig = plt.figure(figsize=(sub_cols * 6, sub_rows / 2. * 6))
@@ -76,14 +72,14 @@ class Model_AM:
                        label="Binned Data",
                        color="blue",
                        s=1)
-            ax.set_title("Model_AM")
+            ax.set_title("Model_AM {}".format(title))
             ax.set_xlabel("TX Amplitude")
             ax.set_ylabel("RX Amplitude")
             ax.set_xlim(-0.5, 1.5)
             ax.legend(loc=4)
 
             fig.tight_layout()
-            fig.savefig(fig_path)
+            fig.savefig(plot_location)
             plt.close(fig)
 
     def get_next_coefs(self, tx_dpd, rx_received, coefs_am):
@@ -95,13 +91,14 @@ class Model_AM:
         coefs_am_new = coefs_am + \
                        self.learning_rate_am * (coefs_am_new - coefs_am)
 
-        self._plot(tx_dpd, rx_received, coefs_am, coefs_am_new)
+        self._plot_data = (tx_dpd, rx_received, coefs_am, coefs_am_new)
 
         return coefs_am_new
 
 # The MIT License (MIT)
 #
 # Copyright (c) 2017 Andreas Steger
+# Copyright (c) 2018 Matthias P. Braendli
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal

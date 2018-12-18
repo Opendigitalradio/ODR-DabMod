@@ -28,22 +28,18 @@ class Model_PM:
     """Calculates new coefficients using the measurement and the previous
     coefficients"""
 
-    def __init__(self,
-                 c,
-                 learning_rate_pm=1,
-                 plot=False):
+    def __init__(self, c, learning_rate_pm=1):
         self.c = c
-
         self.learning_rate_pm = learning_rate_pm
-        self.plot = plot
+        self._plot_data = None
 
-    def _plot(self, tx_dpd, phase_diff, coefs_pm, coefs_pm_new):
-        if self.plot and self.c.plot_location is not None:
+    def plot(self, plot_location, title):
+        if self._plot_data is not None:
+            tx_dpd, phase_diff, coefs_pm, coefs_pm_new = self._plot_data
+
             tx_range, phase_diff_est = self.calc_line(coefs_pm, 0, 0.6)
             tx_range_new, phase_diff_est_new = self.calc_line(coefs_pm_new, 0, 0.6)
 
-            dt = datetime.datetime.now().isoformat()
-            fig_path = self.c.plot_location + "/" + dt + "_Model_PM.png"
             sub_rows = 1
             sub_cols = 1
             fig = plt.figure(figsize=(sub_cols * 6, sub_rows / 2. * 6))
@@ -62,13 +58,13 @@ class Model_PM:
                        label="Binned Data",
                        color="blue",
                        s=1)
-            ax.set_title("Model_PM")
+            ax.set_title("Model_PM {}".format(title))
             ax.set_xlabel("TX Amplitude")
             ax.set_ylabel("Phase DIff")
             ax.legend(loc=4)
 
             fig.tight_layout()
-            fig.savefig(fig_path)
+            fig.savefig(plot_location)
             plt.close(fig)
 
     def _discard_small_values(self, tx_dpd, phase_diff):
@@ -97,13 +93,14 @@ class Model_PM:
         coefs_pm_new = self.fit_poly(tx_dpd, phase_diff)
 
         coefs_pm_new = coefs_pm + self.learning_rate_pm * (coefs_pm_new - coefs_pm)
-        self._plot(tx_dpd, phase_diff, coefs_pm, coefs_pm_new)
+        self._plot_data = (tx_dpd, phase_diff, coefs_pm, coefs_pm_new)
 
         return coefs_pm_new
 
 # The MIT License (MIT)
 #
 # Copyright (c) 2017 Andreas Steger
+# Copyright (c) 2018 Matthias P. Braendli
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal

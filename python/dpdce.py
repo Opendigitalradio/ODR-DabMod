@@ -142,6 +142,8 @@ internal_data = {
         }
 results = {
         'statplot': None,
+        'amplot': None,
+        'pmplot': None,
         'tx_median': 0,
         'rx_median': 0,
         'state': 'Idle',
@@ -203,71 +205,76 @@ def engine_worker():
                     results['stateprogress'] = 0
                     n_runs = internal_data['n_runs']
 
-                # Get Samples and check gain
-                txframe_aligned, tx_ts, rxframe_aligned, rx_ts, rx_median, tx_median = meas.get_samples()
-                # TODO Check TX median
-
-                with lock:
-                    results['stateprogress'] = 20
-                    results['summary'] = ["Captured {} samples".format(len(txframe_aligned)),
-                        "TX/RX median: {} / {}".format(tx_median, rx_median)]
-
-                # Extract usable data from measurement
-                tx, rx, phase_diff, n_per_bin = extStat.extract(txframe_aligned, rxframe_aligned)
-
-                time = datetime.datetime.utcnow()
-
-                plot_file = "stats_{}.png".format(time.strftime("%s"))
-                extStat.plot(os.path.join(plot_path, plot_file), time.strftime("%Y-%m-%dT%H%M%S"))
-
-                with lock:
-                    results['statplot'] = "dpd/" + plot_file
-                    results['stateprogress'] = 30
-                    results['summary'] += ["Extracted Statistics".format(tx_median, rx_median)]
-
-                n_meas = Heuristics.get_n_meas(n_runs)
-                if extStat.n_meas >= n_meas:  # Use as many measurements nr of runs
-                    if any(x is None for x in [tx, rx, phase_diff]):
-                        with lock:
-                            results['summary'] += ["Error! No data to calculate model"]
-                            results['state'] = 'Idle'
-                            results['stateprogress'] = 0
-                    else:
-                        with lock:
-                            results['state'] = 'Capture + Model'
-                            results['stateprogress'] = 40
-                            results['summary'] += ["Training model"]
-
-                        model.train(tx, rx, phase_diff, lr=Heuristics.get_learning_rate(n_runs))
-
-                        with lock:
-                            results['state'] = 'Capture + Model'
-                            results['stateprogress'] = 60
-                            results['summary'] += ["Getting DPD data"]
-
-                        dpddata = model.get_dpd_data()
-                        with lock:
-                            internal_data['dpddata'] = dpddata
-                            internal_data['n_runs'] = 0
-
-                            results['state'] = 'Capture + Model'
-                            results['stateprogress'] = 80
-                            results['summary'] += ["Reset statistics"]
-
-                        extStat = ExtractStatistic(c)
-
-                        with lock:
-                            results['state'] = 'Idle'
-                            results['stateprogress'] = 100
-                            results['summary'] += ["New DPD coefficients calculated"]
+                while True:
+                    # Get Samples and check gain
+                    txframe_aligned, tx_ts, rxframe_aligned, rx_ts, rx_median, tx_median = meas.get_samples()
+                    # TODO Check TX median
 
                     with lock:
+                        results['stateprogress'] += 5
+                        results['summary'] = ["Captured {} samples".format(len(txframe_aligned)),
+                            "TX/RX median: {} / {}".format(tx_median, rx_median)]
+
+                    # Extract usable data from measurement
+                    tx, rx, phase_diff, n_per_bin = extStat.extract(txframe_aligned, rxframe_aligned)
+
+                    time = datetime.datetime.utcnow()
+                    plot_file = "stats_{}.png".format(time.strftime("%s"))
+                    extStat.plot(os.path.join(plot_path, plot_file), time.strftime("%Y-%m-%dT%H%M%S"))
+                    n_meas = Heuristics.get_n_meas(n_runs)
+
+                    with lock:
+                        results['statplot'] = "dpd/" + plot_file
+                        results['stateprogress'] += 5
+                        results['summary'] += ["Extracted Statistics".format(tx_median, rx_median),
+                                "Runs: {}/{}".format(extStat.n_meas, n_meas)]
                         internal_data['n_runs'] += 1
+                    if extStat.n_meas >= n_meas:
+                        break
+
+                if any(x is None for x in [tx, rx, phase_diff]):
+                    with lock:
+                        results['summary'] += ["Error! No data to calculate model"]
+                        results['state'] = 'Idle'
+                        results['stateprogress'] = 0
                 else:
+                    with lock:
+                        results['state'] = 'Capture + Model'
+                        results['stateprogress'] = 60
+                        results['summary'] += ["Training model"]
+
+                    model.train(tx, rx, phase_diff, lr=Heuristics.get_learning_rate(n_runs))
+
+                    time = datetime.datetime.utcnow()
+                    am_plot_file = "model_am_{}.png".format(time.strftime("%s"))
+                    pm_plot_file = "model_pm_{}.png".format(time.strftime("%s"))
+                    model.plot(
+                            os.path.join(plot_path, am_plot_file),
+                            os.path.join(plot_path, pm_plot_file),
+                            time.strftime("%Y-%m-%dT%H%M%S"))
+
+                    with lock:
+                        results['amplot'] = "dpd/" + am_plot_file
+                        results['pmplot'] = "dpd/" + pm_plot_file
+                        results['state'] = 'Capture + Model'
+                        results['stateprogress'] = 70
+                        results['summary'] += ["Getting DPD data"]
+
+                    dpddata = model.get_dpd_data()
+                    with lock:
+                        internal_data['dpddata'] = dpddata
+                        internal_data['n_runs'] = 0
+
+                        results['state'] = 'Capture + Model'
+                        results['stateprogress'] = 80
+                        results['summary'] += ["Reset statistics"]
+
+                    extStat = ExtractStatistic(c)
+
                     with lock:
                         results['state'] = 'Idle'
                         results['stateprogress'] = 100
-                        results['summary'] += ["More data required to train model"]
+                        results['summary'] += ["New DPD coefficients calculated"]
 
     finally:
         with lock:

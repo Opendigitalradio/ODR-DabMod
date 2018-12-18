@@ -36,20 +36,20 @@ class Poly:
     """Calculates new coefficients using the measurement and the previous
     coefficients"""
 
-    def __init__(self,
-                 c,
-                 learning_rate_am=1.0,
-                 learning_rate_pm=1.0):
+    def __init__(self, c, learning_rate_am=1.0, learning_rate_pm=1.0):
         self.c = c
-        self.plot = c.MDL_plot
 
         self.learning_rate_am = learning_rate_am
         self.learning_rate_pm = learning_rate_pm
 
         self.reset_coefs()
 
-        self.model_am = Model_AM.Model_AM(c, plot=self.plot)
-        self.model_pm = Model_PM.Model_PM(c, plot=self.plot)
+        self.model_am = Model_AM.Model_AM(c)
+        self.model_pm = Model_PM.Model_PM(c)
+
+    def plot(self, am_plot_location, pm_plot_location, title):
+        self.model_am.plot(am_plot_location, title)
+        self.model_pm.plot(pm_plot_location, title)
 
     def reset_coefs(self):
         self.coefs_am = np.zeros(5, dtype=np.float32)
