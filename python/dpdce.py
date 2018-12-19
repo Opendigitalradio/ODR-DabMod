@@ -143,8 +143,8 @@ internal_data = {
         }
 results = {
         'statplot': None,
-        'amplot': None,
-        'pmplot': None,
+        'modelplot': None,
+        'modeldata': "",
         'tx_median': 0,
         'rx_median': 0,
         'state': 'Idle',
@@ -159,8 +159,7 @@ agc = Agc(meas, adapt, c)
 
 def clear_pngs(results):
     results['statplot'] = None
-    results['amplot'] = None
-    results['pmplot'] = None
+    results['modelplot'] = None
     pngs = glob.glob(os.path.join(plot_path, "*.png"))
     for png in pngs:
         try:
@@ -206,14 +205,15 @@ def engine_worker():
                     results['stateprogress'] = 100
                     results['summary'] = summary + ["Calibration done"]
             elif cmd == "reset":
+                model.reset_coefs()
                 with lock:
                     internal_data['n_runs'] = 0
                     results['state'] = 'Idle'
                     results['stateprogress'] = 0
                     results['summary'] = ["Reset"]
+                    results['modeldata'] = repr(model.get_dpd_data())
                     clear_pngs(results)
                 extStat = None
-                model.reset_coefs()
             elif cmd == "trigger_run":
                 with lock:
                     results['state'] = 'Capture + Model'
@@ -246,7 +246,7 @@ def engine_worker():
                     with lock:
                         results['statplot'] = "dpd/" + plot_file
                         results['stateprogress'] += 5
-                        results['summary'] += ["Extracted Statistics".format(tx_median, rx_median),
+                        results['summary'] += ["Extracted Statistics: TX median={} RX median={}".format(tx_median, rx_median),
                                 "Runs: {}/{}".format(extStat.n_meas, n_meas)]
                         internal_data['n_runs'] += 1
                     if extStat.n_meas >= n_meas:
@@ -266,16 +266,13 @@ def engine_worker():
                     model.train(tx, rx, phase_diff, lr=Heuristics.get_learning_rate(n_runs))
 
                     time = datetime.datetime.utcnow()
-                    am_plot_file = "model_am_{}.png".format(time.strftime("%s"))
-                    pm_plot_file = "model_pm_{}.png".format(time.strftime("%s"))
+                    model_plot_file = "model_{}.png".format(time.strftime("%s"))
                     model.plot(
-                            os.path.join(plot_path, am_plot_file),
-                            os.path.join(plot_path, pm_plot_file),
+                            os.path.join(plot_path, model_plot_file),
                             time.strftime("%Y-%m-%dT%H%M%S"))
 
                     with lock:
-                        results['amplot'] = "dpd/" + am_plot_file
-                        results['pmplot'] = "dpd/" + pm_plot_file
+                        results['modelplot'] = "dpd/" + model_plot_file
                         results['state'] = 'Capture + Model'
                         results['stateprogress'] = 85
                         results['summary'] += ["Getting DPD data"]
@@ -285,6 +282,7 @@ def engine_worker():
                         internal_data['dpddata'] = dpddata
                         internal_data['n_runs'] = 0
 
+                        results['modeldata'] = repr(dpddata)
                         results['state'] = 'Capture + Model'
                         results['stateprogress'] = 90
                         results['summary'] += ["Reset statistics"]

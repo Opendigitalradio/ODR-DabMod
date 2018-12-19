@@ -115,7 +115,7 @@ class ExtractStatistic:
             i_sub += 1
             ax = plt.subplot(sub_rows, sub_cols, i_sub)
             ax.plot(num)
-            ax.set_xlabel("TX Amplitude")
+            ax.set_xlabel("TX Amplitude bin")
             ax.set_ylabel("Number of Samples")
             ax.set_ylim(0, self.n_per_bin * 1.2)
 

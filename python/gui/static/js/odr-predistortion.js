@@ -43,18 +43,13 @@ function resultrefresh() {
             $('#dpdcapturestats').attr('src', "");
         }
 
-        if (data['amplot']) {
-            $('#dpdamplot').attr('src', data['amplot']);
-        }
-        else {
-            $('#dpdamplot').attr('src', "");
-        }
+        $('#dpdmodeldata').html(data['modeldata']);
 
-        if (data['pmplot']) {
-            $('#dpdpmplot').attr('src', data['pmplot']);
+        if (data['modelplot']) {
+            $('#dpdmodelplot').attr('src', data['modelplot']);
         }
         else {
-            $('#dpdpmplot').attr('src', "");
+            $('#dpdmodelplot').attr('src', "");
         }
     });
 

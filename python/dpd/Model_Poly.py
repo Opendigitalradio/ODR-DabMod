@@ -42,18 +42,19 @@ class Poly:
 
         self.reset_coefs()
 
-    def plot(self, am_plot_location, pm_plot_location, title):
-        if self._am_plot_data is not None:
+    def plot(self, plot_location, title):
+        if self._am_plot_data is not None and self._pm_plot_data is not None:
             tx_dpd, rx_received, coefs_am, coefs_am_new = self._am_plot_data
 
             tx_range, rx_est = self._am_calc_line(coefs_am, 0, 0.6)
             tx_range_new, rx_est_new = self._am_calc_line(coefs_am_new, 0, 0.6)
 
-            sub_rows = 1
+            sub_rows = 2
             sub_cols = 1
             fig = plt.figure(figsize=(sub_cols * 6, sub_rows / 2. * 6))
             i_sub = 0
 
+            # AM subplot
             i_sub += 1
             ax = plt.subplot(sub_rows, sub_cols, i_sub)
             ax.plot(tx_range, rx_est,
@@ -67,26 +68,17 @@ class Poly:
                        label="Binned Data",
                        color="blue",
                        s=1)
-            ax.set_title("Model AM {}".format(title))
+            ax.set_title("Model AM and PM {}".format(title))
             ax.set_xlabel("TX Amplitude")
             ax.set_ylabel("RX Amplitude")
-            ax.set_xlim(-0.5, 1.5)
+            ax.set_xlim(0, 1.0)
             ax.legend(loc=4)
 
-            fig.tight_layout()
-            fig.savefig(am_plot_location)
-            plt.close(fig)
-
-        if self._pm_plot_data is not None:
+            # PM sub plot
             tx_dpd, phase_diff, coefs_pm, coefs_pm_new = self._pm_plot_data
 
             tx_range, phase_diff_est = self._pm_calc_line(coefs_pm, 0, 0.6)
             tx_range_new, phase_diff_est_new = self._pm_calc_line(coefs_pm_new, 0, 0.6)
-
-            sub_rows = 1
-            sub_cols = 1
-            fig = plt.figure(figsize=(sub_cols * 6, sub_rows / 2. * 6))
-            i_sub = 0
 
             i_sub += 1
             ax = plt.subplot(sub_rows, sub_cols, i_sub)
@@ -101,13 +93,13 @@ class Poly:
                        label="Binned Data",
                        color="blue",
                        s=1)
-            ax.set_title("Model PM {}".format(title))
             ax.set_xlabel("TX Amplitude")
             ax.set_ylabel("Phase DIff")
+            ax.set_xlim(0, 1.0)
             ax.legend(loc=4)
 
             fig.tight_layout()
-            fig.savefig(pm_plot_location)
+            fig.savefig(plot_location)
             plt.close(fig)
 
     def reset_coefs(self):
