@@ -67,17 +67,25 @@ $(function(){
         });
     });
 
+    $('#triggerbtn').click(function() {
+        doApiRequestPOST("/api/dpd_trigger_run", {}, function(data) {
+            console.log("run succeeded: " + JSON.stringify(data));
+        });
+    });
+
+    $('#adaptbtn').click(function() {
+        doApiRequestPOST("/api/dpd_adapt", {}, function(data) {
+            console.log("adapt succeeded: " + JSON.stringify(data));
+        });
+    });
+
+
     $('#resetbtn').click(function() {
         doApiRequestPOST("/api/dpd_reset", {}, function(data) {
             console.log("reset succeeded: " + JSON.stringify(data));
         });
     });
 
-    $('#triggerbtn').click(function() {
-        doApiRequestPOST("/api/dpd_trigger_run", {}, function(data) {
-            console.log("run succeeded: " + JSON.stringify(data));
-        });
-    });
 });
 
 /*

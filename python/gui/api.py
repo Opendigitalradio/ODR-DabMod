@@ -107,6 +107,15 @@ class API:
 
     @cherrypy.expose
     @cherrypy.tools.json_out()
+    def dpd_adapt(self, **kwargs):
+        if cherrypy.request.method == 'POST':
+            return self._wrap_dpd("adapt")
+        else:
+            cherrypy.response.status = 400
+            return send_error("POST only")
+
+    @cherrypy.expose
+    @cherrypy.tools.json_out()
     def dpd_reset(self, **kwargs):
         if cherrypy.request.method == 'POST':
             return self._wrap_dpd("reset")

@@ -11,28 +11,41 @@
       <div class="panel panel-default">
         <div class="panel-heading">Status and calibration</div>
         <div class="panel-body">
-          <div>Current DPDCE status:
-            <div>
-              <div id="dpdstatus" style="font-weight:bold;">N/A</div>
-              <div class="progress">
-                <div id="dpdprogress" class="progress-bar" role="progressbar" style="width:0%">
-                    <span id="dpdprogresstext"></span>
+
+          <div class="container-fluid">
+            <div class="row">
+              <div class="col-sm-8">
+                <h2>Current DPDCE status</h2>
+                <div>
+                  <div id="dpdstatus" style="font-weight:bold;">N/A</div>
+                  <div class="progress">
+                    <div id="dpdprogress" class="progress-bar" role="progressbar" style="width:0%">
+                      <span id="dpdprogresstext"></span>
+                    </div>
+                  </div>
                 </div>
+                <div class="well well-sm" id="dpdresults">N/A</div>
+              </div>
+              <div class="col-sm-4">
+                <h2>Summary</h2>
+                <p>Calibration needs to be done once before the PA model
+                can be trained. Every time calibration is changed, the predistortion
+                parameters are invalidated!</p>
+                <p>Once calibration succeeded and correct RX gain is set, you
+                can trigger a capture and model the PA. Usually, several capture
+                runs are needed before the model can be trained.</p>
+                <p>The capture and model analysis will calculate a new set of
+                DPD model data, that you can apply using the Update Predistorter button.</p>
               </div>
             </div>
-            <div class="well well-sm" id="dpdresults">N/A</div>
           </div>
 
-          <div>Calibration needs to be done once before the PA model
-          can be trained. Every time calibration is changed, the predistortion
-          parameters are invalidated!</div>
-          <div>Once calibration succeeded and correct RX gain is set, you
-            can trigger a capture and model the PA. Usually, several capture
-            runs are needed before the model can be trained.</div>
           <button type="button" class="btn btn-sm btn-warning" id="calibratebtn">
             Calibrate</button>
           <button type="button" class="btn btn-sm btn-warning" id="triggerbtn">
             Trigger Capture and PA Modeling</button>
+          <button type="button" class="btn btn-sm btn-warning" id="adaptbtn">
+            Update Predistorter</button>
           <button type="button" class="btn btn-sm btn-info" id="resetbtn">
             Reset captured data</button>
         </div>

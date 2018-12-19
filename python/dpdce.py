@@ -80,6 +80,7 @@ else:
 
 logging.info("DPDCE starting up");
 
+import time
 import socket
 from lib import yamlrpc
 import numpy as np
@@ -238,9 +239,9 @@ def engine_worker():
                     # Extract usable data from measurement
                     tx, rx, phase_diff, n_per_bin = extStat.extract(txframe_aligned, rxframe_aligned)
 
-                    time = datetime.datetime.utcnow()
-                    plot_file = "stats_{}.png".format(time.strftime("%s"))
-                    extStat.plot(os.path.join(plot_path, plot_file), time.strftime("%Y-%m-%dT%H%M%S"))
+                    utctime = datetime.datetime.utcnow()
+                    plot_file = "stats_{}.png".format(utctime.strftime("%s"))
+                    extStat.plot(os.path.join(plot_path, plot_file), utctime.strftime("%Y-%m-%dT%H%M%S"))
                     n_meas = Heuristics.get_n_meas(n_runs)
 
                     with lock:
@@ -248,7 +249,6 @@ def engine_worker():
                         results['stateprogress'] += 5
                         results['summary'] += ["Extracted Statistics: TX median={} RX median={}".format(tx_median, rx_median),
                                 "Runs: {}/{}".format(extStat.n_meas, n_meas)]
-                        internal_data['n_runs'] += 1
                     if extStat.n_meas >= n_meas:
                         break
 
@@ -265,11 +265,11 @@ def engine_worker():
 
                     model.train(tx, rx, phase_diff, lr=Heuristics.get_learning_rate(n_runs))
 
-                    time = datetime.datetime.utcnow()
-                    model_plot_file = "model_{}.png".format(time.strftime("%s"))
+                    utctime = datetime.datetime.utcnow()
+                    model_plot_file = "model_{}.png".format(utctime.strftime("%s"))
                     model.plot(
                             os.path.join(plot_path, model_plot_file),
-                            time.strftime("%Y-%m-%dT%H%M%S"))
+                            utctime.strftime("%Y-%m-%dT%H%M%S"))
 
                     with lock:
                         results['modelplot'] = "dpd/" + model_plot_file
@@ -293,6 +293,47 @@ def engine_worker():
                         results['state'] = 'Idle'
                         results['stateprogress'] = 100
                         results['summary'] += ["New DPD coefficients calculated"]
+            elif cmd == "adapt":
+                with lock:
+                    dpddata = internal_data['dpddata']
+                    results['state'] = 'Update Predistorter'
+                    results['stateprogress'] = 50
+                    results['summary'] = [""]
+                    iteration = internal_data['n_runs']
+                    internal_data['n_runs'] += 1
+
+                adapt.set_predistorter(dpddata)
+
+                time.sleep(2)
+
+                txframe_aligned, tx_ts, rxframe_aligned, rx_ts, rx_median, tx_median = meas.get_samples()
+
+                # Store all settings for pre-distortion, tx and rx
+                adapt.dump()
+
+                # Collect logging data
+                off = symbol_align.calc_offset(txframe_aligned)
+                tx_mer = mer.calc_mer(txframe_aligned[off:off + c.T_U], debug_name='TX')
+                rx_mer = mer.calc_mer(rxframe_aligned[off:off + c.T_U], debug_name='RX')
+                mse = np.mean(np.abs((txframe_aligned - rxframe_aligned) ** 2))
+                tx_gain = adapt.get_txgain()
+                rx_gain = adapt.get_rxgain()
+                digital_gain = adapt.get_digital_gain()
+                rx_shoulder_tuple = meas_shoulders.average_shoulders(rxframe_aligned)
+                tx_shoulder_tuple = meas_shoulders.average_shoulders(txframe_aligned)
+
+                lr = Heuristics.get_learning_rate(iteration)
+
+                summary = [f"Signal measurements after iteration {iteration} with learning rate {lr}",
+                        f"TX MER {tx_mer}, RX MER {rx_mer}",
+                        "Shoulders: TX {!r}, RX {!r}".format(tx_shoulder_tuple, rx_shoulder_tuple),
+                        f"Mean-square error: {mse}",
+                        f"Running with digital gain {digital_gain}, TX gain {tx_gain} and RX gain {rx_gain}"]
+
+                with lock:
+                    results['state'] = 'Update Predistorter'
+                    results['stateprogress'] = 100
+                    results['summary'] = ["Signal measurements after predistortion update"] + summary
     finally:
         with lock:
             results['state'] = 'Terminated'
@@ -318,13 +359,9 @@ try:
             logging.error('YAML-RPC unknown error')
             break
 
-        if method == 'trigger_run':
+        if any(method == m for m in ['trigger_run', 'reset', 'adapt']):
             logging.info('YAML-RPC request : {}'.format(method))
-            command_queue.put('trigger_run')
-            cmd_socket.send_success_response(addr, msg_id, None)
-        elif method == 'reset':
-            logging.info('YAML-RPC request : {}'.format(method))
-            command_queue.put('reset')
+            command_queue.put(method)
             cmd_socket.send_success_response(addr, msg_id, None)
         elif method == 'set_setting':
             logging.info('YAML-RPC request : {} -> {}'.format(method, params))
