@@ -26,6 +26,8 @@ class GlobalConfig:
         self.T_U = oversample * 2048  # Inverse of carrier spacing
         self.T_C = oversample * 504  # Duration of cyclic prefix
 
+        self.median_to_peak = 12 # Estimated value for a DAB OFDM signal
+
         # Frequency Domain
         # example: np.delete(fft[3328:4865], 768)
         self.FFT_delta = 1536  # Number of carrier frequencies
@@ -40,10 +42,8 @@ class GlobalConfig:
         self.phase_offset_per_sample = 1. / self.sample_rate * 2 * np.pi * 1000
 
         # Constants for ExtractStatistic
-        self.ES_plot = plot
-        self.ES_start = 0.0
         self.ES_end = 1.0
-        self.ES_n_bins = 64  # Number of bins between ES_start and ES_end
+        self.ES_n_bins = 64
         self.ES_n_per_bin = 128  # Number of measurements pre bin
 
         # Constants for Measure_Shoulder
@@ -67,9 +67,6 @@ class GlobalConfig:
 
         # Constants for MER
         self.MER_plot = plot
-
-        # Constants for Model
-        self.MDL_plot = plot
 
         # Constants for Model_PM
         # Set all phase offsets to zero for TX amplitude < MPM_tx_min

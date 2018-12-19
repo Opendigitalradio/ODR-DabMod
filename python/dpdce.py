@@ -85,6 +85,7 @@ from lib import yamlrpc
 import numpy as np
 import traceback
 import os.path
+import glob
 from threading import Thread, Lock
 from queue import Queue
 from dpd.Model import Poly
@@ -156,8 +157,19 @@ command_queue = Queue(maxsize=1)
 # Automatic Gain Control for the RX gain
 agc = Agc(meas, adapt, c)
 
+def clear_pngs(results):
+    results['statplot'] = None
+    results['amplot'] = None
+    results['pmplot'] = None
+    pngs = glob.glob(os.path.join(plot_path, "*.png"))
+    for png in pngs:
+        try:
+            os.remove(png)
+        except:
+            results['summary'] += ["failed to delete " + png]
+
 def engine_worker():
-    extStat = ExtractStatistic(c)
+    extStat = None
     try:
         while True:
             cmd = command_queue.get()
@@ -168,12 +180,13 @@ def engine_worker():
                 with lock:
                     results['state'] = 'RX Gain Calibration'
                     results['stateprogress'] = 0
+                    clear_pngs(results)
 
                 summary = []
                 N_ITER = 5
                 for i in range(N_ITER):
                     agc_success, agc_summary = agc.run()
-                    summary += ["calibration run {}:".format(i)] + agc_summary.split("\n")
+                    summary += ["Iteration {}:".format(i)] + agc_summary.split("\n")
 
                     with lock:
                         results['stateprogress'] = int((i + 1) * 100/N_ITER)
@@ -191,14 +204,16 @@ def engine_worker():
                     results['rx_median'] = float(rx_median)
                     results['state'] = 'Idle'
                     results['stateprogress'] = 100
-                    results['summary'] = ["Calibration was done:"] + summary
+                    results['summary'] = summary + ["Calibration done"]
             elif cmd == "reset":
                 with lock:
                     internal_data['n_runs'] = 0
                     results['state'] = 'Idle'
                     results['stateprogress'] = 0
                     results['summary'] = ["Reset"]
-                extStat = ExtractStatistic(c)
+                    clear_pngs(results)
+                extStat = None
+                model.reset_coefs()
             elif cmd == "trigger_run":
                 with lock:
                     results['state'] = 'Capture + Model'
@@ -208,12 +223,17 @@ def engine_worker():
                 while True:
                     # Get Samples and check gain
                     txframe_aligned, tx_ts, rxframe_aligned, rx_ts, rx_median, tx_median = meas.get_samples()
-                    # TODO Check TX median
+
+                    if extStat is None:
+                        # At first run, we must decide how to create the bins
+                        peak_estimated = tx_median * c.median_to_peak
+                        extStat = ExtractStatistic(c, peak_estimated)
 
                     with lock:
                         results['stateprogress'] += 5
                         results['summary'] = ["Captured {} samples".format(len(txframe_aligned)),
-                            "TX/RX median: {} / {}".format(tx_median, rx_median)]
+                            "TX/RX median: {} / {}".format(tx_median, rx_median),
+                            extStat.get_bin_info()]
 
                     # Extract usable data from measurement
                     tx, rx, phase_diff, n_per_bin = extStat.extract(txframe_aligned, rxframe_aligned)
@@ -240,7 +260,7 @@ def engine_worker():
                 else:
                     with lock:
                         results['state'] = 'Capture + Model'
-                        results['stateprogress'] = 60
+                        results['stateprogress'] = 80
                         results['summary'] += ["Training model"]
 
                     model.train(tx, rx, phase_diff, lr=Heuristics.get_learning_rate(n_runs))
@@ -257,7 +277,7 @@ def engine_worker():
                         results['amplot'] = "dpd/" + am_plot_file
                         results['pmplot'] = "dpd/" + pm_plot_file
                         results['state'] = 'Capture + Model'
-                        results['stateprogress'] = 70
+                        results['stateprogress'] = 85
                         results['summary'] += ["Getting DPD data"]
 
                     dpddata = model.get_dpd_data()
@@ -266,16 +286,15 @@ def engine_worker():
                         internal_data['n_runs'] = 0
 
                         results['state'] = 'Capture + Model'
-                        results['stateprogress'] = 80
+                        results['stateprogress'] = 90
                         results['summary'] += ["Reset statistics"]
 
-                    extStat = ExtractStatistic(c)
+                    extStat = None
 
                     with lock:
                         results['state'] = 'Idle'
                         results['stateprogress'] = 100
                         results['summary'] += ["New DPD coefficients calculated"]
-
     finally:
         with lock:
             results['state'] = 'Terminated'

@@ -38,7 +38,7 @@ class ExtractStatistic:
     """Calculate a low variance RX value for equally spaced tx values
     of a predefined range"""
 
-    def __init__(self, c):
+    def __init__(self, c, peak_amplitude):
         self.c = c
 
         self._plot_data = None
@@ -47,7 +47,7 @@ class ExtractStatistic:
         self.n_meas = 0
 
         # Boundaries for the bins
-        self.tx_boundaries = np.linspace(c.ES_start, c.ES_end, c.ES_n_bins + 1)
+        self.tx_boundaries = np.linspace(0.0, peak_amplitude, c.ES_n_bins + 1)
         self.n_per_bin = c.ES_n_per_bin
 
         # List of rx values for each bin
@@ -59,6 +59,10 @@ class ExtractStatistic:
         self.tx_values_lists = []
         for i in range(c.ES_n_bins):
             self.tx_values_lists.append([])
+
+    def get_bin_info(self):
+        return "Binning: {} bins used for amplitudes between {} and {}".format(
+                len(self.tx_boundaries), np.min(self.tx_boundaries), np.max(self.tx_boundaries))
 
     def plot(self, plot_path, title):
         if self._plot_data is not None:

@@ -19,19 +19,19 @@ import dpd.Adapt as Adapt
 import dpd.Measure as Measure
 
 class Agc:
-    """The goal of the automatic gain control is to set the 
-    RX gain to a value at which all received amplitudes can 
-    be detected. This means that the maximum possible amplitude 
+    """The goal of the automatic gain control is to set the
+    RX gain to a value at which all received amplitudes can
+    be detected. This means that the maximum possible amplitude
     should be quantized at the highest possible digital value.
 
-    A problem we have to face, is that the estimation of the 
-    maximum amplitude by applying the max() function is very 
-    unstable. This is due to the maximum’s rareness. Therefore 
-    we estimate a far more robust value, such as the median, 
+    A problem we have to face, is that the estimation of the
+    maximum amplitude by applying the max() function is very
+    unstable. This is due to the maximum’s rareness. Therefore
+    we estimate a far more robust value, such as the median,
     and then approximate the maximum amplitude from it.
 
-    Given this, we tune the RX gain in such a way, that the 
-    received signal fulfills our desired property, of having 
+    Given this, we tune the RX gain in such a way, that the
+    received signal fulfills our desired property, of having
     all amplitudes properly quantized."""
 
     def __init__(self, measure, adapt, c):
