@@ -310,7 +310,9 @@ def engine_worker():
                 txframe_aligned, tx_ts, rxframe_aligned, rx_ts, rx_median, tx_median = meas.get_samples()
 
                 # Store all settings for pre-distortion, tx and rx
-                adapt.dump()
+                utctime = datetime.datetime.utcnow()
+                dump_file = "adapt_{}.pkl".format(utctime.strftime("%s"))
+                adapt.dump(os.path.join(plot_path, dump_file))
 
                 # Collect logging data
                 off = symbol_align.calc_offset(txframe_aligned)
