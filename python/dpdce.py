@@ -101,6 +101,7 @@ from dpd.MER import MER
 from dpd.Measure_Shoulders import Measure_Shoulders
 
 plot_path = os.path.realpath(plot_directory)
+coef_file = os.path.realpath(config['coef_file'])
 
 c = GlobalConfig(samplerate, plot_path)
 symbol_align = Symbol_align(c)
@@ -302,7 +303,7 @@ def engine_worker():
                     iteration = internal_data['n_runs']
                     internal_data['n_runs'] += 1
 
-                adapt.set_predistorter(dpddata)
+                answer = adapt.set_predistorter(dpddata)
 
                 time.sleep(2)
 
@@ -324,7 +325,8 @@ def engine_worker():
 
                 lr = Heuristics.get_learning_rate(iteration)
 
-                summary = [f"Signal measurements after iteration {iteration} with learning rate {lr}",
+                summary = [f"Set predistorter: {answer}",
+                        f"Signal measurements after iteration {iteration} with learning rate {lr}",
                         f"TX MER {tx_mer}, RX MER {rx_mer}",
                         "Shoulders: TX {!r}, RX {!r}".format(tx_shoulder_tuple, rx_shoulder_tuple),
                         f"Mean-square error: {mse}",

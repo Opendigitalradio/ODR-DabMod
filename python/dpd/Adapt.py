@@ -232,7 +232,7 @@ class Adapt:
             _write_lut_file(scalefactor, lut, self.coef_path)
         else:
             raise ValueError("Unknown predistorter '{}'".format(dpddata[0]))
-        self.send_receive("set memlesspoly coeffile {}".format(self.coef_path))
+        return self.send_receive("set memlesspoly coeffile {}".format(self.coef_path))
 
     def dump(self, path=None):
         """Backup current settings to a file"""
