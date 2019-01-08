@@ -3,7 +3,7 @@
    Her Majesty the Queen in Right of Canada (Communications Research
    Center Canada)
 
-   Copyright (C) 2018
+   Copyright (C) 2019
    Matthias P. Braendli, matthias.braendli@mpb.li
 
     http://www.opendigitalradio.org
@@ -76,8 +76,53 @@ std::list<std::string> RemoteControllable::get_supported_parameters() const {
     return parameterlist;
 }
 
-RemoteControllable* RemoteControllers::get_controllable_(
-        const std::string& name)
+void RemoteControllers::add_controller(std::shared_ptr<BaseRemoteController> rc) {
+    m_controllers.push_back(rc);
+}
+
+void RemoteControllers::enrol(RemoteControllable *rc) {
+    controllables.push_back(rc);
+}
+
+void RemoteControllers::remove_controllable(RemoteControllable *rc) {
+    controllables.remove(rc);
+}
+
+std::list< std::vector<std::string> > RemoteControllers::get_param_list_values(const std::string& name) {
+    RemoteControllable* controllable = get_controllable_(name);
+
+    std::list< std::vector<std::string> > allparams;
+    for (auto &param : controllable->get_supported_parameters()) {
+        std::vector<std::string> item;
+        item.push_back(param);
+        try {
+            item.push_back(controllable->get_parameter(param));
+        }
+        catch (const ParameterError &e) {
+            item.push_back(std::string("error: ") + e.what());
+        }
+
+        allparams.push_back(item);
+    }
+    return allparams;
+}
+
+std::string RemoteControllers::get_param(const std::string& name, const std::string& param) {
+    RemoteControllable* controllable = get_controllable_(name);
+    return controllable->get_parameter(param);
+}
+
+void RemoteControllers::check_faults() {
+    for (auto &controller : m_controllers) {
+        if (controller->fault_detected()) {
+            etiLog.level(warn) <<
+                "Detected Remote Control fault, restarting it";
+            controller->restart();
+        }
+    }
+}
+
+RemoteControllable* RemoteControllers::get_controllable_(const std::string& name)
 {
     auto rc = std::find_if(controllables.begin(), controllables.end(),
             [&](RemoteControllable* r) { return r->get_rc_name() == name; });
@@ -183,7 +228,7 @@ void RemoteControllerTelnet::handle_accept(
         etiLog.level(info) << "RC: Closing socket";
         socket->close();
     }
-    catch (std::exception& e)
+    catch (const std::exception& e)
     {
         etiLog.level(error) << "Remote control caught exception: " << e.what();
     }
@@ -279,7 +324,7 @@ void RemoteControllerTelnet::dispatch_command(tcp::socket& socket, string comman
                 reply(socket, ss.str());
 
             }
-            catch (ParameterError &e) {
+            catch (const ParameterError &e) {
                 reply(socket, e.what());
             }
         }
@@ -293,7 +338,7 @@ void RemoteControllerTelnet::dispatch_command(tcp::socket& socket, string comman
                 string r = rcs.get_param(cmd[1], cmd[2]);
                 reply(socket, r);
             }
-            catch (ParameterError &e) {
+            catch (const ParameterError &e) {
                 reply(socket, e.what());
             }
         }
@@ -316,10 +361,10 @@ void RemoteControllerTelnet::dispatch_command(tcp::socket& socket, string comman
                 rcs.set_param(cmd[1], cmd[2], new_param_value.str());
                 reply(socket, "ok");
             }
-            catch (ParameterError &e) {
+            catch (const ParameterError &e) {
                 reply(socket, e.what());
             }
-            catch (exception &e) {
+            catch (const exception &e) {
                 reply(socket, "Error: Invalid parameter value. ");
             }
         }
@@ -478,21 +523,16 @@ void RemoteControllerZmq::process()
                 }
                 else if (msg.size() == 2 && command == "show") {
                     std::string module((char*) msg[1].data(), msg[1].size());
-                    try {
-                        list< vector<string> > r = rcs.get_param_list_values(module);
-                        size_t r_size = r.size();
-                        for (auto &param_val : r) {
-                            std::stringstream ss;
-                            ss << param_val[0] << ": " << param_val[1] << endl;
-                            zmq::message_t zmsg(ss.str().size());
-                            memcpy(zmsg.data(), ss.str().data(), ss.str().size());
+                    list< vector<string> > r = rcs.get_param_list_values(module);
+                    size_t r_size = r.size();
+                    for (auto &param_val : r) {
+                        std::stringstream ss;
+                        ss << param_val[0] << ": " << param_val[1] << endl;
+                        zmq::message_t zmsg(ss.str().size());
+                        memcpy(zmsg.data(), ss.str().data(), ss.str().size());
 
-                            int flag = (--r_size > 0) ? ZMQ_SNDMORE : 0;
-                            repSocket.send(zmsg, flag);
-                        }
-                    }
-                    catch (ParameterError &e) {
-                        send_fail_reply(repSocket, e.what());
+                        int flag = (--r_size > 0) ? ZMQ_SNDMORE : 0;
+                        repSocket.send(zmsg, flag);
                     }
                 }
                 else if (msg.size() == 3 && command == "get") {
@@ -505,7 +545,7 @@ void RemoteControllerZmq::process()
                         memcpy ((void*) zmsg.data(), value.data(), value.size());
                         repSocket.send(zmsg, 0);
                     }
-                    catch (ParameterError &err) {
+                    catch (const ParameterError &err) {
                         send_fail_reply(repSocket, err.what());
                     }
                 }
@@ -518,7 +558,7 @@ void RemoteControllerZmq::process()
                         rcs.set_param(module, parameter, value);
                         send_ok_reply(repSocket);
                     }
-                    catch (ParameterError &err) {
+                    catch (const ParameterError &err) {
                         send_fail_reply(repSocket, err.what());
                     }
                 }
@@ -530,10 +570,10 @@ void RemoteControllerZmq::process()
         }
         repSocket.close();
     }
-    catch (zmq::error_t &e) {
+    catch (const zmq::error_t &e) {
         etiLog.level(error) << "ZMQ RC error: " << std::string(e.what());
     }
-    catch (std::exception& e) {
+    catch (const std::exception& e) {
         etiLog.level(error) << "ZMQ RC caught exception: " << e.what();
         m_fault = true;
     }

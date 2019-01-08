@@ -3,7 +3,7 @@
    Her Majesty the Queen in Right of Canada (Communications Research
    Center Canada)
 
-   Copyright (C) 2018
+   Copyright (C) 2019
    Matthias P. Braendli, matthias.braendli@mpb.li
 
     http://www.opendigitalradio.org
@@ -131,48 +131,12 @@ class RemoteControllable {
  */
 class RemoteControllers {
     public:
-        void add_controller(std::shared_ptr<BaseRemoteController> rc) {
-            m_controllers.push_back(rc);
-        }
-
-        void enrol(RemoteControllable *rc) {
-            controllables.push_back(rc);
-        }
-
-        void remove_controllable(RemoteControllable *rc) {
-            controllables.remove(rc);
-        }
-
-        void check_faults() {
-            for (auto &controller : m_controllers) {
-                if (controller->fault_detected())
-                {
-                    etiLog.level(warn) <<
-                            "Detected Remote Control fault, restarting it";
-                    controller->restart();
-                }
-            }
-        }
-
-        std::list< std::vector<std::string> >
-            get_param_list_values(const std::string& name) {
-            RemoteControllable* controllable = get_controllable_(name);
-
-            std::list< std::vector<std::string> > allparams;
-            for (auto &param : controllable->get_supported_parameters()) {
-                std::vector<std::string> item;
-                item.push_back(param);
-                item.push_back(controllable->get_parameter(param));
-
-                allparams.push_back(item);
-            }
-            return allparams;
-        }
-
-        std::string get_param(const std::string& name, const std::string& param) {
-            RemoteControllable* controllable = get_controllable_(name);
-            return controllable->get_parameter(param);
-        }
+        void add_controller(std::shared_ptr<BaseRemoteController> rc);
+        void enrol(RemoteControllable *rc);
+        void remove_controllable(RemoteControllable *rc);
+        void check_faults();
+        std::list< std::vector<std::string> > get_param_list_values(const std::string& name);
+        std::string get_param(const std::string& name, const std::string& param);
 
         void set_param(
                 const std::string& name,
