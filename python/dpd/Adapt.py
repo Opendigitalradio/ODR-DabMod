@@ -152,7 +152,7 @@ class Adapt:
             _write_lut_file(scalefactor, lut, self._coef_path)
         else:
             raise ValueError("Unknown predistorter '{}'".format(dpddata[0]))
-        self._mod_rc.set_param_value("memlesspoly", "coefffile", self._coef_path)
+        self._mod_rc.set_param_value("memlesspoly", "coeffile", self._coef_path)
 
     def dump(self, path: str) -> None:
         """Backup current settings to a file"""
@@ -161,26 +161,31 @@ class Adapt:
             "txgain": self.get_txgain(),
             "rxgain": self.get_rxgain(),
             "digital_gain": self.get_digital_gain(),
-            "predistorter": self.get_predistorter()
+            "dpddata": self.get_predistorter()
         }
 
         with open(path, "wb") as f:
             pickle.dump(d, f)
 
-    def load(self, path: str) -> None:
+    def restore(self, path: str):
         """Restore settings from a file"""
         with open(path, "rb") as f:
             d = pickle.load(f)
 
             self.set_txgain(0)
+
+            # If any of the following fail, we will be running
+            # with the safe value of txgain=0
             self.set_digital_gain(d["digital_gain"])
             self.set_rxgain(d["rxgain"])
-            self.set_predistorter(d["predistorter"])
+            self.set_predistorter(d["dpddata"])
             self.set_txgain(d["txgain"])
+
+            return d
 
 # The MIT License (MIT)
 #
-# Copyright (c) 2018 Matthias P. Braendli
+# Copyright (c) 2019 Matthias P. Braendli
 # Copyright (c) 2017 Andreas Steger
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy

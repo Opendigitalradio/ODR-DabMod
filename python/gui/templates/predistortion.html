@@ -14,7 +14,7 @@
 
           <div class="container-fluid">
             <div class="row">
-              <div class="col-sm-8">
+              <div class="col-sm-4">
                 <h2>Current DPDCE status</h2>
                 <div>
                   <div id="dpdstatus" style="font-weight:bold;">N/A</div>
@@ -27,6 +27,21 @@
                 <div class="well well-sm" id="dpdresults">N/A</div>
               </div>
               <div class="col-sm-4">
+                <h2>List of saved DPD settings</h2>
+                <!--TODO: 'erase' and 'clear' buttons. Show DPD settings in tooltip?-->
+                <p>This list contains previously used predistortion settings that you
+                can recall.</p>
+                <p>
+                <select id="dpdadaptdumps" size="8" style="width:70%" multiple></select>
+                </p>
+                <p>
+                <button type="button" class="btn btn-sm btn-info" id="adaptdumpsrefreshbtn">Refresh
+                </button>
+                <button type="button" class="btn btn-sm btn-warning" id="adaptdumpsload">Load and Apply
+                </button>
+                </p>
+              </div>
+              <div class="col-sm-4">
                 <h2>Summary</h2>
                 <p>Calibration needs to be done once before the PA model
                 can be trained. Every time calibration is changed, the predistortion
@@ -36,6 +51,8 @@
                 runs are needed before the model can be trained.</p>
                 <p>The capture and model analysis will calculate a new set of
                 DPD model data, that you can apply using the Update Predistorter button.</p>
+                <p>The reset button allows you to reset the computation engine. It does not
+                modify the currently active predistorter.</p>
               </div>
             </div>
           </div>
@@ -47,7 +64,7 @@
           <button type="button" class="btn btn-sm btn-warning" id="adaptbtn">
             Update Predistorter</button>
           <button type="button" class="btn btn-sm btn-info" id="resetbtn">
-            Reset captured data</button>
+            Reset Capture and Model</button>
         </div>
       </div>
 
@@ -97,7 +114,7 @@
 </html>
 
 <!--
-   Copyright (C) 2018
+   Copyright (C) 2019
    Matthias P. Braendli, matthias.braendli@mpb.li
 
 This file is part of ODR-DabMod.

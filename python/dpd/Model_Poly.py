@@ -125,6 +125,11 @@ class Poly:
     def get_dpd_data(self):
         return "poly", self.coefs_am, self.coefs_pm
 
+    def set_dpd_data(self, dpddata):
+        if dpddata[0] != "poly" or len(dpddata) != 3:
+            raise ValueError("dpddata is not of 'poly' format")
+        _, self.coefs_am, self.coefs_pm = dpddata
+
     def _am_calc_line(self, coefs, min_amp, max_amp):
         rx_range = np.linspace(min_amp, max_amp)
         tx_est = np.sum(self._am_poly(rx_range) * coefs, axis=1)

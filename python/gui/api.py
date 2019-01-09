@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-#   Copyright (C) 2018
+#   Copyright (C) 2019
 #   Matthias P. Braendli, matthias.braendli@mpb.li
 #
 #    http://www.opendigitalradio.org
@@ -125,12 +125,20 @@ class API:
 
     @cherrypy.expose
     @cherrypy.tools.json_out()
-    def dpd_settings(self, setting: str, value: str, **kwargs):
+    def dpd_restore_dump(self, **kwargs):
         if cherrypy.request.method == 'POST':
-            data = {'setting': setting, 'value': value}
-            return self._wrap_dpd("set_setting", data)
+            cl = cherrypy.request.headers['Content-Length']
+            rawbody = cherrypy.request.body.read(int(cl))
+            params = json.loads(rawbody.decode())
+            if 'dump_id' in params:
+                data = {'dump_id': params['dump_id']}
+                return self._wrap_dpd("restore_dump", data)
+            else:
+                cherrypy.response.status = 400
+                return send_error("Missing dump_id")
         else:
-            return self._wrap_dpd("get_settings")
+            cherrypy.response.status = 400
+            return send_error("POST only")
 
     @cherrypy.expose
     @cherrypy.tools.json_out()

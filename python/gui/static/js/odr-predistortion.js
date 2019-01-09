@@ -1,4 +1,4 @@
-//   Copyright (C) 2018
+//   Copyright (C) 2019
 //   Matthias P. Braendli, matthias.braendli@mpb.li
 //
 //    http://www.opendigitalradio.org
@@ -17,6 +17,8 @@
 //
 //   You should have received a copy of the GNU General Public License
 //   along with ODR-DabMod.  If not, see <http://www.gnu.org/licenses/>.
+
+var adapt_dumps = [];
 
 function resultrefresh() {
     var jqxhr = doApiRequestGET("/api/dpd_results", function(data) {
@@ -51,10 +53,36 @@ function resultrefresh() {
         else {
             $('#dpdmodelplot').attr('src', "");
         }
+
+        adapt_dumps = data['adapt_dumps'];
     });
 
     jqxhr.always(function() {
         setTimeout(resultrefresh, 2000);
+    });
+}
+
+function adaptdumpsrefresh() {
+    $('#dpdadaptdumps').html("");
+
+    $.each(adapt_dumps, function(i, item) {
+        console.log(item);
+
+        if (isNaN(+item)) {
+            $('#dpdadaptdumps').append($('<option>', {
+                value: item,
+                text : "DPD settings from " + item,
+            }));
+        }
+        else {
+            var d = new Date(0);
+            d.setUTCSeconds(item);
+
+            $('#dpdadaptdumps').append($('<option>', {
+                value: item,
+                text : "DPD settings from " + d.toISOString(),
+            }));
+        }
     });
 }
 
@@ -86,71 +114,19 @@ $(function(){
         });
     });
 
-});
+    $('#adaptdumpsrefreshbtn').click(adaptdumpsrefresh);
 
-/*
-function calibraterefresh() {
-    doApiRequestGET("/api/calibrate", function(data) {
-        var text = "Captured TX signal and feedback." +
-            " TX median: " + data['tx_median'] +
-            " RX median: " + data['rx_median'] +
-            " with relative timestamp offset " +
-            (data['tx_ts'] - data['rx_ts']) +
-            " and measured offset " + data['coarse_offset'] +
-            ". Correlation: " + data['correlation'];
-        $('#calibrationresults').text(text);
-    });
-}
+    $('#adaptdumpsload').click(function() {
+        var elt = document.getElementById("dpdadaptdumps");
 
-$(function(){
-    $('#refreshframesbtn').click(function() {
-        var d = new Date();
-        var n = d.getTime();
-        $('#txframeimg').src = "dpd/txframe.png?cachebreak=" + n;
-        $('#rxframeimg').src = "dpd/rxframe.png?cachebreak=" + n;
-    });
-
-    $('#capturebutton').click(function() {
-        doApiRequestPOST("/api/trigger_capture", {}, function(data) {
-            console.log("trigger_capture succeeded: " + JSON.stringify(data));
-        });
-    });
-
-    $('#dpdstatusbutton').click(function() {
-        doApiRequestGET("/api/dpd_status", function(data) {
-            console.log("dpd_status succeeded: " + JSON.stringify(data));
-            $('#histogram').text(data.histogram);
-            $('#capturestatus').text(data.capture.status);
-            $('#capturelength').text(data.capture.length);
-            $('#tx_median').text(data.capture.tx_median);
-            $('#rx_median').text(data.capture.rx_median);
-        });
-
-    $.ajax({
-        type: "GET",
-        url: "/api/dpd_capture_pointcloud",
-
-        error: function(data) {
-            if (data.status == 500) {
-                var errorWindow = window.open("", "_self");
-                errorWindow.document.write(data.responseText);
-            }
-            else {
-                $.gritter.add({ title: 'API',
-                    text: "AJAX failed: " + data.statusText,
-                    image: '/fonts/warning.png',
-                    sticky: true,
-                });
-            }
-        },
-        success: function(data) {
-            $('#dpd_pointcloud').value(data)
+        if (elt.selectedIndex != -1) {
+            var selectedoption = elt.options[elt.selectedIndex].value;
+            doApiRequestPOST("/api/dpd_restore_dump", {dump_id: selectedoption}, function(data) {
+                console.log("reset succeeded: " + JSON.stringify(data));
+            });
         }
-    })
     });
 });
-
-*/
 
 
 // ToolTip init
