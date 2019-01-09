@@ -80,8 +80,18 @@ class API:
                 return send_error(str(e))
             return send_ok()
         else:
-            cherrypy.response.status = 400
-            return send_error("POST only")
+            if all(p in kwargs for p in ('controllable', 'param')):
+                try:
+                    return send_ok(self.mod_rc.get_param_value(kwargs['controllable'], kwargs['param']))
+                except IOError as e:
+                    cherrypy.response.status = 503
+                    return send_error(str(e))
+                except ValueError as e:
+                    cherrypy.response.status = 503
+                    return send_error(str(e))
+            else:
+                cherrypy.response.status = 400
+                return send_error("missing 'controllable' or 'param' GET parameters")
 
     def _wrap_dpd(self, method, data=None):
         try:
@@ -89,12 +99,12 @@ class API:
             return send_ok(reply)
         except ValueError as e:
             cherrypy.response.status = 503
-            return send_error("YAML-RPC call error: {}".format(e))
+            return send_error("DPDCE remote procedure call error: {}".format(e))
         except TimeoutError as e:
             cherrypy.response.status = 503
-            return send_error("YAML-RPC timeout: {}".format(e))
+            return send_error("DPDCE remote procedure call timed out")
         cherrypy.response.status = 500
-        return send_error("YAML-RPC unknown error")
+        return send_error("Unknown DPDCE remote procedure error error")
 
     @cherrypy.expose
     @cherrypy.tools.json_out()

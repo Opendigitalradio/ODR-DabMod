@@ -33,6 +33,7 @@ from lib import zmqrc
 env = Environment(loader=FileSystemLoader('gui/templates'))
 
 base_js = ["js/odr.js"]
+base_css = ["css/odr.css"]
 
 class Root:
     def __init__(self, dpd_port):
@@ -51,7 +52,8 @@ class Root:
     @cherrypy.expose
     def home(self):
         tmpl = env.get_template("home.html")
-        return tmpl.render(tab='home', js=base_js, is_login=False)
+        js = base_js + ["js/odr-home.js"]
+        return tmpl.render(tab='home', js=js, css=base_css, is_login=False)
 
     @cherrypy.expose
     def rcvalues(self):

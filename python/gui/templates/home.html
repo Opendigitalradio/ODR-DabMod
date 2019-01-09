@@ -4,13 +4,37 @@
 {% include 'head.html' %}
 
 <body>
-	{% include 'body-nav.html' %}
+    {% include 'body-nav.html' %}
 
-	<div class="container-fluid">
-		<div class="jumbotron">
-            <h1>Opendigitalradio</h1><h2>ODR-DabMod Interface</h2>
-		</div>
-	</div>
+    <div class="container-fluid">
+        <div class="jumbotron">
+            <h1>Opendigitalradio</h1><h2>ODR-DabMod Status Check
+                <span id="overall_state" class="glyphicon glyphicon-refresh glyphicon-refresh-animate"></span>
+            </h2>
+            <div class="well well-sm">
+                <p>ODR-DabMod
+                </p>
+                <ul>
+                    <li>Answering to RC:
+                        <span id="is_rc_ok" class="glyphicon glyphicon-question-sign"></span>
+                        <span id="is_rc_ok_comment"><span>
+                    </li>
+                    <li>Frame generation:
+                        <span id="is_modulating" class="glyphicon glyphicon-question-sign"></span>
+                        <span id="is_modulating_comment"><span>
+                    </li>
+                </ul>
+
+                <p>Checking predistortion
+                <ul>
+                    <li>DPDCE running:
+                        <span id="is_dpdce_running" class="glyphicon glyphicon-question-sign"></span>
+                        <span id="is_dpdce_running_comment"><span>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
 </body>
 </html>
 

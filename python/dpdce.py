@@ -409,7 +409,7 @@ try:
         try:
             addr, msg_id, method, params = cmd_socket.receive_request()
         except ValueError as e:
-            logging.warning('YAML-RPC request error: {}'.format(e))
+            logging.warning('RPC request error: {}'.format(e))
             continue
         except TimeoutError:
             continue
@@ -417,22 +417,22 @@ try:
             logging.info('Caught KeyboardInterrupt')
             break
         except:
-            logging.error('YAML-RPC unknown error')
+            logging.error('RPC unknown error')
             break
 
         if any(method == m for m in ['trigger_run', 'reset', 'adapt']):
-            logging.info('YAML-RPC request : {}'.format(method))
+            logging.info('Received RPC request : {}'.format(method))
             command_queue.put(method)
             cmd_socket.send_success_response(addr, msg_id, None)
         elif method == 'restore_dump':
-            logging.info('YAML-RPC restore dump {}'.format(params['dump_id']))
+            logging.info('Received RPC request : restore_dump({})'.format(params['dump_id']))
             command_queue.put(f"restore_dump-{params['dump_id']}")
             cmd_socket.send_success_response(addr, msg_id, None)
         elif method == 'get_results':
             with lock:
                 cmd_socket.send_success_response(addr, msg_id, results)
         elif method == 'calibrate':
-            logging.info('YAML-RPC request : {}'.format(method))
+            logging.info('Received RPC request : {}'.format(method))
             command_queue.put('calibrate')
             cmd_socket.send_success_response(addr, msg_id, None)
         else:

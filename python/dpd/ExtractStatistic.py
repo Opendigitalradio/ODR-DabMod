@@ -76,7 +76,7 @@ class ExtractStatistic:
             i_sub += 1
             ax = plt.subplot(sub_rows, sub_cols, i_sub)
             ax.plot(tx_values, rx_values,
-                    label="Estimated Values",
+                    label="Averaged measurements",
                     color="red")
             for i, tx_value in enumerate(tx_values):
                 rx_values_list = self.rx_values_lists[i]
@@ -94,7 +94,7 @@ class ExtractStatistic:
             i_sub += 1
             ax = plt.subplot(sub_rows, sub_cols, i_sub)
             ax.plot(tx_values, np.rad2deg(phase_diffs_values),
-                    label="Estimated Values",
+                    label="Averaged measurements",
                     color="red")
             for i, tx_value in enumerate(tx_values):
                 phase_diff = phase_diffs_values_lists[i]

@@ -85,7 +85,7 @@ class Socket:
         try:
             data, addr = self.socket.recvfrom(UDP_PACKETSIZE)
         except socket.timeout as to:
-            raise TimeoutError("Timeout: " + str(to))
+            raise TimeoutError()
 
         y = yaml.load(data.decode())
 
