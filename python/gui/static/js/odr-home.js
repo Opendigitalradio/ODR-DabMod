@@ -43,8 +43,20 @@ function apiRequestChain(uri, get_data, success_callback, fail_callback) {
     });
 }
 
-function mark_pending(id) {
+function mark_pending(id, comment) {
     document.getElementById(id).className = "glyphicon glyphicon-refresh glyphicon-refresh-animate";
+
+    if (comment) {
+        document.getElementById(id + "_comment").innerHTML = comment;
+    }
+}
+
+var failure_encountered = false;
+
+function mark_overall_ok() {
+    if (!failure_encountered) {
+        document.getElementById("overall_state").className = "glyphicon glyphicon-ok";
+    }
 }
 
 function mark_ok(id, comment) {
@@ -56,6 +68,8 @@ function mark_ok(id, comment) {
 }
 
 function mark_fail(id, reason) {
+    failure_encountered = true;
+
     var el = document.getElementById(id);
     el.className = "glyphicon glyphicon-remove";
     el.style.color = "#FF3333";
@@ -95,7 +109,7 @@ function check_modulating(last_num_frames) {
                     }
                     else {
                         mark_ok('is_modulating', "Number of frames modulated: " + data);
-                        check_rate_4x();
+                        check_underrunning(0, 0);
                     }
                 }
             }
@@ -108,6 +122,35 @@ function check_modulating(last_num_frames) {
         });
 }
 
+function check_underrunning(iteration, first_underruns) {
+    var n_checks = 3;
+
+    apiRequestChain("/api/parameter",
+        {controllable: 'sdr', param: 'underruns'},
+        function(data) {
+            if (iteration == 0) {
+                mark_pending('is_underrunning', "Checking for underruns");
+                setTimeout(function() { check_underrunning(iteration+1, data); }, 2000);
+            }
+            else if (iteration < n_checks) {
+                mark_pending('is_underrunning', "Check " + iteration + "/" + n_checks + "...");
+                setTimeout(function() { check_underrunning(iteration+1, first_underruns); }, 2000);
+            }
+            else {
+                if (data == first_underruns) {
+                    mark_ok('is_underrunning', "Number of underruns is not increasing: " + data);
+                }
+                else {
+                    mark_fail('is_underrunning', "Underruns observed in last " + n_checks + " seconds: " + data);
+                }
+                check_rate_4x();
+            }
+        },
+        function(data) {
+            mark_fail('is_underrunning', data);
+        });
+}
+
 function check_rate_4x() {
     mark_pending('is_rate_4x');
     apiRequestChain("/api/parameter",
@@ -115,11 +158,11 @@ function check_rate_4x() {
         function(data) {
             if (data == 8192000) {
                 mark_ok('is_rate_4x', "Samplerate: " + data);
-                check_dpdce_running();
             }
             else {
                 mark_fail('is_rate_4x', "Samplerate is not 8192ksps: " + data);
             }
+            check_dpdce_running();
         },
         function(data) {
             mark_fail('is_rate_4x', JSON.parse(data)['reason']);
@@ -132,7 +175,7 @@ function check_dpdce_running() {
         {},
         function(data) {
             mark_ok('is_dpdce_running', "State: " + data['state']);
-            mark_ok('overall_state');
+            mark_overall_ok();
         },
         function(data) {
             mark_fail('is_dpdce_running', JSON.parse(data)['reason']);
