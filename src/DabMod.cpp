@@ -3,7 +3,7 @@
    Her Majesty the Queen in Right of Canada (Communications Research
    Center Canada)
 
-   Copyright (C) 2018
+   Copyright (C) 2019
    Matthias P. Braendli, matthias.braendli@mpb.li
 
     http://opendigitalradio.org
@@ -315,6 +315,7 @@ int launch_modulator(int argc, char* argv[])
         Flowgraph flowgraph;
 
         auto modulator = make_shared<DabModulator>(ediReader, mod_settings);
+        rcs.enrol(modulator.get());
 
         if (format_converter) {
             flowgraph.connect(modulator, format_converter);
@@ -420,6 +421,7 @@ int launch_modulator(int argc, char* argv[])
 
             auto input = make_shared<InputMemory>(&m.data);
             auto modulator = make_shared<DabModulator>(etiReader, mod_settings);
+            rcs.enrol(modulator.get());
 
             if (format_converter) {
                 flowgraph.connect(modulator, format_converter);
