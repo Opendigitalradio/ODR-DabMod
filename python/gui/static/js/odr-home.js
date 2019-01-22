@@ -95,7 +95,7 @@ function check_modulating(last_num_frames) {
                     }
                     else {
                         mark_ok('is_modulating', "Number of frames modulated: " + data);
-                        check_dpdce_running();
+                        check_rate_4x();
                     }
                 }
             }
@@ -108,10 +108,28 @@ function check_modulating(last_num_frames) {
         });
 }
 
+function check_rate_4x() {
+    mark_pending('is_rate_4x');
+    apiRequestChain("/api/parameter",
+        {controllable: 'modulator', param: 'rate'},
+        function(data) {
+            if (data == 8192000) {
+                mark_ok('is_rate_4x', "Samplerate: " + data);
+                check_dpdce_running();
+            }
+            else {
+                mark_fail('is_rate_4x', "Samplerate is not 8192ksps: " + data);
+            }
+        },
+        function(data) {
+            mark_fail('is_rate_4x', JSON.parse(data)['reason']);
+        });
+}
+
 function check_dpdce_running() {
     mark_pending('is_dpdce_running');
     apiRequestChain("/api/dpd_results",
-        {controllable: 'sdr', param: 'frames'},
+        {},
         function(data) {
             mark_ok('is_dpdce_running', "State: " + data['state']);
             mark_ok('overall_state');
