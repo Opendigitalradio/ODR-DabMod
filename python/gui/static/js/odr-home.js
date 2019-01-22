@@ -32,7 +32,6 @@ function apiRequestChain(uri, get_data, success_callback, fail_callback) {
             fail_callback(data.responseText);
         },
         success: function(data) {
-            console.log("GET " + JSON.stringify(get_data) + " success: " + JSON.stringify(data));
             if (data.status == 'ok') {
                 success_callback(data.data);
             }
@@ -109,9 +108,8 @@ function check_modulating(last_num_frames) {
                     }
                     else {
                         mark_ok('is_modulating', "Number of frames modulated: " + data);
-                        check_underrunning(0, 0);
-                        check_late(0, 0);
                     }
+                    check_gpsdo_ok();
                 }
             }
             else {
@@ -122,6 +120,26 @@ function check_modulating(last_num_frames) {
             mark_fail('is_modulating', data);
         });
 }
+
+function check_gpsdo_ok() {
+    mark_pending('is_gpsdo_ok');
+    apiRequestChain("/api/parameter",
+        {controllable: 'sdr', param: 'gpsdo_num_sv'},
+        function(data) {
+            if (data > 3) {
+                mark_ok('is_gpsdo_ok', "Number of SVs used: " + data);
+            }
+            else {
+                mark_fail('is_gpsdo_ok', "Number of SVs (" + data + ") is too low");
+            }
+            check_underrunning(0, 0);
+            check_late(0, 0);
+        },
+        function(data) {
+            mark_fail('is_gpsdo_ok', json.parse(data)['reason']);
+        });
+}
+
 
 function check_underrunning(iteration, first_underruns) {
     var n_checks = 3;
