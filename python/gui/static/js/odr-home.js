@@ -110,6 +110,7 @@ function check_modulating(last_num_frames) {
                     else {
                         mark_ok('is_modulating', "Number of frames modulated: " + data);
                         check_underrunning(0, 0);
+                        check_late(0, 0);
                     }
                 }
             }
@@ -148,6 +149,34 @@ function check_underrunning(iteration, first_underruns) {
         },
         function(data) {
             mark_fail('is_underrunning', data);
+        });
+}
+
+function check_late(iteration, first_late) {
+    var n_checks = 3;
+
+    apiRequestChain("/api/parameter",
+        {controllable: 'sdr', param: 'latepackets'},
+        function(data) {
+            if (iteration == 0) {
+                mark_pending('is_late', "Checking for late packets");
+                setTimeout(function() { check_late(iteration+1, data); }, 2000);
+            }
+            else if (iteration < n_checks) {
+                mark_pending('is_late', "Check " + iteration + "/" + n_checks + "...");
+                setTimeout(function() { check_late(iteration+1, first_late); }, 2000);
+            }
+            else {
+                if (data == first_late) {
+                    mark_ok('is_late', "Number of late packets is not increasing: " + data);
+                }
+                else {
+                    mark_fail('is_late', "Late packets observed in last " + n_checks + " seconds: " + data);
+                }
+            }
+        },
+        function(data) {
+            mark_fail('is_late', data);
         });
 }
 
