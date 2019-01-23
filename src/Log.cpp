@@ -27,6 +27,7 @@
 
 #include <list>
 #include <cstdarg>
+#include <cinttypes>
 #include <chrono>
 
 #include "Log.h"
@@ -173,7 +174,7 @@ LogTracer::LogTracer(const string& trace_filename) : name("TRACE")
     m_trace_micros_startup = duration_cast<microseconds>(now).count();
 
     fprintf(m_trace_file.get(),
-            "0,TRACER,startup at %ld\n", m_trace_micros_startup);
+            "0,TRACER,startup at %" PRIu64 "\n", m_trace_micros_startup);
 }
 
 void LogTracer::log(log_level_t level, const std::string& message)
@@ -183,7 +184,7 @@ void LogTracer::log(log_level_t level, const std::string& message)
         const auto now = steady_clock::now().time_since_epoch();
         const auto micros = duration_cast<microseconds>(now).count();
 
-        fprintf(m_trace_file.get(), "%ld,%s\n",
+        fprintf(m_trace_file.get(), "%" PRIu64 ",%s\n",
                 micros - m_trace_micros_startup,
                 message.c_str());
     }
