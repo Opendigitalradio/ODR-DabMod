@@ -44,12 +44,12 @@ def dpddata_to_str(dpddata) -> str:
     if dpddata[0] == "poly":
         coefs_am = dpddata[1]
         coefs_pm = dpddata[2]
-        return "dpd_coefs_am {}, dpd_coefs_pm {}".format(
+        return "Poly: AM/AM {}, AM/PM {}".format(
                 coefs_am, coefs_pm)
     elif dpddata[0] == "lut":
         scalefactor = dpddata[1]
         lut = dpddata[2]
-        return "LUT scalefactor {}, LUT {}".format(
+        return "LUT: scalefactor {}, LUT {}".format(
                 scalefactor, lut)
     else:
         raise ValueError("Unknown dpddata type {}".format(dpddata[0]))

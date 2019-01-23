@@ -142,7 +142,7 @@ results = {
         'adapt_dumps': [],
         'statplot': None,
         'modelplot': None,
-        'modeldata': repr(dpddata),
+        'modeldata': dpddata_to_str(dpddata),
         'tx_median': 0,
         'rx_median': 0,
         'state': 'Idle',
@@ -218,7 +218,7 @@ def engine_worker():
                     results['state'] = 'Idle'
                     results['stateprogress'] = 0
                     results['summary'] = ["Reset"]
-                    results['modeldata'] = repr(model.get_dpd_data())
+                    results['modeldata'] = dpddata_to_str(model.get_dpd_data())
                     clear_pngs(results)
                 extStat = None
             elif cmd == "trigger_run":
@@ -288,7 +288,7 @@ def engine_worker():
                         internal_data['dpddata'] = dpddata
                         internal_data['n_runs'] = 0
 
-                        results['modeldata'] = repr(dpddata)
+                        results['modeldata'] = dpddata_to_str(dpddata)
                         results['state'] = 'Capture + Model'
                         results['stateprogress'] = 90
                         results['summary'] += ["Reset statistics"]
@@ -337,10 +337,11 @@ def engine_worker():
 
                 summary = [f"Set predistorter:",
                         f"Signal measurements after iteration {iteration} with learning rate {lr}",
-                        f"TX MER {tx_mer}, RX MER {rx_mer}",
-                        "Shoulders: TX {!r}, RX {!r}".format(tx_shoulder_tuple, rx_shoulder_tuple),
-                        f"Mean-square error: {mse}",
-                        f"Running with digital gain {digital_gain}, TX gain {tx_gain} and RX gain {rx_gain}"]
+                        f"TX MER {tx_mer:.2}, RX MER {rx_mer:.2}",
+                        f"Mean-square error: {mse:.3}"]
+                if tx_shoulder_tuple is not None:
+                    summary.append("Shoulders: TX {!r}, RX {!r}".format(tx_shoulder_tuple, rx_shoulder_tuple))
+                summary.append(f"Running with digital gain {digital_gain}, TX gain {tx_gain} and RX gain {rx_gain}")
 
                 with lock:
                     results['state'] = 'Update Predistorter'
@@ -361,7 +362,7 @@ def engine_worker():
                         results['stateprogress'] = 100
                         results['summary'] = [f"Restored DPD defaults",
                             f"Running with digital gain {digital_gain}, TX gain {tx_gain} and RX gain {rx_gain}"]
-                        results['modeldata'] = repr(dpddata)
+                        results['modeldata'] = dpddata_to_str(dpddata)
                 else:
                     dump_file = os.path.join(plot_path, f"adapt_{dump_id}.pkl")
                     try:
@@ -373,7 +374,7 @@ def engine_worker():
                             results['stateprogress'] = 100
                             results['summary'] = [f"Restored DPD settings from dumpfile {dump_id}",
                                 f"Running with digital gain {d['digital_gain']}, TX gain {d['txgain']} and RX gain {d['rxgain']}"]
-                            results['modeldata'] = repr(d["dpddata"])
+                            results['modeldata'] = dpddata_to_str(d["dpddata"])
                     except:
                         e = traceback.format_exc()
                         with lock:
