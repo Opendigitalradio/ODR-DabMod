@@ -73,6 +73,11 @@ class Agc:
             w = "Warning: calculated RX Gain={} is higher than maximum={}. RX feedback power should be increased.".format(
                 self.rxgain, self.max_rxgain)
             logging.warning(w)
+            try:
+                # Reset to a low value, as we expect the user to reduce external attenuation
+                self.adapt.set_rxgain(30)
+            except ValueError as e:
+                return (False, "\n".join([measurements, w, "Setting RX gain to {} failed: {}".format(self.rxgain, e)]))
             return (False, "\n".join([measurements, w]))
         else:
             try:
