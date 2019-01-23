@@ -87,8 +87,8 @@ class ExtractStatistic:
             ax.set_title("Extracted Statistic {}".format(title))
             ax.set_xlabel("TX Amplitude")
             ax.set_ylabel("RX Amplitude")
-            ax.set_ylim(0, 0.8)
-            ax.set_xlim(0, 1.1)
+            ax.set_ylim(0, np.max(self.tx_boundaries)) # we expect a rougly a 1:1 correspondence between x and y
+            ax.set_xlim(0, np.max(self.tx_boundaries))
             ax.legend(loc=4)
 
             i_sub += 1
@@ -105,7 +105,7 @@ class ExtractStatistic:
             ax.set_xlabel("TX Amplitude")
             ax.set_ylabel("Phase Difference")
             ax.set_ylim(-60, 60)
-            ax.set_xlim(0, 1.1)
+            ax.set_xlim(0, np.max(self.tx_boundaries))
             ax.legend(loc=4)
 
             num = []
