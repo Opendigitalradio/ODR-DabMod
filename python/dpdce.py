@@ -237,7 +237,7 @@ def engine_worker():
                         extStat = ExtractStatistic(c, peak_estimated)
 
                     with lock:
-                        results['stateprogress'] += 5
+                        results['stateprogress'] += 2
 
                     # Extract usable data from measurement
                     tx, rx, phase_diff, n_per_bin = extStat.extract(txframe_aligned, rxframe_aligned)
@@ -249,7 +249,7 @@ def engine_worker():
 
                     with lock:
                         results['statplot'] = "dpd/" + plot_file
-                        results['stateprogress'] += 5
+                        results['stateprogress'] += 2
                         results['summary'] = ["Captured {} samples".format(len(txframe_aligned)),
                             "TX/RX median: {} / {}".format(tx_median, rx_median),
                             extStat.get_bin_info(),
