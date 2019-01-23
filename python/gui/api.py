@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-#   Copyright (C) 2018
+#   Copyright (C) 2019
 #   Matthias P. Braendli, matthias.braendli@mpb.li
 #
 #    http://www.opendigitalradio.org
@@ -80,8 +80,18 @@ class API:
                 return send_error(str(e))
             return send_ok()
         else:
-            cherrypy.response.status = 400
-            return send_error("POST only")
+            if all(p in kwargs for p in ('controllable', 'param')):
+                try:
+                    return send_ok(self.mod_rc.get_param_value(kwargs['controllable'], kwargs['param']))
+                except IOError as e:
+                    cherrypy.response.status = 503
+                    return send_error(str(e))
+                except ValueError as e:
+                    cherrypy.response.status = 503
+                    return send_error(str(e))
+            else:
+                cherrypy.response.status = 400
+                return send_error("missing 'controllable' or 'param' GET parameters")
 
     def _wrap_dpd(self, method, data=None):
         try:
@@ -89,18 +99,27 @@ class API:
             return send_ok(reply)
         except ValueError as e:
             cherrypy.response.status = 503
-            return send_error("YAML-RPC call error: {}".format(e))
+            return send_error("DPDCE remote procedure call error: {}".format(e))
         except TimeoutError as e:
             cherrypy.response.status = 503
-            return send_error("YAML-RPC timeout: {}".format(e))
+            return send_error("DPDCE remote procedure call timed out")
         cherrypy.response.status = 500
-        return send_error("YAML-RPC unknown error")
+        return send_error("Unknown DPDCE remote procedure error error")
 
     @cherrypy.expose
     @cherrypy.tools.json_out()
     def dpd_trigger_run(self, **kwargs):
         if cherrypy.request.method == 'POST':
             return self._wrap_dpd("trigger_run")
+        else:
+            cherrypy.response.status = 400
+            return send_error("POST only")
+
+    @cherrypy.expose
+    @cherrypy.tools.json_out()
+    def dpd_adapt(self, **kwargs):
+        if cherrypy.request.method == 'POST':
+            return self._wrap_dpd("adapt")
         else:
             cherrypy.response.status = 400
             return send_error("POST only")
@@ -116,12 +135,20 @@ class API:
 
     @cherrypy.expose
     @cherrypy.tools.json_out()
-    def dpd_settings(self, setting: str, value: str, **kwargs):
+    def dpd_restore_dump(self, **kwargs):
         if cherrypy.request.method == 'POST':
-            data = {'setting': setting, 'value': value}
-            return self._wrap_dpd("set_setting", data)
+            cl = cherrypy.request.headers['Content-Length']
+            rawbody = cherrypy.request.body.read(int(cl))
+            params = json.loads(rawbody.decode())
+            if 'dump_id' in params:
+                data = {'dump_id': params['dump_id']}
+                return self._wrap_dpd("restore_dump", data)
+            else:
+                cherrypy.response.status = 400
+                return send_error("Missing dump_id")
         else:
-            return self._wrap_dpd("get_settings")
+            cherrypy.response.status = 400
+            return send_error("POST only")
 
     @cherrypy.expose
     @cherrypy.tools.json_out()

@@ -1,3 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+
+{% include 'head.html' %}
+
+<body>
+    {% include 'body-nav.html' %}
+
+    <div class="container-fluid">
+        <div class="jumbotron">
+            <h1>Opendigitalradio</h1><h2>ODR-DabMod Status Check
+                <span id="overall_state" class="glyphicon glyphicon-refresh glyphicon-refresh-animate"></span>
+            </h2>
+            <div class="well well-sm">
+                <p>ODR-DabMod
+                </p>
+                <ul>
+                    <li>Answering to RC:
+                        <span id="is_rc_ok" class="glyphicon glyphicon-question-sign"></span>
+                        <span id="is_rc_ok_comment"><span>
+                    </li>
+                    <li>Frame generation:
+                        <span id="is_modulating" class="glyphicon glyphicon-question-sign"></span>
+                        <span id="is_modulating_comment"><span>
+                    </li>
+                    <li>GPSDO status:
+                        <span id="is_gpsdo_ok" class="glyphicon glyphicon-question-sign"></span>
+                        <span id="is_gpsdo_ok_comment"><span>
+                    </li>
+                    <li>Underruns:
+                        <span id="is_underrunning" class="glyphicon glyphicon-question-sign"></span>
+                        <span id="is_underrunning_comment"><span>
+                    </li>
+                    <li>Late packets:
+                        <span id="is_late" class="glyphicon glyphicon-question-sign"></span>
+                        <span id="is_late_comment"><span>
+                    </li>
+                </ul>
+
+                <p>Checking predistortion
+                <ul>
+                    <li>Sample rate at 4x native rate:
+                        <span id="is_rate_4x" class="glyphicon glyphicon-question-sign"></span>
+                        <span id="is_rate_4x_comment"><span>
+                    </li>
+                    <li>DPDCE running:
+                        <span id="is_dpdce_running" class="glyphicon glyphicon-question-sign"></span>
+                        <span id="is_dpdce_running_comment"><span>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+
 <!--
    Copyright (C) 2018
    Matthias P. Braendli, matthias.braendli@mpb.li
@@ -17,19 +73,3 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with ODR-DabMod.  If not, see <http://www.gnu.org/licenses/>.
 -->
-
-<!DOCTYPE html>
-<html lang="en">
-
-{% include 'head.html' %}
-
-<body>
-	{% include 'body-nav.html' %}
-
-	<div class="container-fluid">
-		<div class="jumbotron">
-            <h1>Opendigitalradio</h1><h2>ODR-DabMod Interface</h2>
-		</div>
-	</div>
-</body>
-</html>

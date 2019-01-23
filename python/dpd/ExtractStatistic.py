@@ -38,14 +38,16 @@ class ExtractStatistic:
     """Calculate a low variance RX value for equally spaced tx values
     of a predefined range"""
 
-    def __init__(self, c):
+    def __init__(self, c, peak_amplitude):
         self.c = c
+
+        self._plot_data = None
 
         # Number of measurements used to extract the statistic
         self.n_meas = 0
 
         # Boundaries for the bins
-        self.tx_boundaries = np.linspace(c.ES_start, c.ES_end, c.ES_n_bins + 1)
+        self.tx_boundaries = np.linspace(0.0, peak_amplitude, c.ES_n_bins + 1)
         self.n_per_bin = c.ES_n_per_bin
 
         # List of rx values for each bin
@@ -58,12 +60,14 @@ class ExtractStatistic:
         for i in range(c.ES_n_bins):
             self.tx_values_lists.append([])
 
-        self.plot = c.ES_plot
+    def get_bin_info(self):
+        return "Binning: {} bins used for amplitudes between {} and {}".format(
+                len(self.tx_boundaries), np.min(self.tx_boundaries), np.max(self.tx_boundaries))
 
-    def _plot_and_log(self, tx_values, rx_values, phase_diffs_values, phase_diffs_values_lists):
-        if self.plot and self.c.plot_location is not None:
-            dt = datetime.datetime.now().isoformat()
-            fig_path = self.c.plot_location + "/" + dt + "_ExtractStatistic.png"
+    def plot(self, plot_path, title):
+        if self._plot_data is not None:
+            tx_values, rx_values, phase_diffs_values, phase_diffs_values_lists = self._plot_data
+
             sub_rows = 3
             sub_cols = 1
             fig = plt.figure(figsize=(sub_cols * 6, sub_rows / 2. * 6))
@@ -72,7 +76,7 @@ class ExtractStatistic:
             i_sub += 1
             ax = plt.subplot(sub_rows, sub_cols, i_sub)
             ax.plot(tx_values, rx_values,
-                    label="Estimated Values",
+                    label="Averaged measurements",
                     color="red")
             for i, tx_value in enumerate(tx_values):
                 rx_values_list = self.rx_values_lists[i]
@@ -80,17 +84,17 @@ class ExtractStatistic:
                            np.abs(rx_values_list),
                            s=0.1,
                            color="black")
-            ax.set_title("Extracted Statistic")
+            ax.set_title("Extracted Statistic {}".format(title))
             ax.set_xlabel("TX Amplitude")
             ax.set_ylabel("RX Amplitude")
-            ax.set_ylim(0, 0.8)
-            ax.set_xlim(0, 1.1)
+            ax.set_ylim(0, np.max(self.tx_boundaries)) # we expect a rougly a 1:1 correspondence between x and y
+            ax.set_xlim(0, np.max(self.tx_boundaries))
             ax.legend(loc=4)
 
             i_sub += 1
             ax = plt.subplot(sub_rows, sub_cols, i_sub)
             ax.plot(tx_values, np.rad2deg(phase_diffs_values),
-                    label="Estimated Values",
+                    label="Averaged measurements",
                     color="red")
             for i, tx_value in enumerate(tx_values):
                 phase_diff = phase_diffs_values_lists[i]
@@ -101,7 +105,7 @@ class ExtractStatistic:
             ax.set_xlabel("TX Amplitude")
             ax.set_ylabel("Phase Difference")
             ax.set_ylim(-60, 60)
-            ax.set_xlim(0, 1.1)
+            ax.set_xlim(0, np.max(self.tx_boundaries))
             ax.legend(loc=4)
 
             num = []
@@ -111,12 +115,12 @@ class ExtractStatistic:
             i_sub += 1
             ax = plt.subplot(sub_rows, sub_cols, i_sub)
             ax.plot(num)
-            ax.set_xlabel("TX Amplitude")
+            ax.set_xlabel("TX Amplitude bin")
             ax.set_ylabel("Number of Samples")
             ax.set_ylim(0, self.n_per_bin * 1.2)
 
             fig.tight_layout()
-            fig.savefig(fig_path)
+            fig.savefig(plot_path)
             plt.close(fig)
 
     def _rx_value_per_bin(self):
@@ -166,7 +170,7 @@ class ExtractStatistic:
         phase_diffs_values_lists = self._phase_diff_list_per_bin()
         phase_diffs_values = _phase_diff_value_per_bin(phase_diffs_values_lists)
 
-        self._plot_and_log(tx_values, rx_values, phase_diffs_values, phase_diffs_values_lists)
+        self._plot_data = (tx_values, rx_values, phase_diffs_values, phase_diffs_values_lists)
 
         tx_values_crop = np.array(tx_values, dtype=np.float32)[:idx_end]
         rx_values_crop = np.array(rx_values, dtype=np.float32)[:idx_end]
@@ -176,6 +180,7 @@ class ExtractStatistic:
 # The MIT License (MIT)
 #
 # Copyright (c) 2017 Andreas Steger
+# Copyright (c) 2018 Matthias P. Braendli
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal

@@ -31,22 +31,28 @@ function requestStatus() {
 
     doApiRequestGET("/api/rc_parameters", function(data) {
         console.log(data);
-        let keys = Object.keys(data);
-        keys.sort();
+        let controllable_names = Object.keys(data);
+        controllable_names.sort();
 
         var key1;
-        for (key1 in keys) {
-            let keys2 = Object.keys(data[keys[key1]]);
-            keys2.sort();
+        for (key1 in controllable_names) {
+            let param_names = Object.keys(data[controllable_names[key1]]);
+            param_names.sort();
 
             var key2;
-            for (key2 in keys2) {
-                var param = data[keys[key1]][keys2[key2]];
-                var key = keys[key1] + "_" + keys2[key2];
+            for (key2 in param_names) {
+                var name_controllable = controllable_names[key1];
+                var name_param = param_names[key2];
+                var key = name_controllable + "_" + name_param;
+
+                var param = data[name_controllable][name_param];
                 var valueentry = '<input type="text" id="input'+key+'" ' +
                     'value="' + param['value'] + '">' +
                     '<button type="button" class="btn btn-xs btn-warning"' +
-                    'id="button'+key+'" >upd</button>';
+                    'id="button'+key+'" ' +
+                    'data-controllable="'+name_controllable+'" ' +
+                    'data-param="'+name_param+'" ' +
+                    '>upd</button>';
 
                 $('#rctable > tbody:last').append(
                     '<tr><td>'+key+'</td>'+
@@ -54,7 +60,10 @@ function requestStatus() {
                     '<td>'+param['help']+'</td></tr>');
 
                 $('#button'+key).click(function() {
-                    buttonSetRc("input"+key, key1, key2);
+                    var attr_c = this.getAttribute('data-controllable');
+                    var attr_p = this.getAttribute('data-param');
+                    var k = attr_c + "_" + attr_p;
+                    buttonSetRc("input"+k, attr_c, attr_p);
                 });
             }
         }

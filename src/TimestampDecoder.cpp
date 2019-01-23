@@ -35,6 +35,28 @@
 //#define MDEBUG(fmt, args...) fprintf (LOG, "*****" fmt , ## args)
 #define MDEBUG(fmt, args...) PDEBUG(fmt, ## args)
 
+frame_timestamp& frame_timestamp::operator+=(const double& diff)
+{
+    double offset_pps, offset_secs;
+    offset_pps = modf(diff, &offset_secs);
+
+    this->timestamp_sec += lrint(offset_secs);
+    int64_t new_pps = (int64_t)this->timestamp_pps + llrint(offset_pps * 16384000.0);
+
+    while (new_pps < 0) {
+        this->timestamp_sec -= 1;
+        new_pps += 16384000;
+    }
+
+    while (new_pps > 16384000) {
+        this->timestamp_sec += 1;
+        new_pps -= 16384000;
+    }
+
+    this->timestamp_pps = new_pps;
+    return *this;
+}
+
 TimestampDecoder::TimestampDecoder(double& offset_s) :
         RemoteControllable("tist"),
         timestamp_offset(offset_s)
@@ -65,8 +87,6 @@ std::shared_ptr<frame_timestamp> TimestampDecoder::getTimestamp()
     ts->timestamp_refresh = offset_changed;
     offset_changed = false;
 
-    MDEBUG("time_secs=%d, time_pps=%f\n", time_secs,
-            (double)time_pps / 16384000.0);
     *ts += timestamp_offset;
 
     return ts;

@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
 #   Copyright (C) 2018
@@ -22,15 +22,16 @@
 #   along with ODR-DabMod.  If not, see <http://www.gnu.org/licenses/>.
 import zmq
 import json
+from typing import List
 
-class ModRemoteControl(object):
+class ModRemoteControl:
     """Interact with ODR-DabMod using the ZMQ RC"""
     def __init__(self, mod_host, mod_port=9400):
         self._host = mod_host
         self._port = mod_port
         self._ctx = zmq.Context()
 
-    def _read(self, message_parts):
+    def _read(self, message_parts: List[str]):
         sock = zmq.Socket(self._ctx, zmq.REQ)
         sock.setsockopt(zmq.LINGER, 0)
         sock.connect("tcp://{}:{}".format(self._host, self._port))
@@ -70,14 +71,14 @@ class ModRemoteControl(object):
 
         return modules
 
-    def get_param_value(self, module, param):
+    def get_param_value(self, module: str, param: str) -> str:
         value = self._read(['get', module, param])
         if value[0] == 'fail':
             raise ValueError("Error getting param: {}".format(value[1]))
         else:
             return value[0]
 
-    def set_param_value(self, module, param, value):
+    def set_param_value(self, module: str, param: str, value: str) -> None:
         ret = self._read(['set', module, param, value])
         if ret[0] == 'fail':
             raise ValueError("Error setting param: {}".format(ret[1]))

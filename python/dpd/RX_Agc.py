@@ -19,19 +19,19 @@ import dpd.Adapt as Adapt
 import dpd.Measure as Measure
 
 class Agc:
-    """The goal of the automatic gain control is to set the 
-    RX gain to a value at which all received amplitudes can 
-    be detected. This means that the maximum possible amplitude 
+    """The goal of the automatic gain control is to set the
+    RX gain to a value at which all received amplitudes can
+    be detected. This means that the maximum possible amplitude
     should be quantized at the highest possible digital value.
 
-    A problem we have to face, is that the estimation of the 
-    maximum amplitude by applying the max() function is very 
-    unstable. This is due to the maximum’s rareness. Therefore 
-    we estimate a far more robust value, such as the median, 
+    A problem we have to face, is that the estimation of the
+    maximum amplitude by applying the max() function is very
+    unstable. This is due to the maximum’s rareness. Therefore
+    we estimate a far more robust value, such as the median,
     and then approximate the maximum amplitude from it.
 
-    Given this, we tune the RX gain in such a way, that the 
-    received signal fulfills our desired property, of having 
+    Given this, we tune the RX gain in such a way, that the
+    received signal fulfills our desired property, of having
     all amplitudes properly quantized."""
 
     def __init__(self, measure, adapt, c):
@@ -45,10 +45,15 @@ class Agc:
         self.peak_to_median = 1./c.RAGC_rx_median_target
 
     def run(self) -> Tuple[bool, str]:
-        self.adapt.set_rxgain(self.rxgain)
+        try:
+            self.adapt.set_rxgain(self.rxgain)
+        except ValueError as e:
+            return (False, "Setting RX gain to {} failed: {}".format(self.rxgain, e))
+        time.sleep(0.5)
+
 
         # Measure
-        txframe_aligned, tx_ts, rxframe_aligned, rx_ts, rx_median, tx_median = self.measure.get_samples()
+        txframe, tx_ts, rxframe, rx_ts, rx_median, tx_median = self.measure.get_samples_unaligned(short=False)
 
         # Estimate Maximum
         rx_peak = self.peak_to_median * rx_median
@@ -68,11 +73,19 @@ class Agc:
             w = "Warning: calculated RX Gain={} is higher than maximum={}. RX feedback power should be increased.".format(
                 self.rxgain, self.max_rxgain)
             logging.warning(w)
+            try:
+                # Reset to a low value, as we expect the user to reduce external attenuation
+                self.adapt.set_rxgain(30)
+            except ValueError as e:
+                return (False, "\n".join([measurements, w, "Setting RX gain to {} failed: {}".format(self.rxgain, e)]))
             return (False, "\n".join([measurements, w]))
         else:
-            self.adapt.set_rxgain(self.rxgain)
+            try:
+                self.adapt.set_rxgain(self.rxgain)
+            except ValueError as e:
+                return (False, "Setting RX gain to {} failed: {}".format(self.rxgain, e))
             time.sleep(0.5)
-        return (True, measurements)
+            return (True, measurements)
 
     def plot_estimates(self):
         """Plots the estimate of for Max, Median, Mean for different

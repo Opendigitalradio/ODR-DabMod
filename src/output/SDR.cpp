@@ -66,10 +66,12 @@ SDR::SDR(SDRDeviceConfig& config, std::shared_ptr<SDRDevice> device) :
 
     m_device_thread = std::thread(&SDR::process_thread_entry, this);
 
-    m_dpd_feedback_server = make_shared<DPDFeedbackServer>(
-            m_device,
-            m_config.dpdFeedbackServerPort,
-            m_config.sampleRate);
+    if (m_config.dpdFeedbackServerPort > 0) {
+        m_dpd_feedback_server = make_shared<DPDFeedbackServer>(
+                m_device,
+                m_config.dpdFeedbackServerPort,
+                m_config.sampleRate);
+    }
 
     RC_ADD_PARAMETER(txgain, "TX gain");
     RC_ADD_PARAMETER(rxgain, "RX gain for DPD feedback");

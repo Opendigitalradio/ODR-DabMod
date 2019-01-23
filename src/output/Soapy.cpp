@@ -71,8 +71,10 @@ Soapy::Soapy(SDRDeviceConfig& config) :
         throw std::runtime_error("Cannot create SoapySDR output");
     }
 
-    m_device->setMasterClockRate(m_conf.masterClockRate);
-    etiLog.level(info) << "SoapySDR master clock rate set to " <<
+    if (m_conf.masterClockRate != 0) {
+        m_device->setMasterClockRate(m_conf.masterClockRate);
+    }
+    etiLog.level(info) << "SoapySDR:Actual master clock rate: " <<
         std::fixed << std::setprecision(4) <<
         m_device->getMasterClockRate()/1000.0 << " kHz";
 

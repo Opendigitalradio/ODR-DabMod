@@ -44,22 +44,9 @@ struct frame_timestamp
     bool timestamp_valid = false;
     bool timestamp_refresh;
 
-    frame_timestamp& operator+=(const double& diff)
-    {
-        double offset_pps, offset_secs;
-        offset_pps = modf(diff, &offset_secs);
+    frame_timestamp& operator+=(const double& diff);
 
-        this->timestamp_sec += lrint(offset_secs);
-        this->timestamp_pps += lrint(offset_pps * 16384000.0);
-
-        while (this->timestamp_pps >= 16384000) {
-            this->timestamp_pps -= 16384000;
-            this->timestamp_sec += 1;
-        }
-        return *this;
-    }
-
-    const frame_timestamp operator+(const double diff) {
+    const frame_timestamp operator+(const double diff) const {
         frame_timestamp ts = *this;
         ts += diff;
         return ts;

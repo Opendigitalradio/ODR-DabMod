@@ -3,7 +3,7 @@
    Her Majesty the Queen in Right of Canada (Communications Research
    Center Canada)
 
-   Copyright (C) 2018
+   Copyright (C) 2019
    Matthias P. Braendli, matthias.braendli@mpb.li
 
     http://opendigitalradio.org
@@ -58,14 +58,19 @@
 #include "RemoteControl.h"
 #include "Log.h"
 
+using namespace std;
+
 DabModulator::DabModulator(EtiSource& etiSource,
                            mod_settings_t& settings) :
     ModInput(),
+    RemoteControllable("modulator"),
     m_settings(settings),
     myEtiSource(etiSource),
     myFlowgraph()
 {
     PDEBUG("DabModulator::DabModulator() @ %p\n", this);
+
+    RC_ADD_PARAMETER(rate, "(Read-only) IQ output samplerate");
 
     if (m_settings.dabMode == 0) {
         setMode(2);
@@ -385,3 +390,30 @@ meta_vec_t DabModulator::process_metadata(const meta_vec_t& metadataIn)
     return {};
 }
 
+
+void DabModulator::set_parameter(const string& parameter, const string& value)
+{
+    if (parameter == "rate") {
+        throw ParameterError("Parameter 'rate' is read-only");
+    }
+    else {
+        stringstream ss;
+        ss << "Parameter '" << parameter <<
+            "' is not exported by controllable " << get_rc_name();
+        throw ParameterError(ss.str());
+    }
+}
+
+const string DabModulator::get_parameter(const string& parameter) const
+{
+    stringstream ss;
+    if (parameter == "rate") {
+        ss << m_settings.outputRate;
+    }
+    else {
+        ss << "Parameter '" << parameter <<
+            "' is not exported by controllable " << get_rc_name();
+        throw ParameterError(ss.str());
+    }
+    return ss.str();
+}

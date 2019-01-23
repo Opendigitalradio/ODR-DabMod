@@ -15,7 +15,7 @@ import logging
 
 class Measure:
     """Collect Measurement from DabMod"""
-    def __init__(self, config, samplerate, port, num_samples_to_request):
+    def __init__(self, config, samplerate : int, port : int, num_samples_to_request : int):
         logging.info("Instantiate Measure object")
         self.c = config
         self.samplerate = samplerate
@@ -23,7 +23,7 @@ class Measure:
         self.port = port
         self.num_samples_to_request = num_samples_to_request
 
-    def _recv_exact(self, sock, num_bytes):
+    def _recv_exact(self, sock : socket.socket, num_bytes : int) -> bytes:
         """Receive an exact number of bytes from a socket. This is
         a wrapper around sock.recv() that can return less than the number
         of requested bytes.
@@ -41,7 +41,7 @@ class Measure:
             bufs.append(b)
         return b''.join(bufs)
 
-    def receive_tcp(self):
+    def receive_tcp(self, num_samples_to_request : int):
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         s.settimeout(4)
         s.connect(('localhost', self.port))
@@ -49,8 +49,8 @@ class Measure:
         logging.debug("Send version")
         s.sendall(b"\x01")
 
-        logging.debug("Send request for {} samples".format(self.num_samples_to_request))
-        s.sendall(struct.pack("=I", self.num_samples_to_request))
+        logging.debug("Send request for {} samples".format(num_samples_to_request))
+        s.sendall(struct.pack("=I", num_samples_to_request))
 
         logging.debug("Wait for TX metadata")
         num_samps, tx_second, tx_pps = struct.unpack("=III", self._recv_exact(s, 12))
@@ -90,14 +90,35 @@ class Measure:
 
         return txframe, tx_ts, rxframe, rx_ts
 
+    def get_samples_unaligned(self, short=False):
+        """Connect to ODR-DabMod, retrieve TX and RX samples, load
+        into numpy arrays, and return a tuple
+        (txframe, tx_ts, rxframe, rx_ts, rx_median, tx_median)
+        """
 
-    def get_samples(self):
+        n_samps = int(self.num_samples_to_request / 4) if short else self.num_samples_to_request
+        txframe, tx_ts, rxframe, rx_ts = self.receive_tcp(n_samps)
+
+        # Normalize received signal with sent signal
+        rx_median = np.median(np.abs(rxframe))
+        tx_median = np.median(np.abs(txframe))
+        rxframe = rxframe / rx_median * tx_median
+
+
+        logging.info(
+            "Measurement done, tx %d %s, rx %d %s" %
+            (len(txframe), txframe.dtype, len(rxframe), rxframe.dtype))
+
+        return txframe, tx_ts, rxframe, rx_ts, rx_median, tx_median
+
+    def get_samples(self, short=False):
         """Connect to ODR-DabMod, retrieve TX and RX samples, load
         into numpy arrays, and return a tuple
         (txframe_aligned, tx_ts, rxframe_aligned, rx_ts, rx_median, tx_median)
         """
 
-        txframe, tx_ts, rxframe, rx_ts = self.receive_tcp()
+        n_samps = int(self.num_samples_to_request / 4) if short else self.num_samples_to_request
+        txframe, tx_ts, rxframe, rx_ts = self.receive_tcp(n_samps)
 
         # Normalize received signal with sent signal
         rx_median = np.median(np.abs(rxframe))
@@ -116,6 +137,7 @@ class Measure:
 
 # The MIT License (MIT)
 #
+# Copyright (c) 2018 Matthias P. Braendli
 # Copyright (c) 2017 Andreas Steger
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
