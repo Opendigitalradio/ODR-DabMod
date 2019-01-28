@@ -318,7 +318,7 @@ void FIRFilter::set_parameter(const string& parameter, const string& value)
             load_filter_taps(value);
             m_taps_file = value;
         }
-        catch (std::runtime_error &e) {
+        catch (const std::runtime_error &e) {
             throw ParameterError(e.what());
         }
     }

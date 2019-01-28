@@ -85,7 +85,7 @@ static void parse_configfile(
             auto telnetrc = make_shared<RemoteControllerTelnet>(telnetport);
             rcs.add_controller(telnetrc);
         }
-        catch (std::exception &e) {
+        catch (const std::exception &e) {
             std::cerr << "Error: " << e.what() << "\n";
             std::cerr << "       telnet remote control enabled, but no telnetport defined.\n";
             throw std::runtime_error("Configuration error");
@@ -98,7 +98,7 @@ static void parse_configfile(
             auto zmqrc = make_shared<RemoteControllerZmq>(zmqCtrlEndpoint);
             rcs.add_controller(zmqrc);
         }
-        catch (std::exception &e) {
+        catch (const std::exception &e) {
             std::cerr << "Error: " << e.what() << "\n";
             std::cerr << "       zmq remote control enabled, but no endpoint defined.\n";
             throw std::runtime_error("Configuration error");
@@ -129,7 +129,7 @@ static void parse_configfile(
         try {
             logfilename = pt.Get("log.filename", "");
         }
-        catch (std::exception &e) {
+        catch (const std::exception &e) {
             std::cerr << "Error: " << e.what() << "\n";
             std::cerr << "       Configuration enables file log, but does not specify log filename\n";
             throw std::runtime_error("Configuration error");
@@ -335,7 +335,7 @@ static void parse_configfile(
         try {
             mod_settings.tist_offset_s = pt.GetReal("delaymanagement.offset", 0.0);
         }
-        catch (std::exception &e) {
+        catch (const std::exception &e) {
             std::cerr << "Error: delaymanagement: synchronous is enabled, but no offset defined!\n";
             throw std::runtime_error("Configuration error");
         }
