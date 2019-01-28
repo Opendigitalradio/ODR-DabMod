@@ -184,7 +184,15 @@ class InputZeroMQReader : public InputReader, public RemoteControllable
         std::atomic<bool> m_running = ATOMIC_VAR_INIT(false);
         std::string m_uri;
         size_t m_max_queued_frames = 0;
-        ThreadsafeQueue<std::vector<uint8_t> > m_in_messages;
+
+        // Either must contain a full ETI frame, or one flag must be set
+        struct message_t {
+            std::vector<uint8_t> eti_frame;
+            bool overflow = false;
+            bool timeout = false;
+            bool fault = false;
+        };
+        ThreadsafeQueue<message_t> m_in_messages;
 
         mutable std::mutex m_last_in_messages_size_mutex;
         size_t m_last_in_messages_size = 0;
