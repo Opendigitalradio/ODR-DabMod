@@ -5,7 +5,11 @@
    Copyright (C) 2018
    Evariste F5OEO, evaristec@gmail.com
 
-   
+   Copyright (C) 2019
+   Matthias P. Braendli, matthias.braendli@mpb.li
+
+    http://opendigitalradio.org
+
 DESCRIPTION:
   It is an output driver using the LimeSDR library.
 */
@@ -32,7 +36,7 @@ DESCRIPTION:
 #ifdef HAVE_CONFIG_H
 #include <config.h>
 #endif
-//#define HAVE_LIMESDR
+
 #ifdef HAVE_LIMESDR
 
 #include <string>
@@ -81,14 +85,10 @@ class Lime : public Output::SDRDevice
     SDRDeviceConfig &m_conf;
     lms_device_t *m_device = nullptr;
     size_t m_channel = 0; // Should be set by config
-    /*
-        SoapySDR::Device *m_device = nullptr;
-        SoapySDR::Stream *m_tx_stream = nullptr;
-        */
     lms_stream_t m_tx_stream;
     bool m_tx_stream_active = false;
     size_t m_interpolate = 1;
-    complexf *interpolatebuf = nullptr;
+    std::vector<complexf> interpolatebuf;
 
     size_t underflows = 0;
     size_t overflows = 0;
