@@ -354,7 +354,7 @@ int launch_modulator(int argc, char* argv[])
                 try {
                     ediUdpInput.rxPacket();
                 }
-                catch (std::runtime_error& e) {
+                catch (const std::runtime_error& e) {
                     etiLog.level(warn) << "EDI input: " << e.what();
                     running = 0;
                     break;
@@ -626,13 +626,13 @@ int main(int argc, char* argv[])
     try {
         return launch_modulator(argc, argv);
     }
-    catch (std::invalid_argument& e) {
+    catch (const std::invalid_argument& e) {
         std::string what(e.what());
         if (not what.empty()) {
             std::cerr << "Modulator error: " << what << std::endl;
         }
     }
-    catch (std::runtime_error& e) {
+    catch (const std::runtime_error& e) {
         std::cerr << "Modulator runtime error: " << e.what() << std::endl;
     }
 

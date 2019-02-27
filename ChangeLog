@@ -1,6 +1,18 @@
 This file contains information about the changes done to
 ODR-DabMod in this repository
 
+2019-01-23: Matthias P. Braendli <matthias@mpb.li>
+	(v2.3.0):
+		Many improvements on GUI and DPDCE: It is now possible
+		to control the predistortion entirely through the web GUI.
+		See `python/README.md` for more.
+		Add SDR temperature to RC and munin.
+		Fix I/Q s16 output format.
+		SoapySDR output: do not set master clock rate if it is 0.
+		Fix warning about feedback server.
+		Fix digital gain being forgotten after an input stream interruption.
+		Handle negative tist offset settings.
+
 2018-08-07: Matthias P. Braendli <matthias@mpb.li>
 	(v2.2.0):
 		Fix bug in CFR implementation that was introduced in v2.1.0.

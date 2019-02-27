@@ -432,7 +432,7 @@ bool UHD::is_clk_source_ok(void) const
                 }
             }
         }
-        catch (uhd::lookup_error &e) {
+        catch (const uhd::lookup_error &e) {
             suppress_refclk_loss_check = true;
             etiLog.log(warn, "OutputUHD: This USRP does not have mboard "
                     "sensor for ext clock loss. Check disabled.");
@@ -456,7 +456,7 @@ double UHD::get_temperature(void) const
     try {
         return std::round(m_usrp->get_tx_sensor("temp", 0).to_real());
     }
-    catch (uhd::lookup_error &e) {
+    catch (const uhd::lookup_error &e) {
         return std::numeric_limits<double>::quiet_NaN();
     }
 }

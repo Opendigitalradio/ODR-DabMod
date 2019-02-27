@@ -35,7 +35,7 @@ Features
 - ZeroMQ PUB and REP output.
 - Ongoing work about digital predistortion for PA linearisation.
   See python/dpd/README.md
-- Ongoign work for a web GUI. See python/gui/README.md
+- A web GUI for control and supervision of modulator and predistortion engine. See python/gui/README.md
 - A prototype algorithm for crest factor reduction.
 
 The src/ directory contains the source code of ODR-DabMod.

@@ -183,7 +183,7 @@ int DabModulator::process(Buffer* dataOut)
             rcs.enrol(tii.get());
             tiiRef = make_shared<PhaseReference>(mode);
         }
-        catch (TIIError& e) {
+        catch (const TIIError& e) {
             etiLog.level(error) << "Could not initialise TII: " << e.what();
         }
 

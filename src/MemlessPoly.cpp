@@ -420,7 +420,7 @@ void MemlessPoly::set_parameter(const string& parameter, const string& value)
             load_coefficients(coefs_fstream);
             m_coefs_file = value;
         }
-        catch (std::runtime_error &e) {
+        catch (const std::runtime_error &e) {
             throw ParameterError(e.what());
         }
     }
@@ -434,7 +434,7 @@ void MemlessPoly::set_parameter(const string& parameter, const string& value)
             ofstream coefs_fstream(m_coefs_file);
             coefs_fstream << value;
         }
-        catch (std::runtime_error &e) {
+        catch (const std::runtime_error &e) {
             throw ParameterError(e.what());
         }
     }
