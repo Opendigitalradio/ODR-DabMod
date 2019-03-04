@@ -64,7 +64,7 @@ int TimeInterleaver::process(Buffer* const dataIn, Buffer* dataOut)
     unsigned char* out = reinterpret_cast<unsigned char*>(dataOut->getData());
 
     for (size_t i = 0; i < dataOut->getLength();) {
-        d_history.push_front(d_history.back());
+        d_history.push_front(move(d_history.back()));
         d_history.pop_back();
         for (uint_fast16_t j = 0; j < d_framesize;) {
             d_history[0][j] = in[i];
