@@ -86,7 +86,7 @@ SDR::SDR(SDRDeviceConfig& config, std::shared_ptr<SDRDevice> device) :
     RC_ADD_PARAMETER(gpsdo_holdover, "1 if the GPSDO is in holdover, 0 if it is using gnss");
 
     if (std::dynamic_pointer_cast<Lime>(device)) {
-        RC_ADD_PARAMETER(fifo_fill, "A value representing the Lime FIFO fullness");
+        RC_ADD_PARAMETER(fifo_fill, "A value representing the Lime FIFO fullness [percent]");
     }
 }
 
@@ -463,7 +463,7 @@ const string SDR::get_parameter(const string& parameter) const
         const auto dev = std::dynamic_pointer_cast<Lime>(m_device);
 
         if (dev) {
-            ss << dev->get_fifo_fill_count();
+            ss << dev->get_fifo_fill_percent();
         }
         else {
             ss << "Parameter '" << parameter <<

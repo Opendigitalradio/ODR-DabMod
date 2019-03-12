@@ -81,7 +81,7 @@ class Lime : public Output::SDRDevice
     virtual const char *device_name(void) const override;
 
     virtual double get_temperature(void) const override;
-    virtual uint32_t get_fifo_fill_count(void) const;
+    virtual float get_fifo_fill_percent(void) const;
 
   private:
     SDRDeviceConfig &m_conf;
@@ -92,7 +92,7 @@ class Lime : public Output::SDRDevice
     size_t m_interpolate = 1;
     std::vector<complexf> interpolatebuf;
 
-    std::atomic<uint32_t> m_last_fifo_filled_count = ATOMIC_VAR_INIT(0);
+    std::atomic<float> m_last_fifo_fill_percent = ATOMIC_VAR_INIT(0);
 
     size_t underflows = 0;
     size_t overflows = 0;

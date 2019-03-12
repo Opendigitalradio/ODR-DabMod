@@ -355,9 +355,9 @@ double Lime::get_temperature(void) const
     return temp;
 }
 
-uint32_t Lime::get_fifo_fill_count(void) const
+float Lime::get_fifo_fill_percent(void) const
 {
-    return m_last_fifo_filled_count;
+    return m_last_fifo_fill_percent * 100;
 }
 
 void Lime::transmit_frame(const struct FrameData &frame)
@@ -383,7 +383,7 @@ void Lime::transmit_frame(const struct FrameData &frame)
     etiLog.level(info) << "overrun" << LimeStatus.overrun << "underun" << LimeStatus.underrun << "drop" << LimeStatus.droppedPackets;
 #endif
 
-    m_last_fifo_filled_count.store(LimeStatus.fifoFilledCount);
+    m_last_fifo_fill_percent.store((float)LimeStatus.fifoFilledCount / (float)LimeStatus.fifoSize);
 
     /*
     if(LimeStatus.fifoFilledCount>=5*FRAME_LENGTH*m_interpolate) // Start if FIFO is half full {
