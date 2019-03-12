@@ -378,18 +378,7 @@ void Lime::transmit_frame(const struct FrameData &frame)
     etiLog.level(info) << "overrun" << LimeStatus.overrun << "underun" << LimeStatus.underrun << "drop" << LimeStatus.droppedPackets;
 #endif
 
-    /* if(LimeStatus.fifoFilledCount>LimeStatus.fifoSize-2*FRAME_LENGTH*m_interpolate) // Drop if Fifo is just 2 frames before fullness 
-    {
-        etiLog.level(info) << "Fifo overflow : drop";
-        return;
-    }*/
-
-    // Wait if Fifo is just 2 frames before fullness
-    if (LimeStatus.fifoFilledCount < FRAME_LENGTH * 2 * m_interpolate) {
-        etiLog.level(info) << "Fifo underflow : duplicate for filling garbage";
-        for (size_t i = 0; i < m_interpolate * 10; i++)
-            LMS_SendStream(&m_tx_stream, buf, numSamples, NULL, 1000);
-    }
+    m_last_fifo_filled_count.store(LimeStatus.fifoFilledCount);
 
     /*
     if(LimeStatus.fifoFilledCount>=5*FRAME_LENGTH*m_interpolate) // Start if FIFO is half full {

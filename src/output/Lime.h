@@ -39,6 +39,7 @@ DESCRIPTION:
 
 #ifdef HAVE_LIMESDR
 
+#include <atomic>
 #include <string>
 #include <memory>
 
@@ -89,6 +90,8 @@ class Lime : public Output::SDRDevice
     bool m_tx_stream_active = false;
     size_t m_interpolate = 1;
     std::vector<complexf> interpolatebuf;
+
+    std::atomic<uint32_t> m_last_fifo_filled_count = ATOMIC_VAR_INIT(0);
 
     size_t underflows = 0;
     size_t overflows = 0;
