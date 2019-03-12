@@ -25,6 +25,7 @@
  */
 
 #include "output/SDR.h"
+#include "output/Lime.h"
 
 #include "PcDebug.h"
 #include "Log.h"
@@ -83,6 +84,10 @@ SDR::SDR(SDRDeviceConfig& config, std::shared_ptr<SDRDevice> device) :
     RC_ADD_PARAMETER(frames, "Counter of number of frames modulated");
     RC_ADD_PARAMETER(gpsdo_num_sv, "Number of Satellite Vehicles tracked by GPSDO");
     RC_ADD_PARAMETER(gpsdo_holdover, "1 if the GPSDO is in holdover, 0 if it is using gnss");
+
+    if (std::dynamic_pointer_cast<Lime>(device)) {
+        RC_ADD_PARAMETER(fifo_fill, "A value representing the Lime FIFO fullness");
+    }
 }
 
 SDR::~SDR()
@@ -388,7 +393,8 @@ void SDR::set_parameter(const string& parameter, const string& value)
              parameter == "latepackets" or
              parameter == "frames" or
              parameter == "gpsdo_num_sv" or
-             parameter == "gpsdo_holdover") {
+             parameter == "gpsdo_holdover" or
+             parameter == "fifo_fill") {
         throw ParameterError("Parameter " + parameter + " is read-only.");
     }
     else {
@@ -452,6 +458,18 @@ const string SDR::get_parameter(const string& parameter) const
     else if (parameter == "gpsdo_holdover") {
         const auto stat = m_device->get_run_statistics();
         ss << (stat.gpsdo_holdover ? 1 : 0);
+    }
+    else if (parameter == "fifo_fill") {
+        const auto dev = std::dynamic_pointer_cast<Lime>(m_device);
+
+        if (dev) {
+            ss << dev->get_fifo_fill_count();
+        }
+        else {
+            ss << "Parameter '" << parameter <<
+                "' is not exported by controllable " << get_rc_name();
+            throw ParameterError(ss.str());
+        }
     }
     else {
         ss << "Parameter '" << parameter <<

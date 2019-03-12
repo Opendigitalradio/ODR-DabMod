@@ -81,6 +81,7 @@ class Lime : public Output::SDRDevice
     virtual const char *device_name(void) const override;
 
     virtual double get_temperature(void) const override;
+    virtual uint32_t get_fifo_fill_count(void) const;
 
   private:
     SDRDeviceConfig &m_conf;

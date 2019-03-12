@@ -355,6 +355,11 @@ double Lime::get_temperature(void) const
     return temp;
 }
 
+uint32_t Lime::get_fifo_fill_count(void) const
+{
+    return m_last_fifo_filled_count;
+}
+
 void Lime::transmit_frame(const struct FrameData &frame)
 {
     if (not m_device)
