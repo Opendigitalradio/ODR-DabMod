@@ -523,16 +523,21 @@ void RemoteControllerZmq::process()
                 }
                 else if (msg.size() == 2 && command == "show") {
                     std::string module((char*) msg[1].data(), msg[1].size());
-                    list< vector<string> > r = rcs.get_param_list_values(module);
-                    size_t r_size = r.size();
-                    for (auto &param_val : r) {
-                        std::stringstream ss;
-                        ss << param_val[0] << ": " << param_val[1] << endl;
-                        zmq::message_t zmsg(ss.str().size());
-                        memcpy(zmsg.data(), ss.str().data(), ss.str().size());
+                    try {
+                        list< vector<string> > r = rcs.get_param_list_values(module);
+                        size_t r_size = r.size();
+                        for (auto &param_val : r) {
+                            std::stringstream ss;
+                            ss << param_val[0] << ": " << param_val[1] << endl;
+                            zmq::message_t zmsg(ss.str().size());
+                            memcpy(zmsg.data(), ss.str().data(), ss.str().size());
 
-                        int flag = (--r_size > 0) ? ZMQ_SNDMORE : 0;
-                        repSocket.send(zmsg, flag);
+                            int flag = (--r_size > 0) ? ZMQ_SNDMORE : 0;
+                            repSocket.send(zmsg, flag);
+                        }
+                    }
+                    catch (const ParameterError &err) {
+                        send_fail_reply(repSocket, err.what());
                     }
                 }
                 else if (msg.size() == 3 && command == "get") {
