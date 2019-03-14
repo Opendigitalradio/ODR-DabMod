@@ -2,7 +2,7 @@
    Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010 Her Majesty the
    Queen in Right of Canada (Communications Research Center Canada)
 
-   Copyright (C) 2018
+   Copyright (C) 2019
    Matthias P. Braendli, matthias.braendli@mpb.li
 
     http://opendigitalradio.org
@@ -193,6 +193,15 @@ UHD::UHD(SDRDeviceConfig& config) :
         throw std::runtime_error("Cannot set USRP sample rate. Aborted.");
     }
 
+    if (m_conf.bandwidth > 0) {
+        m_usrp->set_tx_bandwidth(m_conf.bandwidth);
+        m_usrp->set_rx_bandwidth(m_conf.bandwidth);
+
+        etiLog.level(info) << "OutputUHD:Actual TX bandwidth: " <<
+            std::fixed << std::setprecision(2) <<
+            m_usrp->get_tx_bandwidth();
+    }
+
     tune(m_conf.lo_offset, m_conf.frequency);
 
     m_conf.frequency = m_usrp->get_tx_freq();
@@ -292,6 +301,18 @@ void UHD::set_txgain(double txgain)
 double UHD::get_txgain(void) const
 {
     return m_usrp->get_tx_gain();
+}
+
+void UHD::set_bandwidth(double bandwidth)
+{
+    m_usrp->set_tx_bandwidth(bandwidth);
+    m_usrp->set_rx_bandwidth(bandwidth);
+    m_conf.bandwidth = m_usrp->get_tx_bandwidth();
+}
+
+double UHD::get_bandwidth(void) const
+{
+    return m_usrp->get_tx_bandwidth();
 }
 
 void UHD::transmit_frame(const struct FrameData& frame)

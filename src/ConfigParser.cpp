@@ -235,6 +235,7 @@ static void parse_configfile(
         sdr_device_config.rx_antenna = pt.Get("uhdoutput.rx_antenna", "RX2");
         sdr_device_config.rxgain = pt.GetReal("uhdoutput.rxgain", 0.0);
         sdr_device_config.frequency = pt.GetReal("uhdoutput.frequency", 0);
+        sdr_device_config.bandwidth = pt.GetReal("uhdoutput.bandwidth", 0);
         std::string chan = pt.Get("uhdoutput.channel", "");
         sdr_device_config.dabMode = mod_settings.dabMode;
 
@@ -287,6 +288,7 @@ static void parse_configfile(
         outputsoapy_conf.tx_antenna = pt.Get("soapyoutput.tx_antenna", "");
         outputsoapy_conf.lo_offset = pt.GetReal("soapyoutput.lo_offset", 0.0);
         outputsoapy_conf.frequency = pt.GetReal("soapyoutput.frequency", 0);
+        outputsoapy_conf.bandwidth = pt.GetReal("soapyoutput.bandwidth", 0);
         std::string chan = pt.Get("soapyoutput.channel", "");
         outputsoapy_conf.dabMode = mod_settings.dabMode;
 
