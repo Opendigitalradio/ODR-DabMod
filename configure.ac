@@ -69,7 +69,7 @@ AX_CHECK_COMPILE_FLAG([-Wduplicated-cond], [CXXFLAGS="$CXXFLAGS -Wduplicated-con
 AX_CHECK_COMPILE_FLAG([-Wduplicated-branches], [CXXFLAGS="$CXXFLAGS -Wduplicated-branches"], [], ["-Werror"])
 AX_CHECK_COMPILE_FLAG([-Wlogical-op], [CXXFLAGS="$CXXFLAGS -Wlogical-op"], [], ["-Werror"])
 AX_CHECK_COMPILE_FLAG([-Wrestrict], [CXXFLAGS="$CXXFLAGS -Wrestrict"], [], ["-Werror"])
-AX_CHECK_COMPILE_FLAG([-Wshadow], [CXXFLAGS="$CXXFLAGS -Wshadow"], [], ["-Werror"])
+AX_CHECK_COMPILE_FLAG([-Wno-pragmas], [CXXFLAGS="$CXXFLAGS -Wno-pragmas"], [], ["-Werror"])
 AX_CHECK_COMPILE_FLAG([-Wdouble-promotion], [CXXFLAGS="$CXXFLAGS -Wdouble-promotion"], [], ["-Werror"])
 AX_CHECK_COMPILE_FLAG(["-Wformat=2"], [CXXFLAGS="$CXXFLAGS -Wformat=2"], [], ["-Werror"])
 AC_LANG_POP([C++])
