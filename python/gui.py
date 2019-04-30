@@ -83,6 +83,7 @@ if __name__ == '__main__':
     allconfig.read(cli_args.config)
     config = allconfig['gui']
     dpd_port = allconfig['dpdce'].getint('control_port')
+    plot_relative_dir = allconfig['dpdce']['plot_directory']
 
     daemon = False
     if daemon:
@@ -113,7 +114,7 @@ if __name__ == '__main__':
                 '/': { },
                 '/dpd': {
                     'tools.staticdir.on': True,
-                    'tools.staticdir.dir': os.path.join(staticdir, u"dpd/")
+                    'tools.staticdir.dir': os.path.realpath(plot_relative_dir)
                     },
                 '/css': {
                     'tools.staticdir.on': True,
