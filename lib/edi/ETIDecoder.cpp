@@ -156,8 +156,14 @@ ETIDecoder::decode_state_t ETIDecoder::decode_afpacket(
     // read length from packet
     uint32_t taglength = read_32b(input_data.begin() + 2);
     uint16_t seq = read_16b(input_data.begin() + 6);
+
+    const size_t crclength = 2;
+    if (input_data.size() < AFPACKET_HEADER_LEN + taglength + crclength) {
+        return {false, 0};
+    }
+
     if (m_last_seq + 1 != seq) {
-        etiLog.level(warn) << "EDI AF Packet sequence error";
+        etiLog.level(warn) << "EDI AF Packet sequence error, " << seq;
     }
     m_last_seq = seq;
 
@@ -174,10 +180,6 @@ ETIDecoder::decode_state_t ETIDecoder::decode_afpacket(
         return {false, 0};
     }
 
-    const size_t crclength = 2;
-    if (input_data.size() < AFPACKET_HEADER_LEN + taglength + crclength) {
-        return {false, 0};
-    }
 
     if (not has_crc) {
         throw invalid_argument("AF packet not supported, has no CRC");
