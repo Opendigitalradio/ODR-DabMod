@@ -306,11 +306,11 @@ int launch_modulator(int argc, char* argv[])
             // setMaxDelay wants number of AF packets, which correspond to 24ms ETI frames
             ediInput.setMaxDelay(lroundf(mod_settings.edi_max_delay_ms / 24.0f));
         }
-        EdiUdpInput ediUdpInput(ediInput);
+        EdiTransport ediTransport(ediInput);
 
-        ediUdpInput.Open(mod_settings.inputName);
-        if (not ediUdpInput.isEnabled()) {
-            throw runtime_error("inputTransport is edi, but ediUdpInput is not enabled");
+        ediTransport.Open(mod_settings.inputName);
+        if (not ediTransport.isEnabled()) {
+            throw runtime_error("inputTransport is edi, but ediTransport is not enabled");
         }
         Flowgraph flowgraph;
 
@@ -329,13 +329,24 @@ int launch_modulator(int argc, char* argv[])
 
         bool first_frame = true;
 
+        auto frame_received_tp = chrono::steady_clock::now();
+
         while (running) {
             while (running and not ediReader.isFrameReady()) {
                 try {
-                    ediUdpInput.rxPacket();
+                    bool packet_received = ediTransport.rxPacket();
+                    if (packet_received) {
+                        frame_received_tp = chrono::steady_clock::now();
+                    }
                 }
                 catch (const std::runtime_error& e) {
                     etiLog.level(warn) << "EDI input: " << e.what();
+                    running = 0;
+                    break;
+                }
+
+                if (frame_received_tp + chrono::seconds(10) < chrono::steady_clock::now()) {
+                    etiLog.level(error) << "No EDI data received in 10 seconds.";
                     running = 0;
                     break;
                 }
