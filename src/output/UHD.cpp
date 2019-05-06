@@ -359,8 +359,7 @@ void UHD::transmit_frame(const struct FrameData& frame)
 
         num_acc_samps += num_tx_samps;
 
-        md_tx.time_spec = md_tx.time_spec +
-            uhd::time_spec_t(0, num_tx_samps/m_conf.sampleRate);
+        md_tx.time_spec += uhd::time_spec_t(0, num_tx_samps/m_conf.sampleRate);
 
         if (num_tx_samps == 0) {
             etiLog.log(warn,
