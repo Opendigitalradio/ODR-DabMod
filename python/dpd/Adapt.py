@@ -76,7 +76,7 @@ class Adapt:
         try:
             return float(self._mod_rc.get_param_value("sdr", "txgain"))
         except ValueError as e:
-            logging.warning(f"Adapt: get_txgain error: {e}")
+            logging.warning("Adapt: get_txgain error: {}".format(e))
             return -1.0
 
     def set_rxgain(self, gain: float) -> None:
@@ -90,7 +90,7 @@ class Adapt:
         try:
             return float(self._mod_rc.get_param_value("sdr", "rxgain"))
         except ValueError as e:
-            logging.warning(f"Adapt: get_rxgain error: {e}")
+            logging.warning("Adapt: get_rxgain error: {}".format(e))
             return -1.0
 
     def set_digital_gain(self, gain: float) -> None:
@@ -102,7 +102,7 @@ class Adapt:
         try:
             return float(self._mod_rc.get_param_value("gain", "digital"))
         except ValueError as e:
-            logging.warning(f"Adapt: get_digital_gain error: {e}")
+            logging.warning("Adapt: get_digital_gain error: {}".format(e))
             return -1.0
 
     def get_predistorter(self):

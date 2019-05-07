@@ -335,13 +335,13 @@ def engine_worker():
 
                 lr = Heuristics.get_learning_rate(iteration)
 
-                summary = [f"Set predistorter:",
-                        f"Signal measurements after iteration {iteration} with learning rate {lr}",
-                        f"TX MER {tx_mer:.2}, RX MER {rx_mer:.2}",
-                        f"Mean-square error: {mse:.3}"]
+                summary = ["Set predistorter:",
+                        "Signal measurements after iteration {} with learning rate {}".format(iteration, lr),
+                        "TX MER {:.2}, RX MER {:.2}".format(tx_mer, rx_mer),
+                        "Mean-square error: {:.3}".format(mse)]
                 if tx_shoulder_tuple is not None:
                     summary.append("Shoulders: TX {!r}, RX {!r}".format(tx_shoulder_tuple, rx_shoulder_tuple))
-                summary.append(f"Running with digital gain {digital_gain}, TX gain {tx_gain} and RX gain {rx_gain}")
+                summary.append("Running with digital gain {}, TX gain {} and RX gain {}".format(digital_gain, tx_gain, rx_gain))
 
                 with lock:
                     results['state'] = 'Update Predistorter'
@@ -360,33 +360,33 @@ def engine_worker():
                     with lock:
                         results['state'] = 'Idle'
                         results['stateprogress'] = 100
-                        results['summary'] = [f"Restored DPD defaults",
-                            f"Running with digital gain {digital_gain}, TX gain {tx_gain} and RX gain {rx_gain}"]
+                        results['summary'] = ["Restored DPD defaults",
+                            "Running with digital gain {}, TX gain {} and RX gain {}".format(digital_gain, tx_gain, rx_gain)]
                         results['modeldata'] = dpddata_to_str(dpddata)
                 else:
-                    dump_file = os.path.join(plot_path, f"adapt_{dump_id}.pkl")
+                    dump_file = os.path.join(plot_path, "adapt_{}.pkl".format(dump_id))
                     try:
                         d = adapt.restore(dump_file)
-                        logging.info(f"Restore: {d}")
+                        logging.info("Restore: {}".format(d))
                         model.set_dpd_data(d['dpddata'])
                         with lock:
                             results['state'] = 'Idle'
                             results['stateprogress'] = 100
-                            results['summary'] = [f"Restored DPD settings from dumpfile {dump_id}",
-                                f"Running with digital gain {d['digital_gain']}, TX gain {d['txgain']} and RX gain {d['rxgain']}"]
+                            results['summary'] = ["Restored DPD settings from dumpfile {}".format(dump_id),
+                                    "Running with digital gain {}, TX gain {} and RX gain {}".format(d['digital_gain'], d['tx_gain'], d['rx_gain'])]
                             results['modeldata'] = dpddata_to_str(d["dpddata"])
                     except:
                         e = traceback.format_exc()
                         with lock:
                             results['state'] = 'Idle'
                             results['stateprogress'] = 100
-                            results['summary'] = [f"Failed to restore DPD settings from dumpfile {dump_id}",
-                                    f"Error: {e}"]
+                            results['summary'] = ["Failed to restore DPD settings from dumpfile {}".format(dump_id),
+                                    "Error: {}".format(e)]
         except:
             e = traceback.format_exc()
             logging.error(e)
             with lock:
-                results['summary'] = [f"Exception:"] + e.split("\n")
+                results['summary'] = ["Exception:"] + e.split("\n")
                 results['state'] = 'Autorestart pending'
                 results['stateprogress'] = 0
 
@@ -397,7 +397,7 @@ def engine_worker():
             time.sleep(2)
             with lock:
                 dt = datetime.datetime.utcnow().isoformat()
-                results['summary'] = [f"DPD engine auto-restarted at {dt} UTC", f"After exception {e}"]
+                results['summary'] = ["DPD engine auto-restarted at {} UTC".format(dt), "After exception {}".format(e)]
                 results['state'] = 'Idle'
                 results['stateprogress'] = 0
 
@@ -427,7 +427,7 @@ try:
             cmd_socket.send_success_response(addr, msg_id, None)
         elif method == 'restore_dump':
             logging.info('Received RPC request : restore_dump({})'.format(params['dump_id']))
-            command_queue.put(f"restore_dump-{params['dump_id']}")
+            command_queue.put("restore_dump-{}".format(params['dump_id']))
             cmd_socket.send_success_response(addr, msg_id, None)
         elif method == 'get_results':
             with lock:

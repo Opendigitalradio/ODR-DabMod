@@ -63,7 +63,9 @@ struct SDRDeviceConfig {
     double txgain = 0.0;
     double rxgain = 0.0;
     bool enableSync = false;
+    double bandwidth = 0.0;
     unsigned upsample = 1;
+
     // When working with timestamps, mute the frames that
     // do not have a timestamp
     bool muteNoTimestamps = false;
@@ -124,6 +126,8 @@ class SDRDevice {
         virtual double get_real_secs(void) const = 0;
         virtual void set_rxgain(double rxgain) = 0;
         virtual double get_rxgain(void) const = 0;
+        virtual void set_bandwidth(double bandwidth) = 0;
+        virtual double get_bandwidth(void) const = 0;
         virtual size_t receive_frame(
                 complexf *buf,
                 size_t num_samples,

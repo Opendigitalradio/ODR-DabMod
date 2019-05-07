@@ -547,7 +547,7 @@ void EdiReader::assemble()
     m_frameReady = true;
 }
 
-EdiUdpInput::EdiUdpInput(EdiDecoder::ETIDecoder& decoder) :
+EdiTransport::EdiTransport(EdiDecoder::ETIDecoder& decoder) :
     m_enabled(false),
     m_port(0),
     m_bindto("0.0.0.0"),
@@ -555,49 +555,100 @@ EdiUdpInput::EdiUdpInput(EdiDecoder::ETIDecoder& decoder) :
     m_decoder(decoder) { }
 
 
-void EdiUdpInput::Open(const std::string& uri)
+void EdiTransport::Open(const std::string& uri)
 {
     etiLog.level(info) << "Opening EDI :" << uri;
-    size_t found_port = uri.find_first_of(":", 6);
-    if (found_port == string::npos) {
-        throw std::invalid_argument("EDI input port must be provided");
-    }
 
-    m_port = std::stoi(uri.substr(found_port+1));
-    std::string host_full = uri.substr(6, found_port-6);// ignore udp://
-    size_t found_mcast = host_full.find_first_of("@"); //have multicast address:
-    if (found_mcast != string::npos) {
-        if (found_mcast > 0) {
-            m_bindto = host_full.substr(0, found_mcast);
+    const string proto = uri.substr(0, 3);
+    if (proto == "udp") {
+        size_t found_port = uri.find_first_of(":", 6);
+        if (found_port == string::npos) {
+            throw std::invalid_argument("EDI UDP input port must be provided");
         }
-        m_mcastaddr = host_full.substr(found_mcast+1);
+
+        m_port = std::stoi(uri.substr(found_port+1));
+        std::string host_full = uri.substr(6, found_port-6);// skip udp://
+        size_t found_mcast = host_full.find_first_of("@"); //have multicast address:
+        if (found_mcast != string::npos) {
+            if (found_mcast > 0) {
+                m_bindto = host_full.substr(0, found_mcast);
+            }
+            m_mcastaddr = host_full.substr(found_mcast+1);
+        }
+        else if (found_port != 6) {
+            m_bindto=host_full;
+        }
+
+        etiLog.level(info) << "EDI UDP input: host:" << m_bindto <<
+            ", source:" << m_mcastaddr << ", port:" << m_port;
+
+        // The max_fragments_queued is only a protection against a runaway
+        // memory usage.
+        // Rough calculation:
+        // 300 seconds, 24ms per frame, up to 20 fragments per frame
+        const size_t max_fragments_queued = 20 * 300 * 1000 / 24;
+
+        m_udp_rx.start(m_port, m_bindto, m_mcastaddr, max_fragments_queued);
+        m_proto = Proto::UDP;
+        m_enabled = true;
     }
-    else if (found_port != 6) {
-        m_bindto=host_full;
+    else if (proto == "tcp") {
+        size_t found_port = uri.find_first_of(":", 6);
+        if (found_port == string::npos) {
+            throw std::invalid_argument("EDI TCP input port must be provided");
+        }
+
+        m_port = std::stoi(uri.substr(found_port+1));
+        const std::string hostname = uri.substr(6, found_port-6);// skip tcp://
+
+        etiLog.level(info) << "EDI TCP connect to " << hostname << ":" << m_port;
+
+        m_tcpclient.connect(hostname, m_port);
+        m_proto = Proto::TCP;
+        m_enabled = true;
     }
-
-    etiLog.level(info) << "EDI input: host:" << m_bindto <<
-        ", source:" << m_mcastaddr << ", port:" << m_port;
-
-    // The max_fragments_queued is only a protection against a runaway
-    // memory usage.
-    // Rough calculation:
-    // 300 seconds, 24ms per frame, up to 20 fragments per frame
-    const size_t max_fragments_queued = 20 * 300 * 1000 / 24;
-
-    m_udp_rx.start(m_port, m_bindto, m_mcastaddr, max_fragments_queued);
-    m_enabled = true;
+    else {
+        throw std::invalid_argument("ETI protocol '" + proto + "' unknown");
+    }
 }
 
-bool EdiUdpInput::rxPacket()
+bool EdiTransport::rxPacket()
 {
-    auto udp_data = m_udp_rx.get_packet_buffer();
+    switch (m_proto) {
+        case Proto::UDP:
+            {
+                auto udp_data = m_udp_rx.get_packet_buffer();
 
-    if (udp_data.empty()) {
-        return false;
+                if (udp_data.empty()) {
+                    return false;
+                }
+
+                m_decoder.push_packet(udp_data);
+                return true;
+            }
+        case Proto::TCP:
+            {
+                m_tcpbuffer.resize(4096);
+                const int timeout_ms = 1000;
+                try {
+                    ssize_t ret = m_tcpclient.recv(m_tcpbuffer.data(), m_tcpbuffer.size(), 0, timeout_ms);
+                    if (ret == 0 or ret == -1) {
+                        return false;
+                    }
+                    else if (ret > (ssize_t)m_tcpbuffer.size()) {
+                        throw logic_error("EDI TCP: invalid recv() return value");
+                    }
+                    else {
+                        m_tcpbuffer.resize(ret);
+                        m_decoder.push_bytes(m_tcpbuffer);
+                        return true;
+                    }
+                }
+                catch (const TCPSocket::Timeout&) {
+                    return false;
+                }
+            }
     }
-
-    m_decoder.push_packet(udp_data);
-    return true;
+    throw logic_error("Incomplete rxPacket implementation!");
 }
 #endif // HAVE_EDI

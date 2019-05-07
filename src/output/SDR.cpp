@@ -76,6 +76,7 @@ SDR::SDR(SDRDeviceConfig& config, std::shared_ptr<SDRDevice> device) :
 
     RC_ADD_PARAMETER(txgain, "TX gain");
     RC_ADD_PARAMETER(rxgain, "RX gain for DPD feedback");
+    RC_ADD_PARAMETER(bandwidth, "Analog front-end bandwidth");
     RC_ADD_PARAMETER(freq, "Transmission frequency");
     RC_ADD_PARAMETER(muting, "Mute the output by stopping the transmitter");
     RC_ADD_PARAMETER(temp, "Temperature in degrees C of the device");
@@ -381,6 +382,10 @@ void SDR::set_parameter(const string& parameter, const string& value)
         ss >> m_config.rxgain;
         m_device->set_rxgain(m_config.rxgain);
     }
+    else if (parameter == "bandwidth") {
+        ss >> m_config.bandwidth;
+        m_device->set_bandwidth(m_config.bandwidth);
+    }
     else if (parameter == "freq") {
         ss >> m_config.frequency;
         m_device->tune(m_config.lo_offset, m_config.frequency);
@@ -414,6 +419,9 @@ const string SDR::get_parameter(const string& parameter) const
     }
     else if (parameter == "rxgain") {
         ss << m_config.rxgain;
+    }
+    else if (parameter == "bandwidth") {
+        ss << m_config.bandwidth;
     }
     else if (parameter == "freq") {
         ss << m_config.frequency;

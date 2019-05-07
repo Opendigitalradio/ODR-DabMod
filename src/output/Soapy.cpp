@@ -2,7 +2,7 @@
    Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010 Her Majesty the
    Queen in Right of Canada (Communications Research Center Canada)
 
-   Copyright (C) 2018
+   Copyright (C) 2019
    Matthias P. Braendli, matthias.braendli@mpb.li
 
     http://opendigitalradio.org
@@ -90,15 +90,23 @@ Soapy::Soapy(SDRDeviceConfig& config) :
         std::fixed << std::setprecision(3) <<
         m_conf.frequency / 1000.0 << " kHz.";
 
+    if (m_conf.bandwidth > 0) {
+        m_device->setBandwidth(SOAPY_SDR_TX, 0, m_conf.bandwidth);
+        m_device->setBandwidth(SOAPY_SDR_RX, 0, m_conf.bandwidth);
+        etiLog.level(info) << "SoapySDR:Actual TX bandwidth: " <<
+            std::fixed << std::setprecision(2) <<
+            m_device->getBandwidth(SOAPY_SDR_TX, 0);
+    }
+
     m_device->setGain(SOAPY_SDR_TX, 0, m_conf.txgain);
-    etiLog.level(info) << "SoapySDR:Actual tx gain: " <<
+    etiLog.level(info) << "SoapySDR:Actual TX gain: " <<
         std::fixed << std::setprecision(2) <<
         m_device->getGain(SOAPY_SDR_TX, 0);
 
     if (not m_conf.tx_antenna.empty()) {
         m_device->setAntenna(SOAPY_SDR_TX, 0, m_conf.tx_antenna);
     }
-    etiLog.level(info) << "SoapySDR:Actual tx antenna: " <<
+    etiLog.level(info) << "SoapySDR:Actual TX antenna: " <<
         m_device->getAntenna(SOAPY_SDR_TX, 0);
 
     if (m_device->hasHardwareTime()) {
@@ -155,6 +163,20 @@ double Soapy::get_txgain(void) const
 {
     if (not m_device) throw runtime_error("Soapy device not set up");
     return m_device->getGain(SOAPY_SDR_TX, 0);
+}
+
+void Soapy::set_bandwidth(double bandwidth)
+{
+    m_conf.bandwidth = bandwidth;
+    if (not m_device) throw runtime_error("Soapy device not set up");
+    m_device->setBandwidth(SOAPY_SDR_TX, 0, m_conf.bandwidth);
+    m_device->setBandwidth(SOAPY_SDR_RX, 0, m_conf.bandwidth);
+}
+
+double Soapy::get_bandwidth(void) const
+{
+    if (not m_device) throw runtime_error("Soapy device not set up");
+    return m_device->getBandwidth(SOAPY_SDR_TX, 0);
 }
 
 SDRDevice::RunStatistics Soapy::get_run_statistics(void) const

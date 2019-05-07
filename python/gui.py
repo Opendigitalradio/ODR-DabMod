@@ -30,15 +30,14 @@ from jinja2 import Environment, FileSystemLoader
 from gui.api import API
 from lib import zmqrc
 
-env = Environment(loader=FileSystemLoader('gui/templates'))
-
 base_js = ["js/odr.js"]
 base_css = ["css/odr.css"]
 
 class Root:
-    def __init__(self, dpd_port):
+    def __init__(self, dpd_port, end):
         self.mod_rc = zmqrc.ModRemoteControl("localhost")
         self.api = API(self.mod_rc, dpd_port)
+        self.env = env
 
     @cherrypy.expose
     def index(self):
@@ -46,30 +45,30 @@ class Root:
 
     @cherrypy.expose
     def about(self):
-        tmpl = env.get_template("about.html")
+        tmpl = self.env.get_template("about.html")
         return tmpl.render(tab='about', js=base_js, is_login=False)
 
     @cherrypy.expose
     def home(self):
-        tmpl = env.get_template("home.html")
+        tmpl = self.env.get_template("home.html")
         js = base_js + ["js/odr-home.js"]
         return tmpl.render(tab='home', js=js, css=base_css, is_login=False)
 
     @cherrypy.expose
     def rcvalues(self):
-        tmpl = env.get_template("rcvalues.html")
+        tmpl = self.env.get_template("rcvalues.html")
         js = base_js + ["js/odr-rcvalues.js"]
         return tmpl.render(tab='rcvalues', js=js, is_login=False)
 
     @cherrypy.expose
     def modulator(self):
-        tmpl = env.get_template("modulator.html")
+        tmpl = self.env.get_template("modulator.html")
         js = base_js + ["js/odr-modulator.js"]
         return tmpl.render(tab='modulator', js=js, is_login=False)
 
     @cherrypy.expose
     def predistortion(self):
-        tmpl = env.get_template("predistortion.html")
+        tmpl = self.env.get_template("predistortion.html")
         js = base_js + ["js/odr-predistortion.js"]
         return tmpl.render(tab='predistortion', js=js, is_login=False)
 
@@ -84,6 +83,7 @@ if __name__ == '__main__':
     allconfig.read(cli_args.config)
     config = allconfig['gui']
     dpd_port = allconfig['dpdce'].getint('control_port')
+    plot_relative_dir = allconfig['dpdce']['plot_directory']
 
     daemon = False
     if daemon:
@@ -106,13 +106,15 @@ if __name__ == '__main__':
             })
 
     staticdir = os.path.realpath(config['static_directory'])
+    templatedir = os.path.realpath(config['templates_directory'])
+    env = Environment(loader=FileSystemLoader(templatedir))
 
     cherrypy.tree.mount(
-            Root(dpd_port), config={
+            Root(dpd_port, env), config={
                 '/': { },
                 '/dpd': {
                     'tools.staticdir.on': True,
-                    'tools.staticdir.dir': os.path.join(staticdir, u"dpd/")
+                    'tools.staticdir.dir': os.path.realpath(plot_relative_dir)
                     },
                 '/css': {
                     'tools.staticdir.on': True,

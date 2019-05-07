@@ -42,6 +42,8 @@
 
 using namespace std;
 
+constexpr int ZMQ_TIMEOUT_MS = 100;
+
 #define NUM_FRAMES_PER_ZMQ_MESSAGE 4
 /* A concatenation of four ETI frames,
  * whose maximal size is 6144.
@@ -76,6 +78,9 @@ InputZeroMQReader::InputZeroMQReader() :
 InputZeroMQReader::~InputZeroMQReader()
 {
     m_running = false;
+    // This avoids the ugly "context was terminated" error because it lets
+    // poll do its thing first
+    this_thread::sleep_for(chrono::milliseconds(2 * ZMQ_TIMEOUT_MS));
     m_zmqcontext.close();
     if (m_recv_thread.joinable()) {
         m_recv_thread.join();
@@ -190,8 +195,7 @@ void InputZeroMQReader::RecvProcess()
             zmq::pollitem_t items[1];
             items[0].socket = subscriber;
             items[0].events = ZMQ_POLLIN;
-            const int zmq_timeout_ms = 100;
-            const int num_events = zmq::poll(items, 1, zmq_timeout_ms);
+            const int num_events = zmq::poll(items, 1, ZMQ_TIMEOUT_MS);
             if (num_events == 0) {
                 message_t msg;
                 msg.timeout = true;

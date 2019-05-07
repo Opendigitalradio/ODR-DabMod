@@ -34,6 +34,7 @@
 #include "Eti.h"
 #include "Log.h"
 #include "FicSource.h"
+#include "Socket.h"
 #include "SubchannelSource.h"
 #include "TimestampDecoder.h"
 #include "lib/edi/ETIDecoder.hpp"
@@ -185,13 +186,12 @@ private:
 };
 
 /* The EDI input does not use the inputs defined in InputReader.h, as they were
- * designed for ETI. It uses the EdiUdpInput which in turn uses a threaded
+ * designed for ETI. It uses the EdiTransport which in turn uses a threaded
  * receiver.
  */
-
-class EdiUdpInput {
+class EdiTransport {
     public:
-        EdiUdpInput(EdiDecoder::ETIDecoder& decoder);
+        EdiTransport(EdiDecoder::ETIDecoder& decoder);
 
         void Open(const std::string& uri);
 
@@ -209,7 +209,11 @@ class EdiUdpInput {
         std::string m_bindto;
         std::string m_mcastaddr;
 
+        enum class Proto { UDP, TCP };
+        Proto m_proto;
         UdpReceiver m_udp_rx;
+        std::vector<uint8_t> m_tcpbuffer;
+        TCPClient m_tcpclient;
         EdiDecoder::ETIDecoder& m_decoder;
 };
 #endif
