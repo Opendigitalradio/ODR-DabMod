@@ -295,6 +295,18 @@ double Lime::get_txgain(void) const
     return txgain;
 }
 
+void Lime::set_bandwidth(double bandwidth)
+{
+    LMS_SetLPFBW(m_device, LMS_CH_TX, m_channel, bandwidth);
+}
+
+double Lime::get_bandwidth(void) const
+{
+    double bw;
+    LMS_GetLPFBW(m_device, LMS_CH_TX, m_channel, &bw);
+    return bw;
+}
+
 SDRDevice::RunStatistics Lime::get_run_statistics(void) const
 {
     RunStatistics rs;
