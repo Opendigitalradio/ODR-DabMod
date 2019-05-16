@@ -93,8 +93,9 @@ class Lime : public Output::SDRDevice
     bool m_tx_stream_active = false;
     size_t m_interpolate = 1;
     std::vector<complexf> interpolatebuf;
-
+    std::vector<short> m_i16samples; 
     std::atomic<float> m_last_fifo_fill_percent = ATOMIC_VAR_INIT(0);
+    
 
     size_t underflows = 0;
     size_t overflows = 0;

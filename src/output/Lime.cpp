@@ -35,6 +35,7 @@ DESCRIPTION:
 
 #ifdef HAVE_LIMESDR
 
+//#define LIMEDEBUG
 #include <chrono>
 #include <limits>
 #include <cstdio>
@@ -42,7 +43,9 @@ DESCRIPTION:
 
 #include "Log.h"
 #include "Utils.h"
-
+#ifdef __ARM_NEON__
+#include <arm_neon.h>
+#endif
 using namespace std;
 
 namespace Output
@@ -51,6 +54,41 @@ namespace Output
 static constexpr size_t FRAMES_MAX_SIZE = 2;
 static constexpr size_t FRAME_LENGTH = 196608; // at native sample rate!
 
+#ifdef __ARM_NEON__
+void conv_s16_from_float(unsigned n, const float *a, short *b)
+{
+    unsigned i;
+
+    const float32x4_t plusone4 = vdupq_n_f32(1.0f);
+    const float32x4_t minusone4 = vdupq_n_f32(-1.0f);
+    const float32x4_t half4 = vdupq_n_f32(0.5f);
+    const float32x4_t scale4 = vdupq_n_f32(32767.0f);
+    const uint32x4_t mask4 = vdupq_n_u32(0x80000000);
+
+    for (i = 0; i < n / 4; i++)
+    {
+        float32x4_t v4 = ((float32x4_t *)a)[i];
+        v4 = vmulq_f32(vmaxq_f32(vminq_f32(v4, plusone4), minusone4), scale4);
+
+        const float32x4_t w4 = vreinterpretq_f32_u32(vorrq_u32(vandq_u32(
+                                                                   vreinterpretq_u32_f32(v4), mask4),
+                                                               vreinterpretq_u32_f32(half4)));
+
+        ((int16x4_t *)b)[i] = vmovn_s32(vcvtq_s32_f32(vaddq_f32(v4, w4)));
+    }
+}
+#else
+void conv_s16_from_float(unsigned n, const float *a, short *b)
+{
+    unsigned i;
+
+    for (i = 0; i < n; i++)
+    {
+        b[i] = (short)(a[i] * 32767.0f);
+    }
+}
+#endif
+
 Lime::Lime(SDRDeviceConfig &config) : SDRDevice(), m_conf(config)
 {
     m_interpolate = m_conf.upsample;
@@ -58,166 +96,138 @@ Lime::Lime(SDRDeviceConfig &config) : SDRDevice(), m_conf(config)
     etiLog.level(info) << "Lime:Creating the device with: " << m_conf.device;
 
     const int device_count = LMS_GetDeviceList(nullptr);
-    if (device_count < 0) {
+    if (device_count < 0)
+    {
         etiLog.level(error) << "Error making LimeSDR device: " << LMS_GetLastErrorMessage();
         throw runtime_error("Cannot find LimeSDR output device");
     }
 
     lms_info_str_t device_list[device_count];
-    if (LMS_GetDeviceList(device_list) < 0) {
+    if (LMS_GetDeviceList(device_list) < 0)
+    {
         etiLog.level(error) << "Error making LimeSDR device: %s " << LMS_GetLastErrorMessage();
         throw runtime_error("Cannot find LimeSDR output device");
     }
 
     size_t device_i = 0; // If several cards, need to get device by configuration
-    if (LMS_Open(&m_device, device_list[device_i], nullptr) < 0) {
+    if (LMS_Open(&m_device, device_list[device_i], nullptr) < 0)
+    {
         etiLog.level(error) << "Error making LimeSDR device: %s " << LMS_GetLastErrorMessage();
         throw runtime_error("Cannot open LimeSDR output device");
     }
 
-    if (LMS_Reset(m_device) < 0) {
+    if (LMS_Reset(m_device) < 0)
+    {
         etiLog.level(error) << "Error making LimeSDR device: %s " << LMS_GetLastErrorMessage();
         throw runtime_error("Cannot reset LimeSDR output device");
     }
 
-    if (LMS_Init(m_device) < 0) {
+    if (LMS_Init(m_device) < 0)
+    {
         etiLog.level(error) << "Error making LimeSDR device: %s " << LMS_GetLastErrorMessage();
         throw runtime_error("Cannot init LimeSDR output device");
     }
 
-    if (m_conf.masterClockRate != 0) {
-        if (LMS_SetClockFreq(m_device, LMS_CLOCK_CGEN, m_conf.masterClockRate) < 0) {
+    if (m_conf.masterClockRate != 0)
+    {
+        if (LMS_SetClockFreq(m_device, LMS_CLOCK_CGEN, m_conf.masterClockRate) < 0)
+        {
             etiLog.level(error) << "Error making LimeSDR device: %s " << LMS_GetLastErrorMessage();
             throw runtime_error("Cannot set master clock rate (CGEN) for LimeSDR output device");
         }
 
         float_type masterClockRate = 0;
-        if (LMS_GetClockFreq(m_device, LMS_CLOCK_CGEN, &masterClockRate) < 0) {
+        if (LMS_GetClockFreq(m_device, LMS_CLOCK_CGEN, &masterClockRate) < 0)
+        {
             etiLog.level(error) << "Error reading CGEN clock LimeSDR device: %s " << LMS_GetLastErrorMessage();
         }
-        else {
-            etiLog.level(info) << "LimeSDR master clock rate set to " << fixed << setprecision(4) <<
-                masterClockRate;
+        else
+        {
+            etiLog.level(info) << "LimeSDR master clock rate set to " << fixed << setprecision(4) << masterClockRate;
         }
     }
 
-    if (LMS_EnableChannel(m_device, LMS_CH_TX, m_channel, true) < 0) {
+    if (LMS_EnableChannel(m_device, LMS_CH_TX, m_channel, true) < 0)
+    {
         etiLog.level(error) << "Error making LimeSDR device: %s " << LMS_GetLastErrorMessage();
         throw runtime_error("Cannot enable channel for LimeSDR output device");
     }
 
-    if (LMS_SetSampleRate(m_device, m_conf.sampleRate * m_interpolate, 0) < 0) {
+    if (LMS_SetSampleRate(m_device, m_conf.sampleRate * m_interpolate, 0) < 0)
+    {
         etiLog.level(error) << "Error making LimeSDR device: %s " << LMS_GetLastErrorMessage();
         throw runtime_error("Cannot set sample rate for LimeSDR output device");
     }
     float_type host_sample_rate = 0.0;
 
-    if (LMS_GetSampleRate(m_device, LMS_CH_TX, m_channel, &host_sample_rate, NULL) < 0) {
+    if (LMS_GetSampleRate(m_device, LMS_CH_TX, m_channel, &host_sample_rate, NULL) < 0)
+    {
         etiLog.level(error) << "Error making LimeSDR device: %s " << LMS_GetLastErrorMessage();
         throw runtime_error("Cannot get samplerate for LimeSDR output device");
     }
-    etiLog.level(info) << "LimeSDR sample rate set to " << fixed << setprecision(4) <<
-        host_sample_rate / 1000.0 << " kHz";
+    etiLog.level(info) << "LimeSDR sample rate set to " << fixed << setprecision(4) << host_sample_rate / 1000.0 << " kHz";
 
     tune(m_conf.lo_offset, m_conf.frequency);
 
     float_type cur_frequency = 0.0;
 
-    if (LMS_GetLOFrequency(m_device, LMS_CH_TX, m_channel, &cur_frequency) < 0) {
+    if (LMS_GetLOFrequency(m_device, LMS_CH_TX, m_channel, &cur_frequency) < 0)
+    {
         etiLog.level(error) << "Error making LimeSDR device: %s " << LMS_GetLastErrorMessage();
         throw runtime_error("Cannot get frequency for LimeSDR output device");
     }
-    etiLog.level(info) << "LimeSDR:Actual frequency: " << fixed << setprecision(3) <<
-        cur_frequency / 1000.0 << " kHz.";
+    etiLog.level(info) << "LimeSDR:Actual frequency: " << fixed << setprecision(3) << cur_frequency / 1000.0 << " kHz.";
 
-    if (LMS_SetNormalizedGain(m_device, LMS_CH_TX, m_channel, m_conf.txgain / 100.0) < 0) {
+    if (LMS_SetNormalizedGain(m_device, LMS_CH_TX, m_channel, m_conf.txgain / 100.0) < 0)
+    {
         //value 0..100 -> Normalize
         etiLog.level(error) << "Error making LimeSDR device: %s " << LMS_GetLastErrorMessage();
         throw runtime_error("Cannot set TX gain for LimeSDR output device");
     }
 
-    if (LMS_SetAntenna(m_device, LMS_CH_TX, m_channel, LMS_PATH_TX2) < 0) {
+    if (LMS_SetAntenna(m_device, LMS_CH_TX, m_channel, LMS_PATH_TX2) < 0)
+    {
         etiLog.level(error) << "Error making LimeSDR device: %s " << LMS_GetLastErrorMessage();
         throw runtime_error("Cannot set antenna for LimeSDR output device");
     }
 
     double bandwidth_calibrating = 2.5e6; // Minimal bandwidth
-    if (LMS_Calibrate(m_device, LMS_CH_TX, m_channel, bandwidth_calibrating, 0) < 0) {
+    if (LMS_Calibrate(m_device, LMS_CH_TX, m_channel, bandwidth_calibrating, 0) < 0)
+    {
         etiLog.level(error) << "Error making LimeSDR device: %s " << LMS_GetLastErrorMessage();
         throw runtime_error("Cannot calibrate LimeSDR output device");
     }
 
-    switch (m_interpolate) {
-        case 1:
-            {
-                static double coeff[] = {
-                    -0.0014080960536375642, 0.0010270054917782545,
-                    0.0002103941806126386, -0.0023147952742874622,
-                    0.004256128799170256, -0.0038850826676934958,
-                    -0.0006057845894247293, 0.008352266624569893,
-                    -0.014639420434832573, 0.01275692880153656,
-                    0.0012119393795728683, -0.02339744009077549,
-                    0.04088031128048897, -0.03649924695491791,
-                    -0.001745241112075746, 0.07178881019353867,
-                    -0.15494878590106964, 0.22244733572006226,
-                    0.7530255913734436, 0.22244733572006226,
-                    -0.15494878590106964, 0.07178881019353867,
-                    -0.001745241112075746, -0.03649924695491791,
-                    0.04088031128048897, -0.02339744009077549,
-                    0.0012119393795728683, 0.01275692880153656,
-                    -0.014639420434832573, 0.008352266624569893,
-                    -0.0006057845894247293, -0.0038850826676934958,
-                    0.004256128799170256, -0.0023147952742874622,
-                    0.0002103941806126386, 0.0010270054917782545,
-                    -0.0014080960536375642};
-                LMS_SetGFIRCoeff(m_device, LMS_CH_TX, m_channel, LMS_GFIR3, coeff, 37);
-                LMS_SetGFIR(m_device, LMS_CH_TX, m_channel, LMS_GFIR3, true);
-            }
-            break;
-        case 2:
-            {
-                static double coeff[] = {0.0007009872933849692,
-                    0.0006160094635561109, -0.0003868100175168365,
-                    -0.0010892765130847692, -0.0003017585549969226,
-                    0.0013388358056545258, 0.0014964848523959517,
-                    -0.000810395460575819, -0.0028437587898224592,
-                    -0.001026041223667562, 0.0033166243229061365,
-                    0.004008698742836714, -0.0016114861937239766,
-                    -0.006794447544962168, -0.0029077117796987295,
-                    0.0070640090852975845, 0.009203733876347542,
-                    -0.002605677582323551, -0.014204192906618118,
-                    -0.007088471669703722, 0.013578214682638645,
-                    0.019509244710206985, -0.0035577849484980106,
-                    -0.028872046619653702, -0.016949573531746864,
-                    0.02703845500946045, 0.045044951140880585,
-                    -0.00423968443647027, -0.07416801154613495,
-                    -0.05744718387722969, 0.09617383778095245,
-                    0.30029231309890747, 0.39504382014274597,
-                    0.30029231309890747, 0.09617383778095245,
-                    -0.05744718387722969, -0.07416801154613495,
-                    -0.00423968443647027, 0.045044951140880585,
-                    0.02703845500946045, -0.016949573531746864,
-                    -0.028872046619653702, -0.0035577849484980106,
-                    0.019509244710206985, 0.013578214682638645,
-                    -0.007088471669703722, -0.014204192906618118,
-                    -0.002605677582323551, 0.009203733876347542,
-                    0.0070640090852975845, -0.0029077117796987295,
-                    -0.006794447544962168, -0.0016114861937239766,
-                    0.004008698742836714, 0.0033166243229061365,
-                    -0.001026041223667562, -0.0028437587898224592,
-                    -0.000810395460575819, 0.0014964848523959517,
-                    0.0013388358056545258, -0.0003017585549969226,
-                    -0.0010892765130847692, -0.0003868100175168365,
-                    0.0006160094635561109, 0.0007009872933849692};
-                LMS_SetGFIRCoeff(m_device, LMS_CH_TX, m_channel, LMS_GFIR3, coeff, 65);
-                LMS_SetGFIR(m_device, LMS_CH_TX, m_channel, LMS_GFIR3, true);
-            }
-            break;
-        default:
-            throw runtime_error("Unsupported interpolate: " + to_string(m_interpolate));
+    switch (m_interpolate)
+    {
+    case 1:
+    {
+        //design matlab
+        static double coeff[61] = {
+            -0.0008126748726, -0.0003874975955, 0.0007290032809, -0.0009636150789, 0.0007643355639,
+            3.123887291e-05, -0.001263667713, 0.002418729011, -0.002785810735, 0.001787990681,
+            0.0006407162873, -0.003821208142, 0.006409643684, -0.006850919221, 0.004091503099,
+            0.00172403187, -0.008917749859, 0.01456955727, -0.01547530293, 0.009518089704,
+            0.00304264226, -0.01893160492, 0.0322769247, -0.03613986075, 0.02477015182,
+            0.0041426518, -0.04805115238, 0.09958232939, -0.1481673121, 0.1828524768,
+            0.8045722842, 0.1828524768, -0.1481673121, 0.09958232939, -0.04805115238,
+            0.0041426518, 0.02477015182, -0.03613986075, 0.0322769247, -0.01893160492,
+            0.00304264226, 0.009518089704, -0.01547530293, 0.01456955727, -0.008917749859,
+            0.00172403187, 0.004091503099, -0.006850919221, 0.006409643684, -0.003821208142,
+            0.0006407162873, 0.001787990681, -0.002785810735, 0.002418729011, -0.001263667713,
+            3.123887291e-05, 0.0007643355639, -0.0009636150789, 0.0007290032809, -0.0003874975955,
+            -0.0008126748726};
+
+        LMS_SetGFIRCoeff(m_device, LMS_CH_TX, m_channel, LMS_GFIR3, coeff, 61);
+    }
+    break;
+    
+    default:
+        throw runtime_error("Unsupported interpolate: " + to_string(m_interpolate));
     }
 
-    if (m_conf.sampleRate != 2048000) {
+    if (m_conf.sampleRate != 2048000)
+    {
         throw runtime_error("Lime output only supports native samplerate = 2048000");
         /* The buffer_size calculation below does not take into account resampling */
     }
@@ -227,10 +237,11 @@ Lime::Lime(SDRDeviceConfig &config) : SDRDevice(), m_conf(config)
     // Fifo seems to be round to multiple of SampleRate
     m_tx_stream.channel = m_channel;
     m_tx_stream.fifoSize = buffer_size;
-    m_tx_stream.throughputVsLatency = 1.0;
+    m_tx_stream.throughputVsLatency = 2.0; // Should be {0..1} but could be extended 
     m_tx_stream.isTx = LMS_CH_TX;
-    m_tx_stream.dataFmt = lms_stream_t::LMS_FMT_F32;
-    if (LMS_SetupStream(m_device, &m_tx_stream) < 0) {
+    m_tx_stream.dataFmt = lms_stream_t::LMS_FMT_I16;
+    if (LMS_SetupStream(m_device, &m_tx_stream) < 0)
+    {
         etiLog.level(error) << "Error making LimeSDR device: %s " << LMS_GetLastErrorMessage();
         throw runtime_error("Cannot setup TX stream for LimeSDR output device");
     }
@@ -240,7 +251,8 @@ Lime::Lime(SDRDeviceConfig &config) : SDRDevice(), m_conf(config)
 
 Lime::~Lime()
 {
-    if (m_device != nullptr) {
+    if (m_device != nullptr)
+    {
         LMS_StopStream(&m_tx_stream);
         LMS_DestroyStream(m_device, &m_tx_stream);
         LMS_EnableChannel(m_device, LMS_CH_TX, m_channel, false);
@@ -253,7 +265,8 @@ void Lime::tune(double lo_offset, double frequency)
     if (not m_device)
         throw runtime_error("Lime device not set up");
 
-    if (LMS_SetLOFrequency(m_device, LMS_CH_TX, m_channel, m_conf.frequency) < 0) {
+    if (LMS_SetLOFrequency(m_device, LMS_CH_TX, m_channel, m_conf.frequency) < 0)
+    {
         etiLog.level(error) << "Error setting LimeSDR TX frequency: %s " << LMS_GetLastErrorMessage();
     }
 }
@@ -265,7 +278,8 @@ double Lime::get_tx_freq(void) const
 
     float_type cur_frequency = 0.0;
 
-    if (LMS_GetLOFrequency(m_device, LMS_CH_TX, m_channel, &cur_frequency) < 0) {
+    if (LMS_GetLOFrequency(m_device, LMS_CH_TX, m_channel, &cur_frequency) < 0)
+    {
         etiLog.level(error) << "Error getting LimeSDR TX frequency: %s " << LMS_GetLastErrorMessage();
     }
 
@@ -278,7 +292,8 @@ void Lime::set_txgain(double txgain)
     if (not m_device)
         throw runtime_error("Lime device not set up");
 
-    if (LMS_SetNormalizedGain(m_device, LMS_CH_TX, m_channel, m_conf.txgain / 100.0) < 0) {
+    if (LMS_SetNormalizedGain(m_device, LMS_CH_TX, m_channel, m_conf.txgain / 100.0) < 0)
+    {
         etiLog.level(error) << "Error setting LimeSDR TX gain: %s " << LMS_GetLastErrorMessage();
     }
 }
@@ -289,7 +304,8 @@ double Lime::get_txgain(void) const
         throw runtime_error("Lime device not set up");
 
     float_type txgain = 0;
-    if (LMS_GetNormalizedGain(m_device, LMS_CH_TX, m_channel, &txgain) < 0) {
+    if (LMS_GetNormalizedGain(m_device, LMS_CH_TX, m_channel, &txgain) < 0)
+    {
         etiLog.level(error) << "Error getting LimeSDR TX gain: %s " << LMS_GetLastErrorMessage();
     }
     return txgain;
@@ -361,7 +377,8 @@ double Lime::get_temperature(void) const
         throw runtime_error("Lime device not set up");
 
     float_type temp = numeric_limits<float_type>::quiet_NaN();
-    if (LMS_GetChipTemperature(m_device, 0, &temp) < 0) {
+    if (LMS_GetChipTemperature(m_device, 0, &temp) < 0)
+    {
         etiLog.level(error) << "Error getting LimeSDR temperature: %s " << LMS_GetLastErrorMessage();
     }
     return temp;
@@ -380,7 +397,13 @@ void Lime::transmit_frame(const struct FrameData &frame)
     // The frame buffer contains bytes representing FC32 samples
     const complexf *buf = reinterpret_cast<const complexf *>(frame.buf.data());
     const size_t numSamples = frame.buf.size() / sizeof(complexf);
-    if ((frame.buf.size() % sizeof(complexf)) != 0) {
+
+    m_i16samples.resize(numSamples * 2);
+    short *buffi16 = &m_i16samples[0];
+    
+    conv_s16_from_float(numSamples * 2, (const float *)buf, buffi16);
+    if ((frame.buf.size() % sizeof(complexf)) != 0)
+    {
         throw runtime_error("Lime: invalid buffer size");
     }
 
@@ -390,7 +413,7 @@ void Lime::transmit_frame(const struct FrameData &frame)
     underflows += LimeStatus.underrun;
     late_packets += LimeStatus.droppedPackets;
 
-#if LIMEDEBUG
+#ifdef LIMEDEBUG
     etiLog.level(info) << LimeStatus.fifoFilledCount << "/" << LimeStatus.fifoSize << ":" << numSamples << "Rate" << LimeStatus.linkRate / (2 * 2.0);
     etiLog.level(info) << "overrun" << LimeStatus.overrun << "underun" << LimeStatus.underrun << "drop" << LimeStatus.droppedPackets;
 #endif
@@ -408,24 +431,25 @@ void Lime::transmit_frame(const struct FrameData &frame)
 */
 
     ssize_t num_sent = 0;
-    if (m_interpolate == 1) {
-        num_sent = LMS_SendStream(&m_tx_stream, buf, numSamples, NULL, 1000);
+
+    lms_stream_meta_t meta;
+    meta.flushPartialPacket = true;
+    meta.timestamp = 0;
+    meta.waitForTimestamp = false;
+
+    if (m_interpolate == 1)
+    {
+        num_sent = LMS_SendStream(&m_tx_stream, buffi16, numSamples, &meta, 1000);
     }
 
-    if (m_interpolate > 1) { // We upsample (1 0 0 0), low pass filter is done by FIR
-        interpolatebuf.resize(m_interpolate * numSamples);
-        for (size_t i = 0; i < numSamples; i++) {
-            interpolatebuf[i * m_interpolate] = buf[i];
-            for (size_t j = 1; j < m_interpolate; j++)
-                interpolatebuf[i * m_interpolate + j] = complexf(0, 0);
-        }
-        num_sent = LMS_SendStream(&m_tx_stream, interpolatebuf.data(), numSamples * m_interpolate, NULL, 1000);
-    }
+    
 
-    if (num_sent == 0) {
+    if (num_sent == 0)
+    {
         etiLog.level(info) << "Lime: zero samples sent" << num_sent;
     }
-    else if (num_sent == -1) {
+    else if (num_sent == -1)
+    {
         etiLog.level(error) << "Error sending LimeSDR stream: %s " << LMS_GetLastErrorMessage();
     }
 
