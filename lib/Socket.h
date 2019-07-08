@@ -162,7 +162,7 @@ class TCPSocket {
         TCPSocket& operator=(TCPSocket&& other);
 
         bool valid(void) const;
-        void connect(const std::string& hostname, int port);
+        void connect(const std::string& hostname, int port, bool nonblock = false);
         void listen(int port, const std::string& name);
         void close(void);
 
