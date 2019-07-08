@@ -2,7 +2,7 @@
    Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010, 2011 Her Majesty
    the Queen in Right of Canada (Communications Research Center Canada)
 
-   Copyright (C) 2018
+   Copyright (C) 2019
    Matthias P. Braendli, matthias.braendli@mpb.li
 
     http://opendigitalradio.org
@@ -38,9 +38,6 @@
 #include "SubchannelSource.h"
 #include "TimestampDecoder.h"
 #include "lib/edi/ETIDecoder.hpp"
-#ifdef HAVE_EDI
-#  include "lib/UdpSocket.h"
-#endif
 
 #include <vector>
 #include <memory>
@@ -211,9 +208,9 @@ class EdiTransport {
 
         enum class Proto { UDP, TCP };
         Proto m_proto;
-        UdpReceiver m_udp_rx;
+        Socket::UDPReceiver m_udp_rx;
         std::vector<uint8_t> m_tcpbuffer;
-        TCPClient m_tcpclient;
+        Socket::TCPClient m_tcpclient;
         EdiDecoder::ETIDecoder& m_decoder;
 };
 #endif

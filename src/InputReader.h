@@ -144,7 +144,7 @@ class InputTcpReader : public InputReader
         virtual std::string GetPrintableInfo() const override;
 
     private:
-        TCPClient m_tcpclient;
+        Socket::TCPClient m_tcpclient;
         std::string m_uri;
 };
 

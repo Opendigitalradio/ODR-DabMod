@@ -528,8 +528,6 @@ odr_dabmod_CXXFLAGS = -Wall -Isrc -Ilib -std=c++11 \
 odr_dabmod_LDADD    = $(FFT_LDADD)
 odr_dabmod_SOURCES  = src/DabMod.cpp \
 					  src/PcDebug.h \
-					  src/Socket.h \
-					  src/Socket.cpp \
 					  src/DabModulator.cpp \
 					  src/DabModulator.h \
 					  src/Buffer.cpp \
@@ -578,7 +576,6 @@ odr_dabmod_SOURCES  = src/DabMod.cpp \
 					  src/ConvEncoder.h \
 					  src/TimeInterleaver.cpp \
 					  src/TimeInterleaver.h \
-					  src/ThreadsafeQueue.h \
 					  src/Log.cpp \
 					  src/Log.h \
 					  src/RemoteControl.cpp \
@@ -591,6 +588,9 @@ odr_dabmod_SOURCES  = src/DabMod.cpp \
 					  lib/INIReader.h \
 					  lib/crc.h \
 					  lib/crc.c \
+					  lib/Socket.h \
+					  lib/Socket.cpp \
+					  lib/ThreadsafeQueue.h \
 					  lib/fec/char.h \
 					  lib/fec/decode_rs_char.c \
 					  lib/fec/decode_rs.h \
@@ -655,9 +655,5 @@ odr_dabmod_SOURCES += lib/edi/buffer_unpack.hpp \
 					  lib/edi/ETIDecoder.hpp \
 					  lib/edi/ETIDecoder.cpp \
 					  lib/edi/PFT.hpp \
-					  lib/edi/PFT.cpp \
-					  lib/UdpSocket.h \
-					  lib/UdpSocket.cpp \
-					  lib/InetAddress.h \
-					  lib/InetAddress.cpp
+					  lib/edi/PFT.cpp
 endif
