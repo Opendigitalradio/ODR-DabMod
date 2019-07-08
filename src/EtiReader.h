@@ -115,7 +115,7 @@ private:
 /* The EdiReader extracts the necessary data using the EDI input library in
  * lib/edi
  */
-class EdiReader : public EtiSource, public EdiDecoder::DataCollector
+class EdiReader : public EtiSource, public EdiDecoder::ETIDataCollector
 {
 public:
     EdiReader(double& tist_offset_s);
@@ -139,7 +139,7 @@ public:
     // Update the data for the frame characterisation
     virtual void update_fc_data(const EdiDecoder::eti_fc_data& fc_data);
 
-    virtual void update_fic(const std::vector<uint8_t>& fic);
+    virtual void update_fic(std::vector<uint8_t>&& fic);
 
     virtual void update_err(uint8_t err);
 
@@ -153,7 +153,7 @@ public:
 
     virtual void update_rfu(uint16_t rfu);
 
-    virtual void add_subchannel(const EdiDecoder::eti_stc_data& stc);
+    virtual void add_subchannel(EdiDecoder::eti_stc_data&& stc);
 
     // Gets called by the EDI library to tell us that all data for a frame was given to us
     virtual void assemble(void);

@@ -650,6 +650,8 @@ endif
 
 if COMPILE_EDI
 odr_dabmod_SOURCES += lib/edi/buffer_unpack.hpp \
+					  lib/edi/common.hpp \
+					  lib/edi/common.cpp \
 					  lib/edi/eti.hpp \
 					  lib/edi/eti.cpp \
 					  lib/edi/ETIDecoder.hpp \

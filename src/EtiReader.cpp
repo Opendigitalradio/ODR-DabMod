@@ -238,7 +238,7 @@ int EtiReader::loadEtiData(const Buffer& dataIn)
                 unsigned size = mySources[i]->framesize();
                 PDEBUG("Writting %i bytes of subchannel data\n", size);
                 Buffer subch(size, in);
-                mySources[i]->loadSubchannelData(subch);
+                mySources[i]->loadSubchannelData(move(subch));
                 input_size -= size;
                 framesize -= size;
                 in += size;
@@ -428,12 +428,12 @@ void EdiReader::update_fc_data(const EdiDecoder::eti_fc_data& fc_data)
     m_fc_valid = true;
 }
 
-void EdiReader::update_fic(const std::vector<uint8_t>& fic)
+void EdiReader::update_fic(std::vector<uint8_t>&& fic)
 {
     if (not m_proto_valid) {
         throw std::logic_error("Cannot update FIC before protocol");
     }
-    m_fic = fic;
+    m_fic = move(fic);
 }
 
 void EdiReader::update_edi_time(
@@ -469,7 +469,7 @@ void EdiReader::update_rfu(uint16_t rfu)
     m_rfu = rfu;
 }
 
-void EdiReader::add_subchannel(const EdiDecoder::eti_stc_data& stc)
+void EdiReader::add_subchannel(EdiDecoder::eti_stc_data&& stc)
 {
     if (not m_proto_valid) {
         throw std::logic_error("Cannot add subchannel before protocol");
@@ -485,7 +485,7 @@ void EdiReader::add_subchannel(const EdiDecoder::eti_stc_data& stc)
         throw std::invalid_argument(
                 "EDI: MST data length inconsistent with FIC");
     }
-    source->loadSubchannelData(stc.mst);
+    source->loadSubchannelData(move(stc.mst));
 
     if (m_sources.size() > 64) {
         throw std::invalid_argument("Too many subchannels");

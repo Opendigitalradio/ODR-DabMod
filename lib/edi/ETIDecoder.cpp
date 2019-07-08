@@ -1,5 +1,5 @@
 /*
-   Copyright (C) 2017
+   Copyright (C) 2019
    Matthias P. Braendli, matthias.braendli@mpb.li
 
    http://opendigitalradio.org
@@ -30,242 +30,40 @@ namespace EdiDecoder {
 
 using namespace std;
 
-ETIDecoder::ETIDecoder(DataCollector& data_collector, bool verbose) :
+ETIDecoder::ETIDecoder(ETIDataCollector& data_collector, bool verbose) :
     m_data_collector(data_collector),
-    m_last_seq(0)
+    m_dispatcher(std::bind(&ETIDecoder::packet_completed, this), verbose)
 {
-    m_pft.setVerbose(verbose);
+    using std::placeholders::_1;
+    using std::placeholders::_2;
+    m_dispatcher.register_tag("*ptr",
+            std::bind(&ETIDecoder::decode_starptr, this, _1, _2));
+    m_dispatcher.register_tag("deti",
+            std::bind(&ETIDecoder::decode_deti, this, _1, _2));
+    m_dispatcher.register_tag("est",
+            std::bind(&ETIDecoder::decode_estn, this, _1, _2));
+    m_dispatcher.register_tag("*dmy",
+            std::bind(&ETIDecoder::decode_stardmy, this, _1, _2));
 }
 
 void ETIDecoder::push_bytes(const vector<uint8_t> &buf)
 {
-    copy(buf.begin(), buf.end(), back_inserter(m_input_data));
-
-    while (m_input_data.size() > 2) {
-        if (m_input_data[0] == 'A' and m_input_data[1] == 'F') {
-            const decode_state_t st = decode_afpacket(m_input_data);
-
-            if (st.num_bytes_consumed == 0 and not st.complete) {
-                // We need to refill our buffer
-                break;
-            }
-
-            if (st.num_bytes_consumed) {
-                vector<uint8_t> remaining_data;
-                copy(m_input_data.begin() + st.num_bytes_consumed,
-                        m_input_data.end(),
-                        back_inserter(remaining_data));
-                m_input_data = remaining_data;
-            }
-
-            if (st.complete) {
-                m_data_collector.assemble();
-            }
-
-        }
-        else if (m_input_data[0] == 'P' and m_input_data[1] == 'F') {
-            PFT::Fragment fragment;
-            const size_t fragment_bytes = fragment.loadData(m_input_data);
-
-            if (fragment_bytes == 0) {
-                // We need to refill our buffer
-                break;
-            }
-
-            vector<uint8_t> remaining_data;
-            copy(m_input_data.begin() + fragment_bytes,
-                    m_input_data.end(),
-                    back_inserter(remaining_data));
-            m_input_data = remaining_data;
-
-            if (fragment.isValid()) {
-                m_pft.pushPFTFrag(fragment);
-            }
-
-            auto af = m_pft.getNextAFPacket();
-            if (not af.empty()) {
-                decode_state_t st = decode_afpacket(af);
-
-                if (st.complete) {
-                    m_data_collector.assemble();
-                }
-            }
-
-        }
-        else {
-            etiLog.log(warn,"Unknown %c!", *m_input_data.data());
-            m_input_data.erase(m_input_data.begin());
-        }
-    }
+    m_dispatcher.push_bytes(buf);
 }
 
 void ETIDecoder::push_packet(const vector<uint8_t> &buf)
 {
-    if (buf.size() < 2) {
-        throw std::invalid_argument("Not enough bytes to read EDI packet header");
-    }
-
-    if (buf[0] == 'A' and buf[1] == 'F') {
-        const decode_state_t st = decode_afpacket(buf);
-
-        if (st.complete) {
-            m_data_collector.assemble();
-        }
-
-    }
-    else if (buf[0] == 'P' and buf[1] == 'F') {
-        PFT::Fragment fragment;
-        fragment.loadData(buf);
-
-        if (fragment.isValid()) {
-            m_pft.pushPFTFrag(fragment);
-        }
-
-        auto af = m_pft.getNextAFPacket();
-        if (not af.empty()) {
-            const decode_state_t st = decode_afpacket(af);
-
-            if (st.complete) {
-                m_data_collector.assemble();
-            }
-        }
-    }
-    else {
-        const char packettype[3] = {(char)buf[0], (char)buf[1], '\0'};
-        std::stringstream ss;
-        ss << "Unknown EDI packet ";
-        ss << packettype;
-        throw std::invalid_argument(ss.str());
-    }
+    m_dispatcher.push_packet(buf);
 }
 
 void ETIDecoder::setMaxDelay(int num_af_packets)
 {
-    m_pft.setMaxDelay(num_af_packets);
+    m_dispatcher.setMaxDelay(num_af_packets);
 }
 
 #define AFPACKET_HEADER_LEN 10 // includes SYNC
 
-ETIDecoder::decode_state_t ETIDecoder::decode_afpacket(
-        const std::vector<uint8_t> &input_data)
-{
-    if (input_data.size() < AFPACKET_HEADER_LEN) {
-        return {false, 0};
-    }
-
-    // read length from packet
-    uint32_t taglength = read_32b(input_data.begin() + 2);
-    uint16_t seq = read_16b(input_data.begin() + 6);
-
-    const size_t crclength = 2;
-    if (input_data.size() < AFPACKET_HEADER_LEN + taglength + crclength) {
-        return {false, 0};
-    }
-
-    if (m_last_seq + 1 != seq) {
-        etiLog.level(warn) << "EDI AF Packet sequence error, " << seq;
-    }
-    m_last_seq = seq;
-
-    bool has_crc = (input_data[8] & 0x80) ? true : false;
-    uint8_t major_revision = (input_data[8] & 0x70) >> 4;
-    uint8_t minor_revision = input_data[8] & 0x0F;
-    if (major_revision != 1 or minor_revision != 0) {
-        throw invalid_argument("EDI AF Packet has wrong revision " +
-                to_string(major_revision) + "." + to_string(minor_revision));
-    }
-    uint8_t pt = input_data[9];
-    if (pt != 'T') {
-        // only support Tag
-        return {false, 0};
-    }
-
-
-    if (not has_crc) {
-        throw invalid_argument("AF packet not supported, has no CRC");
-    }
-
-    uint16_t crc = 0xffff;
-    for (size_t i = 0; i < AFPACKET_HEADER_LEN + taglength; i++) {
-        crc = crc16(crc, &input_data[i], 1);
-    }
-    crc ^= 0xffff;
-
-    uint16_t packet_crc = read_16b(input_data.begin() + AFPACKET_HEADER_LEN + taglength);
-
-    if (packet_crc != crc) {
-        throw invalid_argument(
-                "AF Packet crc wrong");
-    }
-    else {
-        vector<uint8_t> payload(taglength);
-        copy(input_data.begin() + AFPACKET_HEADER_LEN,
-                input_data.begin() + AFPACKET_HEADER_LEN + taglength,
-                payload.begin());
-
-        return {decode_tagpacket(payload),
-            AFPACKET_HEADER_LEN + taglength + 2};
-    }
-}
-
-bool ETIDecoder::decode_tagpacket(const vector<uint8_t> &payload)
-{
-    size_t length = 0;
-
-    bool success = true;
-
-    for (size_t i = 0; i + 8 < payload.size(); i += 8 + length) {
-        char tag_sz[5];
-        tag_sz[4] = '\0';
-        copy(payload.begin() + i, payload.begin() + i + 4, tag_sz);
-
-        string tag(tag_sz);
-
-        uint32_t taglength = read_32b(payload.begin() + i + 4);
-
-        if (taglength % 8 != 0) {
-            etiLog.log(warn, "Invalid tag length!");
-            break;
-        }
-        taglength /= 8;
-
-        length = taglength;
-
-        vector<uint8_t> tag_value(taglength);
-        copy(   payload.begin() + i+8,
-                payload.begin() + i+8+taglength,
-                tag_value.begin());
-
-        bool tagsuccess = false;
-        if (tag == "*ptr") {
-            tagsuccess = decode_starptr(tag_value);
-        }
-        else if (tag == "deti") {
-            tagsuccess = decode_deti(tag_value);
-        }
-        else if (tag.substr(0, 3) == "est") {
-            uint8_t n = tag_sz[3];
-            tagsuccess = decode_estn(tag_value, n);
-        }
-        else if (tag == "*dmy") {
-            tagsuccess = decode_stardmy(tag_value);
-        }
-        else {
-            etiLog.log(warn, "Unknown TAG %s", tag.c_str());
-            break;
-        }
-
-        if (not tagsuccess) {
-            etiLog.log(warn, "Error decoding TAG %s", tag.c_str());
-            success = tagsuccess;
-            break;
-        }
-    }
-
-    return success;
-}
-
-bool ETIDecoder::decode_starptr(const vector<uint8_t> &value)
+bool ETIDecoder::decode_starptr(const vector<uint8_t> &value, uint16_t)
 {
     if (value.size() != 0x40 / 8) {
         etiLog.log(warn, "Incorrect length %02lx for *PTR", value.size());
@@ -285,7 +83,7 @@ bool ETIDecoder::decode_starptr(const vector<uint8_t> &value)
     return true;
 }
 
-bool ETIDecoder::decode_deti(const vector<uint8_t> &value)
+bool ETIDecoder::decode_deti(const vector<uint8_t> &value, uint16_t)
 {
     /*
     uint16_t detiHeader = fct | (fcth << 8) | (rfudf << 13) | (ficf << 14) | (atstf << 15);
@@ -364,7 +162,7 @@ bool ETIDecoder::decode_deti(const vector<uint8_t> &value)
                 fic.begin());
         i += fic_length;
 
-        m_data_collector.update_fic(fic);
+        m_data_collector.update_fic(move(fic));
     }
 
     if (rfudf) {
@@ -385,7 +183,7 @@ bool ETIDecoder::decode_deti(const vector<uint8_t> &value)
     return true;
 }
 
-bool ETIDecoder::decode_estn(const vector<uint8_t> &value, uint8_t n)
+bool ETIDecoder::decode_estn(const vector<uint8_t> &value, uint16_t n)
 {
     uint32_t sstc = read_24b(value.begin());
 
@@ -404,14 +202,19 @@ bool ETIDecoder::decode_estn(const vector<uint8_t> &value, uint8_t n)
             value.end(),
             back_inserter(stc.mst));
 
-    m_data_collector.add_subchannel(stc);
+    m_data_collector.add_subchannel(move(stc));
 
     return true;
 }
 
-bool ETIDecoder::decode_stardmy(const vector<uint8_t>& /*value*/)
+bool ETIDecoder::decode_stardmy(const vector<uint8_t>& /*value*/, uint16_t)
 {
     return true;
+}
+
+void ETIDecoder::packet_completed()
+{
+    m_data_collector.assemble();
 }
 
 }

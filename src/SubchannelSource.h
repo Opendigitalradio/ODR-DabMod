@@ -59,7 +59,7 @@ public:
     size_t protectionOption() const;
     const std::vector<PuncturingRule>& get_rules() const;
 
-    void loadSubchannelData(const Buffer& data);
+    void loadSubchannelData(Buffer&& data);
     int process(Buffer* outputData);
     const char* name() { return "SubchannelSource"; }
 
