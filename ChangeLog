@@ -1,6 +1,15 @@
 This file contains information about the changes done to
 ODR-DabMod in this repository
 
+2019-07-08: Matthias P. Braendli <matthias@mpb.li>
+	(v2.3.1):
+		Add analog bandwidth setting for UHD and SoapySDR outputs.
+		Implement 10s check for ZMQ input, resetting the socket if no
+		data arrives.
+		Fix compilation against UHD 3.14.
+		Add EDI-over-TCP input.
+		Other minor fixes for GUI and ODR-DabMod.
+
 2019-01-23: Matthias P. Braendli <matthias@mpb.li>
 	(v2.3.0):
 		Many improvements on GUI and DPDCE: It is now possible
