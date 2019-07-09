@@ -34,22 +34,37 @@ matrix:
             - g++-9
 
     - env: MATRIX_EVAL="CC=gcc-9 CXX=g++-9" CONF="--disable-output-uhd --enable-output-raw"
+      os: linux
+      dist: xenial
+      sudo: required
       compiler: gcc
       addons: *linuxaddons
 
     - env: MATRIX_EVAL="CC=gcc-9 CXX=g++-9" CONF="--disable-output-uhd --disable-native"
+      os: linux
+      dist: xenial
+      sudo: required
       compiler: gcc
       addons: *linuxaddons
 
     - env: MATRIX_EVAL="CC=gcc-9 CXX=g++-9" CONF="--disable-output-uhd --enable-edi"
+      os: linux
+      dist: xenial
+      sudo: required
       compiler: gcc
       addons: *linuxaddons
 
     - env: MATRIX_EVAL="CC=gcc-9 CXX=g++-9" CONF="--disable-output-uhd --enable-trace"
+      os: linux
+      dist: xenial
+      sudo: required
       compiler: gcc
       addons: *linuxaddons
 
     - env: MATRIX_EVAL="CC=gcc-9 CXX=g++-9" CONF="--enable-easydabv3 --disable-output-uhd --enable-fast-math --disable-native"
+      os: linux
+      dist: xenial
+      sudo: required
       compiler: gcc
       addons: *linuxaddons
 
