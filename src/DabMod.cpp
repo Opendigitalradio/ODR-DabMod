@@ -37,6 +37,7 @@
 #include <cstdlib>
 #include <stdexcept>
 #include <cstdio>
+#include <cstring>
 #include <cstddef>
 #include <sys/stat.h>
 #include <signal.h>
