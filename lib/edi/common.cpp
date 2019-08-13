@@ -25,18 +25,31 @@
 #include <iomanip>
 #include <sstream>
 #include <cassert>
+#include <cmath>
 #include <cstdio>
 
 namespace EdiDecoder {
 
 using namespace std;
 
+bool frame_timestamp_t::valid() const
+{
+    return tsta != 0xFFFFFF;
+}
+
 string frame_timestamp_t::to_string() const
 {
     const time_t seconds_in_unix_epoch = to_unix_epoch();
 
     stringstream ss;
-    ss << "Timestamp: " << std::put_time(std::gmtime(&seconds_in_unix_epoch), "%c %Z");
+    if (valid()) {
+        ss << "Timestamp: ";
+    }
+    else {
+        ss << "Timestamp not valid: ";
+    }
+    ss << std::put_time(std::gmtime(&seconds_in_unix_epoch), "%c %Z") <<
+        " + " << ((double)tsta / 16384000.0);
     return ss.str();
 }
 
@@ -46,6 +59,16 @@ time_t frame_timestamp_t::to_unix_epoch() const
     // Convert using
     // TZ=UTC python -c 'import datetime; print(datetime.datetime(2000,1,1,0,0,0,0).strftime("%s"))'
     return 946684800 + seconds - utco;
+}
+
+std::chrono::system_clock::time_point frame_timestamp_t::to_system_clock() const
+{
+    auto ts = chrono::system_clock::from_time_t(to_unix_epoch());
+
+    // PPS offset in seconds = tsta / 16384000
+    ts += chrono::nanoseconds(std::lrint(tsta / 0.016384));
+
+    return ts;
 }
 
 
@@ -179,7 +202,7 @@ decode_state_t TagDispatcher::decode_afpacket(
         return {false, 0};
     }
 
-    if (m_last_seq + (uint16_t)1 != seq) {
+    if (m_last_seq + 1 != seq) {
         etiLog.level(warn) << "EDI AF Packet sequence error, " << seq;
     }
     m_last_seq = seq;

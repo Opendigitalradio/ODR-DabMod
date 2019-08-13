@@ -23,6 +23,7 @@
 #include "PFT.hpp"
 #include <functional>
 #include <map>
+#include <chrono>
 #include <string>
 #include <vector>
 #include <cstddef>
@@ -33,9 +34,12 @@ namespace EdiDecoder {
 struct frame_timestamp_t {
     uint32_t seconds = 0;
     uint32_t utco = 0;
+    uint32_t tsta = 0; // According to EN 300 797 Annex B
 
+    bool valid() const;
     std::string to_string() const;
     time_t to_unix_epoch() const;
+    std::chrono::system_clock::time_point to_system_clock() const;
 };
 
 struct decode_state_t {
