@@ -30,6 +30,7 @@
 #endif
 
 #include <cstdint>
+#include <algorithm>
 
 #include "INIReader.h"
 
