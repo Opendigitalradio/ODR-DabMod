@@ -24,10 +24,10 @@
 
 #pragma once
 
-#include <stdint.h>
+#include <cstdint>
 #define PACKED __attribute__ ((packed))
 
-#include <time.h>
+#include <ctime>
 
 namespace EdiDecoder {
 

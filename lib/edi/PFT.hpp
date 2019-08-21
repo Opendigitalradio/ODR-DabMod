@@ -21,10 +21,11 @@
  */
 
 #pragma once
-#include <stdio.h>
+#include <cstdio>
+#include <cstdint>
 #include <vector>
 #include <map>
-#include <stdint.h>
+#include <string>
 
 namespace EdiDecoder {
 namespace PFT {

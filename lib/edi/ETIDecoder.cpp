@@ -22,7 +22,7 @@
 #include "buffer_unpack.hpp"
 #include "crc.h"
 #include "Log.h"
-#include <stdio.h>
+#include <cstdio>
 #include <cassert>
 #include <sstream>
 
