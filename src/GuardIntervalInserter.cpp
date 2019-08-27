@@ -26,7 +26,8 @@
 
 #include "GuardIntervalInserter.h"
 #include "PcDebug.h"
-#include <string.h>
+#include <cstring>
+#include <cassert>
 #include <stdexcept>
 #include <complex>
 #include <mutex>
