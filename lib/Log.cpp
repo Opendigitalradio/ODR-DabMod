@@ -34,12 +34,23 @@
 
 using namespace std;
 
-/* etiLog is a singleton used in all parts of the program to output log messages.
- */
-Logger etiLog;
+
+Logger::Logger()
+{
+    m_io_thread = std::thread(&Logger::io_process, this);
+}
+
+Logger::~Logger() {
+    m_message_queue.trigger_wakeup();
+    m_io_thread.join();
+
+    std::lock_guard<std::mutex> guard(m_backend_mutex);
+    backends.clear();
+}
 
 void Logger::register_backend(std::shared_ptr<LogBackend> backend)
 {
+    std::lock_guard<std::mutex> guard(m_backend_mutex);
     backends.push_back(backend);
 }
 
@@ -75,7 +86,7 @@ void Logger::logstr(log_level_t level, std::string&& message)
 {
     if (level == discard) {
         return;
-	}
+    }
 
     log_message_t m(level, move(message));
     m_message_queue.push(move(m));
@@ -101,13 +112,15 @@ void Logger::io_process()
             message.resize(message.length()-1);
         }
 
-        for (auto &backend : backends) {
-            backend->log(m.level, message);
-        }
+        {
+            std::lock_guard<std::mutex> guard(m_backend_mutex);
+            for (auto &backend : backends) {
+                backend->log(m.level, message);
+            }
 
-        if (m.level != log_level_t::trace) {
-            std::lock_guard<std::mutex> guard(m_cerr_mutex);
-            std::cerr << levels_as_str[m.level] << " " << message << std::endl;
+            if (m.level != log_level_t::trace) {
+                std::cerr << levels_as_str[m.level] << " " << message << std::endl;
+            }
         }
     }
 }

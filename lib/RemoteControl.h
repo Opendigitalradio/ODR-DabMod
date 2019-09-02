@@ -149,6 +149,8 @@ class RemoteControllers {
         std::list<std::shared_ptr<BaseRemoteController> > m_controllers;
 };
 
+/* rcs is a singleton used in all parts of the program to interact with the RC.
+ * It is constructed in Globals.cpp */
 extern RemoteControllers rcs;
 
 /* Implements a Remote controller based on a simple telnet CLI

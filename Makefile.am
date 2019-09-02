@@ -99,6 +99,7 @@ odr_dabmod_SOURCES  = src/DabMod.cpp \
 					  lib/RemoteControl.h \
 					  lib/Log.cpp \
 					  lib/Log.h \
+					  lib/Globals.cpp \
 					  lib/INIReader.h \
 					  lib/crc.h \
 					  lib/crc.c \

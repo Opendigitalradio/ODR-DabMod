@@ -32,8 +32,6 @@
 
 using namespace std;
 
-RemoteControllers rcs;
-
 RemoteControllerTelnet::~RemoteControllerTelnet()
 {
     m_active = false;

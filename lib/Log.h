@@ -133,16 +133,10 @@ struct log_message_t {
 
 class Logger {
     public:
-        Logger() {
-            m_io_thread = std::thread(&Logger::io_process, this);
-        }
-
+        Logger();
         Logger(const Logger& other) = delete;
         const Logger& operator=(const Logger& other) = delete;
-        ~Logger() {
-            m_message_queue.trigger_wakeup();
-            m_io_thread.join();
-        }
+        ~Logger();
 
         void register_backend(std::shared_ptr<LogBackend> backend);
 
@@ -163,9 +157,11 @@ class Logger {
 
         ThreadsafeQueue<log_message_t> m_message_queue;
         std::thread m_io_thread;
-        std::mutex m_cerr_mutex;
+        std::mutex m_backend_mutex;
 };
 
+/* etiLog is a singleton used in all parts of the program to output log messages.
+ * It is constructed in Globals.cpp */
 extern Logger etiLog;
 
 // Accumulate a line of logs, using same syntax as stringstream
