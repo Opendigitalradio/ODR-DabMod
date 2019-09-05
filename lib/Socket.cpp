@@ -381,7 +381,7 @@ bool TCPSocket::valid() const
     return m_sock != -1;
 }
 
-void TCPSocket::connect(const std::string& hostname, int port)
+void TCPSocket::connect(const std::string& hostname, int port, bool nonblock)
 {
     if (m_sock != INVALID_SOCKET) {
         throw std::logic_error("You may only connect an invalid TCPSocket");
@@ -415,10 +415,21 @@ void TCPSocket::connect(const std::string& hostname, int port)
         if (sfd == -1)
             continue;
 
+        if (nonblock) {
+            int flags = fcntl(sfd, F_GETFL);
+            if (flags == -1) {
+                std::string errstr(strerror(errno));
+                throw std::runtime_error("TCP: Could not get socket flags: " + errstr);
+            }
+
+            if (fcntl(sfd, F_SETFL, flags | O_NONBLOCK) == -1) {
+                std::string errstr(strerror(errno));
+                throw std::runtime_error("TCP: Could not set O_NONBLOCK: " + errstr);
+            }
+        }
+
         int ret = ::connect(sfd, rp->ai_addr, rp->ai_addrlen);
         if (ret != -1 or (ret == -1 and errno == EINPROGRESS)) {
-            // As the TCPClient could set the socket to nonblocking, we
-            // must handle EINPROGRESS here
             m_sock = sfd;
             break;
         }
@@ -673,9 +684,6 @@ ssize_t TCPClient::recv(void *buffer, size_t length, int flags, int timeout_ms)
 
         if (ret == 0) {
             m_sock.close();
-
-            TCPSocket newsock;
-            m_sock = std::move(newsock);
             reconnect();
         }
 
@@ -693,13 +701,9 @@ ssize_t TCPClient::recv(void *buffer, size_t length, int flags, int timeout_ms)
 
 void TCPClient::reconnect()
 {
-    int flags = fcntl(m_sock.m_sock, F_GETFL);
-    if (fcntl(m_sock.m_sock, F_SETFL, flags | O_NONBLOCK) == -1) {
-        std::string errstr(strerror(errno));
-        throw std::runtime_error("TCP: Could not set O_NONBLOCK: " + errstr);
-    }
-
-    m_sock.connect(m_hostname, m_port);
+    TCPSocket newsock;
+    m_sock = std::move(newsock);
+    m_sock.connect(m_hostname, m_port, true);
 }
 
 TCPConnection::TCPConnection(TCPSocket&& sock) :
