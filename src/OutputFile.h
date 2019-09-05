@@ -33,10 +33,11 @@
 
 #include "ModPlugin.h"
 #include "EtiReader.h"
+#include "TimestampDecoder.h"
 
 #include <string>
-#include <stdio.h>
-#include <sys/types.h>
+#include <cstdio>
+#include <cstdint>
 #include <memory>
 
 class OutputFile : public ModOutput, public ModMetadata
@@ -52,6 +53,7 @@ public:
 
 protected:
     bool myShowMetadata = false;
+    frame_timestamp myLastTimestamp;
     std::string myFilename;
 
     struct FILEDeleter{ void operator()(FILE* fd){ if (fd) fclose(fd); }};
