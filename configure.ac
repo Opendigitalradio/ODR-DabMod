@@ -49,9 +49,6 @@ AC_ARG_ENABLE([trace],
 AC_ARG_ENABLE([zeromq],
         [AS_HELP_STRING([--disable-zeromq], [Disable ZeroMQ input, output and remote control])],
         [], [enable_zeromq=yes])
-AC_ARG_ENABLE([edi],
-        [AS_HELP_STRING([--enable-edi], [Enable EDI input])],
-        [], [enable_edi=no])
 AC_ARG_ENABLE([native],
         [AS_HELP_STRING([--disable-native], [Do not compile with -march=native])],
         [], [enable_native=yes])
@@ -123,11 +120,6 @@ AS_IF([test "x$enable_output_uhd" = "xyes"],
 
 AS_IF([test "x$enable_soapysdr" = "xyes"],
       [AC_DEFINE(HAVE_SOAPYSDR, [1], [Define if SoapySDR output is enabled])])
-
-AS_IF([test "x$enable_edi" = "xyes"],
-      [AC_DEFINE(HAVE_EDI, [1], [Define if EDI input is enabled]) ])
-
-AM_CONDITIONAL([COMPILE_EDI], [test "x$enable_edi" = "xyes"])
 
 AS_IF([test "x$enable_easydabv3" = "xyes"],
       AC_DEFINE(BUILD_FOR_EASYDABV3, [1], [Define if we are building for EasyDABv3]))

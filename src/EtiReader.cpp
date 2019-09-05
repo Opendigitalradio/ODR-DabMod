@@ -312,7 +312,6 @@ uint32_t EtiReader::getPPSOffset()
     return timestamp;
 }
 
-#ifdef HAVE_EDI
 EdiReader::EdiReader(
         double& tist_offset_s) :
     m_timestamp_decoder(tist_offset_s)
@@ -654,4 +653,15 @@ bool EdiTransport::rxPacket()
     }
     throw logic_error("Incomplete rxPacket implementation!");
 }
-#endif // HAVE_EDI
+
+EdiInput::EdiInput(double& tist_offset_s, float edi_max_delay_ms) :
+    ediReader(tist_offset_s),
+    decoder(ediReader, false),
+    ediTransport(decoder)
+{
+    if (edi_max_delay_ms > 0.0f) {
+        // setMaxDelay wants number of AF packets, which correspond to 24ms ETI frames
+        decoder.setMaxDelay(lroundf(edi_max_delay_ms / 24.0f));
+    }
+}
+

@@ -47,13 +47,6 @@ matrix:
       compiler: gcc
       addons: *linuxaddons
 
-    - env: MATRIX_EVAL="CC=gcc-9 CXX=g++-9" CONF="--disable-output-uhd --enable-edi"
-      os: linux
-      dist: xenial
-      sudo: required
-      compiler: gcc
-      addons: *linuxaddons
-
     - env: MATRIX_EVAL="CC=gcc-9 CXX=g++-9" CONF="--disable-output-uhd --enable-trace"
       os: linux
       dist: xenial

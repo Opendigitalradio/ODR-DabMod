@@ -86,6 +86,7 @@ struct mod_settings_t {
     Output::SDRDeviceConfig sdr_device_config;
 #endif
 
+    bool showProcessTime = true;
 };
 
 void parse_args(int argc, char **argv, mod_settings_t& mod_settings);

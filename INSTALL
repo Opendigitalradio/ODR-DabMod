@@ -32,7 +32,6 @@ The configure script can be launch with a variety of options:
                         This is meant for distribution package maintainers who want to
                         use their own march option, and for people running into compilation
                         issues due to -march=native. (e.g. GCC bug 70132 on ARM systems)
- --enable-edi           Enable the EDI input.
 
 Debugging options: You should not enable any debug option if you need good performance.
  --enable-trace         Create debugging files for each DSP block for data analysis

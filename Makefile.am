@@ -114,7 +114,16 @@ odr_dabmod_SOURCES  = src/DabMod.cpp \
 					  lib/fec/fec.h \
 					  lib/fec/init_rs_char.c \
 					  lib/fec/init_rs.h \
-					  lib/fec/rs-common.h
+					  lib/fec/rs-common.h \
+					  lib/edi/buffer_unpack.hpp \
+					  lib/edi/common.hpp \
+					  lib/edi/common.cpp \
+					  lib/edi/eti.hpp \
+					  lib/edi/eti.cpp \
+					  lib/edi/ETIDecoder.hpp \
+					  lib/edi/ETIDecoder.cpp \
+					  lib/edi/PFT.hpp \
+					  lib/edi/PFT.cpp
 
 if !COMPILE_FOR_EASYDABV3
 odr_dabmod_SOURCES += \
@@ -161,14 +170,3 @@ odr_dabmod_SOURCES += \
 odr_dabmod_LDADD   += $(UHD_LIBS)
 endif
 
-if COMPILE_EDI
-odr_dabmod_SOURCES += lib/edi/buffer_unpack.hpp \
-					  lib/edi/common.hpp \
-					  lib/edi/common.cpp \
-					  lib/edi/eti.hpp \
-					  lib/edi/eti.cpp \
-					  lib/edi/ETIDecoder.hpp \
-					  lib/edi/ETIDecoder.cpp \
-					  lib/edi/PFT.hpp \
-					  lib/edi/PFT.cpp
-endif

@@ -46,9 +46,6 @@ static void printHeader()
 #if defined(HAVE_ZEROMQ)
         "zeromq " <<
 #endif
-#ifdef HAVE_EDI
-        "EDI " <<
-#endif
 #if defined(HAVE_OUTPUT_UHD)
         "output_uhd " <<
 #endif

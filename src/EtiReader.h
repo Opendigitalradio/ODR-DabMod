@@ -111,7 +111,6 @@ private:
     std::vector<std::shared_ptr<SubchannelSource> > mySources;
 };
 
-#ifdef HAVE_EDI
 /* The EdiReader extracts the necessary data using the EDI input library in
  * lib/edi
  */
@@ -213,5 +212,13 @@ class EdiTransport {
         Socket::TCPClient m_tcpclient;
         EdiDecoder::ETIDecoder& m_decoder;
 };
-#endif
+
+// EdiInput wraps an EdiReader, an EdiDecoder::ETIDecoder and an EdiTransport
+class EdiInput {
+    public:
+        EdiInput(double& tist_offset_s, float edi_max_delay_ms);
+        EdiReader ediReader;
+        EdiDecoder::ETIDecoder decoder;
+        EdiTransport ediTransport;
+};
 
