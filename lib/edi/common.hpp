@@ -38,9 +38,14 @@ struct frame_timestamp_t {
 
     bool valid() const;
     std::string to_string() const;
-    time_t to_unix_epoch() const;
+    std::time_t to_unix_epoch() const;
     std::chrono::system_clock::time_point to_system_clock() const;
+
+    double diff_ms(const frame_timestamp_t& other) const;
+
+    static frame_timestamp_t from_unix_epoch(std::time_t time, uint32_t tai_utc_offset, uint32_t tsta);
 };
+
 
 struct decode_state_t {
     decode_state_t(bool _complete, size_t _num_bytes_consumed) :

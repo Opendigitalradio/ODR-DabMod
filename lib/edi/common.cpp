@@ -61,6 +61,25 @@ time_t frame_timestamp_t::to_unix_epoch() const
     return 946684800 + seconds - utco;
 }
 
+double frame_timestamp_t::diff_ms(const frame_timestamp_t& other) const
+{
+    const double lhs = (double)seconds + (tsta / 16384000.0);
+    const double rhs = (double)other.seconds + (other.tsta / 16384000.0);
+    return lhs - rhs;
+}
+
+frame_timestamp_t frame_timestamp_t::from_unix_epoch(std::time_t time, uint32_t tai_utc_offset, uint32_t tsta)
+{
+    frame_timestamp_t ts;
+
+    const std::time_t posix_timestamp_1_jan_2000 = 946684800;
+
+    ts.utco = tai_utc_offset - 32;
+    ts.seconds = time - posix_timestamp_1_jan_2000 + ts.utco;
+    ts.tsta = tsta;
+    return ts;
+}
+
 std::chrono::system_clock::time_point frame_timestamp_t::to_system_clock() const
 {
     auto ts = chrono::system_clock::from_time_t(to_unix_epoch());
@@ -202,7 +221,7 @@ decode_state_t TagDispatcher::decode_afpacket(
         return {false, 0};
     }
 
-    if (m_last_seq + 1 != seq) {
+    if (m_last_seq + (uint16_t)1 != seq) {
         etiLog.level(warn) << "EDI AF Packet sequence error, " << seq;
     }
     m_last_seq = seq;
