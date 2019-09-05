@@ -32,7 +32,7 @@
 #include <chrono>
 #include <stdexcept>
 #include <cassert>
-
+#include <cmath>
 
 using namespace std;
 
