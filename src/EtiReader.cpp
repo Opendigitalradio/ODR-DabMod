@@ -628,7 +628,10 @@ bool EdiTransport::rxPacket()
             }
         case Proto::TCP:
             {
-                m_tcpbuffer.resize(4096);
+                // The buffer size must be smaller than the size of two AF Packets, because otherwise
+                // the EDI decoder decodes two in a row and discards the first. This leads to ETI FCT
+                // discontinuity.
+                m_tcpbuffer.resize(512);
                 const int timeout_ms = 1000;
                 try {
                     ssize_t ret = m_tcpclient.recv(m_tcpbuffer.data(), m_tcpbuffer.size(), 0, timeout_ms);
