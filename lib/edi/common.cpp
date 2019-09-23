@@ -339,4 +339,17 @@ bool TagDispatcher::decode_tagpacket(const vector<uint8_t> &payload)
     return success;
 }
 
+odr_version_data parse_odr_version_data(const std::vector<uint8_t>& data)
+{
+    if (data.size() < sizeof(uint32_t)) {
+        return {};
+    }
+
+    const size_t versionstr_length = data.size() - sizeof(uint32_t);
+    string version(data.begin(), data.begin() + versionstr_length);
+    uint32_t uptime_s = read_32b(data.begin() + versionstr_length);
+
+    return {version, uptime_s};
+}
+
 }

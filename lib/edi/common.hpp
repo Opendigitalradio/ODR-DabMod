@@ -94,4 +94,12 @@ class TagDispatcher {
         std::function<void()> m_af_packet_completed;
 };
 
+// Data carried inside the ODRv EDI TAG
+struct odr_version_data {
+    std::string version;
+    uint32_t uptime_s;
+};
+
+odr_version_data parse_odr_version_data(const std::vector<uint8_t>& data);
+
 }
