@@ -14,9 +14,9 @@ matrix:
       compiler: clang
 
     # GCC and clang builds on Linux
-    - env: MATRIX_EVAL="CC=gcc-6 CXX=g++-6" CONF="--disable-zeromq --disable-output-uhd"
+    - env: MATRIX_EVAL="CC=gcc-9 CXX=g++-9" CONF="--disable-zeromq --disable-output-uhd"
       os: linux
-      dist: trusty
+      dist: xenial
       sudo: required
       compiler: gcc
       addons: &linuxaddons
@@ -25,31 +25,39 @@ matrix:
             - ubuntu-toolchain-r-test
           packages: &packages
             - libzmq3-dev
-            - libzmq3
+            - libzmq5
             - automake
             - libtool
             - libcurl4-openssl-dev
             - libfftw3-dev
             # libuhd-dev is not allowed
-            - g++-6
+            - g++-9
 
-    - env: MATRIX_EVAL="CC=gcc-6 CXX=g++-6" CONF="--disable-output-uhd --enable-output-raw"
+    - env: MATRIX_EVAL="CC=gcc-9 CXX=g++-9" CONF="--disable-output-uhd --enable-output-raw"
+      os: linux
+      dist: xenial
+      sudo: required
       compiler: gcc
       addons: *linuxaddons
 
-    - env: MATRIX_EVAL="CC=gcc-6 CXX=g++-6" CONF="--disable-output-uhd --disable-native"
+    - env: MATRIX_EVAL="CC=gcc-9 CXX=g++-9" CONF="--disable-output-uhd --disable-native"
+      os: linux
+      dist: xenial
+      sudo: required
       compiler: gcc
       addons: *linuxaddons
 
-    - env: MATRIX_EVAL="CC=gcc-6 CXX=g++-6" CONF="--disable-output-uhd --enable-edi"
+    - env: MATRIX_EVAL="CC=gcc-9 CXX=g++-9" CONF="--disable-output-uhd --enable-trace"
+      os: linux
+      dist: xenial
+      sudo: required
       compiler: gcc
       addons: *linuxaddons
 
-    - env: MATRIX_EVAL="CC=gcc-6 CXX=g++-6" CONF="--disable-output-uhd --enable-trace"
-      compiler: gcc
-      addons: *linuxaddons
-
-    - env: MATRIX_EVAL="CC=gcc-6 CXX=g++-6" CONF="--enable-easydabv3 --disable-output-uhd --enable-fast-math --disable-native"
+    - env: MATRIX_EVAL="CC=gcc-9 CXX=g++-9" CONF="--enable-easydabv3 --disable-output-uhd --enable-fast-math --disable-native"
+      os: linux
+      dist: xenial
+      sudo: required
       compiler: gcc
       addons: *linuxaddons
 

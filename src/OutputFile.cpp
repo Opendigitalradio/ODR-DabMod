@@ -27,12 +27,12 @@
 #include "OutputFile.h"
 #include "PcDebug.h"
 #include "Log.h"
-#include "TimestampDecoder.h"
 
 #include <string>
-#include <assert.h>
+#include <chrono>
 #include <stdexcept>
-
+#include <cassert>
+#include <cmath>
 
 using namespace std;
 
@@ -53,7 +53,6 @@ OutputFile::OutputFile(const std::string& filename, bool show_metadata) :
     myFile.reset(fd);
 }
 
-
 int OutputFile::process(Buffer* dataIn)
 {
     PDEBUG("OutputFile::process(%p)\n", dataIn);
@@ -72,8 +71,18 @@ meta_vec_t OutputFile::process_metadata(const meta_vec_t& metadataIn)
     if (myShowMetadata) {
         stringstream ss;
 
+        frame_timestamp first_ts;
+
         for (const auto& md : metadataIn) {
             if (md.ts) {
+                // The following code assumes TM I, where we get called every 96ms.
+                // Support for other transmission modes skipped because this is mostly
+                // debugging code.
+
+                if (md.ts->fp == 0 or md.ts->fp == 4) {
+                    first_ts = *md.ts;
+                }
+
                 ss << " FCT=" << md.ts->fct <<
                     " FP=" << (int)md.ts->fp;
                 if (md.ts->timestamp_valid) {
@@ -90,13 +99,46 @@ meta_vec_t OutputFile::process_metadata(const meta_vec_t& metadataIn)
             }
         }
 
-        if (metadataIn.empty()) {
-            etiLog.level(debug) << "Output File got no mdIn";
+        if (myLastTimestamp.timestamp_valid) {
+            if (first_ts.timestamp_valid) {
+                uint32_t timestamp = myLastTimestamp.timestamp_pps;
+                timestamp += 96 << 14; // Shift 96ms by 14 to Timestamp level 2
+                if (timestamp > 0xf9FFff) {
+                    timestamp -= 0xfa0000; // Substract 16384000, corresponding to one second
+                    myLastTimestamp.timestamp_sec += 1;
+                }
+                myLastTimestamp.timestamp_pps = timestamp;
+
+                if (myLastTimestamp.timestamp_sec != first_ts.timestamp_sec or
+                        myLastTimestamp.timestamp_pps != first_ts.timestamp_pps) {
+                    ss << " TS wrong interval; ";
+                }
+                myLastTimestamp = first_ts;
+            }
+            else {
+                ss << " TS of FP=0 MISSING; ";
+                myLastTimestamp.timestamp_valid = false;
+            }
         }
         else {
-            etiLog.level(debug) << "Output File got metadata: " << ss.str();
+            // Includes invalid and valid cases
+            myLastTimestamp = first_ts;
         }
 
+        if (metadataIn.empty()) {
+            etiLog.level(debug) << "Output File got no metadata";
+        }
+        else {
+            using namespace std::chrono;
+            const auto now = system_clock::now();
+            const int64_t ticks_now = duration_cast<milliseconds>(now.time_since_epoch()).count();
+            //const int64_t first_ts_ticks = first_ts.timestamp_sec * 1000 + first_ts.timestamp_pps / 16384;
+            const int64_t first_ts_ticks = std::llrint(first_ts.get_real_secs() * 1000);
+
+            ss << " DELTA: " << first_ts_ticks - ticks_now << "ms;";
+
+            etiLog.level(debug) << "Output File metadata: " << ss.str();
+        }
     }
     return {};
 }

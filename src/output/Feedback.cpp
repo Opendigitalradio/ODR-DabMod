@@ -200,14 +200,13 @@ void DPDFeedbackServer::ReceiveBurstThread()
 
 void DPDFeedbackServer::ServeFeedback()
 {
-    TCPSocket m_server_sock;
-    m_server_sock.listen(m_port);
+    Socket::TCPSocket m_server_sock;
+    m_server_sock.listen(m_port, "127.0.0.1");
 
     etiLog.level(info) << "DPD Feedback server listening on port " << m_port;
 
     while (m_running) {
-        struct sockaddr_in client;
-        TCPSocket client_sock = m_server_sock.accept_with_timeout(1000, &client);
+        auto client_sock = m_server_sock.accept(1000);
 
         if (not m_running) {
             break;

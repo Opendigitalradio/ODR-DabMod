@@ -145,15 +145,15 @@
       count++;
     }
     if (count != no_eras) {
-      fprintf(stderr, "count = %d no_eras = %d\n lambda(x) is WRONG\n",count,no_eras);
+      printf("count = %d no_eras = %d\n lambda(x) is WRONG\n",count,no_eras);
       count = -1;
       goto finish;
     }
 #if DEBUG >= 2
-    fprintf(stderr, "\n Erasure positions as determined by roots of Eras Loc Poly:\n");
+    printf("\n Erasure positions as determined by roots of Eras Loc Poly:\n");
     for (i = 0; i < count; i++)
-      fprintf(stderr, "%d ", loc[i]);
-    fprintf(stderr, "\n");
+      printf("%d ", loc[i]);
+    printf("\n");
 #endif
 #endif
   }
@@ -227,7 +227,7 @@
       continue; /* Not a root */
     /* store root (index-form) and error location number */
 #if DEBUG>=2
-    fprintf(stderr, "count %d root %d loc %d\n",count,i,k);
+    printf("count %d root %d loc %d\n",count,i,k);
 #endif
     root[count] = i;
     loc[count] = k;
@@ -279,7 +279,7 @@
     }
 #if DEBUG >= 1
     if (den == 0) {
-      fprintf(stderr, "\n ERROR: denominator = 0\n");
+      printf("\n ERROR: denominator = 0\n");
       count = -1;
       goto finish;
     }

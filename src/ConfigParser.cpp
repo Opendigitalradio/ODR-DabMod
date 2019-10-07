@@ -30,6 +30,7 @@
 #endif
 
 #include <cstdint>
+#include <algorithm>
 
 #include "INIReader.h"
 
@@ -143,6 +144,8 @@ static void parse_configfile(
         etiLog.register_backend(make_shared<LogTracer>(trace_filename));
     }
 
+    mod_settings.showProcessTime = pt.GetInteger("log.show_process_time",
+            mod_settings.showProcessTime);
 
     // modulator parameters:
     const string gainMode_setting = pt.Get("modulator.gainmode", "var");

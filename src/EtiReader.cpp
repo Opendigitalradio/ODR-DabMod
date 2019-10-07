@@ -2,7 +2,7 @@
    Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010, 2011 Her Majesty
    the Queen in Right of Canada (Communications Research Center Canada)
 
-   Copyright (C) 2018
+   Copyright (C) 2019
    Matthias P. Braendli, matthias.braendli@mpb.li
 
     http://opendigitalradio.org
@@ -238,7 +238,7 @@ int EtiReader::loadEtiData(const Buffer& dataIn)
                 unsigned size = mySources[i]->framesize();
                 PDEBUG("Writting %i bytes of subchannel data\n", size);
                 Buffer subch(size, in);
-                mySources[i]->loadSubchannelData(subch);
+                mySources[i]->loadSubchannelData(move(subch));
                 input_size -= size;
                 framesize -= size;
                 in += size;
@@ -312,7 +312,6 @@ uint32_t EtiReader::getPPSOffset()
     return timestamp;
 }
 
-#ifdef HAVE_EDI
 EdiReader::EdiReader(
         double& tist_offset_s) :
     m_timestamp_decoder(tist_offset_s)
@@ -428,12 +427,12 @@ void EdiReader::update_fc_data(const EdiDecoder::eti_fc_data& fc_data)
     m_fc_valid = true;
 }
 
-void EdiReader::update_fic(const std::vector<uint8_t>& fic)
+void EdiReader::update_fic(std::vector<uint8_t>&& fic)
 {
     if (not m_proto_valid) {
         throw std::logic_error("Cannot update FIC before protocol");
     }
-    m_fic = fic;
+    m_fic = move(fic);
 }
 
 void EdiReader::update_edi_time(
@@ -469,7 +468,7 @@ void EdiReader::update_rfu(uint16_t rfu)
     m_rfu = rfu;
 }
 
-void EdiReader::add_subchannel(const EdiDecoder::eti_stc_data& stc)
+void EdiReader::add_subchannel(EdiDecoder::eti_stc_data&& stc)
 {
     if (not m_proto_valid) {
         throw std::logic_error("Cannot add subchannel before protocol");
@@ -485,7 +484,7 @@ void EdiReader::add_subchannel(const EdiDecoder::eti_stc_data& stc)
         throw std::invalid_argument(
                 "EDI: MST data length inconsistent with FIC");
     }
-    source->loadSubchannelData(stc.mst);
+    source->loadSubchannelData(move(stc.mst));
 
     if (m_sources.size() > 64) {
         throw std::invalid_argument("Too many subchannels");
@@ -628,7 +627,10 @@ bool EdiTransport::rxPacket()
             }
         case Proto::TCP:
             {
-                m_tcpbuffer.resize(4096);
+                // The buffer size must be smaller than the size of two AF Packets, because otherwise
+                // the EDI decoder decodes two in a row and discards the first. This leads to ETI FCT
+                // discontinuity.
+                m_tcpbuffer.resize(512);
                 const int timeout_ms = 1000;
                 try {
                     ssize_t ret = m_tcpclient.recv(m_tcpbuffer.data(), m_tcpbuffer.size(), 0, timeout_ms);
@@ -644,11 +646,22 @@ bool EdiTransport::rxPacket()
                         return true;
                     }
                 }
-                catch (const TCPSocket::Timeout&) {
+                catch (const Socket::TCPSocket::Timeout&) {
                     return false;
                 }
             }
     }
     throw logic_error("Incomplete rxPacket implementation!");
 }
-#endif // HAVE_EDI
+
+EdiInput::EdiInput(double& tist_offset_s, float edi_max_delay_ms) :
+    ediReader(tist_offset_s),
+    decoder(ediReader, false),
+    ediTransport(decoder)
+{
+    if (edi_max_delay_ms > 0.0f) {
+        // setMaxDelay wants number of AF packets, which correspond to 24ms ETI frames
+        decoder.setMaxDelay(lroundf(edi_max_delay_ms / 24.0f));
+    }
+}
+

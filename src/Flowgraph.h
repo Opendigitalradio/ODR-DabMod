@@ -71,7 +71,7 @@ protected:
 #endif
 
     std::shared_ptr<ModPlugin> myPlugin;
-    time_t myProcessTime;
+    time_t myProcessTime = 0;
 };
 
 
@@ -94,7 +94,7 @@ protected:
 class Flowgraph
 {
 public:
-    Flowgraph();
+    Flowgraph(bool showProcessTime);
     virtual ~Flowgraph();
     Flowgraph(const Flowgraph&) = delete;
     Flowgraph& operator=(const Flowgraph&) = delete;
@@ -106,7 +106,8 @@ public:
 protected:
     std::vector<std::shared_ptr<Node> > nodes;
     std::vector<std::shared_ptr<Edge> > edges;
-    time_t myProcessTime;
+    time_t myProcessTime = 0;
+    bool myShowProcessTime;
 };
 
 

@@ -1046,9 +1046,9 @@ size_t SubchannelSource::protectionOption() const
     return 0;
 }
 
-void SubchannelSource::loadSubchannelData(const Buffer& data)
+void SubchannelSource::loadSubchannelData(Buffer&& data)
 {
-    d_buffer = data;
+    d_buffer = std::move(data);
 }
 
 int SubchannelSource::process(Buffer* outputData)

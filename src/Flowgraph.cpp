@@ -43,8 +43,7 @@ using EdgeIterator = std::vector<shared_ptr<Edge> >::iterator;
 
 
 Node::Node(shared_ptr<ModPlugin> plugin) :
-    myPlugin(plugin),
-    myProcessTime(0)
+    myPlugin(plugin)
 {
     PDEBUG("Node::Node(plugin(%s): %p) @ %p\n",
             plugin->name(), plugin.get(), this);
@@ -237,8 +236,8 @@ Edge::~Edge()
 
 
 
-Flowgraph::Flowgraph() :
-    myProcessTime(0)
+Flowgraph::Flowgraph(bool showProcessTime) :
+    myShowProcessTime(showProcessTime)
 {
     PDEBUG("Flowgraph::Flowgraph() @ %p\n", this);
 }
@@ -248,7 +247,7 @@ Flowgraph::~Flowgraph()
 {
     PDEBUG("Flowgraph::~Flowgraph() @ %p\n", this);
 
-    if (myProcessTime) {
+    if (myShowProcessTime and myProcessTime) {
         stringstream ss;
         ss << "Process time:\n";
 

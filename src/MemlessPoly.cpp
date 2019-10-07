@@ -36,7 +36,8 @@
 #include "PcDebug.h"
 #include "Utils.h"
 
-#include <stdio.h>
+#include <cstdio>
+#include <cstring>
 #include <stdexcept>
 #include <string>
 #include <future>

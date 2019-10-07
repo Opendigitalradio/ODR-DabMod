@@ -27,6 +27,7 @@
 #include <iostream>
 #include <fstream>
 #include <string>
+#include <cstring>
 #include "PcDebug.h"
 #include "TimestampDecoder.h"
 #include "Log.h"

@@ -28,8 +28,9 @@
 #include "GainControl.h"
 #include "PcDebug.h"
 
-#include <stdio.h>
+#include <cstdio>
 #include <stdexcept>
+#include <algorithm>
 #include <string>
 
 #ifdef __SSE__

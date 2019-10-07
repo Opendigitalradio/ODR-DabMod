@@ -248,7 +248,6 @@ uint16_t crc16(uint16_t l_crc, const void *lp_data, unsigned l_nb)
 {
     const uint8_t* data = (const uint8_t*)lp_data;
     while (l_nb--) {
-        //fprintf(stdout, "crc 0x%02x 0x%04x\n", *data, l_crc);
         l_crc =
             (l_crc << 8) ^ crc16tab[(l_crc >> 8) ^ *(data++)];
     }

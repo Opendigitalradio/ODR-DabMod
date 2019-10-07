@@ -1,5 +1,5 @@
 /*
-   Copyright (C) 2017
+   Copyright (C) 2019
    Matthias P. Braendli, matthias.braendli@mpb.li
 
    http://opendigitalradio.org
@@ -20,12 +20,12 @@
  */
 #pragma once
 
-#include <stdint.h>
+#include "eti.hpp"
+#include "common.hpp"
+#include <cstdint>
 #include <deque>
 #include <string>
 #include <vector>
-#include "PFT.hpp"
-#include "eti.hpp"
 
 namespace EdiDecoder {
 
@@ -33,7 +33,7 @@ namespace EdiDecoder {
 // EDI.
 //
 // Number of streams is given separately, and frame length
-// is calculated in the DataCollector
+// is calculated in the ETIDataCollector
 struct eti_fc_data {
     bool atstf;
     uint32_t tsta;
@@ -58,10 +58,10 @@ struct eti_stc_data {
 };
 
 /* A class that receives multiplex data must implement the interface described
- * in the DataCollector. This can be e.g. a converter to ETI, or something that
+ * in the ETIDataCollector. This can be e.g. a converter to ETI, or something that
  * prepares data structures for a modulator.
  */
-class DataCollector {
+class ETIDataCollector {
     public:
         // Tell the ETIWriter what EDI protocol we receive in *ptr.
         // This is not part of the ETI data, but is used as check
@@ -73,21 +73,19 @@ class DataCollector {
         // Update the data for the frame characterisation
         virtual void update_fc_data(const eti_fc_data& fc_data) = 0;
 
-        virtual void update_fic(const std::vector<uint8_t>& fic) = 0;
+        virtual void update_fic(std::vector<uint8_t>&& fic) = 0;
 
         virtual void update_err(uint8_t err) = 0;
 
         // In addition to TSTA in ETI, EDI also transports more time
         // stamp information.
-        virtual void update_edi_time(
-                uint32_t utco,
-                uint32_t seconds) = 0;
+        virtual void update_edi_time(uint32_t utco, uint32_t seconds) = 0;
 
         virtual void update_mnsc(uint16_t mnsc) = 0;
 
         virtual void update_rfu(uint16_t rfu) = 0;
 
-        virtual void add_subchannel(const eti_stc_data& stc) = 0;
+        virtual void add_subchannel(eti_stc_data&& stc) = 0;
 
         // Tell the ETIWriter that the AFPacket is complete
         virtual void assemble(void) = 0;
@@ -101,7 +99,7 @@ class DataCollector {
  */
 class ETIDecoder {
     public:
-        ETIDecoder(DataCollector& data_collector, bool verbose);
+        ETIDecoder(ETIDataCollector& data_collector, bool verbose);
 
         /* Push bytes into the decoder. The buf can contain more
          * than a single packet. This is useful when reading from streams
@@ -120,27 +118,16 @@ class ETIDecoder {
         void setMaxDelay(int num_af_packets);
 
     private:
-        struct decode_state_t {
-            decode_state_t(bool _complete, size_t _num_bytes_consumed) :
-                complete(_complete), num_bytes_consumed(_num_bytes_consumed) {}
-            bool complete;
-            size_t num_bytes_consumed;
-        };
+        bool decode_starptr(const std::vector<uint8_t> &value, uint16_t);
+        bool decode_deti(const std::vector<uint8_t> &value, uint16_t);
+        bool decode_estn(const std::vector<uint8_t> &value, uint16_t n);
+        bool decode_stardmy(const std::vector<uint8_t> &value, uint16_t);
 
-        decode_state_t decode_afpacket(const std::vector<uint8_t> &input_data);
-        bool decode_tagpacket(const std::vector<uint8_t> &payload);
-        bool decode_starptr(const std::vector<uint8_t> &value);
-        bool decode_deti(const std::vector<uint8_t> &value);
-        bool decode_estn(const std::vector<uint8_t> &value, uint8_t n);
-        bool decode_stardmy(const std::vector<uint8_t> &value);
+        void packet_completed();
 
-        DataCollector& m_data_collector;
+        ETIDataCollector& m_data_collector;
+        TagDispatcher m_dispatcher;
 
-        PFT::PFT m_pft;
-
-        uint16_t m_last_seq;
-
-        std::vector<uint8_t> m_input_data;
 };
 
 }

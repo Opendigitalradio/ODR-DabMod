@@ -20,7 +20,7 @@
  * -------------------------------------------------------------------
  */
 
-#include <stdio.h>
+#include <cstdio>
 #include <cassert>
 #include <cstring>
 #include <sstream>

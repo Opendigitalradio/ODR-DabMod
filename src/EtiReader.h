@@ -2,7 +2,7 @@
    Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010, 2011 Her Majesty
    the Queen in Right of Canada (Communications Research Center Canada)
 
-   Copyright (C) 2018
+   Copyright (C) 2019
    Matthias P. Braendli, matthias.braendli@mpb.li
 
     http://opendigitalradio.org
@@ -38,9 +38,6 @@
 #include "SubchannelSource.h"
 #include "TimestampDecoder.h"
 #include "lib/edi/ETIDecoder.hpp"
-#ifdef HAVE_EDI
-#  include "lib/UdpSocket.h"
-#endif
 
 #include <vector>
 #include <memory>
@@ -114,11 +111,10 @@ private:
     std::vector<std::shared_ptr<SubchannelSource> > mySources;
 };
 
-#ifdef HAVE_EDI
 /* The EdiReader extracts the necessary data using the EDI input library in
  * lib/edi
  */
-class EdiReader : public EtiSource, public EdiDecoder::DataCollector
+class EdiReader : public EtiSource, public EdiDecoder::ETIDataCollector
 {
 public:
     EdiReader(double& tist_offset_s);
@@ -142,7 +138,7 @@ public:
     // Update the data for the frame characterisation
     virtual void update_fc_data(const EdiDecoder::eti_fc_data& fc_data);
 
-    virtual void update_fic(const std::vector<uint8_t>& fic);
+    virtual void update_fic(std::vector<uint8_t>&& fic);
 
     virtual void update_err(uint8_t err);
 
@@ -156,7 +152,7 @@ public:
 
     virtual void update_rfu(uint16_t rfu);
 
-    virtual void add_subchannel(const EdiDecoder::eti_stc_data& stc);
+    virtual void add_subchannel(EdiDecoder::eti_stc_data&& stc);
 
     // Gets called by the EDI library to tell us that all data for a frame was given to us
     virtual void assemble(void);
@@ -211,10 +207,18 @@ class EdiTransport {
 
         enum class Proto { UDP, TCP };
         Proto m_proto;
-        UdpReceiver m_udp_rx;
+        Socket::UDPReceiver m_udp_rx;
         std::vector<uint8_t> m_tcpbuffer;
-        TCPClient m_tcpclient;
+        Socket::TCPClient m_tcpclient;
         EdiDecoder::ETIDecoder& m_decoder;
 };
-#endif
+
+// EdiInput wraps an EdiReader, an EdiDecoder::ETIDecoder and an EdiTransport
+class EdiInput {
+    public:
+        EdiInput(double& tist_offset_s, float edi_max_delay_ms);
+        EdiReader ediReader;
+        EdiDecoder::ETIDecoder decoder;
+        EdiTransport ediTransport;
+};
 

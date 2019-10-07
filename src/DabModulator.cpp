@@ -132,7 +132,7 @@ int DabModulator::process(Buffer* dataOut)
         const unsigned mode = m_settings.dabMode;
         setMode(mode);
 
-        myFlowgraph = make_shared<Flowgraph>();
+        myFlowgraph = make_shared<Flowgraph>(m_settings.showProcessTime);
         ////////////////////////////////////////////////////////////////
         // CIF data initialisation
         ////////////////////////////////////////////////////////////////

@@ -30,20 +30,20 @@
 #   include <config.h>
 #endif
 
-
 #include "RemoteControl.h"
 #include "ModPlugin.h"
 #include "PcDebug.h"
 #include "ThreadsafeQueue.h"
 
 #include <sys/types.h>
+#include <array>
 #include <complex>
+#include <memory>
+#include <string>
 #include <thread>
 #include <vector>
-#include <time.h>
+#include <ctime>
 #include <cstdio>
-#include <string>
-#include <memory>
 
 #define MEMLESSPOLY_PIPELINE_DELAY 1
 

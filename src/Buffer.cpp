@@ -97,6 +97,9 @@ Buffer& Buffer::operator=(Buffer&& other)
     if (&other != this) {
         m_len = other.m_len;
         m_capacity = other.m_capacity;
+        if (m_data != nullptr) {
+            free(m_data);
+        }
         m_data = other.m_data;
 
         other.m_len = 0;

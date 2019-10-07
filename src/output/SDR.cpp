@@ -314,7 +314,7 @@ void SDR::handle_frame(struct FrameData& frame)
             }
 
             if (expected_sec != tx_second or expected_pps != tx_pps) {
-                etiLog.level(warn) << "OutputSDR: timestamp irregularity!" <<
+                etiLog.level(warn) << "OutputSDR: timestamp irregularity at FCT=" << frame.ts.fct <<
                     std::fixed <<
                     " Expected " <<
                     expected_sec << "+" << (double)expected_pps/16384000.0 <<
@@ -337,7 +337,7 @@ void SDR::handle_frame(struct FrameData& frame)
 
         if (time_spec.get_real_secs() + tx_timeout < device_time) {
             etiLog.level(warn) <<
-                "OutputSDR: Timestamp in the past! offset: " <<
+                "OutputSDR: Timestamp in the past at FCT=" << frame.ts.fct << " offset: " <<
                 std::fixed <<
                 time_spec.get_real_secs() - device_time <<
                 "  (" << device_time << ")"
@@ -349,7 +349,7 @@ void SDR::handle_frame(struct FrameData& frame)
 
         if (time_spec.get_real_secs() > device_time + TIMESTAMP_ABORT_FUTURE) {
             etiLog.level(error) <<
-                "OutputSDR: Timestamp way too far in the future! offset: " <<
+                "OutputSDR: Timestamp way too far in the future at FCT=" << frame.ts.fct << " offset: " <<
                 std::fixed <<
                 time_spec.get_real_secs() - device_time;
             throw std::runtime_error("Timestamp error. Aborted.");
@@ -358,7 +358,7 @@ void SDR::handle_frame(struct FrameData& frame)
 
     if (m_config.muting) {
         etiLog.log(info,
-                "OutputSDR: Muting sample %d requested\n",
+                "OutputSDR: Muting FCT=%d requested",
                 frame.ts.fct);
         return;
     }

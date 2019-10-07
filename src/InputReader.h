@@ -144,7 +144,7 @@ class InputTcpReader : public InputReader
         virtual std::string GetPrintableInfo() const override;
 
     private:
-        TCPClient m_tcpclient;
+        Socket::TCPClient m_tcpclient;
         std::string m_uri;
 };
 
@@ -201,14 +201,6 @@ class InputZeroMQReader : public InputReader, public RemoteControllable
 
         zmq::context_t m_zmqcontext; // is thread-safe
         std::thread m_recv_thread;
-
-        /* We must be careful to keep frame phase consistent. If we
-         * drop a single ETI frame, we will break the transmission
-         * frame vs. ETI frame phase.
-         *
-         * Here we keep track of how many ETI frames we must drop.
-         */
-        int m_to_drop = 0;
 };
 
 #endif

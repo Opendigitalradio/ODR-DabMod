@@ -19,7 +19,7 @@
 # along with ODR-DabMod.  If not, see <http://www.gnu.org/licenses/>.
 
 AC_PREREQ(2.69)
-AC_INIT([ODR-DabMod], [2.3.0], [matthias.braendli@mpb.li])
+AC_INIT([ODR-DabMod], [2.3.1], [matthias.braendli@mpb.li])
 AC_CONFIG_AUX_DIR([build-aux])
 AC_CONFIG_MACRO_DIR([m4])
 AC_CANONICAL_SYSTEM
@@ -49,9 +49,6 @@ AC_ARG_ENABLE([trace],
 AC_ARG_ENABLE([zeromq],
         [AS_HELP_STRING([--disable-zeromq], [Disable ZeroMQ input, output and remote control])],
         [], [enable_zeromq=yes])
-AC_ARG_ENABLE([edi],
-        [AS_HELP_STRING([--enable-edi], [Enable EDI input])],
-        [], [enable_edi=no])
 AC_ARG_ENABLE([native],
         [AS_HELP_STRING([--disable-native], [Do not compile with -march=native])],
         [], [enable_native=yes])
@@ -131,15 +128,8 @@ AS_IF([test "x$enable_output_uhd" = "xyes"],
 AS_IF([test "x$enable_soapysdr" = "xyes"],
       [AC_DEFINE(HAVE_SOAPYSDR, [1], [Define if SoapySDR output is enabled])])
 
-AS_IF([test "x$enable_edi" = "xyes"],
-      [AC_DEFINE(HAVE_EDI, [1], [Define if EDI input is enabled]) ])
-
 AS_IF([test "x$enable_limesdr" = "xyes"],
       [AC_DEFINE(HAVE_LIMESDR, [1], [Define if LimeSDR input is enabled]) ])
-
-
-
-AM_CONDITIONAL([COMPILE_EDI], [test "x$enable_edi" = "xyes"])
 
 AS_IF([test "x$enable_easydabv3" = "xyes"],
       AC_DEFINE(BUILD_FOR_EASYDABV3, [1], [Define if we are building for EasyDABv3]))
@@ -212,7 +202,7 @@ echo "***********************************************"
 echo
 enabled=""
 disabled=""
-for feat in edi prof trace output_uhd zeromq soapysdr easydabv3 limesdr
+for feat in prof trace output_uhd zeromq soapysdr easydabv3 limesdr
 do
     eval var=\$enable_$feat
     AS_IF([test "x$var" = "xyes"],
