@@ -16,7 +16,7 @@ Features
 - Reads ETI and EDI, outputs compliant COFDM I/Q
 - Supports native DAB sample rate and can also resample to other rates
 - Supports all four DAB transmission modes
-- Configuration file support, see doc/example.ini
+- Configuration file support, see `doc/example.ini`
 - Integrated UHD output for [USRP devices](https://www.ettus.com/product)
   - Tested for B200, B100, USRP2, USRP1
   - With WBX daughterboard (where appropriate)
@@ -31,27 +31,27 @@ Features
 - ETI sources: ETI-over-TCP, file (Raw, Framed and Streamed) and ZeroMQ
 - A Telnet and ZeroMQ remote-control that can be used to change
   some parameters during runtime and retrieve statistics.
-  See doc/README-RC.md for more information
+  See `doc/README-RC.md` for more information
 - ZeroMQ PUB and REP output.
 - Ongoing work about digital predistortion for PA linearisation.
-  See python/dpd/README.md
-- A web GUI for control and supervision of modulator and predistortion engine. See python/gui/README.md
+  See `python/dpd/README.md`
+- A web GUI for control and supervision of modulator and predistortion engine. See `python/gui/README.md`
 - A prototype algorithm for crest factor reduction.
 
-The src/ directory contains the source code of ODR-DabMod.
+The `src/` directory contains the source code of ODR-DabMod.
 
-The doc/ directory contains the ODR-DabMod documentation, an example
+The `doc/` directory contains the ODR-DabMod documentation, an example
 configuration file and a script for munin integration.
 
-The lib/ directory contains source code of libraries needed to build
+The `lib/` directory contains source code of libraries needed to build
 ODR-DabMod.
 
-The python/ directory contains a web-based graphical control interface and
+The `python/` directory contains a web-based graphical control interface and
 the digital predistortion project.
 
 INSTALL
 =======
-See the INSTALL file for installation instructions.
+See the INSTALL.md file for installation instructions.
 
 LICENCE
 =======
