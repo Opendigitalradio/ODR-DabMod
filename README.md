@@ -51,11 +51,11 @@ the digital predistortion project.
 
 INSTALL
 =======
-See the INSTALL.md file for installation instructions.
+See the `INSTALL.md` file for installation instructions.
 
 LICENCE
 =======
-See the files LICENCE and COPYING
+See the files `LICENCE` and `COPYING`
 
 CONTACT
 =======
