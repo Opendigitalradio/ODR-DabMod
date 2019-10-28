@@ -23,7 +23,7 @@
 
 ACLOCAL_AMFLAGS = -I m4
 
-EXTRA_DIST = COPYING NEWS README.md AUTHORS ChangeLog TODO doc \
+EXTRA_DIST = COPYING NEWS README.md INSTALL.md AUTHORS ChangeLog TODO doc \
 			 lib/fec/README.md lib/fec/LICENSE \
 			 lib/edi/README.md
 
