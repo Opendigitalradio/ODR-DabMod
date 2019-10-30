@@ -22,7 +22,6 @@
 #include "buffer_unpack.hpp"
 #include "Log.h"
 #include "crc.h"
-#include <iomanip>
 #include <sstream>
 #include <cassert>
 #include <cmath>
@@ -48,8 +47,14 @@ string frame_timestamp_t::to_string() const
     else {
         ss << "Timestamp not valid: ";
     }
-    ss << std::put_time(std::gmtime(&seconds_in_unix_epoch), "%c %Z") <<
-        " + " << ((double)tsta / 16384000.0);
+
+    char timestr[100];
+    if (std::strftime(timestr, sizeof(timestr), "%Y-%m-%dZ%H:%M:%S", std::gmtime(&seconds_in_unix_epoch))) {
+        ss << timestr << " + " << ((double)tsta / 16384000.0);
+    }
+    else {
+        ss << "unknown";
+    }
     return ss.str();
 }
 
