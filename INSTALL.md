@@ -4,6 +4,7 @@ Required dependencies:
 * A C++11 capable compiler
 * pkg-config
 * FFTW 3.x
+* autoconf
 * Optional UHD for USRP
 * Optional SoapySDR (see below)
 * Optional ZeroMQ http://www.zeromq.org
