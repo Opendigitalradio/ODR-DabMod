@@ -86,9 +86,11 @@ SDR::SDR(SDRDeviceConfig& config, std::shared_ptr<SDRDevice> device) :
     RC_ADD_PARAMETER(gpsdo_num_sv, "Number of Satellite Vehicles tracked by GPSDO");
     RC_ADD_PARAMETER(gpsdo_holdover, "1 if the GPSDO is in holdover, 0 if it is using gnss");
 
+#ifdef HAVE_LIMESDR
     if (std::dynamic_pointer_cast<Lime>(device)) {
         RC_ADD_PARAMETER(fifo_fill, "A value representing the Lime FIFO fullness [percent]");
     }
+#endif // HAVE_LIMESDR
 }
 
 SDR::~SDR()
@@ -467,6 +469,7 @@ const string SDR::get_parameter(const string& parameter) const
         const auto stat = m_device->get_run_statistics();
         ss << (stat.gpsdo_holdover ? 1 : 0);
     }
+#ifdef HAVE_LIMESDR
     else if (parameter == "fifo_fill") {
         const auto dev = std::dynamic_pointer_cast<Lime>(m_device);
 
@@ -479,6 +482,7 @@ const string SDR::get_parameter(const string& parameter) const
             throw ParameterError(ss.str());
         }
     }
+#endif // HAVE_LIMESDR
     else {
         ss << "Parameter '" << parameter <<
             "' is not exported by controllable " << get_rc_name();
