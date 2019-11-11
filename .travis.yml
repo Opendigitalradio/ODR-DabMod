@@ -5,24 +5,25 @@ matrix:
     # Clang on OSX
     - env: MATRIX_EVAL="" CONF="--disable-output-uhd"
       os: osx
-      osx_image: xcode9.4
+      osx_image: xcode11
       compiler: clang
 
     - env: MATRIX_EVAL="" CONF=""
       os: osx
-      osx_image: xcode9.4
+      osx_image: xcode11
       compiler: clang
 
-    # GCC and clang builds on Linux
+    # GCC builds on Linux
     - env: MATRIX_EVAL="CC=gcc-9 CXX=g++-9" CONF="--disable-zeromq --disable-output-uhd"
       os: linux
-      dist: xenial
+      dist: bionic
       sudo: required
+      arch: amd64
       compiler: gcc
       addons: &linuxaddons
         apt:
           sources: &sources
-            - ubuntu-toolchain-r-test
+            - sourceline: 'ppa:ubuntu-toolchain-r/test'
           packages: &packages
             - libzmq3-dev
             - libzmq5
@@ -35,29 +36,51 @@ matrix:
 
     - env: MATRIX_EVAL="CC=gcc-9 CXX=g++-9" CONF="--disable-output-uhd --enable-output-raw"
       os: linux
-      dist: xenial
+      dist: bionic
       sudo: required
+      arch: amd64
       compiler: gcc
       addons: *linuxaddons
 
     - env: MATRIX_EVAL="CC=gcc-9 CXX=g++-9" CONF="--disable-output-uhd --disable-native"
       os: linux
-      dist: xenial
+      dist: bionic
       sudo: required
+      arch: amd64
       compiler: gcc
       addons: *linuxaddons
 
     - env: MATRIX_EVAL="CC=gcc-9 CXX=g++-9" CONF="--disable-output-uhd --enable-trace"
       os: linux
-      dist: xenial
+      dist: bionic
       sudo: required
+      arch: amd64
       compiler: gcc
       addons: *linuxaddons
 
+    # ARM64 builds
+    - env: MATRIX_EVAL="CC=gcc-9 CXX=g++-9" CONF="--disable-output-uhd"
+      os: linux
+      dist: bionic
+      sudo: required
+      arch: arm64
+      compiler: gcc
+      addons: *linuxaddons
+
+    - env: MATRIX_EVAL="CC=gcc-9 CXX=g++-9" CONF="--disable-output-uhd --disable-native"
+      os: linux
+      dist: bionic
+      sudo: required
+      arch: arm64
+      compiler: gcc
+      addons: *linuxaddons
+
+    # For EasyDAB, which should be an armhf build instead
     - env: MATRIX_EVAL="CC=gcc-9 CXX=g++-9" CONF="--enable-easydabv3 --disable-output-uhd --enable-fast-math --disable-native"
       os: linux
-      dist: xenial
+      dist: bionic
       sudo: required
+      arch: amd64
       compiler: gcc
       addons: *linuxaddons
 
