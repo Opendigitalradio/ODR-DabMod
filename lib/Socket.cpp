@@ -650,7 +650,7 @@ ssize_t TCPSocket::recv(void *buffer, size_t length, int flags, int timeout_ms)
         std::string errstr(strerror(errno));
         throw std::runtime_error("TCP receive with poll() error: " + errstr);
     }
-    else if (retval > 0 and (fds[0].revents | POLLIN)) {
+    else if (retval > 0 and (fds[0].revents & POLLIN)) {
         ssize_t ret = ::recv(m_sock, buffer, length, flags);
         if (ret == -1) {
             if (errno == ECONNREFUSED) {
