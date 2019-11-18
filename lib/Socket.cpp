@@ -490,6 +490,11 @@ void TCPSocket::listen(int port, const string& name)
             continue;
         }
 
+        int reuse_setting = 1;
+        if (setsockopt(sfd, SOL_SOCKET, SO_REUSEADDR, &reuse_setting, sizeof(reuse_setting)) == -1) {
+            throw runtime_error("Can't reuse address");
+        }
+
         if (::bind(sfd, rp->ai_addr, rp->ai_addrlen) == 0) {
             m_sock = sfd;
             break;
