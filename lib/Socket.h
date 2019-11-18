@@ -50,7 +50,7 @@
 namespace Socket {
 
 struct InetAddress {
-    struct sockaddr_storage addr;
+    struct sockaddr_storage addr = {};
 
     struct sockaddr *as_sockaddr() { return reinterpret_cast<sockaddr*>(&addr); };
 

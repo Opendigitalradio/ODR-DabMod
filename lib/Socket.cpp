@@ -69,7 +69,8 @@ void InetAddress::resolveUdpDestination(const std::string& destination, int port
 UDPPacket::UDPPacket() { }
 
 UDPPacket::UDPPacket(size_t initSize) :
-    buffer(initSize)
+    buffer(initSize),
+    address()
 { }
 
 
