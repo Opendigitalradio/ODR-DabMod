@@ -55,7 +55,9 @@ USRPTime::USRPTime(
 
         set_usrp_time_from_localtime();
     }
-    else if (m_conf.pps_src == "pps") {
+    else if (m_conf.pps_src == "pps" or m_conf.pps_src == "external") {
+        /* Not sure if pps was previously accepted by UHD, or if that was wrong.
+         * The B100 and B200 use 'external'. */
         // let verify_time handle time setup
     }
     else if (m_conf.pps_src == "gpsdo") {
