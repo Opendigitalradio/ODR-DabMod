@@ -79,6 +79,7 @@ Soapy::Soapy(SDRDeviceConfig& config) :
         m_device->getMasterClockRate()/1000.0 << " kHz";
 
     m_device->setSampleRate(SOAPY_SDR_TX, 0, m_conf.sampleRate);
+    m_device->setSampleRate(SOAPY_SDR_RX, 0, m_conf.sampleRate);
     etiLog.level(info) << "SoapySDR:Actual TX rate: " <<
         std::fixed << std::setprecision(4) <<
         m_device->getSampleRate(SOAPY_SDR_TX, 0) / 1000.0 <<
