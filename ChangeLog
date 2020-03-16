@@ -1,6 +1,13 @@
 This file contains information about the changes done to
 ODR-DabMod in this repository
 
+2020-03-16: Matthias P. Braendli <matthias@mpb.li>
+	(v2.4.0):
+		Put more code in common with the other ODR-mmbTools.
+		Rework EDI input, which is now always compiled-in and preferred
+		to ZMQ input (for standards compliance).
+		Add native Lime support.
+
 2019-07-08: Matthias P. Braendli <matthias@mpb.li>
 	(v2.3.1):
 		Add analog bandwidth setting for UHD and SoapySDR outputs.
