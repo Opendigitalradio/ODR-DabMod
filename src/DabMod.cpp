@@ -528,6 +528,7 @@ static run_modulator_state_t run_modulator(modulator_data& m)
                         else {
                             throw logic_error("Unhandled framesize==0!");
                         }
+                        continue;
                     }
                     else if (framesize < 0) {
                         etiLog.level(error) << "Input read error.";
@@ -541,6 +542,8 @@ static run_modulator_state_t run_modulator(modulator_data& m)
                         etiLog.level(error) << "ETI frame incompletely read";
                         throw std::runtime_error("ETI read error");
                     }
+
+                    last_frame_received = chrono::steady_clock::now();
 
                     fct = m.etiReader->getFct();
                     fp = m.etiReader->getFp();
