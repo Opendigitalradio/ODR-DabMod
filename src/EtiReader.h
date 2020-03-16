@@ -72,6 +72,25 @@ protected:
     std::shared_ptr<FicSource> myFicSource;
 };
 
+enum class EtiReaderState {
+    // For Framed input format
+    NbFrame,
+
+    // For Streamed input format
+    FrameSize,
+
+    // ETI Sync
+    Sync,
+    Fc,
+    Nst,
+    Eoh,
+    Fic,
+    Subch,
+    Eof,
+    Tist,
+    Pad
+};
+
 /* The EtiReader extracts the necessary data for modulation from an ETI(NI) byte stream. */
 class EtiReader : public EtiSource
 {
@@ -95,7 +114,7 @@ private:
     /* Transform the ETI TIST to a PPS offset in units of 1/16384000 s */
     uint32_t getPPSOffset();
 
-    int state;
+    EtiReaderState state = EtiReaderState::Sync;
     uint32_t nb_frames;
     uint16_t framesize;
     eti_SYNC eti_sync;

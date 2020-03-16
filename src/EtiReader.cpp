@@ -38,24 +38,8 @@
 
 using namespace std;
 
-enum ETI_READER_STATE {
-    EtiReaderStateNbFrame,
-    EtiReaderStateFrameSize,
-    EtiReaderStateSync,
-    EtiReaderStateFc,
-    EtiReaderStateNst,
-    EtiReaderStateEoh,
-    EtiReaderStateFic,
-    EtiReaderStateSubch,
-    EtiReaderStateEof,
-    EtiReaderStateTist,
-    EtiReaderStatePad
-};
-
-
 EtiReader::EtiReader(
         double& tist_offset_s) :
-    state(EtiReaderStateSync),
     myTimestampDecoder(tist_offset_s),
     eti_fc_valid(false)
 {
@@ -109,178 +93,178 @@ int EtiReader::loadEtiData(const Buffer& dataIn)
 
     while (input_size > 0) {
         switch (state) {
-        case EtiReaderStateNbFrame:
-            if (input_size < 4) {
-                return dataIn.getLength() - input_size;
-            }
-            nb_frames = *(uint32_t*)in;
-            input_size -= 4;
-            in += 4;
-            state = EtiReaderStateFrameSize;
-            PDEBUG("Nb frames: %i\n", nb_frames);
-            break;
-        case EtiReaderStateFrameSize:
-            if (input_size < 2) {
-                return dataIn.getLength() - input_size;
-            }
-            framesize = *(uint16_t*)in;
-            input_size -= 2;
-            in += 2;
-            state = EtiReaderStateSync;
-            PDEBUG("Framesize: %i\n", framesize);
-            break;
-        case EtiReaderStateSync:
-            if (input_size < 4) {
-                return dataIn.getLength() - input_size;
-            }
-            framesize = 6144;
-            memcpy(&eti_sync, in, 4);
-            input_size -= 4;
-            framesize -= 4;
-            in += 4;
-            state = EtiReaderStateFc;
-            PDEBUG("Sync.err: 0x%.2x\n", eti_sync.ERR);
-            PDEBUG("Sync.fsync: 0x%.6x\n", eti_sync.FSYNC);
-            break;
-        case EtiReaderStateFc:
-            if (input_size < 4) {
-                return dataIn.getLength() - input_size;
-            }
-            memcpy(&eti_fc, in, 4);
-            eti_fc_valid = true;
-            input_size -= 4;
-            framesize -= 4;
-            in += 4;
-            state = EtiReaderStateNst;
-            PDEBUG("Fc.fct: 0x%.2x\n", eti_fc.FCT);
-            PDEBUG("Fc.ficf: %u\n", eti_fc.FICF);
-            PDEBUG("Fc.nst: %u\n", eti_fc.NST);
-            PDEBUG("Fc.fp: 0x%x\n", eti_fc.FP);
-            PDEBUG("Fc.mid: %u\n", eti_fc.MID);
-            PDEBUG("Fc.fl: %u\n", eti_fc.getFrameLength());
-            if (!eti_fc.FICF) {
-                throw std::runtime_error("FIC must be present to modulate!");
-            }
-            if (not myFicSource) {
-                unsigned ficf = eti_fc.FICF;
-                unsigned mid = eti_fc.MID;
-                myFicSource = make_shared<FicSource>(ficf, mid);
-            }
-            break;
-        case EtiReaderStateNst:
-            if (input_size < 4 * (size_t)eti_fc.NST) {
-                return dataIn.getLength() - input_size;
-            }
-            if ((eti_stc.size() != eti_fc.NST) ||
-                    (memcmp(&eti_stc[0], in, 4 * eti_fc.NST))) {
-                PDEBUG("New stc!\n");
-                eti_stc.resize(eti_fc.NST);
-                memcpy(&eti_stc[0], in, 4 * eti_fc.NST);
+            case EtiReaderState::NbFrame:
+                if (input_size < 4) {
+                    return dataIn.getLength() - input_size;
+                }
+                nb_frames = *(uint32_t*)in;
+                input_size -= 4;
+                in += 4;
+                state = EtiReaderState::FrameSize;
+                PDEBUG("Nb frames: %i\n", nb_frames);
+                break;
+            case EtiReaderState::FrameSize:
+                if (input_size < 2) {
+                    return dataIn.getLength() - input_size;
+                }
+                framesize = *(uint16_t*)in;
+                input_size -= 2;
+                in += 2;
+                state = EtiReaderState::Sync;
+                PDEBUG("Framesize: %i\n", framesize);
+                break;
+            case EtiReaderState::Sync:
+                if (input_size < 4) {
+                    return dataIn.getLength() - input_size;
+                }
+                framesize = 6144;
+                memcpy(&eti_sync, in, 4);
+                input_size -= 4;
+                framesize -= 4;
+                in += 4;
+                state = EtiReaderState::Fc;
+                PDEBUG("Sync.err: 0x%.2x\n", eti_sync.ERR);
+                PDEBUG("Sync.fsync: 0x%.6x\n", eti_sync.FSYNC);
+                break;
+            case EtiReaderState::Fc:
+                if (input_size < 4) {
+                    return dataIn.getLength() - input_size;
+                }
+                memcpy(&eti_fc, in, 4);
+                eti_fc_valid = true;
+                input_size -= 4;
+                framesize -= 4;
+                in += 4;
+                state = EtiReaderState::Nst;
+                PDEBUG("Fc.fct: 0x%.2x\n", eti_fc.FCT);
+                PDEBUG("Fc.ficf: %u\n", eti_fc.FICF);
+                PDEBUG("Fc.nst: %u\n", eti_fc.NST);
+                PDEBUG("Fc.fp: 0x%x\n", eti_fc.FP);
+                PDEBUG("Fc.mid: %u\n", eti_fc.MID);
+                PDEBUG("Fc.fl: %u\n", eti_fc.getFrameLength());
+                if (!eti_fc.FICF) {
+                    throw std::runtime_error("FIC must be present to modulate!");
+                }
+                if (not myFicSource) {
+                    unsigned ficf = eti_fc.FICF;
+                    unsigned mid = eti_fc.MID;
+                    myFicSource = make_shared<FicSource>(ficf, mid);
+                }
+                break;
+            case EtiReaderState::Nst:
+                if (input_size < 4 * (size_t)eti_fc.NST) {
+                    return dataIn.getLength() - input_size;
+                }
+                if ((eti_stc.size() != eti_fc.NST) ||
+                        (memcmp(&eti_stc[0], in, 4 * eti_fc.NST))) {
+                    PDEBUG("New stc!\n");
+                    eti_stc.resize(eti_fc.NST);
+                    memcpy(&eti_stc[0], in, 4 * eti_fc.NST);
 
-                mySources.clear();
-                for (unsigned i = 0; i < eti_fc.NST; ++i) {
-                    const auto tpl = eti_stc[i].TPL;
-                    mySources.push_back(
-                            make_shared<SubchannelSource>(
-                                eti_stc[i].getStartAddress(),
-                                eti_stc[i].getSTL(),
-                                tpl));
-                    PDEBUG("Sstc %u:\n", i);
-                    PDEBUG(" Stc%i.scid: %i\n", i, eti_stc[i].SCID);
-                    PDEBUG(" Stc%i.sad: %u\n", i, eti_stc[i].getStartAddress());
-                    PDEBUG(" Stc%i.tpl: 0x%.2x\n", i, eti_stc[i].TPL);
-                    PDEBUG(" Stc%i.stl: %u\n", i, eti_stc[i].getSTL());
+                    mySources.clear();
+                    for (unsigned i = 0; i < eti_fc.NST; ++i) {
+                        const auto tpl = eti_stc[i].TPL;
+                        mySources.push_back(
+                                make_shared<SubchannelSource>(
+                                    eti_stc[i].getStartAddress(),
+                                    eti_stc[i].getSTL(),
+                                    tpl));
+                        PDEBUG("Sstc %u:\n", i);
+                        PDEBUG(" Stc%i.scid: %i\n", i, eti_stc[i].SCID);
+                        PDEBUG(" Stc%i.sad: %u\n", i, eti_stc[i].getStartAddress());
+                        PDEBUG(" Stc%i.tpl: 0x%.2x\n", i, eti_stc[i].TPL);
+                        PDEBUG(" Stc%i.stl: %u\n", i, eti_stc[i].getSTL());
+                    }
                 }
-            }
-            input_size -= 4 * eti_fc.NST;
-            framesize -= 4 * eti_fc.NST;
-            in += 4 * eti_fc.NST;
-            state = EtiReaderStateEoh;
-            break;
-        case EtiReaderStateEoh:
-            if (input_size < 4) {
-                return dataIn.getLength() - input_size;
-            }
-            memcpy(&eti_eoh, in, 4);
-            input_size -= 4;
-            framesize -= 4;
-            in += 4;
-            state = EtiReaderStateFic;
-            PDEBUG("Eoh.mnsc: 0x%.4x\n", eti_eoh.MNSC);
-            PDEBUG("Eoh.crc: 0x%.4x\n", eti_eoh.CRC);
-            break;
-        case EtiReaderStateFic:
-            if (eti_fc.MID == 3) {
-                if (input_size < 128) {
+                input_size -= 4 * eti_fc.NST;
+                framesize -= 4 * eti_fc.NST;
+                in += 4 * eti_fc.NST;
+                state = EtiReaderState::Eoh;
+                break;
+            case EtiReaderState::Eoh:
+                if (input_size < 4) {
                     return dataIn.getLength() - input_size;
                 }
-                PDEBUG("Writing 128 bytes of FIC channel data\n");
-                Buffer fic(128, in);
-                myFicSource->loadFicData(fic);
-                input_size -= 128;
-                framesize -= 128;
-                in += 128;
-            } else {
-                if (input_size < 96) {
+                memcpy(&eti_eoh, in, 4);
+                input_size -= 4;
+                framesize -= 4;
+                in += 4;
+                state = EtiReaderState::Fic;
+                PDEBUG("Eoh.mnsc: 0x%.4x\n", eti_eoh.MNSC);
+                PDEBUG("Eoh.crc: 0x%.4x\n", eti_eoh.CRC);
+                break;
+            case EtiReaderState::Fic:
+                if (eti_fc.MID == 3) {
+                    if (input_size < 128) {
+                        return dataIn.getLength() - input_size;
+                    }
+                    PDEBUG("Writing 128 bytes of FIC channel data\n");
+                    Buffer fic(128, in);
+                    myFicSource->loadFicData(fic);
+                    input_size -= 128;
+                    framesize -= 128;
+                    in += 128;
+                } else {
+                    if (input_size < 96) {
+                        return dataIn.getLength() - input_size;
+                    }
+                    PDEBUG("Writing 96 bytes of FIC channel data\n");
+                    Buffer fic(96, in);
+                    myFicSource->loadFicData(fic);
+                    input_size -= 96;
+                    framesize -= 96;
+                    in += 96;
+                }
+                state = EtiReaderState::Subch;
+                break;
+            case EtiReaderState::Subch:
+                for (size_t i = 0; i < eti_stc.size(); ++i) {
+                    unsigned size = mySources[i]->framesize();
+                    PDEBUG("Writting %i bytes of subchannel data\n", size);
+                    Buffer subch(size, in);
+                    mySources[i]->loadSubchannelData(move(subch));
+                    input_size -= size;
+                    framesize -= size;
+                    in += size;
+                }
+                state = EtiReaderState::Eof;
+                break;
+            case EtiReaderState::Eof:
+                if (input_size < 4) {
                     return dataIn.getLength() - input_size;
                 }
-                PDEBUG("Writing 96 bytes of FIC channel data\n");
-                Buffer fic(96, in);
-                myFicSource->loadFicData(fic);
-                input_size -= 96;
-                framesize -= 96;
-                in += 96;
-            }
-            state = EtiReaderStateSubch;
-            break;
-        case EtiReaderStateSubch:
-            for (size_t i = 0; i < eti_stc.size(); ++i) {
-                unsigned size = mySources[i]->framesize();
-                PDEBUG("Writting %i bytes of subchannel data\n", size);
-                Buffer subch(size, in);
-                mySources[i]->loadSubchannelData(move(subch));
-                input_size -= size;
-                framesize -= size;
-                in += size;
-            }
-            state = EtiReaderStateEof;
-            break;
-        case EtiReaderStateEof:
-            if (input_size < 4) {
-                return dataIn.getLength() - input_size;
-            }
-            memcpy(&eti_eof, in, 4);
-            input_size -= 4;
-            framesize -= 4;
-            in += 4;
-            state = EtiReaderStateTist;
-            PDEBUG("Eof.crc: %#.4x\n", eti_eof.CRC);
-            PDEBUG("Eof.rfu: %#.4x\n", eti_eof.RFU);
-            break;
-        case EtiReaderStateTist:
-            if (input_size < 4) {
-                return dataIn.getLength() - input_size;
-            }
-            memcpy(&eti_tist, in, 4);
-            input_size -= 4;
-            framesize -= 4;
-            in += 4;
-            state = EtiReaderStatePad;
-            PDEBUG("Tist: 0x%.6x\n", eti_tist.TIST);
-            break;
-        case EtiReaderStatePad:
-            if (framesize > 0) {
-                --input_size;
-                --framesize;
-                ++in;
-            } else {
-                state = EtiReaderStateSync;
-            }
-            break;
-        default:
-            // throw std::runtime_error("Invalid state!");
-            PDEBUG("Invalid state (%i)!", state);
-            input_size = 0;
+                memcpy(&eti_eof, in, 4);
+                input_size -= 4;
+                framesize -= 4;
+                in += 4;
+                state = EtiReaderState::Tist;
+                PDEBUG("Eof.crc: %#.4x\n", eti_eof.CRC);
+                PDEBUG("Eof.rfu: %#.4x\n", eti_eof.RFU);
+                break;
+            case EtiReaderState::Tist:
+                if (input_size < 4) {
+                    return dataIn.getLength() - input_size;
+                }
+                memcpy(&eti_tist, in, 4);
+                input_size -= 4;
+                framesize -= 4;
+                in += 4;
+                state = EtiReaderState::Pad;
+                PDEBUG("Tist: 0x%.6x\n", eti_tist.TIST);
+                break;
+            case EtiReaderState::Pad:
+                if (framesize > 0) {
+                    --input_size;
+                    --framesize;
+                    ++in;
+                } else {
+                    state = EtiReaderState::Sync;
+                }
+                break;
+            default:
+                // throw std::runtime_error("Invalid state!");
+                PDEBUG("Invalid state (%i)!", state);
+                input_size = 0;
         }
     }
 
