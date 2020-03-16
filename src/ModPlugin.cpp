@@ -104,7 +104,9 @@ int PipelinedModCodec::process(Buffer* dataIn, Buffer* dataOut)
     }
     else {
         dataOut->setLength(dataIn->getLength());
-        memset(dataOut->getData(), 0, dataOut->getLength());
+        if (dataOut->getLength() > 0) {
+            memset(dataOut->getData(), 0, dataOut->getLength());
+        }
         m_ready_to_output_data = true;
     }
 
