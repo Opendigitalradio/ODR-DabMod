@@ -43,6 +43,8 @@ struct frame_timestamp_t {
 
     double diff_ms(const frame_timestamp_t& other) const;
 
+    frame_timestamp_t& operator+=(const std::chrono::milliseconds& ms);
+
     static frame_timestamp_t from_unix_epoch(std::time_t time, uint32_t tai_utc_offset, uint32_t tsta);
 };
 
