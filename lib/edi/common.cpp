@@ -242,7 +242,9 @@ decode_state_t TagDispatcher::decode_afpacket(
         return {false, 0};
     }
 
-    if (m_last_seq + (uint16_t)1 != seq) {
+    // SEQ wraps at 0xFFFF, unsigned integer overflow is intentional
+    const uint16_t expected_seq = m_last_seq + 1;
+    if (expected_seq != seq) {
         etiLog.level(warn) << "EDI AF Packet sequence error, " << seq;
     }
     m_last_seq = seq;
