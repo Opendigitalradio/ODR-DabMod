@@ -57,7 +57,7 @@ AC_ARG_ENABLE([easydabv3],
         [], [enable_easydabv3=no])
 AC_ARG_ENABLE([limesdr],
         [AS_HELP_STRING([--enable-limesdr], [Build for LimeSDR board])],
-        [], [enable_limesdr=no])        
+        [], [enable_limesdr=no])
 
 # UHD support control
 AC_ARG_ENABLE([output_uhd],
@@ -124,6 +124,12 @@ AS_IF([test "x$enable_output_uhd" = "xyes"],
 
 AS_IF([test "x$enable_output_uhd" = "xyes"],
       [AC_DEFINE(HAVE_OUTPUT_UHD, [1], [Define if UHD output is enabled])])
+
+# I don't know why this is needed, I think the uhd pkg-config file should also
+# tell us to link against boost thread, but it doesn't.
+AS_IF([test "x$enable_output_uhd" = "xyes"],
+    [ AX_BOOST_BASE([1.55.0], [], AC_MSG_ERROR([BOOST 1.55 or later is required]))
+      AX_BOOST_THREAD ])
 
 AS_IF([test "x$enable_soapysdr" = "xyes"],
       [AC_DEFINE(HAVE_SOAPYSDR, [1], [Define if SoapySDR output is enabled])])

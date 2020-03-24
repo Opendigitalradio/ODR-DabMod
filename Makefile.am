@@ -38,8 +38,8 @@ bin_PROGRAMS = odr-dabmod
 odr_dabmod_CFLAGS   = -Wall -Isrc -Ilib \
 					  $(GITVERSION_FLAGS)
 odr_dabmod_CXXFLAGS = -Wall -Isrc -Ilib -std=c++11 \
-					  $(GITVERSION_FLAGS)
-odr_dabmod_LDADD    =
+					  $(GITVERSION_FLAGS) $(BOOST_CPPFLAGS)
+odr_dabmod_LDADD    =  $(BOOST_LDFLAGS) $(BOOST_THREAD_LIB)
 odr_dabmod_SOURCES  = src/DabMod.cpp \
 					  src/PcDebug.h \
 					  src/DabModulator.cpp \
@@ -169,6 +169,6 @@ odr_dabmod_SOURCES += \
 					  src/TII.cpp \
 					  src/TII.h
 
-odr_dabmod_LDADD   += $(UHD_LIBS) $(LIMESDR_LIBS)
+odr_dabmod_LDADD   += $(UHD_LIBS) $(LIMESDR_LIBS) $(ADDITIONAL_UHD_LIBS)
 endif
 
