@@ -1,6 +1,12 @@
 This file contains information about the changes done to
 ODR-DabMod in this repository
 
+2020-04-06: Matthias P. Braendli <matthias@mpb.li>
+	(v2.4.1):
+		Fix handling of Ctrl-C.
+		Fix unaligned memory access in ZeroMQ input.
+		Fix incorrect display of "EDI AF Packet sequence error".
+
 2020-03-16: Matthias P. Braendli <matthias@mpb.li>
 	(v2.4.0):
 		Put more code in common with the other ODR-mmbTools.
