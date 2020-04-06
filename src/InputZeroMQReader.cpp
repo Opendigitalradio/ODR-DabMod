@@ -52,17 +52,12 @@ constexpr int ZMQ_TIMEOUT_MS = 100;
  * we do not risk breaking ETI vs. transmission frame
  * phase.
  *
- * The frames are concatenated in buf, and
- * their sizes is given in the buflen array.
- *
- * Most of the time, the buf will not be completely
- * filled
+ * The header is followed by the four ETI frames.
  */
-struct zmq_dab_message_t
+struct zmq_msg_header_t
 {
     uint32_t version;
     uint16_t buflen[NUM_FRAMES_PER_ZMQ_MESSAGE];
-    uint8_t  buf[NUM_FRAMES_PER_ZMQ_MESSAGE*6144];
 };
 
 #define ZMQ_DAB_MESSAGE_T_HEADERSIZE \
@@ -210,28 +205,29 @@ void InputZeroMQReader::RecvProcess()
                     throw runtime_error("ZeroMQ packet too small for header");
                 }
                 else {
-                    const zmq_dab_message_t* dab_msg = (zmq_dab_message_t*)incoming.data();
+                    zmq_msg_header_t dab_msg;
+                    memcpy(&dab_msg, incoming.data(), sizeof(zmq_msg_header_t));
 
-                    if (dab_msg->version != 1) {
+                    if (dab_msg.version != 1) {
                         etiLog.level(error) <<
                             "ZeroMQ wrong packet version " <<
-                            dab_msg->version;
+                            dab_msg.version;
                     }
 
-                    int offset = sizeof(dab_msg->version) +
-                        NUM_FRAMES_PER_ZMQ_MESSAGE * sizeof(*dab_msg->buflen);
+                    int offset = sizeof(dab_msg.version) +
+                        NUM_FRAMES_PER_ZMQ_MESSAGE * sizeof(*dab_msg.buflen);
 
                     for (int i = 0; i < NUM_FRAMES_PER_ZMQ_MESSAGE; i++) {
-                        if (dab_msg->buflen[i] > 6144) {
+                        if (dab_msg.buflen[i] > 6144) {
                             stringstream ss;
                             ss << "ZeroMQ buffer " << i <<
-                                " has invalid buflen " << dab_msg->buflen[i];
+                                " has invalid buflen " << dab_msg.buflen[i];
                             throw runtime_error(ss.str());
                         }
                         else {
                             vector<uint8_t> buf(6144, 0x55);
 
-                            const int framesize = dab_msg->buflen[i];
+                            const int framesize = dab_msg.buflen[i];
 
                             if ((ssize_t)incoming.size() < offset + framesize) {
                                 throw runtime_error("ZeroMQ packet too small");
