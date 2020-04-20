@@ -6,6 +6,7 @@ Required dependencies:
 * FFTW 3.x
 * autoconf
 * Optional UHD for USRP
+* Optional LimeSuite for LimeSDR support
 * Optional SoapySDR (see below)
 * Optional ZeroMQ http://www.zeromq.org
 
@@ -25,31 +26,21 @@ Configure options
 
 The configure script can be launched with a variety of options:
 
-`--disable-zeromq`
+Disable ZeroMQ input (to be used with ODR-DabMux), output and remotecontrol: `--disable-zeromq`
 
-Disable ZeroMQ input (to be used with ODR-DabMux), output and remotecontrol.
+Disable the binding to the UHD driver for USRPs: `--disable-output-uhd`
 
-                        
-`--disable-output-uhd`
+Compile using the `-ffast-math` option that gives a substantial speedup at the cost of floating point correctness:  `--enable-fast-math`
 
-Disable the binding to the UHD driver for USRPs
+On some ARM systems you might need `--with-boost-libdir=/usr/lib/arm-linux-gnueabihf` so that boost gets found.
 
-
-`--enable-fast-math`   
-
-Compile using the `-ffast-math` option that gives a substantial speedup at the cost of floating point correctness.
- 
-
-`--disable-native`
+Do not pass `-march=native` to the compiler: `--disable-native`
 
 **Remark:** Do not compile ODR-DabMod with `-march=native` compiler option. This is meant for distribution package maintainers who want to use their own march option, and for people running into compilation issues due to `-march=native`. (e.g. GCC bug 70132 on ARM systems)
 
 **Debugging options:** You should not enable any debug option if you need good performance.
 
-
-`--enable-trace`
-
-Create debugging files for each DSP block for data analysis
+Create debugging files for each DSP block for data analysis: `--enable-trace`
 
 For more information, call:
 
@@ -88,13 +79,13 @@ Nearly as simple install procedure using repository:
 * Download and install dependencies as above
 * Clone the git repository
 * Bootstrap autotools:
-   
+
       % ./bootstrap.sh
-      
+
   In case this fails, try:
-  
+
       % aclocal && automake --gnu --add-missing && autoconf
-        
+
 * Then use `./configure` as above
 
 SoapySDR support and required dependencies
