@@ -291,4 +291,32 @@ class TCPReceiveServer {
         TCPSocket m_listener_socket;
 };
 
+/* A TCP client that abstracts the handling of connects and disconnects.
+ */
+class TCPSendClient {
+    public:
+        TCPSendClient(const std::string& hostname, int port);
+        ~TCPSendClient();
+
+        /* Throws a runtime_error on error
+         */
+        void sendall(const std::vector<uint8_t>& buffer);
+
+    private:
+        void process();
+
+        std::string m_hostname;
+        int m_port;
+
+        bool m_is_connected = false;
+
+        TCPSocket m_sock;
+        static constexpr size_t MAX_QUEUE_SIZE = 1024;
+        ThreadsafeQueue<std::vector<uint8_t> > m_queue;
+        std::atomic<bool> m_running;
+        std::string m_exception_data;
+        std::thread m_sender_thread;
+        TCPSocket m_listener_socket;
+};
+
 }

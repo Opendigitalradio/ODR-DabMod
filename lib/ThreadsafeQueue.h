@@ -52,12 +52,21 @@ public:
     /* Push one element into the queue, and notify another thread that
      * might be waiting.
      *
+     * if max_size > 0 and the queue already contains at least max_size elements,
+     * the element gets discarded.
+     *
      * returns the new queue size.
      */
-    size_t push(T const& val)
+    size_t push(T const& val, size_t max_size = 0)
     {
         std::unique_lock<std::mutex> lock(the_mutex);
-        the_queue.push(val);
+        size_t queue_size_before = the_queue.size();
+        if (max_size == 0) {
+            the_queue.push(val);
+        }
+        else if (queue_size_before < max_size) {
+            the_queue.push(val);
+        }
         size_t queue_size = the_queue.size();
         lock.unlock();
 
@@ -66,10 +75,16 @@ public:
         return queue_size;
     }
 
-    size_t push(T&& val)
+    size_t push(T&& val, size_t max_size = 0)
     {
         std::unique_lock<std::mutex> lock(the_mutex);
-        the_queue.emplace(std::move(val));
+        size_t queue_size_before = the_queue.size();
+        if (max_size == 0) {
+            the_queue.emplace(std::move(val));
+        }
+        else if (queue_size_before < max_size) {
+            the_queue.emplace(std::move(val));
+        }
         size_t queue_size = the_queue.size();
         lock.unlock();
 
