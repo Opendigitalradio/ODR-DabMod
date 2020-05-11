@@ -2,7 +2,7 @@
    Copyright (C) 2003, 2004, 2005, 2006, 2007, 2008, 2009 Her Majesty the
    Queen in Right of Canada (Communications Research Center Canada)
 
-   Copyright (C) 2019
+   Copyright (C) 2020
    Matthias P. Braendli, matthias.braendli@mpb.li
 
     http://www.opendigitalradio.org
@@ -311,7 +311,7 @@ class TCPSendClient {
         bool m_is_connected = false;
 
         TCPSocket m_sock;
-        static constexpr size_t MAX_QUEUE_SIZE = 1024;
+        static constexpr size_t MAX_QUEUE_SIZE = 512;
         ThreadsafeQueue<std::vector<uint8_t> > m_queue;
         std::atomic<bool> m_running;
         std::string m_exception_data;

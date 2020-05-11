@@ -1,5 +1,5 @@
 /*
-   Copyright (C) 2019
+   Copyright (C) 2020
    Matthias P. Braendli, matthias.braendli@mpb.li
 
    http://opendigitalradio.org
@@ -57,6 +57,12 @@ struct eti_stc_data {
     uint16_t stl(void) const { return mst.size() / 8; }
 };
 
+struct ReceivedTagPacket {
+    std::vector<uint8_t> tagpacket;
+    frame_timestamp_t timestamp;
+};
+
+
 /* A class that receives multiplex data must implement the interface described
  * in the ETIDataCollector. This can be e.g. a converter to ETI, or something that
  * prepares data structures for a modulator.
@@ -87,8 +93,9 @@ class ETIDataCollector {
 
         virtual void add_subchannel(eti_stc_data&& stc) = 0;
 
-        // Tell the ETIWriter that the AFPacket is complete
-        virtual void assemble(void) = 0;
+        // Tell the consumer that the AFPacket is complete, and include
+        // the raw received TAGs
+        virtual void assemble(ReceivedTagPacket&& tagpacket) = 0;
 };
 
 /* The ETIDecoder takes care of decoding the EDI TAGs related to the transport
@@ -99,7 +106,9 @@ class ETIDataCollector {
  */
 class ETIDecoder {
     public:
-        ETIDecoder(ETIDataCollector& data_collector, bool verbose);
+        ETIDecoder(ETIDataCollector& data_collector);
+
+        void set_verbose(bool verbose);
 
         /* Push bytes into the decoder. The buf can contain more
          * than a single packet. This is useful when reading from streams
@@ -118,16 +127,19 @@ class ETIDecoder {
         void setMaxDelay(int num_af_packets);
 
     private:
-        bool decode_starptr(const std::vector<uint8_t> &value, uint16_t);
-        bool decode_deti(const std::vector<uint8_t> &value, uint16_t);
-        bool decode_estn(const std::vector<uint8_t> &value, uint16_t n);
-        bool decode_stardmy(const std::vector<uint8_t> &value, uint16_t);
+        bool decode_starptr(const std::vector<uint8_t>& value, const tag_name_t& n);
+        bool decode_deti(const std::vector<uint8_t>& value, const tag_name_t& n);
+        bool decode_estn(const std::vector<uint8_t>& value, const tag_name_t& n);
+        bool decode_stardmy(const std::vector<uint8_t>& value, const tag_name_t& n);
+
+        bool decode_tagpacket(const std::vector<uint8_t>& value);
 
         void packet_completed();
 
         ETIDataCollector& m_data_collector;
         TagDispatcher m_dispatcher;
 
+        ReceivedTagPacket m_received_tagpacket;
 };
 
 }

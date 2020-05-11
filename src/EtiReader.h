@@ -2,7 +2,7 @@
    Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010, 2011 Her Majesty
    the Queen in Right of Canada (Communications Research Center Canada)
 
-   Copyright (C) 2019
+   Copyright (C) 2020
    Matthias P. Braendli, matthias.braendli@mpb.li
 
     http://opendigitalradio.org
@@ -138,11 +138,11 @@ class EdiReader : public EtiSource, public EdiDecoder::ETIDataCollector
 public:
     EdiReader(double& tist_offset_s);
 
-    virtual unsigned getMode();
-    virtual unsigned getFp();
-    virtual unsigned getFct();
-    virtual bool sourceContainsTimestamp();
-    virtual const std::vector<std::shared_ptr<SubchannelSource> > getSubchannels() const;
+    virtual unsigned getMode() override;
+    virtual unsigned getFp() override;
+    virtual unsigned getFct() override;
+    virtual bool sourceContainsTimestamp() override;
+    virtual const std::vector<std::shared_ptr<SubchannelSource> > getSubchannels() const override;
 
     virtual bool isFrameReady(void);
     virtual void clearFrame(void);
@@ -152,29 +152,29 @@ public:
     virtual void update_protocol(
             const std::string& proto,
             uint16_t major,
-            uint16_t minor);
+            uint16_t minor) override;
 
     // Update the data for the frame characterisation
-    virtual void update_fc_data(const EdiDecoder::eti_fc_data& fc_data);
+    virtual void update_fc_data(const EdiDecoder::eti_fc_data& fc_data) override;
 
-    virtual void update_fic(std::vector<uint8_t>&& fic);
+    virtual void update_fic(std::vector<uint8_t>&& fic) override;
 
-    virtual void update_err(uint8_t err);
+    virtual void update_err(uint8_t err) override;
 
     // In addition to TSTA in ETI, EDI also transports more time
     // stamp information.
     virtual void update_edi_time(
             uint32_t utco,
-            uint32_t seconds);
+            uint32_t seconds) override;
 
-    virtual void update_mnsc(uint16_t mnsc);
+    virtual void update_mnsc(uint16_t mnsc) override;
 
-    virtual void update_rfu(uint16_t rfu);
+    virtual void update_rfu(uint16_t rfu) override;
 
-    virtual void add_subchannel(EdiDecoder::eti_stc_data&& stc);
+    virtual void add_subchannel(EdiDecoder::eti_stc_data&& stc) override;
 
     // Gets called by the EDI library to tell us that all data for a frame was given to us
-    virtual void assemble(void);
+    virtual void assemble(EdiDecoder::ReceivedTagPacket&& tagpacket) override;
 private:
     bool m_proto_valid = false;
     bool m_frameReady = false;

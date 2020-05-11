@@ -2,7 +2,7 @@
    Copyright (C) 2003, 2004, 2005, 2006, 2007, 2008, 2009 Her Majesty the
    Queen in Right of Canada (Communications Research Center Canada)
 
-   Copyright (C) 2019
+   Copyright (C) 2020
    Matthias P. Braendli, matthias.braendli@mpb.li
 
     http://www.opendigitalradio.org
@@ -932,6 +932,11 @@ void TCPSendClient::sendall(const std::vector<uint8_t>& buffer)
     }
 
     m_queue.push(buffer);
+
+    if (m_queue.size() > MAX_QUEUE_SIZE) {
+        vector<uint8_t> discard;
+        m_queue.try_pop(discard);
+    }
 }
 
 void TCPSendClient::process()

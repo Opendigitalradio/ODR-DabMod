@@ -1,5 +1,5 @@
 /*
-   Copyright (C) 2019
+   Copyright (C) 2020
    Matthias P. Braendli, matthias.braendli@mpb.li
 
    http://opendigitalradio.org
@@ -41,7 +41,7 @@ struct frame_timestamp_t {
     std::time_t to_unix_epoch() const;
     std::chrono::system_clock::time_point to_system_clock() const;
 
-    double diff_ms(const frame_timestamp_t& other) const;
+    double diff_s(const frame_timestamp_t& other) const;
 
     frame_timestamp_t& operator+=(const std::chrono::milliseconds& ms);
 
@@ -55,6 +55,10 @@ struct decode_state_t {
     size_t num_bytes_consumed;
 };
 
+using tag_name_t = std::array<uint8_t, 4>;
+
+std::string tag_name_to_human_readable(const tag_name_t& name);
+
 /* The TagDispatcher takes care of decoding EDI, with or without PFT, and
  * will call functions when TAGs are encountered.
  *
@@ -63,7 +67,10 @@ struct decode_state_t {
  */
 class TagDispatcher {
     public:
-        TagDispatcher(std::function<void()>&& af_packet_completed, bool verbose);
+        TagDispatcher(std::function<void()>&& af_packet_completed);
+
+        void set_verbose(bool verbose);
+
 
         /* Push bytes into the decoder. The buf can contain more
          * than a single packet. This is useful when reading from streams
@@ -81,8 +88,18 @@ class TagDispatcher {
          */
         void setMaxDelay(int num_af_packets);
 
-        using tag_handler = std::function<bool(std::vector<uint8_t>, uint16_t)>;
+        /* Handler function for a tag. The first argument contains the tag value,
+         * the second argument contains the tag name */
+        using tag_handler = std::function<bool(const std::vector<uint8_t>&, const tag_name_t&)>;
+
+        /* Register a handler for a tag. If the tag string can be length 0, 1, 2, 3 or 4.
+         * If is shorter than 4, it will perform a longest match on the tag name.
+         */
         void register_tag(const std::string& tag, tag_handler&& h);
+
+        /* The complete tagpacket can also be retrieved */
+        using tagpacket_handler = std::function<void(const std::vector<uint8_t>&)>;
+        void register_tagpacket_handler(tagpacket_handler&& h);
 
     private:
         decode_state_t decode_afpacket(const std::vector<uint8_t> &input_data);
@@ -93,6 +110,7 @@ class TagDispatcher {
         std::vector<uint8_t> m_input_data;
         std::map<std::string, tag_handler> m_handlers;
         std::function<void()> m_af_packet_completed;
+        tagpacket_handler m_tagpacket_handler;
 };
 
 // Data carried inside the ODRv EDI TAG

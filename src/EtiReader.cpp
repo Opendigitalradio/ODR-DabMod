@@ -475,7 +475,7 @@ void EdiReader::add_subchannel(EdiDecoder::eti_stc_data&& stc)
     }
 }
 
-void EdiReader::assemble()
+void EdiReader::assemble(EdiDecoder::ReceivedTagPacket&& tagpacket)
 {
     if (not m_proto_valid) {
         throw std::logic_error("Cannot assemble EDI data before protocol");
@@ -640,7 +640,7 @@ bool EdiTransport::rxPacket()
 
 EdiInput::EdiInput(double& tist_offset_s, float edi_max_delay_ms) :
     ediReader(tist_offset_s),
-    decoder(ediReader, false),
+    decoder(ediReader),
     ediTransport(decoder)
 {
     if (edi_max_delay_ms > 0.0f) {
