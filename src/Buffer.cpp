@@ -29,8 +29,9 @@
 #include "PcDebug.h"
 
 #include <string>
-#include <stdlib.h>
-#include <string.h>
+#include <stdexcept>
+#include <cstdlib>
+#include <cstring>
 
 Buffer::Buffer(size_t len, const void *data)
 {
