@@ -25,6 +25,7 @@
 #include <map>
 #include <chrono>
 #include <string>
+#include <array>
 #include <vector>
 #include <cstddef>
 #include <ctime>
