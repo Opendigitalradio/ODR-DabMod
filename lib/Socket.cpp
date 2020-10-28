@@ -630,8 +630,13 @@ ssize_t TCPSocket::recv(void *buffer, size_t length, int flags)
 {
     ssize_t ret = ::recv(m_sock, buffer, length, flags);
     if (ret == -1) {
-        std::string errstr(strerror(errno));
-        throw std::runtime_error("TCP receive error: " + errstr);
+        if (errno == EINTR) {
+            throw Interrupted();
+        }
+        else {
+            std::string errstr(strerror(errno));
+            throw std::runtime_error("TCP receive error: " + errstr);
+        }
     }
     return ret;
 }

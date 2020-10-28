@@ -180,12 +180,12 @@ class TCPSocket {
          */
         ssize_t send(const void* data, size_t size, int timeout_ms=0);
 
-        /* Returns number of bytes read, 0 on disconnect. Throws a
-         * runtime_error on error */
+        class Interrupted {};
+        /* Returns number of bytes read, 0 on disconnect.
+         * Throws Interrupted on EINTR, runtime_error on error */
         ssize_t recv(void *buffer, size_t length, int flags);
 
         class Timeout {};
-        class Interrupted {};
         /* Returns number of bytes read, 0 on disconnect or refused connection.
          * Throws a Timeout on timeout, Interrupted on EINTR, a runtime_error
          * on error
