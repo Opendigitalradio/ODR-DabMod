@@ -264,9 +264,15 @@ decode_state_t TagDispatcher::decode_afpacket(
     }
 
     // SEQ wraps at 0xFFFF, unsigned integer overflow is intentional
-    const uint16_t expected_seq = m_last_seq + 1;
-    if (expected_seq != seq) {
-        etiLog.level(warn) << "EDI AF Packet sequence error, " << seq;
+    if (m_last_seq_valid) {
+        const uint16_t expected_seq = m_last_seq + 1;
+        if (expected_seq != seq) {
+            etiLog.level(warn) << "EDI AF Packet sequence error, " << seq;
+        }
+    }
+    else {
+        etiLog.level(info) << "EDI AF Packet initial sequence number: " << seq;
+        m_last_seq_valid = true;
     }
     m_last_seq = seq;
 

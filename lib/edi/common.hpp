@@ -107,6 +107,7 @@ class TagDispatcher {
         bool decode_tagpacket(const std::vector<uint8_t> &payload);
 
         PFT::PFT m_pft;
+        bool m_last_seq_valid = false;
         uint16_t m_last_seq = 0;
         std::vector<uint8_t> m_input_data;
         std::map<std::string, tag_handler> m_handlers;
