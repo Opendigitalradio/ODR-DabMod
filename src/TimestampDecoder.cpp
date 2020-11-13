@@ -49,7 +49,7 @@ frame_timestamp& frame_timestamp::operator+=(const double& diff)
         new_pps += 16384000;
     }
 
-    while (new_pps > 16384000) {
+    while (new_pps >= 16384000) {
         this->timestamp_sec += 1;
         new_pps -= 16384000;
     }
