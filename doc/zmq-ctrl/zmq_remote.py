@@ -51,7 +51,7 @@ if socks:
 
         print("Received: {}".format(len(data)))
         for i,part in enumerate(data):
-            print(" RX {}: {}".format(i, part))
+            print(" RX {}: {}".format(i, part.decode().replace('\n',' ')))
 
 else:
     print("ZMQ error: timeout")
