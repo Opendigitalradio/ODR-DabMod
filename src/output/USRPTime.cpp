@@ -68,6 +68,9 @@ USRPTime::USRPTime(
             // let verify_time handle time setup
         }
     }
+    else if (m_conf.pps_src == "external") {
+        set_usrp_time_from_pps();
+    }
     else {
         throw std::runtime_error("USRPTime not implemented yet: " +
                 m_conf.pps_src);
