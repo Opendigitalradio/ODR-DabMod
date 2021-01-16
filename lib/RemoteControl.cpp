@@ -29,6 +29,7 @@
 #include <algorithm>
 
 #include "RemoteControl.h"
+#include "zmq.hpp"
 
 using namespace std;
 
@@ -424,7 +425,7 @@ void RemoteControllerZmq::recv_all(zmq::socket_t& pSocket, std::vector<std::stri
     bool more = true;
     do {
         zmq::message_t msg;
-        pSocket.recv(&msg);
+        pSocket.recv(msg);
         std::string incoming((char*)msg.data(), msg.size());
         message.push_back(incoming);
         more = msg.more();
@@ -436,7 +437,7 @@ void RemoteControllerZmq::send_ok_reply(zmq::socket_t &pSocket)
     zmq::message_t msg(2);
     char repCode[2] = {'o', 'k'};
     memcpy ((void*) msg.data(), repCode, 2);
-    pSocket.send(msg, 0);
+    pSocket.send(msg, zmq::send_flags::none);
 }
 
 void RemoteControllerZmq::send_fail_reply(zmq::socket_t &pSocket, const std::string &error)
@@ -444,11 +445,11 @@ void RemoteControllerZmq::send_fail_reply(zmq::socket_t &pSocket, const std::str
     zmq::message_t msg1(4);
     char repCode[4] = {'f', 'a', 'i', 'l'};
     memcpy ((void*) msg1.data(), repCode, 4);
-    pSocket.send(msg1, ZMQ_SNDMORE);
+    pSocket.send(msg1, zmq::send_flags::sndmore);
 
     zmq::message_t msg2(error.length());
     memcpy ((void*) msg2.data(), error.c_str(), error.length());
-    pSocket.send(msg2, 0);
+    pSocket.send(msg2, zmq::send_flags::none);
 }
 
 void RemoteControllerZmq::process()
@@ -508,8 +509,7 @@ void RemoteControllerZmq::process()
                         zmq::message_t zmsg(ss.str().size());
                         memcpy ((void*) zmsg.data(), msg_s.data(), msg_s.size());
 
-                        int flag = (--cohort_size > 0) ? ZMQ_SNDMORE : 0;
-                        repSocket.send(zmsg, flag);
+                        repSocket.send(zmsg, (--cohort_size > 0) ? zmq::send_flags::sndmore : zmq::send_flags::none);
                     }
                 }
                 else if (msg.size() == 2 && command == "show") {
@@ -523,8 +523,7 @@ void RemoteControllerZmq::process()
                             zmq::message_t zmsg(ss.str().size());
                             memcpy(zmsg.data(), ss.str().data(), ss.str().size());
 
-                            int flag = (--r_size > 0) ? ZMQ_SNDMORE : 0;
-                            repSocket.send(zmsg, flag);
+                            repSocket.send(zmsg, (--r_size > 0) ? zmq::send_flags::sndmore : zmq::send_flags::none);
                         }
                     }
                     catch (const ParameterError &err) {
@@ -539,7 +538,7 @@ void RemoteControllerZmq::process()
                         std::string value = rcs.get_param(module, parameter);
                         zmq::message_t zmsg(value.size());
                         memcpy ((void*) zmsg.data(), value.data(), value.size());
-                        repSocket.send(zmsg, 0);
+                        repSocket.send(zmsg, zmq::send_flags::none);
                     }
                     catch (const ParameterError &err) {
                         send_fail_reply(repSocket, err.what());
@@ -576,4 +575,3 @@ void RemoteControllerZmq::process()
 }
 
 #endif
-

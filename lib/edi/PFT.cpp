@@ -23,6 +23,7 @@
 #include <cstdio>
 #include <cassert>
 #include <cstring>
+#include <cmath>
 #include <sstream>
 #include <stdexcept>
 #include <algorithm>
@@ -109,10 +110,17 @@ class FECDecoder {
 
 size_t Fragment::loadData(const std::vector<uint8_t> &buf)
 {
+    return loadData(buf, 0);
+}
+
+size_t Fragment::loadData(const std::vector<uint8_t> &buf, int received_on_port)
+{
     const size_t header_len = 14;
     if (buf.size() < header_len) {
         return 0;
     }
+
+    this->received_on_port = received_on_port;
 
     size_t index = 0;
 
@@ -461,6 +469,32 @@ std::string AFBuilder::visualise() const
     return ss.str();
 }
 
+std::string AFBuilder::visualise_fragment_origins() const
+{
+    stringstream ss;
+    if (_fragments.size() == 0) {
+        return "No fragments";
+    }
+    else {
+        ss << _fragments.size() << " fragments: ";
+    }
+
+    std::map<int, size_t> port_count;
+
+    for (const auto& f : _fragments) {
+        port_count[f.second.received_on_port]++;
+    }
+
+    for (const auto& p : port_count) {
+        ss << "p" << p.first << " " <<
+            std::round(100.0 * ((double)p.second) / (double)_fragments.size()) << "% ";
+    }
+
+    ss << "\n";
+
+    return ss.str();
+}
+
 void PFT::pushPFTFrag(const Fragment &fragment)
 {
     // Start decoding the first pseq we receive. In normal
@@ -518,6 +552,9 @@ std::vector<uint8_t> PFT::getNextAFPacket()
     if (builder.canAttemptToDecode() == dar_t::yes) {
         auto afpacket = builder.extractAF();
         assert(not afpacket.empty());
+        if (m_verbose) {
+            etiLog.level(debug) << "Fragment origin stats: " << builder.visualise_fragment_origins();
+        }
         incrementNextPseq();
         return afpacket;
     }
@@ -532,6 +569,9 @@ std::vector<uint8_t> PFT::getNextAFPacket()
 
             if (afpacket.empty()) {
                 etiLog.log(debug,"pseq %d timed out after RS", m_next_pseq);
+            }
+            if (m_verbose) {
+                etiLog.level(debug) << "Fragment origin stats: " << builder.visualise_fragment_origins();
             }
             incrementNextPseq();
             return afpacket;

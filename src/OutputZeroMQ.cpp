@@ -68,10 +68,10 @@ int OutputZeroMQ::process(Buffer* dataIn)
     if (m_type == ZMQ_REP) {
         // A ZMQ_REP socket requires a request first
         zmq::message_t msg;
-        m_zmq_sock.recv(&msg);
+        m_zmq_sock.recv(msg, zmq::recv_flags::none);
     }
 
-    m_zmq_sock.send(dataIn->getData(), dataIn->getLength());
+    m_zmq_sock.send(zmq::const_buffer{dataIn->getData(), dataIn->getLength()});
 
     return dataIn->getLength();
 }

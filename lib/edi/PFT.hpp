@@ -36,11 +36,14 @@ using findex_t = uint32_t; // findex is a 24-bit value
 class Fragment
 {
     public:
+        int received_on_port = 0;
+
         // Load the data for one fragment from buf into
         // the Fragment.
         // \returns the number of bytes of useful data found in buf
         // A non-zero return value doesn't imply a valid fragment
         // the isValid() method must be used to verify this.
+        size_t loadData(const std::vector<uint8_t> &buf, int received_on_port);
         size_t loadData(const std::vector<uint8_t> &buf);
 
         bool isValid() const { return _valid; }
@@ -111,7 +114,9 @@ class AFBuilder
                 return {_fragments.size(), _Fcount};
             }
 
-        std::string visualise(void) const;
+        std::string visualise() const;
+
+        std::string visualise_fragment_origins() const;
 
         /* The user of this instance can keep track of the lifetime of this
          * builder

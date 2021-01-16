@@ -94,7 +94,7 @@ odr_dabmod_SOURCES  = src/DabMod.cpp \
 					  src/FormatConverter.h \
 					  src/Utils.cpp \
 					  src/Utils.h \
-					  src/zmq.hpp \
+					  lib/zmq.hpp \
 					  lib/RemoteControl.cpp \
 					  lib/RemoteControl.h \
 					  lib/Log.cpp \

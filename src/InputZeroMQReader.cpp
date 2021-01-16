@@ -198,7 +198,7 @@ void InputZeroMQReader::RecvProcess()
                 continue;
             }
 
-            subscriber.recv(&incoming);
+            subscriber.recv(incoming);
 
             if (queue_size < m_max_queued_frames) {
                 if (incoming.size() < ZMQ_DAB_MESSAGE_T_HEADERSIZE) {

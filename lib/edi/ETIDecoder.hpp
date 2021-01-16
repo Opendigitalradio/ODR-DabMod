@@ -38,11 +38,11 @@ struct eti_fc_data {
     bool atstf;
     uint32_t tsta;
     bool ficf;
-    uint16_t dflc;
+    uint16_t dlfc;
     uint8_t mid;
     uint8_t fp;
 
-    uint8_t fct(void) const { return dflc % 250; }
+    uint8_t fct(void) const { return dlfc % 250; }
 };
 
 // Information for a subchannel available in EDI
@@ -119,7 +119,7 @@ class ETIDecoder {
         /* Push a complete packet into the decoder. Useful for UDP and other
          * datagram-oriented protocols.
          */
-        void push_packet(const std::vector<uint8_t> &buf);
+        void push_packet(Packet &pack);
 
         /* Set the maximum delay in number of AF Packets before we
          * abandon decoding a given pseq.

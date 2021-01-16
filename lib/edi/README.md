@@ -1,1 +1,1 @@
-These files are copied from the odr-edilib project.
+These files are copied from the common ODR code repository.

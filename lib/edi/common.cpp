@@ -22,6 +22,7 @@
 #include "buffer_unpack.hpp"
 #include "Log.h"
 #include "crc.h"
+#include <algorithm>
 #include <sstream>
 #include <cassert>
 #include <cmath>
@@ -142,6 +143,12 @@ void TagDispatcher::set_verbose(bool verbose)
 
 void TagDispatcher::push_bytes(const vector<uint8_t> &buf)
 {
+    if (buf.empty()) {
+        m_input_data.clear();
+        m_last_seq_valid = false;
+        return;
+    }
+
     copy(buf.begin(), buf.end(), back_inserter(m_input_data));
 
     while (m_input_data.size() > 2) {
@@ -194,14 +201,16 @@ void TagDispatcher::push_bytes(const vector<uint8_t> &buf)
             }
         }
         else {
-            etiLog.log(warn,"Unknown %c!", *m_input_data.data());
+            etiLog.log(warn, "Unknown 0x%02x!", *m_input_data.data());
             m_input_data.erase(m_input_data.begin());
         }
     }
 }
 
-void TagDispatcher::push_packet(const vector<uint8_t> &buf)
+void TagDispatcher::push_packet(const Packet &packet)
 {
+    auto& buf = packet.buf;
+
     if (buf.size() < 2) {
         throw std::invalid_argument("Not enough bytes to read EDI packet header");
     }
@@ -216,7 +225,7 @@ void TagDispatcher::push_packet(const vector<uint8_t> &buf)
     }
     else if (buf[0] == 'P' and buf[1] == 'F') {
         PFT::Fragment fragment;
-        fragment.loadData(buf);
+        fragment.loadData(buf, packet.received_on_port);
 
         if (fragment.isValid()) {
             m_pft.pushPFTFrag(fragment);
@@ -232,11 +241,10 @@ void TagDispatcher::push_packet(const vector<uint8_t> &buf)
         }
     }
     else {
-        const char packettype[3] = {(char)buf[0], (char)buf[1], '\0'};
         std::stringstream ss;
-        ss << "Unknown EDI packet ";
-        ss << packettype;
-        throw std::invalid_argument(ss.str());
+        ss << "Unknown EDI packet " << std::hex << (int)buf[0] << " " << (int)buf[1];
+        m_ignored_tags.clear();
+        throw invalid_argument(ss.str());
     }
 }
 
@@ -268,6 +276,7 @@ decode_state_t TagDispatcher::decode_afpacket(
         const uint16_t expected_seq = m_last_seq + 1;
         if (expected_seq != seq) {
             etiLog.level(warn) << "EDI AF Packet sequence error, " << seq;
+            m_ignored_tags.clear();
         }
     }
     else {
@@ -303,8 +312,7 @@ decode_state_t TagDispatcher::decode_afpacket(
     uint16_t packet_crc = read_16b(input_data.begin() + AFPACKET_HEADER_LEN + taglength);
 
     if (packet_crc != crc) {
-        throw invalid_argument(
-                "AF Packet crc wrong");
+        throw invalid_argument("AF Packet crc wrong");
     }
     else {
         vector<uint8_t> payload(taglength);
@@ -379,7 +387,10 @@ bool TagDispatcher::decode_tagpacket(const vector<uint8_t> &payload)
         }
 
         if (not found) {
-            etiLog.log(warn, "Ignoring unknown TAG %s", tag.c_str());
+            if (std::find(m_ignored_tags.begin(), m_ignored_tags.end(), tag) == m_ignored_tags.end()) {
+                etiLog.log(warn, "Ignoring unknown TAG %s", tag.c_str());
+                m_ignored_tags.push_back(tag);
+            }
             break;
         }
 

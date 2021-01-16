@@ -201,13 +201,13 @@ private:
 };
 
 /* The EDI input does not use the inputs defined in InputReader.h, as they were
- * designed for ETI. It uses the EdiTransport which in turn uses a threaded
- * receiver.
+ * designed for ETI.
  */
 class EdiTransport {
     public:
         EdiTransport(EdiDecoder::ETIDecoder& decoder);
 
+        /* Can be called once when using TCP, or several times when using UDP */
         void Open(const std::string& uri);
 
         bool isEnabled(void) const { return m_enabled; }
@@ -224,8 +224,8 @@ class EdiTransport {
         std::string m_bindto;
         std::string m_mcastaddr;
 
-        enum class Proto { UDP, TCP };
-        Proto m_proto;
+        enum class Proto { Unspecified, UDP, TCP };
+        Proto m_proto = Proto::Unspecified;
         Socket::UDPReceiver m_udp_rx;
         std::vector<uint8_t> m_tcpbuffer;
         Socket::TCPClient m_tcpclient;

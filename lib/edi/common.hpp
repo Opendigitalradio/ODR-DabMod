@@ -60,6 +60,14 @@ using tag_name_t = std::array<uint8_t, 4>;
 
 std::string tag_name_to_human_readable(const tag_name_t& name);
 
+struct Packet {
+    std::vector<uint8_t> buf;
+    int received_on_port;
+
+    Packet(std::vector<uint8_t>&& b) : buf(b), received_on_port(0) { }
+    Packet() {}
+};
+
 /* The TagDispatcher takes care of decoding EDI, with or without PFT, and
  * will call functions when TAGs are encountered.
  *
@@ -72,17 +80,17 @@ class TagDispatcher {
 
         void set_verbose(bool verbose);
 
-
         /* Push bytes into the decoder. The buf can contain more
          * than a single packet. This is useful when reading from streams
-         * (files, TCP)
+         * (files, TCP). Pushing an empty buf will clear the internal decoder
+         * state to ensure realignment (e.g. on stream reconnection)
          */
         void push_bytes(const std::vector<uint8_t> &buf);
 
         /* Push a complete packet into the decoder. Useful for UDP and other
          * datagram-oriented protocols.
          */
-        void push_packet(const std::vector<uint8_t> &buf);
+        void push_packet(const Packet &packet);
 
         /* Set the maximum delay in number of AF Packets before we
          * abandon decoding a given pseq.
@@ -113,6 +121,8 @@ class TagDispatcher {
         std::map<std::string, tag_handler> m_handlers;
         std::function<void()> m_af_packet_completed;
         tagpacket_handler m_tagpacket_handler;
+
+        std::vector<std::string> m_ignored_tags;
 };
 
 // Data carried inside the ODRv EDI TAG
