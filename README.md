@@ -28,6 +28,7 @@ Features
 - A FIR filter for improved spectrum mask
 - TII insertion
 - Logging: log to file, to syslog
+- EDI sources: TCP and UDP, both with and without Protection and Fragmentation Layer.
 - ETI sources: ETI-over-TCP, file (Raw, Framed and Streamed) and ZeroMQ
 - A Telnet and ZeroMQ remote-control that can be used to change
   some parameters during runtime and retrieve statistics.

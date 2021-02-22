@@ -1,6 +1,13 @@
 This file contains information about the changes done to
 ODR-DabMod in this repository
 
+2021-02-22: Matthias P. Braendli <matthias@mpb.li>
+	(v2.4.2):
+		Fix some compilation issues for GCC 10 and due to missing includes.
+		Fix external PPS input sync for B200.
+		Properly handle and edge value of TIST.
+		Update common ODR-mmbTools code.
+
 2020-04-06: Matthias P. Braendli <matthias@mpb.li>
 	(v2.4.1):
 		Fix handling of Ctrl-C.
