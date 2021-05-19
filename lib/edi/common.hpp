@@ -68,6 +68,13 @@ struct Packet {
     Packet() {}
 };
 
+struct seq_info_t {
+    bool seq_valid = false;
+    uint16_t seq = 0;
+    bool pseq_valid = false;
+    uint16_t pseq = 0;
+};
+
 /* The TagDispatcher takes care of decoding EDI, with or without PFT, and
  * will call functions when TAGs are encountered.
  *
@@ -110,13 +117,16 @@ class TagDispatcher {
         using tagpacket_handler = std::function<void(const std::vector<uint8_t>&)>;
         void register_tagpacket_handler(tagpacket_handler&& h);
 
+        seq_info_t get_seq_info() const {
+            return m_last_sequences;
+        }
+
     private:
         decode_state_t decode_afpacket(const std::vector<uint8_t> &input_data);
         bool decode_tagpacket(const std::vector<uint8_t> &payload);
 
         PFT::PFT m_pft;
-        bool m_last_seq_valid = false;
-        uint16_t m_last_seq = 0;
+        seq_info_t m_last_sequences;
         std::vector<uint8_t> m_input_data;
         std::map<std::string, tag_handler> m_handlers;
         std::function<void()> m_af_packet_completed;

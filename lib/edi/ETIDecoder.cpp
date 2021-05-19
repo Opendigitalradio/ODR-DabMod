@@ -69,7 +69,7 @@ void ETIDecoder::setMaxDelay(int num_af_packets)
 
 #define AFPACKET_HEADER_LEN 10 // includes SYNC
 
-bool ETIDecoder::decode_starptr(const std::vector<uint8_t>& value, const tag_name_t& n)
+bool ETIDecoder::decode_starptr(const std::vector<uint8_t>& value, const tag_name_t& /*n*/)
 {
     if (value.size() != 0x40 / 8) {
         etiLog.log(warn, "Incorrect length %02lx for *PTR", value.size());
@@ -89,7 +89,7 @@ bool ETIDecoder::decode_starptr(const std::vector<uint8_t>& value, const tag_nam
     return true;
 }
 
-bool ETIDecoder::decode_deti(const std::vector<uint8_t>& value, const tag_name_t& n)
+bool ETIDecoder::decode_deti(const std::vector<uint8_t>& value, const tag_name_t& /*n*/)
 {
     /*
     uint16_t detiHeader = fct | (fcth << 8) | (rfudf << 13) | (ficf << 14) | (atstf << 15);

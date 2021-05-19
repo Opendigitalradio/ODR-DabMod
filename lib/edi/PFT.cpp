@@ -1,6 +1,6 @@
 /* ------------------------------------------------------------------
  * Copyright (C) 2017 AVT GmbH - Fabien Vercasson
- * Copyright (C) 2017 Matthias P. Braendli
+ * Copyright (C) 2021 Matthias P. Braendli
  *                    matthias.braendli@mpb.li
  *
  * http://opendigitalradio.org
@@ -126,7 +126,7 @@ size_t Fragment::loadData(const std::vector<uint8_t> &buf, int received_on_port)
 
     // Parse PFT Fragment Header (ETSI TS 102 821 V1.4.1 ch7.1)
     if (not (buf[0] == 'P' and buf[1] == 'F') ) {
-        throw invalid_argument("Invalid PFT SYNC bytes");
+        throw runtime_error("Invalid PFT SYNC bytes");
     }
     index += 2; // Psync
 
@@ -208,15 +208,30 @@ AFBuilder::AFBuilder(pseq_t Pseq, findex_t Fcount, size_t lifetime)
 
 void AFBuilder::pushPFTFrag(const Fragment &frag)
 {
-    if (_Pseq != frag.Pseq() or _Fcount != frag.Fcount()) {
-        throw invalid_argument("Invalid PFT fragment Pseq or Fcount");
+    if (_Pseq != frag.Pseq()) {
+        throw logic_error("Invalid PFT fragment Pseq");
     }
-    const auto Findex = frag.Findex();
-    const bool fragment_already_received = _fragments.count(Findex);
 
-    if (not fragment_already_received)
-    {
-        _fragments[Findex] = frag;
+    if (_Fcount != frag.Fcount()) {
+        etiLog.level(warn) << "Discarding fragment with invalid fcount";
+    }
+    else {
+        const auto Findex = frag.Findex();
+        const bool fragment_already_received = _fragments.count(Findex);
+
+        if (not fragment_already_received) {
+            bool consistent = true;
+            if (_fragments.size() > 0) {
+                consistent = frag.checkConsistency(_fragments.cbegin()->second);
+            }
+
+            if (consistent) {
+                _fragments[Findex] = frag;
+            }
+            else {
+                etiLog.level(warn) << "Discard fragment";
+            }
+        }
     }
 }
 
@@ -246,7 +261,7 @@ bool Fragment::checkConsistency(const Fragment& other) const
 }
 
 
-AFBuilder::decode_attempt_result_t AFBuilder::canAttemptToDecode() const
+AFBuilder::decode_attempt_result_t AFBuilder::canAttemptToDecode()
 {
     if (_fragments.empty()) {
         return AFBuilder::decode_attempt_result_t::no;
@@ -263,7 +278,8 @@ AFBuilder::decode_attempt_result_t AFBuilder::canAttemptToDecode() const
                 const Fragment& frag = pair.second;
                 return first.checkConsistency(frag) and _Pseq == frag.Pseq();
             }) ) {
-        throw invalid_argument("Inconsistent PFT fragments");
+        _fragments.clear();
+        throw runtime_error("Inconsistent PFT fragments");
     }
 
     // Calculate the minimum number of fragments necessary to apply FEC.
@@ -301,7 +317,7 @@ AFBuilder::decode_attempt_result_t AFBuilder::canAttemptToDecode() const
     return AFBuilder::decode_attempt_result_t::no;
 }
 
-std::vector<uint8_t> AFBuilder::extractAF() const
+std::vector<uint8_t> AFBuilder::extractAF()
 {
     if (not _af_packet.empty()) {
         return _af_packet;
@@ -310,13 +326,12 @@ std::vector<uint8_t> AFBuilder::extractAF() const
     bool ok = false;
 
     if (canAttemptToDecode() != AFBuilder::decode_attempt_result_t::no) {
-
         auto frag_it = _fragments.begin();
         if (frag_it->second.Fcount() == _Fcount - 1) {
             frag_it++;
 
             if (frag_it == _fragments.end()) {
-                throw std::runtime_error("Invalid attempt at extracting AF");
+                throw runtime_error("Invalid attempt at extracting AF");
             }
         }
 
@@ -343,12 +358,14 @@ std::vector<uint8_t> AFBuilder::extractAF() const
                     const auto& fragment = _fragments.at(j).payload();
 
                     if (j != _Fcount - 1 and fragment.size() != Plen) {
+                        _fragments.clear();
                         throw runtime_error("Incorrect fragment length " +
                                 to_string(fragment.size()) + " " +
                                 to_string(Plen));
                     }
 
                     if (j == _Fcount - 1 and fragment.size() > Plen) {
+                        _fragments.clear();
                         throw runtime_error("Incorrect last fragment length " +
                                 to_string(fragment.size()) + " " +
                                 to_string(Plen));
@@ -453,7 +470,7 @@ std::vector<uint8_t> AFBuilder::extractAF() const
     return _af_packet;
 }
 
-std::string AFBuilder::visualise() const
+std::string AFBuilder::visualise()
 {
     stringstream ss;
     ss << "|";
@@ -525,7 +542,7 @@ void PFT::pushPFTFrag(const Fragment &fragment)
     if (m_verbose) {
         etiLog.log(debug, "Got frag %u:%u, afbuilders: ",
                 fragment.Pseq(), fragment.Findex());
-        for (const auto &k : m_afbuilders) {
+        for (auto &k : m_afbuilders) {
             const bool isNextPseq = (m_next_pseq == k.first);
             etiLog.level(debug) << (isNextPseq ? "->" : "  ") <<
                 k.first << " " << k.second.visualise();
@@ -534,15 +551,17 @@ void PFT::pushPFTFrag(const Fragment &fragment)
 }
 
 
-std::vector<uint8_t> PFT::getNextAFPacket()
+afpacket_pft_t PFT::getNextAFPacket()
 {
+    afpacket_pft_t af;
+
     if (m_afbuilders.count(m_next_pseq) == 0) {
         if (m_afbuilders.size() > m_max_delay) {
             m_afbuilders.clear();
             etiLog.level(debug) << " Reinit";
         }
 
-        return {};
+        return af;
     }
 
     auto &builder = m_afbuilders.at(m_next_pseq);
@@ -555,8 +574,9 @@ std::vector<uint8_t> PFT::getNextAFPacket()
         if (m_verbose) {
             etiLog.level(debug) << "Fragment origin stats: " << builder.visualise_fragment_origins();
         }
+        af.pseq = m_next_pseq;
+        af.af_packet = afpacket;
         incrementNextPseq();
-        return afpacket;
     }
     else if (builder.canAttemptToDecode() == dar_t::maybe) {
         if (builder.lifeTime > 0) {
@@ -573,8 +593,9 @@ std::vector<uint8_t> PFT::getNextAFPacket()
             if (m_verbose) {
                 etiLog.level(debug) << "Fragment origin stats: " << builder.visualise_fragment_origins();
             }
+            af.pseq = m_next_pseq;
+            af.af_packet = afpacket;
             incrementNextPseq();
-            return afpacket;
         }
     }
     else {
@@ -588,7 +609,7 @@ std::vector<uint8_t> PFT::getNextAFPacket()
         }
     }
 
-    return {};
+    return af;
 }
 
 void PFT::setMaxDelay(size_t num_af_packets)

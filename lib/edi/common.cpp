@@ -132,7 +132,7 @@ std::string tag_name_to_human_readable(const tag_name_t& name)
 TagDispatcher::TagDispatcher(
         std::function<void()>&& af_packet_completed) :
     m_af_packet_completed(move(af_packet_completed)),
-    m_tagpacket_handler([](const std::vector<uint8_t>& ignore){})
+    m_tagpacket_handler([](const std::vector<uint8_t>& /*ignore*/){})
 {
 }
 
@@ -145,7 +145,7 @@ void TagDispatcher::push_bytes(const vector<uint8_t> &buf)
 {
     if (buf.empty()) {
         m_input_data.clear();
-        m_last_seq_valid = false;
+        m_last_sequences.seq_valid = false;
         return;
     }
 
@@ -168,6 +168,7 @@ void TagDispatcher::push_bytes(const vector<uint8_t> &buf)
                 m_input_data = remaining_data;
             }
 
+            m_last_sequences.pseq_valid = false;
             if (st.complete) {
                 m_af_packet_completed();
             }
@@ -192,8 +193,10 @@ void TagDispatcher::push_bytes(const vector<uint8_t> &buf)
             }
 
             auto af = m_pft.getNextAFPacket();
-            if (not af.empty()) {
-                decode_state_t st = decode_afpacket(af);
+            if (not af.af_packet.empty()) {
+                const decode_state_t st = decode_afpacket(af.af_packet);
+                m_last_sequences.pseq = af.pseq;
+                m_last_sequences.pseq_valid = true;
 
                 if (st.complete) {
                     m_af_packet_completed();
@@ -217,6 +220,7 @@ void TagDispatcher::push_packet(const Packet &packet)
 
     if (buf[0] == 'A' and buf[1] == 'F') {
         const decode_state_t st = decode_afpacket(buf);
+        m_last_sequences.pseq_valid = false;
 
         if (st.complete) {
             m_af_packet_completed();
@@ -232,8 +236,10 @@ void TagDispatcher::push_packet(const Packet &packet)
         }
 
         auto af = m_pft.getNextAFPacket();
-        if (not af.empty()) {
-            const decode_state_t st = decode_afpacket(af);
+        if (not af.af_packet.empty()) {
+            const decode_state_t st = decode_afpacket(af.af_packet);
+            m_last_sequences.pseq = af.pseq;
+            m_last_sequences.pseq_valid = true;
 
             if (st.complete) {
                 m_af_packet_completed();
@@ -272,8 +278,8 @@ decode_state_t TagDispatcher::decode_afpacket(
     }
 
     // SEQ wraps at 0xFFFF, unsigned integer overflow is intentional
-    if (m_last_seq_valid) {
-        const uint16_t expected_seq = m_last_seq + 1;
+    if (m_last_sequences.seq_valid) {
+        const uint16_t expected_seq = m_last_sequences.seq + 1;
         if (expected_seq != seq) {
             etiLog.level(warn) << "EDI AF Packet sequence error, " << seq;
             m_ignored_tags.clear();
@@ -281,9 +287,9 @@ decode_state_t TagDispatcher::decode_afpacket(
     }
     else {
         etiLog.level(info) << "EDI AF Packet initial sequence number: " << seq;
-        m_last_seq_valid = true;
+        m_last_sequences.seq_valid = true;
     }
-    m_last_seq = seq;
+    m_last_sequences.seq = seq;
 
     bool has_crc = (input_data[8] & 0x80) ? true : false;
     uint8_t major_revision = (input_data[8] & 0x70) >> 4;

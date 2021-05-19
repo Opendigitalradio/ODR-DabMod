@@ -1,6 +1,6 @@
 /* ------------------------------------------------------------------
  * Copyright (C) 2017 AVT GmbH - Fabien Vercasson
- * Copyright (C) 2017 Matthias P. Braendli
+ * Copyright (C) 2021 Matthias P. Braendli
  *                    matthias.braendli@mpb.li
  *
  * http://opendigitalradio.org
@@ -101,20 +101,20 @@ class AFBuilder
         void pushPFTFrag(const Fragment &frag);
 
         /* Assess if it may be possible to decode this AF packet */
-        decode_attempt_result_t canAttemptToDecode() const;
+        decode_attempt_result_t canAttemptToDecode();
 
         /* Try to build the AF with received fragments.
          * Apply error correction if necessary (missing packets/CRC errors)
          * \return an empty vector if building the AF is not possible
          */
-        std::vector<uint8_t> extractAF(void) const;
+        std::vector<uint8_t> extractAF();
 
         std::pair<findex_t, findex_t>
             numberOfFragments(void) const {
                 return {_fragments.size(), _Fcount};
             }
 
-        std::string visualise() const;
+        std::string visualise();
 
         std::string visualise_fragment_origins() const;
 
@@ -135,6 +135,13 @@ class AFBuilder
         findex_t _Fcount;
 };
 
+struct afpacket_pft_t
+{
+    // validity of the struct is given by af_packet begin empty or not.
+    std::vector<uint8_t> af_packet;
+    pseq_t pseq = 0;
+};
+
 class PFT
 {
     public:
@@ -145,7 +152,7 @@ class PFT
          *
          * \return an empty vector if building the AF is not possible
          */
-        std::vector<uint8_t> getNextAFPacket(void);
+        afpacket_pft_t getNextAFPacket();
 
         /* Set the maximum delay in number of AF Packets before we
          * abandon decoding a given pseq.
@@ -156,7 +163,7 @@ class PFT
         void setVerbose(bool enable);
 
     private:
-        void incrementNextPseq(void);
+        void incrementNextPseq();
 
         pseq_t m_next_pseq;
         size_t m_max_delay = 10; // in AF packets
