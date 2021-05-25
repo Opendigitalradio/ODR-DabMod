@@ -60,6 +60,7 @@ struct eti_stc_data {
 struct ReceivedTagPacket {
     std::vector<uint8_t> tagpacket;
     frame_timestamp_t timestamp;
+    seq_info_t seq;
 };
 
 

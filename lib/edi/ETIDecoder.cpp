@@ -233,6 +233,8 @@ bool ETIDecoder::decode_tagpacket(const std::vector<uint8_t>& value)
 
 void ETIDecoder::packet_completed()
 {
+    m_received_tagpacket.seq = m_dispatcher.get_seq_info();
+
     ReceivedTagPacket tp;
     swap(tp, m_received_tagpacket);
     m_data_collector.assemble(move(tp));
