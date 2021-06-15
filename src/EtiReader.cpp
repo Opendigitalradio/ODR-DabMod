@@ -334,7 +334,7 @@ const std::vector<std::shared_ptr<SubchannelSource> > EdiReader::getSubchannels(
     std::vector<std::shared_ptr<SubchannelSource> > sources;
 
     sources.resize(m_sources.size());
-    for (const auto s : m_sources) {
+    for (const auto& s : m_sources) {
         if (s.first < sources.size()) {
             sources.at(s.first) = s.second;
         }
