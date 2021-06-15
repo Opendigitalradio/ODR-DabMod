@@ -453,11 +453,11 @@ std::vector<uint8_t> AFBuilder::extractAF()
         }
 
         // EDI specific, must have a CRC.
-        if( _af_packet.size() >= 12 ) {
+        if (_af_packet.size() >= 12) {
             ok = checkCRC(_af_packet.data(), _af_packet.size());
 
             if (not ok) {
-                etiLog.log(debug, "Too many errors to reconstruct AF from %zu/%u"
+                etiLog.log(debug, "CRC error after AF reconstruction from %zu/%u"
                         " PFT fragments\n", _fragments.size(), _Fcount);
             }
         }
@@ -570,7 +570,7 @@ afpacket_pft_t PFT::getNextAFPacket()
 
     if (builder.canAttemptToDecode() == dar_t::yes) {
         auto afpacket = builder.extractAF();
-        assert(not afpacket.empty());
+        // Empty AF Packet can happen if CRC is wrong
         if (m_verbose) {
             etiLog.level(debug) << "Fragment origin stats: " << builder.visualise_fragment_origins();
         }
@@ -588,7 +588,7 @@ afpacket_pft_t PFT::getNextAFPacket()
             auto afpacket = builder.extractAF();
 
             if (afpacket.empty()) {
-                etiLog.log(debug,"pseq %d timed out after RS", m_next_pseq);
+                etiLog.log(debug, "pseq %d timed out after RS", m_next_pseq);
             }
             if (m_verbose) {
                 etiLog.level(debug) << "Fragment origin stats: " << builder.visualise_fragment_origins();
