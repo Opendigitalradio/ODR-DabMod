@@ -58,6 +58,9 @@ AC_ARG_ENABLE([easydabv3],
 AC_ARG_ENABLE([limesdr],
         [AS_HELP_STRING([--enable-limesdr], [Build for LimeSDR board])],
         [], [enable_limesdr=no])
+AC_ARG_ENABLE([bladerf],
+        [AS_HELP_STRING([--enable-bladerf], [Build for BladeRF boards])],
+        [], [enable_bladerf=no])
 
 # UHD support control
 AC_ARG_ENABLE([output_uhd],
@@ -110,9 +113,13 @@ AS_IF([test "x$enable_limesdr" = "xyes"],
          [AC_CHECK_LIB([LimeSuite], [LMS_Init], [LIMESDR_LIBS="-lLimeSuite"],
                        [AC_MSG_ERROR([LimeSDR LimeSuite is required])])])
 
+AS_IF([test "x$enable_bladerf" = "xyes"],
+         [AC_CHECK_LIB([bladeRF], [bladerf_open], [BLADERF_LIBS="-lbladeRF"],
+                       [AC_MSG_ERROR([BladeRF library is required])])])
+
 AC_SUBST([CFLAGS], ["$CFLAGS $EXTRA $FFTW_CFLAGS $SOAPYSDR_CFLAGS $PTHREAD_CFLAGS"])
 AC_SUBST([CXXFLAGS], ["$CXXFLAGS $EXTRA $FFTW_CFLAGS $SOAPYSDR_CFLAGS $PTHREAD_CFLAGS"])
-AC_SUBST([LIBS], ["$FFTW_LIBS $SOAPYSDR_LIBS $PTHREAD_LIBS $ZMQ_LIBS $LIMESDR_LIBS"])
+AC_SUBST([LIBS], ["$FFTW_LIBS $SOAPYSDR_LIBS $PTHREAD_LIBS $ZMQ_LIBS $LIMESDR_LIBS $BLADERF_LIBS"])
 
 AS_IF([test "x$enable_easydabv3" = "xyes" && test "x$enable_output_uhd" == "xyes"],
       AC_MSG_ERROR([Cannot enable both EasyDABv3 and UHD output]))
@@ -135,7 +142,10 @@ AS_IF([test "x$enable_soapysdr" = "xyes"],
       [AC_DEFINE(HAVE_SOAPYSDR, [1], [Define if SoapySDR output is enabled])])
 
 AS_IF([test "x$enable_limesdr" = "xyes"],
-      [AC_DEFINE(HAVE_LIMESDR, [1], [Define if LimeSDR input is enabled]) ])
+      [AC_DEFINE(HAVE_LIMESDR, [1], [Define if LimeSDR output is enabled]) ])
+
+AS_IF([test "x$enable_bladerf" = "xyes"],
+      [AC_DEFINE(HAVE_BLADERF, [1], [Define if BladeRF output is enabled]) ])
 
 AS_IF([test "x$enable_easydabv3" = "xyes"],
       AC_DEFINE(BUILD_FOR_EASYDABV3, [1], [Define if we are building for EasyDABv3]))
@@ -207,7 +217,7 @@ echo "***********************************************"
 echo
 enabled=""
 disabled=""
-for feat in prof trace output_uhd zeromq soapysdr easydabv3 limesdr
+for feat in prof trace output_uhd zeromq soapysdr easydabv3 limesdr bladerf
 do
     eval var=\$enable_$feat
     AS_IF([test "x$var" = "xyes"],
