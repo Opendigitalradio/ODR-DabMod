@@ -57,6 +57,7 @@
 #include "output/UHD.h"
 #include "output/Soapy.h"
 #include "output/Lime.h"
+#include "output/BladeRF.h"
 #include "OutputZeroMQ.h"
 #include "InputReader.h"
 #include "PcDebug.h"
@@ -158,6 +159,13 @@ static void printModSettings(const mod_settings_t& mod_settings)
                 mod_settings.sdr_device_config.masterClockRate << "\n";
     }
 #endif
+#if defined(HAVE_BLADERF)
+    else if (mod_settings.useBladeRFOutput) {
+        ss << " BladeRF\n"
+            "  Device: " << mod_settings.sdr_device_config.device << "\n" <<
+            "  refclk: " << mod_settings.sdr_device_config.refclk_src << "\n";
+    }
+#endif
     else if (mod_settings.useZeroMQOutput) {
         ss << " ZeroMQ\n" <<
             "  Listening on: " << mod_settings.outputName << "\n" <<
@@ -251,6 +259,16 @@ static shared_ptr<ModOutput> prepare_output(
         rcs.enrol((Output::SDR*)output.get());
     }
 #endif
+#if defined(HAVE_BLADERF)
+    else if (s.useBladeRFOutput) {
+        /* We normalise specifically for the BladeRF output : range [-2048; 2047] */
+        s.normalise = 2047.0f / normalise_factor;
+        s.sdr_device_config.sampleRate = s.outputRate;
+        auto bladerfdevice = make_shared<Output::BladeRF>(s.sdr_device_config);
+        output = make_shared<Output::SDR>(s.sdr_device_config, bladerfdevice);
+        rcs.enrol((Output::SDR*)output.get());
+    }
+#endif
 #if defined(HAVE_ZEROMQ)
     else if (s.useZeroMQOutput) {
         /* We normalise the same way as for the UHD output */
@@ -301,7 +319,8 @@ int launch_modulator(int argc, char* argv[])
              mod_settings.useUHDOutput or
              mod_settings.useZeroMQOutput or
              mod_settings.useSoapyOutput or
-             mod_settings.useLimeOutput)) {
+             mod_settings.useLimeOutput or
+             mod_settings.useBladeRFOutput)) {
         throw std::runtime_error("Configuration error: Output not specified");
     }
 
@@ -314,6 +333,9 @@ int launch_modulator(int argc, char* argv[])
              mod_settings.fileOutputFormat == "s16")) {
         format_converter = make_shared<FormatConverter>(mod_settings.fileOutputFormat);
     }
+    else if (mod_settings.useBladeRFOutput) {
+        format_converter = make_shared<FormatConverter>(mod_settings.BladeRFOutputFormat);
+    } 
 
     auto output = prepare_output(mod_settings);
 

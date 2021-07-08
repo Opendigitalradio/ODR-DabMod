@@ -146,6 +146,8 @@ odr_dabmod_SOURCES += \
 					  src/output/USRPTime.h \
 					  src/output/Lime.cpp \
 					  src/output/Lime.h \
+					  src/output/BladeRF.cpp \
+					  src/output/BladeRF.h \
 					  src/PhaseReference.cpp \
 					  src/PhaseReference.h \
 					  src/QpskSymbolMapper.cpp \
