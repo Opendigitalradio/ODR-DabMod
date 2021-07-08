@@ -345,7 +345,7 @@ void Soapy::transmit_frame(const struct FrameData& frame)
             int ret_deact = m_device->deactivateStream(m_tx_stream);
             if (ret_deact != 0) {
                 throw std::runtime_error(
-                        string("Soapy activate TX stream failed: ") +
+                        string("Soapy deactivate TX stream failed: ") +
                         SoapySDR::errToStr(ret_deact));
             }
             m_tx_stream_active = false;
