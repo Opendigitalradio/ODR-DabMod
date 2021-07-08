@@ -18,14 +18,14 @@
 # You should have received a copy of the GNU General Public License
 # along with ODR-DabMod.  If not, see <http://www.gnu.org/licenses/>.
 
-AC_PREREQ(2.69)
-AC_INIT([ODR-DabMod], [2.4.2], [matthias.braendli@mpb.li])
+AC_PREREQ([2.71])
+AC_INIT([ODR-DabMod],[2.4.2],[matthias.braendli@mpb.li])
 AC_CONFIG_AUX_DIR([build-aux])
 AC_CONFIG_MACRO_DIR([m4])
-AC_CANONICAL_SYSTEM
+AC_CANONICAL_TARGET
 AM_INIT_AUTOMAKE([-Wall foreign subdir-objects])
 AC_CONFIG_SRCDIR([src/DabMod.cpp])
-AC_CONFIG_HEADER([config.h])
+AC_CONFIG_HEADERS([config.h])
 AM_SILENT_RULES([yes])
 
 # Checks for programs.
@@ -142,7 +142,6 @@ AS_IF([test "x$enable_easydabv3" = "xyes"],
 
 
 # Checks for header files.
-AC_HEADER_STDC
 AC_CHECK_HEADERS([fcntl.h limits.h memory.h netinet/in.h stdint.h stdlib.h string.h sys/time.h sys/timeb.h unistd.h])
 
 AC_MSG_CHECKING(for M_PIl existence)
