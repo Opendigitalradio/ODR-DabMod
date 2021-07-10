@@ -260,7 +260,15 @@ void UDPSocket::send(const std::vector<uint8_t>& data, InetAddress destination)
 }
 
 void UDPSocket::joinGroup(const char* groupname, const char* if_addr)
-{
+{	
+	struct ip_mreqn {
+    struct in_addr imr_multiaddr; /* IP multicast group
+                                     address */
+    struct in_addr imr_address;   /* IP address of local
+                                     interface */
+    int            imr_ifindex;   /* interface index */
+	};
+	
     ip_mreqn group;
     if ((group.imr_multiaddr.s_addr = inet_addr(groupname)) == INADDR_NONE) {
         throw runtime_error("Cannot convert multicast group name");
