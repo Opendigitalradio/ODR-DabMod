@@ -35,15 +35,15 @@ DESCRIPTION:
  #   include <config.h>
  #endif
 
- //#ifdef HAVE_OUTPUT_LIBBLADERF
+ //#ifdef HAVE_OUTPUT_BLADERF
 
  //#include <uhd/utils/safe_main.hpp>
  //#include <uhd/usrp/multi_usrp.hpp>
  //#include <chrono>
  #include <memory>
  #include <string>
- //#include <atomic>
- //include <thread>
+ #include <atomic>
+ #include <thread>
 
  #include "Log.h"
  #include "output/SDR.h"
@@ -65,7 +65,7 @@ DESCRIPTION:
 
 namespace Output {
 
-class libbladerf : public Output::SDRDevice
+class BladeRF : public Output::SDRDevice
 {
    public:
        libbladerf(SDRDeviceConfig& config);
@@ -99,30 +99,21 @@ class libbladerf : public Output::SDRDevice
 
    private:
        SDRDeviceConfig& m_conf;
-       uhd::usrp::multi_usrp::sptr m_usrp;
-       uhd::tx_streamer::sptr m_tx_stream;
-       uhd::rx_streamer::sptr m_rx_stream;
-       std::shared_ptr<USRPTime> m_device_time;
+       // https://nuand.com/bladeRF-doc/libbladeRF/v2.2.1/structbladerf__devinfo.html#a4369c00791073f53ce0d4c606df27c6f
+       struct bladerf *m_device;
+       bladerf_channel m_channel = BLADERF_CHANNEL_TX(0); // ..._TX(1) is possible too
+       bool m_tx_stream_active = false;
+       size_t m_interpolate = 1;
+       std::vector<complexf> interpolatebuf;
+       std::vector<short> m_i16samples;
+       std::atomic<float> m_last_fifo_fill_percent = ATOMIC_VAR_INIT(0);
 
        size_t num_underflows = 0;
        size_t num_overflows = 0;
        size_t num_late_packets = 0;
        size_t num_frames_modulated = 0;
-       size_t num_underflows_previous = 0;
-       size_t num_late_packets_previous = 0;
-
-       // Used to print statistics once a second
-       std::chrono::steady_clock::time_point last_print_time;
-
-       // Returns true if we want to verify loss of refclk
-       bool refclk_loss_needs_check(void) const;
-       mutable bool suppress_refclk_loss_check = false;
-
-       // Poll asynchronous metadata from UHD
-       std::atomic<bool> m_running;
-       std::thread m_async_rx_thread;
-       void stop_threads(void);
-       void print_async_thread(void);
+       //size_t num_underflows_previous = 0;
+       //size_t num_late_packets_previous = 0;
 };
 
 } // namespace Output
