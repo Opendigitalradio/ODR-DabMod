@@ -18,7 +18,7 @@
 # You should have received a copy of the GNU General Public License
 # along with ODR-DabMod.  If not, see <http://www.gnu.org/licenses/>.
 
-AC_PREREQ([2.71])
+AC_PREREQ([2.69])
 AC_INIT([ODR-DabMod],[2.4.2],[matthias.braendli@mpb.li])
 AC_CONFIG_AUX_DIR([build-aux])
 AC_CONFIG_MACRO_DIR([m4])
