@@ -57,502 +57,452 @@ using namespace std;
 
 using namespace std;
 
-namespace Output {
-
-// Maximum number of frames that can wait in frames
-static const size_t FRAMES_MAX_SIZE = 8; // I'm not sure at this time
-
-static std::string stringtrim(const std::string &s)
+namespace Output
 {
-    auto wsfront = std::find_if_not(s.begin(), s.end(),
-            [](int c){ return std::isspace(c);} );
-    return std::string(wsfront,
-            std::find_if_not(s.rbegin(),
-                std::string::const_reverse_iterator(wsfront),
-                [](int c){ return std::isspace(c);} ).base());
-}
 
-// Logging section
-static void bladerf_log_set_verbosity(BLADERF_LOG_LEVEL_VERBOSE);
+static constexpr size_t FRAMES_MAX_SIZE = 2;
+static constexpr size_t FRAME_LENGTH = 196608; // at native sample rate!
 
-static void bladerf_msg_handler(bladerf_log_level type);
+//#ifdef __ARM_NEON__
+void conv_s16_from_float(unsigned n, const float *a, short *b)
 {
-    if (type == BLADERF_LOG_LEVEL_WARNING) {
-        etiLog.level(warn) << "UHD Warning: " << "unknown";
-    }
-    else if (type == BLADERF_LOG_LEVEL_ERROR) {
-        etiLog.level(error) << "UHD Error: " << "unknown";
-    }
-    else {
-            etiLog.level(debug) << "UHD Message: " << "unknown";
-        }
+    unsigned i;
+
+    const float32x4_t plusone4 = vdupq_n_f32(1.0f);
+    const float32x4_t minusone4 = vdupq_n_f32(-1.0f);
+    const float32x4_t half4 = vdupq_n_f32(0.5f);
+    const float32x4_t scale4 = vdupq_n_f32(32767.0f);
+    const uint32x4_t mask4 = vdupq_n_u32(0x80000000);
+
+    for (i = 0; i < n / 4; i++)
+    {
+        float32x4_t v4 = ((float32x4_t *)a)[i];
+        v4 = vmulq_f32(vmaxq_f32(vminq_f32(v4, plusone4), minusone4), scale4);
+
+        const float32x4_t w4 = vreinterpretq_f32_u32(vorrq_u32(vandq_u32(
+                                                                   vreinterpretq_u32_f32(v4), mask4),
+                                                               vreinterpretq_u32_f32(half4)));
+
+        ((int16x4_t *)b)[i] = vmovn_s32(vcvtq_s32_f32(vaddq_f32(v4, w4)));
     }
 }
+void conv_s16_from_float(unsigned n, const float *a, short *b)
+{
+    unsigned i;
 
-// Class
-BladeRF::BladeRF(SDRDeviceConfig& config) :
-    SDRDevice(),
-    m_conf(config),
+    for (i = 0; i < n; i++)
+    {
+        b[i] = (short)(a[i] * 32767.0f);
+    }
+}
+
+BladeRF::BladeRF(SDRDeviceConfig &config) : SDRDevice(), m_conf(config)
 {
     m_interpolate = m_conf.upsample;
 
     etiLog.level(info) << "BladeRF:Creating the device with: " << m_conf.device;
 
-    const int device_count = bladerf_get_device_list(nullptr); //line 251 libbladerf
+    const int device_count = bladerf_get_device_list(nullptr); // line 251
     if (device_count < 0)
     {
-        etiLog.level(error) << "Error making BladeRF device: " << bladerf_strerror(BLADERF_ERR_NODEV);
+        etiLog.level(error) << "Error making BladeRF device: " << bladerf_strerror(device_count);
         throw runtime_error("Cannot find BladeRF output device");
     }
 
-    // Not sure if it's possible to define the masterclockrate
-    if (m_conf.masterClockRate != 0) {
-        if (device.str() != "") {
-            device << ",";
+    struct bladerf_devinfo device_list[device_count];
+    int status = bladerf_get_device_list(device_list)
+    if (status < 0)
+    {
+        etiLog.level(error) << "Error making BladeRF device: %s " << bladerf_strerror(status);
+        throw runtime_error("Cannot find BladeRF output device");
+    }
+
+/*
+    bladerf_init_devinfo(&device_list[device_count]);
+    status = bladerf_open_with_devinfo(&m_device, &device_list[device_count]);
+    if (status < 0)
+    {
+        etiLog.level(error) << "Error making BladeRF device: %s " << bladerf_strerror(status);
+        throw runtime_error("Cannot open BladeRF output device");
+    } 
+*/
+
+    size_t device_i = 0; // If several cards, need to get device by configuration
+    status = bladerf_open(&m_device, device_list[device_i].serial, nullptr)
+    if (status < 0)
+    {
+        etiLog.level(error) << "Error making BladeRF device: %s " << bladerf_strerror(status);
+        throw runtime_error("Cannot open BladeRF output device");
+    }
+
+/* Need to find a reset-like function for bladerf
+    if (LMS_Reset(m_device) < 0)
+    {
+        etiLog.level(error) << "Error making LimeSDR device: %s " << LMS_GetLastErrorMessage();
+        throw runtime_error("Cannot reset LimeSDR output device");
+    }
+*/
+
+    // The clock has to be 38.4 MHz on BladeRF xA4/9.
+    // Only defining if it is internal or external oscillator here
+    if (m_conf.masterClockRate != 0)
+    {
+        m_device->setMast;
+    }
+
+    bladerf_clock_select clk_sel = CLOCK_SELECT_ONBOARD;
+    if (m_conf.refclk_src == "internal")
+    {
+        clk_sel = CLOCK_SELECT_ONBOARD;
+        status = bladerf_set_clock_select(m_device, clk_sel);
+        if (status < 0)
+        {
+            etiLog.level(error) << "Error making BladeRF device: %s " << bladerf_strerror(status);
+            throw runtime_error("Cannot set BladeRF oscillator to internal");
         }
-        device << "master_clock_rate=" << m_conf.masterClockRate;
     }
-
-    MDEBUG("BladeRF::BladeRF(device: %s) @ %p\n",
-            device.str().c_str(), this);
-
-    // // Adds a logger : https://files.ettus.com/manual/namespaceuhd_1_1log.html
-    // uhd::log::add_logger("dabmod", uhd_log_handler);
-    // try {
-    //     uhd::log::set_console_level(uhd::log::fatal);
-    // }
-    // catch (const uhd::key_error&) {
-    //     etiLog.level(warn) << "OutputUHD: Could not set UHD console loglevel";
-    // }
-//#else
-//    uhd::msg::register_handler(uhd_msg_handler);
-//#endif
-
-    uhd::set_thread_priority_safe();
-
-    etiLog.log(info, "OutputBladeRF:Creating the BladeRF device with: %s...",
-            device.str().c_str());
-
-    m_usrp = uhd::usrp::multi_usrp::make(device.str());
-
-    etiLog.log(info, "OutputUHD:Using device: %s...",
-            m_usrp->get_pp_string().c_str());
-
-    if (m_conf.masterClockRate != 0.0) {
-        double master_clk_rate = m_usrp->get_master_clock_rate();
-        etiLog.log(debug, "OutputUHD:Checking master clock rate: %f...",
-                master_clk_rate);
-
-        if (fabs(master_clk_rate - m_conf.masterClockRate) >
-                (m_conf.masterClockRate * 1e-6)) {
-            throw std::runtime_error("Cannot set USRP master_clock_rate. Aborted.");
+    else if (m_conf.refclk_src == "external")
+    {
+        clk_sel = CLOCK_SELECT_EXTERNAL;
+        status = bladerf_set_clock_select(m_device, clk_sel);
+        if (status < 0)
+        {
+            etiLog.level(error) << "Error making BladeRF device: %s " << bladerf_strerror(status);
+            throw runtime_error("Cannot set BladeRF oscillator to external");
         }
     }
-
-    MDEBUG("OutputUHD:Setting REFCLK and PPS input...\n");
-
-    if (m_conf.refclk_src == "gpsdo-ettus") {
-        m_usrp->set_clock_source("gpsdo");
-    }
-    else {
-        m_usrp->set_clock_source(m_conf.refclk_src);
-    }
-    m_usrp->set_time_source(m_conf.pps_src);
-
-    if (m_conf.subDevice != "") {
-        m_usrp->set_tx_subdev_spec(uhd::usrp::subdev_spec_t(m_conf.subDevice),
-                uhd::usrp::multi_usrp::ALL_MBOARDS);
+    else
+    {
+        etiLog.level(error) << "Error making BladeRF device: %s " << bladerf_strerror(status);
+        throw runtime_error("Cannot set BladeRF oscillator to external nor internal");
     }
 
-    etiLog.level(debug) << "UHD clock source is " << m_usrp->get_clock_source(0);
-
-    etiLog.level(debug) << "UHD time source is " << m_usrp->get_time_source(0);
-
-    m_device_time = std::make_shared<USRPTime>(m_usrp, m_conf);
-
-    m_usrp->set_tx_rate(m_conf.sampleRate);
-    etiLog.log(debug, "OutputUHD:Set rate to %d. Actual TX Rate: %f sps...",
-            m_conf.sampleRate, m_usrp->get_tx_rate());
-
-    if (fabs(m_usrp->get_tx_rate() / m_conf.sampleRate) >
-             m_conf.sampleRate * 1e-6) {
-        throw std::runtime_error("Cannot set USRP sample rate. Aborted.");
-    }
-
-    if (m_conf.bandwidth > 0) {
-        m_usrp->set_tx_bandwidth(m_conf.bandwidth);
-        m_usrp->set_rx_bandwidth(m_conf.bandwidth);
-
-        etiLog.level(info) << "OutputUHD:Actual TX bandwidth: " <<
-            std::fixed << std::setprecision(2) <<
-            m_usrp->get_tx_bandwidth();
-    }
-
-    tune(m_conf.lo_offset, m_conf.frequency);
-
-    m_conf.frequency = m_usrp->get_tx_freq();
-    etiLog.level(debug) << std::fixed << std::setprecision(3) <<
-        "OutputUHD:Actual TX frequency: " << m_conf.frequency;
-
-    etiLog.level(debug) << std::fixed << std::setprecision(3) <<
-        "OutputUHD:Actual RX frequency: " << m_usrp->get_tx_freq();
-
-    m_usrp->set_tx_gain(m_conf.txgain);
-    m_conf.txgain = m_usrp->get_tx_gain();
-    etiLog.log(debug, "OutputUHD:Actual TX Gain: %f", m_conf.txgain);
-
-    etiLog.log(debug, "OutputUHD:Mute on missing timestamps: %s",
-            m_conf.muteNoTimestamps ? "enabled" : "disabled");
-
-    m_usrp->set_rx_rate(m_conf.sampleRate);
-    etiLog.log(debug, "OutputUHD:Actual RX Rate: %f sps.", m_usrp->get_rx_rate());
-
-    if (not m_conf.rx_antenna.empty()) {
-        m_usrp->set_rx_antenna(m_conf.rx_antenna);
-    }
-    etiLog.log(debug, "OutputUHD:Actual RX Antenna: %s",
-            m_usrp->get_rx_antenna().c_str());
-
-    if (not m_conf.tx_antenna.empty()) {
-        m_usrp->set_tx_antenna(m_conf.tx_antenna);
-    }
-    etiLog.log(debug, "OutputUHD:Actual TX Antenna: %s",
-            m_usrp->get_tx_antenna().c_str());
-
-    m_usrp->set_rx_gain(m_conf.rxgain);
-    etiLog.log(debug, "OutputUHD:Actual RX Gain: %f", m_usrp->get_rx_gain());
-
-    const uhd::stream_args_t stream_args("fc32"); //complex floats
-    m_rx_stream = m_usrp->get_rx_stream(stream_args);
-    m_tx_stream = m_usrp->get_tx_stream(stream_args);
-
-    m_running.store(true);
-    m_async_rx_thread = std::thread(&UHD::print_async_thread, this);
-
-    MDEBUG("OutputUHD:UHD ready.\n");
-}
-
-UHD::~UHD()
-{
-    stop_threads();
-}
-
-void UHD::tune(double lo_offset, double frequency)
-{
-    if (lo_offset != 0.0) {
-        etiLog.level(info) << std::fixed << std::setprecision(3) <<
-            "OutputUHD:Setting freq to " << frequency <<
-            "  with LO offset " << lo_offset << "...";
-
-        const auto tr = uhd::tune_request_t(frequency, lo_offset);
-        uhd::tune_result_t result = m_usrp->set_tx_freq(tr);
-
-        etiLog.level(debug) << "OutputUHD: TX freq" <<
-            std::fixed << std::setprecision(0) <<
-            " Target RF: " << result.target_rf_freq <<
-            " Actual RF: " << result.actual_rf_freq <<
-            " Target DSP: " << result.target_dsp_freq <<
-            " Actual DSP: " << result.actual_dsp_freq;
-
-        uhd::tune_result_t result_rx = m_usrp->set_rx_freq(tr);
-
-        etiLog.level(debug) << "OutputUHD: RX freq" <<
-            std::fixed << std::setprecision(0) <<
-            " Target RF: " << result_rx.target_rf_freq <<
-            " Actual RF: " << result_rx.actual_rf_freq <<
-            " Target DSP: " << result_rx.target_dsp_freq <<
-            " Actual DSP: " << result_rx.actual_dsp_freq;
-    }
-    else {
-        //set the centre frequency
-        etiLog.level(info) << std::fixed << std::setprecision(3) <<
-            "OutputUHD:Setting freq to " << frequency << "...";
-        m_usrp->set_tx_freq(frequency);
-
-        m_usrp->set_rx_freq(frequency);
-    }
-}
-
-double UHD::get_tx_freq(void) const
-{
-    return m_usrp->get_tx_freq();
-}
-
-void UHD::set_txgain(double txgain)
-{
-    m_usrp->set_tx_gain(txgain);
-    m_conf.txgain = m_usrp->get_tx_gain();
-}
-
-double UHD::get_txgain(void) const
-{
-    return m_usrp->get_tx_gain();
-}
-
-void UHD::set_bandwidth(double bandwidth)
-{
-    m_usrp->set_tx_bandwidth(bandwidth);
-    m_usrp->set_rx_bandwidth(bandwidth);
-    m_conf.bandwidth = m_usrp->get_tx_bandwidth();
-}
-
-double UHD::get_bandwidth(void) const
-{
-    return m_usrp->get_tx_bandwidth();
-}
-
-void UHD::transmit_frame(const struct FrameData& frame)
-{
-    const double tx_timeout = 20.0;
-    const size_t sizeIn = frame.buf.size() / sizeof(complexf);
-    const complexf* in_data = reinterpret_cast<const complexf*>(&frame.buf[0]);
-
-    uhd::tx_metadata_t md_tx;
-
-    bool tx_allowed = true;
-
-    // muting and mutenotimestamp is handled by SDR
-    if (m_conf.enableSync and frame.ts.timestamp_valid) {
-        uhd::time_spec_t timespec(
-                frame.ts.timestamp_sec, frame.ts.pps_offset());
-        md_tx.time_spec = timespec;
-        md_tx.has_time_spec = true;
-    }
-    else {
-        md_tx.has_time_spec = false;
-    }
-
-    size_t usrp_max_num_samps = m_tx_stream->get_max_num_samps();
-    size_t num_acc_samps = 0; //number of accumulated samples
-    while (tx_allowed and m_running.load() and (num_acc_samps < sizeIn)) {
-        size_t samps_to_send = std::min(sizeIn - num_acc_samps, usrp_max_num_samps);
-
-        const bool eob_because_muting = m_conf.muting;
-
-        // ensure the the last packet has EOB set if the timestamps has been
-        // refreshed and need to be reconsidered. If muting was set, set the
-        // EOB and quit the loop afterwards, to avoid an underrun.
-        md_tx.end_of_burst = eob_because_muting or (
-                frame.ts.timestamp_valid and
-                frame.ts.timestamp_refresh and
-                samps_to_send <= usrp_max_num_samps );
-
-        //send a single packet
-        size_t num_tx_samps = m_tx_stream->send(
-                &in_data[num_acc_samps],
-                samps_to_send, md_tx, tx_timeout);
-        etiLog.log(trace, "UHD,sent %zu of %zu", num_tx_samps, samps_to_send);
-
-        num_acc_samps += num_tx_samps;
-
-        md_tx.time_spec += uhd::time_spec_t(0, num_tx_samps/m_conf.sampleRate);
-
-        if (num_tx_samps == 0) {
-            etiLog.log(warn,
-                    "OutputUHD unable to write to device, skipping frame!");
-            break;
+    /* No function to enable a specific channel in the libbladerf API
+        if (LMS_EnableChannel(m_device, LMS_CH_TX, m_channel, true) < 0)
+        {
+            etiLog.level(error) << "Error making LimeSDR device: %s " << LMS_GetLastErrorMessage();
+            throw runtime_error("Cannot enable channel for LimeSDR output device");
         }
+   */
 
-        if (eob_because_muting) {
-            break;
+    
+    status = bladerf_set_sample_rate(m_device, m_channel, m_conf.sampleRate * m_interpolate, NULL);
+    if (status < 0)
+    {
+        etiLog.level(error) << "Error making BladeRF device: %s " << bladerf_strerror(status);
+        throw runtime_error("Cannot set BladeRF sample rate");
+    }
+    
+    bladerf_sample_rate host_sample_rate = 0.0;
+
+    status =  bladerf_get_sample_rate(m_device, m_channel, &host_sample_rate);
+
+    if (status < 0)
+    {
+        etiLog.level(error) << "Error making BladeRF device: %s " << bladerf_strerror(status);
+        throw runtime_error("Cannot get BladeRF sample rate");
+    }
+    etiLog.level(info) << "BladeRF sample rate set to " << std::to_string(host_sample_rate / 1000.0) << " kHz";
+
+    tune(m_conf.lo_offset, m_conf.frequency); //lo_offset?
+
+    bladerf_frequency cur_frequency = 0.0;
+
+    status = bladerf_get_frequency(m_device, m_channel, &cur_frequency);
+    if(status < 0)
+    {
+        etiLog.level(error) << "Error making BladeRF device: %s " << bladerf_strerror(status);
+        throw runtime_error("Cannot get BladeRF frequency");
+    }
+    etiLog.level(info) << "BladeRF:Actual frequency: " << fixed << setprecision(3) << cur_frequency / 1000.0 << " kHz.";
+
+    status = bladerf_set_gain(&m_device, m_channel, m_conf.txgain) // gain in [dB]
+    if (status < 0)
+    {
+        etiLog.level(error) << "Error making BladeRF device: %s " << bladerf_strerror(status);
+        throw runtime_error("Cannot set BladeRF gain");
+    }
+
+    // libbladerf does not provide a setting function for antennas
+    /*
+    if (LMS_SetAntenna(m_device, LMS_CH_TX, m_channel, LMS_PATH_TX2) < 0)
+    {
+        etiLog.level(error) << "Error making LimeSDR device: %s " << LMS_GetLastErrorMessage();
+        throw runtime_error("Cannot set antenna for LimeSDR output device");
+    }
+    */
+
+   status = bladerf_set_bandwidth()
+
+
+
+    double bandwidth_calibrating = 2.5e6; // Minimal bandwidth
+    if (LMS_Calibrate(m_device, LMS_CH_TX, m_channel, bandwidth_calibrating, 0) < 0)
+    {
+        etiLog.level(error) << "Error making LimeSDR device: %s " << LMS_GetLastErrorMessage();
+        throw runtime_error("Cannot calibrate LimeSDR output device");
+    }
+
+    switch (m_interpolate)
+    {
+    case 1:
+    {
+        //design matlab
+        static double coeff[61] = {
+            -0.0008126748726, -0.0003874975955, 0.0007290032809, -0.0009636150789, 0.0007643355639,
+            3.123887291e-05, -0.001263667713, 0.002418729011, -0.002785810735, 0.001787990681,
+            0.0006407162873, -0.003821208142, 0.006409643684, -0.006850919221, 0.004091503099,
+            0.00172403187, -0.008917749859, 0.01456955727, -0.01547530293, 0.009518089704,
+            0.00304264226, -0.01893160492, 0.0322769247, -0.03613986075, 0.02477015182,
+            0.0041426518, -0.04805115238, 0.09958232939, -0.1481673121, 0.1828524768,
+            0.8045722842, 0.1828524768, -0.1481673121, 0.09958232939, -0.04805115238,
+            0.0041426518, 0.02477015182, -0.03613986075, 0.0322769247, -0.01893160492,
+            0.00304264226, 0.009518089704, -0.01547530293, 0.01456955727, -0.008917749859,
+            0.00172403187, 0.004091503099, -0.006850919221, 0.006409643684, -0.003821208142,
+            0.0006407162873, 0.001787990681, -0.002785810735, 0.002418729011, -0.001263667713,
+            3.123887291e-05, 0.0007643355639, -0.0009636150789, 0.0007290032809, -0.0003874975955,
+            -0.0008126748726};
+
+        LMS_SetGFIRCoeff(m_device, LMS_CH_TX, m_channel, LMS_GFIR3, coeff, 61);
+    }
+    break;
+    
+    default:
+        throw runtime_error("Unsupported interpolate: " + to_string(m_interpolate));
+    }
+
+    if (m_conf.sampleRate != 2048000)
+    {
+        throw runtime_error("Lime output only supports native samplerate = 2048000");
+        /* The buffer_size calculation below does not take into account resampling */
+    }
+
+    // Frame duration is 96ms
+    size_t buffer_size = FRAME_LENGTH * m_interpolate * 10; // We take 10 Frame buffer size Fifo
+    // Fifo seems to be round to multiple of SampleRate
+    m_tx_stream.channel = m_channel;
+    m_tx_stream.fifoSize = buffer_size;
+    m_tx_stream.throughputVsLatency = 2.0; // Should be {0..1} but could be extended 
+    m_tx_stream.isTx = LMS_CH_TX;
+    m_tx_stream.dataFmt = lms_stream_t::LMS_FMT_I16;
+    if (LMS_SetupStream(m_device, &m_tx_stream) < 0)
+    {
+        etiLog.level(error) << "Error making LimeSDR device: %s " << LMS_GetLastErrorMessage();
+        throw runtime_error("Cannot setup TX stream for LimeSDR output device");
+    }
+    LMS_StartStream(&m_tx_stream);
+    LMS_SetGFIR(m_device, LMS_CH_TX, m_channel, LMS_GFIR3, true);
+}
+
+BladeRF::~BladeRF()
+{
+    if (m_device != nullptr)
+    {
+        LMS_StopStream(&m_tx_stream);
+        LMS_DestroyStream(m_device, &m_tx_stream);
+        LMS_EnableChannel(m_device, LMS_CH_TX, m_channel, false);
+        LMS_Close(m_device);
+    }
+}
+
+void BladeRF::tune(double lo_offset, double frequency)
+{
+    int status;
+    if (not m_device)
+        throw runtime_error("BladeRF device not set up");
+
+    status = bladerf_set_frequency(m_device, m_channel, m_conf.frequency);
+    if (status < 0)
+    {
+         etiLog.level(error) << "Error setting BladeRF TX frequency: %s " << bladerf_strerror(status);
+    }
+}
+
+double BladeRF::get_tx_freq(void) const
+{
+    if (not m_device)
+        throw runtime_error("Lime device not set up");
+
+    float_type cur_frequency = 0.0;
+
+    if (LMS_GetLOFrequency(m_device, LMS_CH_TX, m_channel, &cur_frequency) < 0)
+    {
+        etiLog.level(error) << "Error getting LimeSDR TX frequency: %s " << LMS_GetLastErrorMessage();
+    }
+
+    return cur_frequency;
+}
+
+void BladeRF::set_txgain(double txgain)
+{
+    m_conf.txgain = txgain;
+    if (not m_device)
+        throw runtime_error("Lime device not set up");
+
+    if (LMS_SetNormalizedGain(m_device, LMS_CH_TX, m_channel, m_conf.txgain / 100.0) < 0)
+    {
+        etiLog.level(error) << "Error setting LimeSDR TX gain: %s " << LMS_GetLastErrorMessage();
+    }
+}
+
+double BladeRF::get_txgain(void) const
+{
+    if (not m_device)
+        throw runtime_error("Lime device not set up");
+
+    float_type txgain = 0;
+    if (LMS_GetNormalizedGain(m_device, LMS_CH_TX, m_channel, &txgain) < 0)
+    {
+        etiLog.level(error) << "Error getting LimeSDR TX gain: %s " << LMS_GetLastErrorMessage();
+    }
+    return txgain;
+}
+
+void BladeRF::set_bandwidth(double bandwidth)
+{
+    LMS_SetLPFBW(m_device, LMS_CH_TX, m_channel, bandwidth);
+}
+
+double BladeRF::get_bandwidth(void) const
+{
+    double bw;
+    LMS_GetLPFBW(m_device, LMS_CH_TX, m_channel, &bw);
+    return bw;
+}
+
+SDRDevice::RunStatistics Lime::get_run_statistics(void) const
+{
+    RunStatistics rs;
+    rs.num_underruns = underflows;
+    rs.num_overruns = overflows;
+    rs.num_late_packets = late_packets;
+    rs.num_frames_modulated = num_frames_modulated;
+    return rs;
+}
+
+double BladeRF::get_real_secs(void) const
+{
+    // TODO
+    return 0.0;
+}
+
+void BladeRF::set_rxgain(double rxgain)
+{
+    // TODO
+}
+
+double BladeRF::get_rxgain(void) const
+{
+    // TODO
+    return 0.0;
+}
+
+size_t BladeRF::receive_frame(
+    complexf *buf,
+    size_t num_samples,
+    struct frame_timestamp &ts,
+    double timeout_secs)
+{
+    // TODO
+    return 0;
+}
+
+bool BladeRF::is_clk_source_ok() const
+{
+    // TODO
+    return true;
+}
+
+const char *BladeRF::device_name(void) const
+{
+    return "BladeRF";
+}
+
+double BladeRF::get_temperature(void) const
+{
+    if (not m_device)
+        throw runtime_error("Lime device not set up");
+
+    float_type temp = numeric_limits<float_type>::quiet_NaN();
+    if (LMS_GetChipTemperature(m_device, 0, &temp) < 0)
+    {
+        etiLog.level(error) << "Error getting LimeSDR temperature: %s " << LMS_GetLastErrorMessage();
+    }
+    return temp;
+}
+
+float BladeRF::get_fifo_fill_percent(void) const
+{
+    return m_last_fifo_fill_percent * 100;
+}
+
+void BladeRF::transmit_frame(const struct FrameData &frame)
+{
+    if (not m_device)
+        throw runtime_error("Lime device not set up");
+
+    // The frame buffer contains bytes representing FC32 samples
+    const complexf *buf = reinterpret_cast<const complexf *>(frame.buf.data());
+    const size_t numSamples = frame.buf.size() / sizeof(complexf);
+
+    m_i16samples.resize(numSamples * 2);
+    short *buffi16 = &m_i16samples[0];
+    
+    conv_s16_from_float(numSamples * 2, (const float *)buf, buffi16);
+    if ((frame.buf.size() % sizeof(complexf)) != 0)
+    {
+        throw runtime_error("Lime: invalid buffer size");
+    }
+
+    lms_stream_status_t LimeStatus;
+    LMS_GetStreamStatus(&m_tx_stream, &LimeStatus);
+    overflows += LimeStatus.overrun;
+    underflows += LimeStatus.underrun;
+    late_packets += LimeStatus.droppedPackets;
+
+#ifdef LIMEDEBUG
+    etiLog.level(info) << LimeStatus.fifoFilledCount << "/" << LimeStatus.fifoSize << ":" << numSamples << "Rate" << LimeStatus.linkRate / (2 * 2.0);
+    etiLog.level(info) << "overrun" << LimeStatus.overrun << "underun" << LimeStatus.underrun << "drop" << LimeStatus.droppedPackets;
+#endif
+
+    m_last_fifo_fill_percent.store((float)LimeStatus.fifoFilledCount / (float)LimeStatus.fifoSize);
+
+    /*
+    if(LimeStatus.fifoFilledCount>=5*FRAME_LENGTH*m_interpolate) // Start if FIFO is half full {
+        if(not m_tx_stream_active) {
+            etiLog.level(info) << "Fifo OK : Normal running";
+            LMS_StartStream(&m_tx_stream);
+            m_tx_stream_active = true;
         }
+    }
+*/
+
+    ssize_t num_sent = 0;
+
+    lms_stream_meta_t meta;
+    meta.flushPartialPacket = true;
+    meta.timestamp = 0;
+    meta.waitForTimestamp = false;
+
+    if (m_interpolate == 1)
+    {
+        num_sent = LMS_SendStream(&m_tx_stream, buffi16, numSamples, &meta, 1000);
+    }
+
+    
+
+    if (num_sent == 0)
+    {
+        etiLog.level(info) << "Lime: zero samples sent" << num_sent;
+    }
+    else if (num_sent == -1)
+    {
+        etiLog.level(error) << "Error sending LimeSDR stream: %s " << LMS_GetLastErrorMessage();
     }
 
     num_frames_modulated++;
 }
 
-
-SDRDevice::RunStatistics UHD::get_run_statistics(void) const
-{
-    RunStatistics rs;
-    rs.num_underruns = num_underflows;
-    rs.num_overruns = num_overflows;
-    rs.num_late_packets = num_late_packets;
-    rs.num_frames_modulated = num_frames_modulated;
-
-    if (m_device_time) {
-        const auto gpsdo_stat = m_device_time->get_gnss_stats();
-        rs.gpsdo_holdover = gpsdo_stat.holdover;
-        rs.gpsdo_num_sv = gpsdo_stat.num_sv;
-    }
-    return rs;
-}
-
-double UHD::get_real_secs(void) const
-{
-    return m_usrp->get_time_now().get_real_secs();
-}
-
-void UHD::set_rxgain(double rxgain)
-{
-    m_usrp->set_rx_gain(m_conf.rxgain);
-    m_conf.rxgain = m_usrp->get_rx_gain();
-}
-
-double UHD::get_rxgain() const
-{
-    return m_usrp->get_rx_gain();
-}
-
-size_t UHD::receive_frame(
-        complexf *buf,
-        size_t num_samples,
-        struct frame_timestamp& ts,
-        double timeout_secs)
-{
-    uhd::stream_cmd_t cmd(
-            uhd::stream_cmd_t::stream_mode_t::STREAM_MODE_NUM_SAMPS_AND_DONE);
-    cmd.num_samps = num_samples;
-    cmd.stream_now = false;
-    cmd.time_spec = uhd::time_spec_t(ts.timestamp_sec, ts.pps_offset());
-
-    m_rx_stream->issue_stream_cmd(cmd);
-
-    uhd::rx_metadata_t md_rx;
-
-    constexpr double timeout = 60;
-    size_t samples_read = m_rx_stream->recv(buf, num_samples, md_rx, timeout);
-
-    // Update the ts with the effective receive TS
-    ts.timestamp_sec = md_rx.time_spec.get_full_secs();
-    ts.timestamp_pps = md_rx.time_spec.get_frac_secs() * 16384000.0;
-    return samples_read;
-}
-
-// Return true if GPS and reference clock inputs are ok
-bool UHD::is_clk_source_ok(void) const
-{
-    bool ok = true;
-
-    if (refclk_loss_needs_check()) {
-        try {
-            if (not m_usrp->get_mboard_sensor("ref_locked", 0).to_bool()) {
-                ok = false;
-
-                etiLog.level(alert) <<
-                    "OutputUHD: External reference clock lock lost !";
-
-                if (m_conf.refclk_lock_loss_behaviour == CRASH) {
-                    throw std::runtime_error(
-                            "OutputUHD: External reference clock lock lost.");
-                }
-            }
-        }
-        catch (const uhd::lookup_error &e) {
-            suppress_refclk_loss_check = true;
-            etiLog.log(warn, "OutputUHD: This USRP does not have mboard "
-                    "sensor for ext clock loss. Check disabled.");
-        }
-    }
-
-    if (m_device_time) {
-        ok &= m_device_time->verify_time();
-    }
-
-    return ok;
-}
-
-const char* UHD::device_name(void) const
-{
-    return "UHD";
-}
-
-double UHD::get_temperature(void) const
-{
-    try {
-        return std::round(m_usrp->get_tx_sensor("temp", 0).to_real());
-    }
-    catch (const uhd::lookup_error &e) {
-        return std::numeric_limits<double>::quiet_NaN();
-    }
-}
-
-bool UHD::refclk_loss_needs_check() const
-{
-    if (suppress_refclk_loss_check) {
-        return false;
-    }
-    return m_conf.refclk_src != "internal";
-}
-
-void UHD::stop_threads()
-{
-    m_running.store(false);
-    if (m_async_rx_thread.joinable()) {
-        m_async_rx_thread.join();
-    }
-}
-
-
-
-void UHD::print_async_thread()
-{
-    while (m_running.load()) {
-        uhd::async_metadata_t async_md;
-        if (m_usrp->get_device()->recv_async_msg(async_md, 1)) {
-            const char* uhd_async_message = "";
-            bool failure = false;
-            switch (async_md.event_code) {
-                case uhd::async_metadata_t::EVENT_CODE_BURST_ACK:
-                    break;
-                case uhd::async_metadata_t::EVENT_CODE_UNDERFLOW:
-                    uhd_async_message = "Underflow";
-                    num_underflows++;
-                    break;
-                case uhd::async_metadata_t::EVENT_CODE_SEQ_ERROR:
-                    uhd_async_message = "Packet loss between host and device.";
-                    failure = true;
-                    break;
-                case uhd::async_metadata_t::EVENT_CODE_TIME_ERROR:
-                    uhd_async_message = "Packet had time that was late.";
-                    num_late_packets++;
-                    break;
-                case uhd::async_metadata_t::EVENT_CODE_UNDERFLOW_IN_PACKET:
-                    uhd_async_message = "Underflow occurred inside a packet.";
-                    failure = true;
-                    break;
-                case uhd::async_metadata_t::EVENT_CODE_SEQ_ERROR_IN_BURST:
-                    uhd_async_message = "Packet loss within a burst.";
-                    failure = true;
-                    break;
-                default:
-                    uhd_async_message = "unknown event code";
-                    failure = true;
-                    break;
-            }
-
-            if (failure) {
-                etiLog.level(alert) <<
-                    "Received Async UHD Message '" <<
-                    uhd_async_message << "' at time " <<
-                    async_md.time_spec.get_real_secs();
-            }
-        }
-
-        auto time_now = std::chrono::steady_clock::now();
-        if (last_print_time + std::chrono::seconds(1) < time_now) {
-            const double usrp_time =
-                m_usrp->get_time_now().get_real_secs();
-
-            if ( (num_underflows > num_underflows_previous) or
-                 (num_late_packets > num_late_packets_previous)) {
-                etiLog.log(info,
-                        "OutputUHD status (usrp time: %f): "
-                        "%d underruns and %d late packets since last status.\n",
-                        usrp_time,
-                        num_underflows - num_underflows_previous,
-                        num_late_packets - num_late_packets_previous);
-            }
-
-            num_underflows_previous = num_underflows;
-            num_late_packets_previous = num_late_packets;
-
-            last_print_time = time_now;
-        }
-    }
-}
-
 } // namespace Output
 
-#endif // HAVE_OUTPUT_UHD
-
+#endif // HAVE_LIMESDR
