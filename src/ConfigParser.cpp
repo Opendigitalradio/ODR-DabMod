@@ -353,6 +353,37 @@ static void parse_configfile(
         std::cerr << "Error: Invalid output defined.\n";
         throw std::runtime_error("Configuration error");
     }
+#if defined(HAVE_BLADERF)
+    else if (output_selected == "bladerf") {
+        auto& outputbladerf_conf = mod_settings.sdr_device_config;
+        mod_settings.outputName = pt.Get()outputbladerf_conf.device = pt.Get("bladerfoutput.device", "");
+        outputbladerf_conf.masterClockRate = pt.GetInteger("bladerfoutput.master_clock_rate", 0);
+        outputbladerf_conf.txgain = pt.GetReal("bladerfoutput.txgain", 0.0);
+        outputbladerf_conf.tx_antenna = pt.Get("bladerfoutput.tx_antenna", "");
+        outputbladerf_conf.lo_offset = pt.GetReal("bladerfoutput.lo_offset", 0.0);
+        outputbladerf_conf.frequency = pt.GetReal("bladerfoutput.frequency", 0);
+        std::string chan = pt.Get("bladerfoutput.channel", "");
+        outputbladerf_conf.dabMode = mod_settings.dabMode;
+        outputbladerf_conf.upsample = pt.GetInteger("bladerfoutput.upsample", 1);
+
+        if (outputbladerf_conf.frequency == 0 && chan == "") {
+            std::cerr << "       BladeRF output enabled, but neither frequency nor channel defined.\n";
+            throw std::runtime_error("Configuration error");
+        }
+        else if (outputbladerf_conf.frequency == 0) {
+            outputbladerf_conf.frequency =  parseChannel(chan);
+        }
+        else if (outputbladerf_conf.frequency != 0 && chan != "") {
+            std::cerr << "       BladeRF output: cannot define both frequency and channel.\n";
+            throw std::runtime_error("Configuration error");
+        }
+
+        outputbladerf_conf.dpdFeedbackServerPort = pt.GetInteger("bladerfoutput.dpd_port", 0);
+
+        mod_settings.useBladeRFOutput = true;
+    }
+#endif
+
 
 #if defined(HAVE_OUTPUT_UHD)
     mod_settings.sdr_device_config.enableSync = (pt.GetInteger("delaymanagement.synchronous", 0) == 1);
@@ -377,6 +408,7 @@ static void parse_configfile(
     }
 
 #endif
+
 
     /* Read TII parameters from config file */
     mod_settings.tiiConfig.enable = pt.GetInteger("tii.enable", 0);

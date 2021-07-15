@@ -38,6 +38,7 @@
 #include "output/UHD.h"
 #include "output/Soapy.h"
 #include "output/Lime.h"
+#include "output/BladeRF.h"
 
 #define ZMQ_INPUT_MAX_FRAME_QUEUE 500
 
@@ -51,6 +52,7 @@ struct mod_settings_t {
     bool useUHDOutput = false;
     bool useSoapyOutput = false;
     bool useLimeOutput = false;
+    bool useBladeRFOutput = false;
 
     size_t outputRate = 2048000;
     size_t clockRate = 0;
@@ -84,7 +86,7 @@ struct mod_settings_t {
     // Settings for the OFDM windowing
     size_t ofdmWindowOverlap = 0;
 
-#if defined(HAVE_OUTPUT_UHD) || defined(HAVE_SOAPYSDR) || defined(HAVE_LIMESDR)
+#if defined(HAVE_OUTPUT_UHD) || defined(HAVE_SOAPYSDR) || defined(HAVE_LIMESDR) || defined(HAVE_BLADERF)
     Output::SDRDeviceConfig sdr_device_config;
 #endif
 
