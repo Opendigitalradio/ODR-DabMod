@@ -35,15 +35,14 @@ DESCRIPTION:
  #   include <config.h>
  #endif
 
- //#ifdef HAVE_OUTPUT_BLADERF
+//#ifdef HAVE_OUTPUT_BLADERF
 
- //#include <uhd/utils/safe_main.hpp>
- //#include <uhd/usrp/multi_usrp.hpp>
  //#include <chrono>
  #include <memory>
  #include <string>
  #include <atomic>
  #include <thread>
+ #include <libbladeRF.h>
 
  #include "Log.h"
  #include "output/SDR.h"
@@ -68,10 +67,10 @@ namespace Output {
 class BladeRF : public Output::SDRDevice
 {
    public:
-       libbladerf(SDRDeviceConfig& config);
-       libbladerf(const libbladerf& other) = delete;
-       libbladerf& operator=(const libbladerf& other) = delete;
-       ~libbladerf();
+       BladeRF(SDRDeviceConfig& config);
+       BladeRF(const BladeRF& other) = delete;
+       BladeRF& operator=(const BladeRF& other) = delete;
+       ~BladeRF();
 
        virtual void tune(double lo_offset, double frequency) override;
        virtual double get_tx_freq(void) const override;
@@ -102,7 +101,7 @@ class BladeRF : public Output::SDRDevice
        // https://nuand.com/bladeRF-doc/libbladeRF/v2.2.1/structbladerf__devinfo.html#a4369c00791073f53ce0d4c606df27c6f
        struct bladerf *m_device;
        bladerf_channel m_channel = BLADERF_CHANNEL_TX(0); // ..._TX(1) is possible too
-       bool m_tx_stream_active = false;
+       struct bladerf_stream* m_stream;
        size_t m_interpolate = 1;
        std::vector<complexf> interpolatebuf;
        std::vector<short> m_i16samples;
@@ -118,4 +117,4 @@ class BladeRF : public Output::SDRDevice
 
 } // namespace Output
 
-#endif // HAVE_OUTPUT_LIBBLADERF
+//#endif // HAVE_OUTPUT_LIBBLADERF
