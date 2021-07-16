@@ -4,6 +4,9 @@
 
    Copyright (C) 2019
    Matthias P. Braendli, matthias.braendli@mpb.li
+   
+   Copyright (C) 2021
+   Steven Rossel, steven.rossel@bluewin.ch
 
     http://opendigitalradio.org
  */
@@ -57,88 +60,57 @@ using namespace std;
 namespace Output
 {
 
-static constexpr size_t FRAMES_MAX_SIZE = 2;
-static constexpr size_t FRAME_LENGTH = 196608; // at native sample rate!
-
-
 BladeRF::BladeRF(SDRDeviceConfig &config) : SDRDevice(), m_conf(config)
 {
-    m_interpolate = m_conf.upsample;
 
     etiLog.level(info) << "BladeRF:Creating the device with: " << m_conf.device;
-
-    const int device_count = bladerf_get_device_list(nullptr); // line 251
-    if (device_count < 0)
-    {
-        etiLog.level(error) << "Error making BladeRF device: " << bladerf_strerror(device_count);
-        throw runtime_error("Cannot find BladeRF output device");
-    }
-
-    struct bladerf_devinfo device_list[device_count];
-    int status = bladerf_get_device_list((struct bladerf_devinfo**)&device_list);
+    
+    struct bladerf_devinfo devinfo;
+    
+    int status = bladerf_get_device_list((struct bladerf_devinfo**)&devinfo);
     if (status < 0)
     {
         etiLog.level(error) << "Error making BladeRF device: %s " << bladerf_strerror(status);
         throw runtime_error("Cannot find BladeRF output device");
     }
 
-    /* Function to init wildcard devinfos
-    bladerf_init_devinfo(&device_list[device_count]);
-    status = bladerf_open_with_devinfo(&m_device, &device_list[device_count]);
-    if (status < 0)
-    {
-        etiLog.level(error) << "Error making BladeRF device: %s " << bladerf_strerror(status);
-        throw runtime_error("Cannot open BladeRF output device");
-    } 
-    */
-
-    size_t device_i = 0; // If several cards, need to get device by configuration
-    status = bladerf_open(&m_device, device_list[device_i].serial);
+    status = bladerf_open_with_devinfo(&m_device, &devinfo); // first found device is open
     if (status < 0)
     {
         etiLog.level(error) << "Error making BladeRF device: %s " << bladerf_strerror(status);
         throw runtime_error("Cannot open BladeRF output device");
     }
 
-    /* Need to find a reset-like function for bladerf
-    if (LMS_Reset(m_device) < 0)
+    if (m_conf.refclk_src == "pps")
     {
-        etiLog.level(error) << "Error making LimeSDR device: %s " << LMS_GetLastErrorMessage();
-        throw runtime_error("Cannot reset LimeSDR output device");
-    }
-    */
-
-    // The clock has to be 38.4 MHz on BladeRF xA4/9.
-    // Only defining if it is internal or external oscillator here
-
-    bladerf_clock_select clk_sel = CLOCK_SELECT_ONBOARD;
-    if (m_conf.refclk_src == "internal")
-    {
-        clk_sel = CLOCK_SELECT_ONBOARD;
-        status = bladerf_set_clock_select(m_device, clk_sel);
+        status = bladerf_set_vctcxo_tamer_mode(m_device, BLADERF_VCTCXO_TAMER_1_PPS);
         if (status < 0)
         {
             etiLog.level(error) << "Error making BladeRF device: %s " << bladerf_strerror(status);
-            throw runtime_error("Cannot set BladeRF oscillator to internal");
+            throw runtime_error("Cannot set BladeRF refclk to pps");
         }
     }
-    else if (m_conf.refclk_src == "external")
+    else if (m_conf.refclk_src == "10mhz")
     {
-        clk_sel = CLOCK_SELECT_EXTERNAL;
-        status = bladerf_set_clock_select(m_device, clk_sel);
+        status = bladerf_set_vctcxo_tamer_mode(m_device, BLADERF_VCTCXO_TAMER_10_MHZ);
         if (status < 0)
         {
             etiLog.level(error) << "Error making BladeRF device: %s " << bladerf_strerror(status);
-            throw runtime_error("Cannot set BladeRF oscillator to external");
+            throw runtime_error("Cannot set BladeRF refclk to 10 MHz");
         }
     }
     else
     {
-        etiLog.level(error) << "Error making BladeRF device: %s " << bladerf_strerror(status);
-        throw runtime_error("Cannot set BladeRF oscillator to external nor internal");
+        status = bladerf_set_vctcxo_tamer_mode(m_device, BLADERF_VCTCXO_TAMER_DISABLED);
+        if (status < 0)
+        {
+            etiLog.level(error) << "Error making BladeRF device: %s " << bladerf_strerror(status);
+            throw runtime_error("Cannot disable BladeRF refclk");
+        }
     }
     
-    status = bladerf_set_sample_rate(m_device, m_channel, bladerf_sample_rate(m_conf.sampleRate * m_interpolate), NULL);
+    
+    status = bladerf_set_sample_rate(m_device, m_channel, bladerf_sample_rate(m_conf.sampleRate), NULL);
     if (status < 0)
     {
         etiLog.level(error) << "Error making BladeRF device: %s " << bladerf_strerror(status);
@@ -173,7 +145,7 @@ BladeRF::BladeRF(SDRDeviceConfig &config) : SDRDevice(), m_conf(config)
         throw runtime_error("Cannot set BladeRF gain");
     }
 
-    // libbladerf does not provide a setting function for antennas
+    // libbladerf does not provide a specific setting function for antennas
     /*
     if (LMS_SetAntenna(m_device, LMS_CH_TX, m_channel, LMS_PATH_TX2) < 0)
     {
@@ -190,63 +162,6 @@ BladeRF::BladeRF(SDRDeviceConfig &config) : SDRDevice(), m_conf(config)
         throw runtime_error("Cannot set BladeRF bandwidth");
     }
 
-    status = bladerf_enable_module(m_device, m_channel, true);
-    if(status < 0)
-    {
-        etiLog.level(error) << "Error making BladeRF device: %s " << bladerf_strerror(status);
-        throw runtime_error("Cannot enable BladeRF channel");
-    }
-
-#if 0   //FIXME: Needed ???
-    switch (m_interpolate)
-    {
-    case 1:
-    {
-        //design matlab
-        static double coeff[61] = {
-            -0.0008126748726, -0.0003874975955, 0.0007290032809, -0.0009636150789, 0.0007643355639,
-            3.123887291e-05, -0.001263667713, 0.002418729011, -0.002785810735, 0.001787990681,
-            0.0006407162873, -0.003821208142, 0.006409643684, -0.006850919221, 0.004091503099,
-            0.00172403187, -0.008917749859, 0.01456955727, -0.01547530293, 0.009518089704,
-            0.00304264226, -0.01893160492, 0.0322769247, -0.03613986075, 0.02477015182,
-            0.0041426518, -0.04805115238, 0.09958232939, -0.1481673121, 0.1828524768,
-            0.8045722842, 0.1828524768, -0.1481673121, 0.09958232939, -0.04805115238,
-            0.0041426518, 0.02477015182, -0.03613986075, 0.0322769247, -0.01893160492,
-            0.00304264226, 0.009518089704, -0.01547530293, 0.01456955727, -0.008917749859,
-            0.00172403187, 0.004091503099, -0.006850919221, 0.006409643684, -0.003821208142,
-            0.0006407162873, 0.001787990681, -0.002785810735, 0.002418729011, -0.001263667713,
-            3.123887291e-05, 0.0007643355639, -0.0009636150789, 0.0007290032809, -0.0003874975955,
-            -0.0008126748726};
-
-        LMS_SetGFIRCoeff(m_device, LMS_CH_TX, m_channel, LMS_GFIR3, coeff, 61);
-        break;  
-    }
-    default:
-        throw runtime_error("Unsupported interpolate: " + to_string(m_interpolate));
-    }
-#endif
-
-    if (m_conf.sampleRate != 2048000)
-    {
-        throw runtime_error("BladeRF output only supports native samplerate = 2048000");
-        /* The buffer_size calculation below does not take into account resampling */
-    }
-
-    // Frame duration is 96ms
-    //size_t buffer_size = FRAME_LENGTH * m_interpolate * 10; // We take 10 Frame buffer size Fifo
-
-    bladerf_stream_cb callback; // callback function
-    status = bladerf_init_stream(&m_stream, m_device, callback, );
-
-
-
-    if (LMS_SetupStream(m_device, &m_tx_stream) < 0)
-    {
-        etiLog.level(error) << "Error making LimeSDR device: %s " << LMS_GetLastErrorMessage();
-        throw runtime_error("Cannot setup TX stream for LimeSDR output device");
-    }
-    LMS_StartStream(&m_tx_stream);
-    LMS_SetGFIR(m_device, LMS_CH_TX, m_channel, LMS_GFIR3, true);
 }
 
 BladeRF::~BladeRF()
@@ -397,78 +312,56 @@ double BladeRF::get_temperature(void) const
     return temp;
 }
 
-float BladeRF::get_fifo_fill_percent(void) const
-{
-    return m_last_fifo_fill_percent * 100;
-}
-
 
 void BladeRF::transmit_frame(const struct FrameData &frame)
 {
-    if (not m_device)
-        throw runtime_error("Lime device not set up");
-
-    // The frame buffer contains bytes representing FC32 samples
-    const complexf *buf = reinterpret_cast<const complexf *>(frame.buf.data());
-    const size_t numSamples = frame.buf.size() / sizeof(complexf);
-
-    m_i16samples.resize(numSamples * 2);
-    short *buffi16 = &m_i16samples[0];
-    
-    conv_s16_from_float(numSamples * 2, (const float *)buf, buffi16);
-    if ((frame.buf.size() % sizeof(complexf)) != 0)
-    {
-        throw runtime_error("Lime: invalid buffer size");
+    // Allocate a buffer to prepare transmit data in
+    const unsigned int samples_len = 10000; /* May be any (reasonable) size */
+    int16_t* tx_samples = nullptr;
+    tx_samples = (int16_t*)malloc(samples_len*2*1*sizeof(int16_t));
+    if (tx_samples == nullptr) {
+        etiLog.level(info) << "Error TX samples memory allocation";
+         free(tx_samples);
     }
 
-    lms_stream_status_t LimeStatus;
-    LMS_GetStreamStatus(&m_tx_stream, &LimeStatus);
-    overflows += LimeStatus.overrun;
-    underflows += LimeStatus.underrun;
-    late_packets += LimeStatus.droppedPackets;
+    const unsigned int num_buffers = 16;
+    const unsigned int buffer_size = 8192; // Must be a multiple of 1024
+    const unsigned int num_transfers = 8;
+    const unsigned int timeout_ms = 3500;
+    /* Configure the device's x1 TX (SISO) channel for use with the
+    * synchronous interface. SC16 Q11 samples *without* metadata are used. */
+    int status = bladerf_sync_config(m_device, BLADERF_TX_X1, BLADERF_FORMAT_SC16_Q11, num_buffers,
+                                buffer_size, num_transfers, timeout_ms);
+    if (status != 0) {
+        etiLog.level(error) << "Error making BladeRF device: %s " << bladerf_strerror(status);
+        throw runtime_error("Cannot setup BladeRF stream");
+    }
 
-#ifdef LIMEDEBUG
-    etiLog.level(info) << LimeStatus.fifoFilledCount << "/" << LimeStatus.fifoSize << ":" << numSamples << "Rate" << LimeStatus.linkRate / (2 * 2.0);
-    etiLog.level(info) << "overrun" << LimeStatus.overrun << "underun" << LimeStatus.underrun << "drop" << LimeStatus.droppedPackets;
-#endif
+    status = bladerf_enable_module(m_device, m_channel, true); // return 0 on success
+    if(status < 0)
+    {
+        etiLog.level(error) << "Error making BladeRF device: %s " << bladerf_strerror(status);
+        throw runtime_error("Cannot enable BladeRF channel");
+    }
 
-    m_last_fifo_fill_percent.store((float)LimeStatus.fifoFilledCount / (float)LimeStatus.fifoSize);
-
-    /*
-    if(LimeStatus.fifoFilledCount>=5*FRAME_LENGTH*m_interpolate) // Start if FIFO is half full {
-        if(not m_tx_stream_active) {
-            etiLog.level(info) << "Fifo OK : Normal running";
-            LMS_StartStream(&m_tx_stream);
-            m_tx_stream_active = true;
+    while(status == 0)
+    {
+        status = bladerf_sync_tx(m_device, tx_samples, samples_len, NULL, 5000);
+        if(status < 0)
+        {
+            etiLog.level(error) << "Error making BladeRF device: %s " << bladerf_strerror(status);
+            throw runtime_error("Cannot TX samples");
         }
     }
-*/
-
-    ssize_t num_sent = 0;
-
-    lms_stream_meta_t meta;
-    meta.flushPartialPacket = true;
-    meta.timestamp = 0;
-    meta.waitForTimestamp = false;
-
-    if (m_interpolate == 1)
-    {
-        num_sent = LMS_SendStream(&m_tx_stream, buffi16, numSamples, &meta, 1000);
+    if (status == 0) {
+        /* Wait a few seconds for any remaining TX samples to finish
+        * reaching the RF front-end */
+        usleep(2000000);
     }
 
-    
-
-    if (num_sent == 0)
-    {
-        etiLog.level(info) << "Lime: zero samples sent" << num_sent;
-    }
-    else if (num_sent == -1)
-    {
-        etiLog.level(error) << "Error sending LimeSDR stream: %s " << LMS_GetLastErrorMessage();
-    }
-
-    num_frames_modulated++;
 }
+
+
 
 } // namespace Output
 

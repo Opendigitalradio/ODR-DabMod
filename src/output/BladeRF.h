@@ -2,8 +2,9 @@
    Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010 Her Majesty the
    Queen in Right of Canada (Communications Research Center Canada)
 
-   Copyright (C) 2019
+   Copyright (C) 2021
    Matthias P. Braendli, matthias.braendli@mpb.li
+   Steven Rossel, steven.rossel@bluewin.ch
 
     http://opendigitalradio.org
 
@@ -35,7 +36,8 @@ DESCRIPTION:
  #   include <config.h>
  #endif
 
-//#ifdef HAVE_OUTPUT_BLADERF
+
+//#ifdef HAVE_BLADERF
 
  //#include <chrono>
  #include <memory>
@@ -46,21 +48,12 @@ DESCRIPTION:
 
  #include "Log.h"
  #include "output/SDR.h"
- //#include "output/USRPTime.h"
  #include "TimestampDecoder.h"
  #include "RemoteControl.h"
  #include "ThreadsafeQueue.h"
 
  #include <stdio.h>
  #include <sys/types.h>
-
- // If the timestamp is further in the future than
- // 100 seconds, abort
- #define TIMESTAMP_ABORT_FUTURE 100
-
- // Add a delay to increase buffers when
- // frames are too far in the future
- #define TIMESTAMP_MARGIN_FUTURE 0.5
 
 namespace Output {
 
@@ -96,20 +89,18 @@ class BladeRF : public Output::SDRDevice
 
        virtual double get_temperature(void) const override;
 
+
    private:
        SDRDeviceConfig& m_conf;
-       // https://nuand.com/bladeRF-doc/libbladeRF/v2.2.1/structbladerf__devinfo.html#a4369c00791073f53ce0d4c606df27c6f
        struct bladerf *m_device;
        bladerf_channel m_channel = BLADERF_CHANNEL_TX(0); // ..._TX(1) is possible too
        struct bladerf_stream* m_stream;
        size_t m_interpolate = 1;
        std::vector<complexf> interpolatebuf;
-       std::vector<short> m_i16samples;
-       std::atomic<float> m_last_fifo_fill_percent = ATOMIC_VAR_INIT(0);
 
-       size_t num_underflows = 0;
-       size_t num_overflows = 0;
-       size_t num_late_packets = 0;
+       size_t underflows = 0;
+       size_t overflows = 0;
+       size_t late_packets = 0;
        size_t num_frames_modulated = 0;
        //size_t num_underflows_previous = 0;
        //size_t num_late_packets_previous = 0;
@@ -117,4 +108,4 @@ class BladeRF : public Output::SDRDevice
 
 } // namespace Output
 
-//#endif // HAVE_OUTPUT_LIBBLADERF
+//#endif // HAVE_BLADERF
