@@ -66,15 +66,10 @@ BladeRF::BladeRF(SDRDeviceConfig &config) : SDRDevice(), m_conf(config)
     etiLog.level(info) << "BladeRF:Creating the device with: " << m_conf.device;
     
     struct bladerf_devinfo devinfo;
-    
-    int status = bladerf_get_device_list((struct bladerf_devinfo**)&devinfo);
-    if (status < 0)
-    {
-        etiLog.level(error) << "Error making BladeRF device: %s " << bladerf_strerror(status);
-        throw runtime_error("Cannot find BladeRF output device");
-    }
 
-    status = bladerf_open_with_devinfo(&m_device, &devinfo); // first found device is open
+    bladerf_init_devinfo(&devinfo);
+    
+    int status = bladerf_open_with_devinfo(&m_device, &devinfo);
     if (status < 0)
     {
         etiLog.level(error) << "Error making BladeRF device: %s " << bladerf_strerror(status);
@@ -110,7 +105,7 @@ BladeRF::BladeRF(SDRDeviceConfig &config) : SDRDevice(), m_conf(config)
     }
     
     
-    status = bladerf_set_sample_rate(m_device, m_channel, bladerf_sample_rate(m_conf.sampleRate), NULL);
+    status = bladerf_set_sample_rate(m_device, m_channel, (bladerf_sample_rate)m_conf.sampleRate, NULL);
     if (status < 0)
     {
         etiLog.level(error) << "Error making BladeRF device: %s " << bladerf_strerror(status);
@@ -126,6 +121,8 @@ BladeRF::BladeRF(SDRDeviceConfig &config) : SDRDevice(), m_conf(config)
     }
     etiLog.level(info) << "BladeRF sample rate set to " << std::to_string(host_sample_rate / 1000.0) << " kHz";
 
+    
+
     tune(m_conf.lo_offset, m_conf.frequency); //lo_offset?
 
     bladerf_frequency cur_frequency = 0;
@@ -138,24 +135,15 @@ BladeRF::BladeRF(SDRDeviceConfig &config) : SDRDevice(), m_conf(config)
     }
     etiLog.level(info) << "BladeRF:Actual frequency: " << fixed << setprecision(3) << cur_frequency / 1000.0 << " kHz.";
 
-    status = bladerf_set_gain(m_device, m_channel, bladerf_gain(m_conf.txgain)); // gain in [dB]
+    status = bladerf_set_gain(m_device, m_channel, (bladerf_gain)m_conf.txgain); // gain in [dB]
     if (status < 0)
     {
         etiLog.level(error) << "Error making BladeRF device: %s " << bladerf_strerror(status);
         throw runtime_error("Cannot set BladeRF gain");
     }
 
-    // libbladerf does not provide a specific setting function for antennas
-    /*
-    if (LMS_SetAntenna(m_device, LMS_CH_TX, m_channel, LMS_PATH_TX2) < 0)
-    {
-        etiLog.level(error) << "Error making LimeSDR device: %s " << LMS_GetLastErrorMessage();
-        throw runtime_error("Cannot set antenna for LimeSDR output device");
-    }
-    */
-
     bladerf_bandwidth cur_bandwidth = 0;
-    status = bladerf_set_bandwidth(m_device, m_channel, bladerf_bandwidth(m_conf.bandwidth), &cur_bandwidth);
+    status = bladerf_set_bandwidth(m_device, m_channel, (bladerf_bandwidth)m_conf.bandwidth, &cur_bandwidth);
     if (status < 0)
     {
         etiLog.level(error) << "Error making BladeRF device: %s " << bladerf_strerror(status);
