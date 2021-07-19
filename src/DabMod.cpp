@@ -215,7 +215,7 @@ static shared_ptr<ModOutput> prepare_output(
         }
         else if (s.fileOutputFormat == "s16" and s.useBladeRFOutput) {
             // For bladeRF, we must normalise the samples to the interval [-2048; 2047]
-            s.normalise = 2047.0f / normalise_factor; // has to be confirmed, I'm not sure
+            s.normalise = 2047.0f / normalise_factor; // has to be confirmed
 
             output = make_shared<OutputFile>(s.outputName, s.fileOutputShowMetadata);
         }
