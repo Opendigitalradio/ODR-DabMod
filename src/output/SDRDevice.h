@@ -72,7 +72,8 @@ struct SDRDeviceConfig {
     unsigned dabMode = 0;
     unsigned maxGPSHoldoverTime = 0;
 
-    /* allowed values for UHD : auto, int, sma, mimo */
+    /* allowed values for UHD      : auto, int, sma, mimo */
+    /* allowed values for BladeRF  : pps, 10mhz */
     std::string refclk_src;
 
     /* allowed values for UHD : int, sma, mimo */
