@@ -347,7 +347,7 @@ static void parse_configfile(
     else if (output_selected == "bladerf") {
         auto& outputbladerf_conf = mod_settings.sdr_device_config;
         outputbladerf_conf.device = pt.Get("bladerfoutput.device", "");
-        //outputbladerf_conf.reflck_src = pt.Get("bladerfoutput.refclk_source", ""); -> for later
+        outputbladerf_conf.reflck_src = pt.Get("bladerfoutput.refclk_source", "");
         outputbladerf_conf.txgain = pt.GetReal("bladerfoutput.txgain", 0.0);
         outputbladerf_conf.frequency = pt.GetReal("bladerfoutput.frequency", 0);
         std::string chan = pt.Get("bladerfoutput.channel", "");
