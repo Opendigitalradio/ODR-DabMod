@@ -312,8 +312,12 @@ double BladeRF::get_temperature(void) const
 
 void BladeRF::transmit_frame(const struct FrameData &frame)
 {
+    /* Do I have to reinterpret as complex float for BladeRF? Then convert to SC16? */
+    const size_t sizeIn = frame.buf.size() / sizeof(complexf);
+    const complexf* in_data = reinterpret_cast<const complexf*>(&frame.buf[0]);
+
     int status;
-    status = bladerf_sync_tx(m_device, , SAMPLES_LEN, NULL, 5000);
+    status = bladerf_sync_tx(m_device, /*frame.buf*/, /*NUM_SAMPLES*/, NULL, 5000);
     if(status < 0)
     {
         etiLog.level(error) << "Error making BladeRF device: %s " << bladerf_strerror(status);
