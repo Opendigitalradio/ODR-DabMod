@@ -319,10 +319,6 @@ void BladeRF::transmit_frame(const struct FrameData &frame)
         etiLog.level(error) << "Error making BladeRF device: %s " << bladerf_strerror(status);
         throw runtime_error("Cannot transmit TX samples");
     }
-    if (status == 0) {
-        /* Wait a few seconds for any remaining TX samples to finish reaching the RF front-end */
-        usleep(2000000);
-    }
 }
 } // namespace Output
 
