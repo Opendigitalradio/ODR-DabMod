@@ -29,9 +29,6 @@
 
 #include "BladeRF.h"
 
-//FIXME: MUST be removed!!! (for editing only)
-#define HAVE_BLADERF
-
 #ifdef HAVE_BLADERF
 
 #include <chrono>
@@ -41,19 +38,6 @@
 
 #include "Log.h"
 #include "Utils.h"
-using namespace std;
-
-/*
-#include <cmath>
-#include <iostream>
-#include <assert.h>
-#include <stdexcept>
-#include <stdio.h>
-#include <time.h>
-#include <errno.h>
-#include <unistd.h>
-#include <pthread.h>
-*/
 
 using namespace std;
 
@@ -67,7 +51,7 @@ BladeRF::BladeRF(SDRDeviceConfig &config) : SDRDevice(), m_conf(config)
     
     struct bladerf_devinfo devinfo;
 
-    bladerf_init_devinfo(&devinfo);
+    bladerf_init_devinfo(&devinfo); // this function does not return a status
     
     int status = bladerf_open_with_devinfo(&m_device, &devinfo);
     if (status < 0)
@@ -104,7 +88,6 @@ BladeRF::BladeRF(SDRDeviceConfig &config) : SDRDevice(), m_conf(config)
         }
     }
     
-    
     status = bladerf_set_sample_rate(m_device, m_channel, (bladerf_sample_rate)m_conf.sampleRate, NULL);
     if (status < 0)
     {
@@ -120,8 +103,6 @@ BladeRF::BladeRF(SDRDeviceConfig &config) : SDRDevice(), m_conf(config)
         throw runtime_error("Cannot get BladeRF sample rate");
     }
     etiLog.level(info) << "BladeRF sample rate set to " << std::to_string(host_sample_rate / 1000.0) << " kHz";
-
-    
 
     tune(m_conf.lo_offset, m_conf.frequency); //lo_offset?
 
@@ -150,6 +131,27 @@ BladeRF::BladeRF(SDRDeviceConfig &config) : SDRDevice(), m_conf(config)
         throw runtime_error("Cannot set BladeRF bandwidth");
     }
 
+    /* ---------------------------- Streaming Config ---------------------------- */
+    const unsigned int num_buffers = 16;   // Number of buffers to use in the underlying data stream
+    const unsigned int buffer_size = 2048; // Must be a multiple of 1024
+    const unsigned int num_transfers = 8;  // active USB transfers
+    const unsigned int timeout_ms = 3500;
+    /* Configure the device's x1 TX (SISO) channel for use with the
+    * synchronous interface. SC16 Q11 samples *without* metadata are used. */
+    status = bladerf_sync_config(m_device, BLADERF_TX_X1, BLADERF_FORMAT_SC16_Q11, num_buffers,
+                                    buffer_size, num_transfers, timeout_ms);
+    if (status != 0) {
+        etiLog.level(error) << "Error making BladeRF device: %s " << bladerf_strerror(status);
+        throw runtime_error("Cannot setup BladeRF stream");
+    }
+
+    status = bladerf_enable_module(m_device, m_channel, true);
+    if(status < 0)
+    {
+        etiLog.level(error) << "Error making BladeRF device: %s " << bladerf_strerror(status);
+        throw runtime_error("Cannot enable BladeRF channel");
+    }
+
 }
 
 BladeRF::~BladeRF()
@@ -168,7 +170,14 @@ void BladeRF::tune(double lo_offset, double frequency)
     if (not m_device)
         throw runtime_error("BladeRF device not set up");
 
-    status = bladerf_set_frequency(m_device, m_channel, bladerf_frequency(m_conf.frequency));
+    if (lo_offset != 0)
+    {
+        etiLog.level(info) << "lo_offset cannot be set at "<< std::to_string(lo_offset) << " with BladeRF output, has to be 0"
+                           << "\nlo_offset is now set to 0";
+        m_conf.lo_offset = 0;
+    }
+
+    status = bladerf_set_frequency(m_device, m_channel, (bladerf_frequency)m_conf.frequency);
     if (status < 0)
     {
          etiLog.level(error) << "Error setting BladeRF TX frequency: %s " << bladerf_strerror(status);
@@ -199,7 +208,7 @@ void BladeRF::set_txgain(double txgain)
         throw runtime_error("Lime device not set up");
 
     int status;
-    status = bladerf_set_gain(m_device, m_channel, bladerf_gain(m_conf.txgain)); // gain in [dB]
+    status = bladerf_set_gain(m_device, m_channel, (bladerf_gain)m_conf.txgain); // gain in [dB]
     if (status < 0)
     {
         etiLog.level(error) << "Error making BladeRF device: %s " << bladerf_strerror(status);
@@ -225,7 +234,7 @@ double BladeRF::get_txgain(void) const
 
 void BladeRF::set_bandwidth(double bandwidth)
 {
-    bladerf_set_bandwidth(m_device, m_channel, bladerf_bandwidth(m_conf.bandwidth), NULL);
+    bladerf_set_bandwidth(m_device, m_channel, (bladerf_bandwidth)m_conf.bandwidth, NULL);
 }
 
 double BladeRF::get_bandwidth(void) const
@@ -303,54 +312,18 @@ double BladeRF::get_temperature(void) const
 
 void BladeRF::transmit_frame(const struct FrameData &frame)
 {
-    // Allocate a buffer to prepare transmit data in
-    const unsigned int samples_len = 10000; /* May be any (reasonable) size */
-    int16_t* tx_samples = nullptr;
-    tx_samples = (int16_t*)malloc(samples_len*2*1*sizeof(int16_t));
-    if (tx_samples == nullptr) {
-        etiLog.level(info) << "Error TX samples memory allocation";
-         free(tx_samples);
-    }
-
-    const unsigned int num_buffers = 16;
-    const unsigned int buffer_size = 8192; // Must be a multiple of 1024
-    const unsigned int num_transfers = 8;
-    const unsigned int timeout_ms = 3500;
-    /* Configure the device's x1 TX (SISO) channel for use with the
-    * synchronous interface. SC16 Q11 samples *without* metadata are used. */
-    int status = bladerf_sync_config(m_device, BLADERF_TX_X1, BLADERF_FORMAT_SC16_Q11, num_buffers,
-                                buffer_size, num_transfers, timeout_ms);
-    if (status != 0) {
-        etiLog.level(error) << "Error making BladeRF device: %s " << bladerf_strerror(status);
-        throw runtime_error("Cannot setup BladeRF stream");
-    }
-
-    status = bladerf_enable_module(m_device, m_channel, true); // return 0 on success
+    int status;
+    status = bladerf_sync_tx(m_device, &frame, SAMPLES_LEN, NULL, 5000);
     if(status < 0)
     {
         etiLog.level(error) << "Error making BladeRF device: %s " << bladerf_strerror(status);
-        throw runtime_error("Cannot enable BladeRF channel");
-    }
-
-    while(status == 0)
-    {
-        status = bladerf_sync_tx(m_device, tx_samples, samples_len, NULL, 5000);
-        if(status < 0)
-        {
-            etiLog.level(error) << "Error making BladeRF device: %s " << bladerf_strerror(status);
-            throw runtime_error("Cannot TX samples");
-        }
+        throw runtime_error("Cannot transmit TX samples");
     }
     if (status == 0) {
-        /* Wait a few seconds for any remaining TX samples to finish
-        * reaching the RF front-end */
+        /* Wait a few seconds for any remaining TX samples to finish reaching the RF front-end */
         usleep(2000000);
     }
-
 }
-
-
-
 } // namespace Output
 
 #endif // HAVE_BLADERF

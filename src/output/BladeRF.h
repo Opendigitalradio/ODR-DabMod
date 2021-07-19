@@ -2,8 +2,10 @@
    Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010 Her Majesty the
    Queen in Right of Canada (Communications Research Center Canada)
 
-   Copyright (C) 2021
+   Copyright (C) 2019
    Matthias P. Braendli, matthias.braendli@mpb.li
+
+   Copyright (C) 2021
    Steven Rossel, steven.rossel@bluewin.ch
 
     http://opendigitalradio.org
@@ -37,9 +39,10 @@ DESCRIPTION:
  #endif
 
 
-//#ifdef HAVE_BLADERF
+#ifdef HAVE_BLADERF
+ #define SAMPLES_LEN 10000 // for transmit_frame() purpose, may be any (reasonable) size
 
- //#include <chrono>
+ #include <chrono>
  #include <memory>
  #include <string>
  #include <atomic>
@@ -93,7 +96,7 @@ class BladeRF : public Output::SDRDevice
    private:
        SDRDeviceConfig& m_conf;
        struct bladerf *m_device;
-       bladerf_channel m_channel = BLADERF_CHANNEL_TX(0); // ..._TX(1) is possible too
+       bladerf_channel m_channel = BLADERF_CHANNEL_TX(0); // channel TX0
        struct bladerf_stream* m_stream;
        size_t m_interpolate = 1;
        std::vector<complexf> interpolatebuf;
@@ -108,4 +111,4 @@ class BladeRF : public Output::SDRDevice
 
 } // namespace Output
 
-//#endif // HAVE_BLADERF
+#endif // HAVE_BLADERF
