@@ -133,7 +133,7 @@ BladeRF::BladeRF(SDRDeviceConfig &config) : SDRDevice(), m_conf(config)
 
     /* ---------------------------- Streaming Config ---------------------------- */
     const unsigned int num_buffers = 16;   // Number of buffers to use in the underlying data stream
-    const unsigned int buffer_size = 2048; // Must be a multiple of 1024
+    const unsigned int buffer_size = 8192; // "to hold 2048 samples for one channel, a buffer must be at least 8192 bytes large"
     const unsigned int num_transfers = 8;  // active USB transfers
     const unsigned int timeout_ms = 3500;
     /* Configure the device's x1 TX (SISO) channel for use with the
@@ -313,7 +313,7 @@ double BladeRF::get_temperature(void) const
 void BladeRF::transmit_frame(const struct FrameData &frame)
 {
     int status;
-    status = bladerf_sync_tx(m_device, &frame, SAMPLES_LEN, NULL, 5000);
+    status = bladerf_sync_tx(m_device, , SAMPLES_LEN, NULL, 5000);
     if(status < 0)
     {
         etiLog.level(error) << "Error making BladeRF device: %s " << bladerf_strerror(status);
