@@ -164,7 +164,9 @@ static void printModSettings(const mod_settings_t& mod_settings)
         ss << " BladeRF\n"
             "  Device: " << mod_settings.sdr_device_config.device << "\n" <<
             "  master_clock_rate: " <<
-                mod_settings.sdr_device_config.masterClockRate << "\n";
+                "38400000"<< "\n"; // master_clock rate is not configurable
+            /*"  master_clock_rate: " <<
+                mod_settings.sdr_device_config.masterClockRate << "\n";*/
     }
 #endif
     else if (mod_settings.useZeroMQOutput) {
@@ -209,6 +211,12 @@ static shared_ptr<ModOutput> prepare_output(
                 s.normalise = 1.0f / normalise_factor_file_max;
             else if (s.gainMode == GainMode::GAIN_VAR)
                 s.normalise = 1.0f / normalise_factor_file_var;
+            output = make_shared<OutputFile>(s.outputName, s.fileOutputShowMetadata);
+        }
+        else if (s.fileOutputFormat == "s16" and s.useBladeRFOutput) {
+            // For bladeRF, we must normalise the samples to the interval [-2048; 2047]
+            s.normalise = 2047.0f / normalise_factor;
+
             output = make_shared<OutputFile>(s.outputName, s.fileOutputShowMetadata);
         }
         else if (s.fileOutputFormat == "s16") {
