@@ -163,10 +163,7 @@ static void printModSettings(const mod_settings_t& mod_settings)
     else if (mod_settings.useBladeRFOutput) {
         ss << " BladeRF\n"
             "  Device: " << mod_settings.sdr_device_config.device << "\n" <<
-            "  master_clock_rate: " <<
-                "38400000"<< "\n"; // master_clock rate is not configurable
-            /*"  master_clock_rate: " <<
-                mod_settings.sdr_device_config.masterClockRate << "\n";*/
+            "  refclk: " << mod_settings.sdr_device_config.refclk_src << "\n";
     }
 #endif
     else if (mod_settings.useZeroMQOutput) {
@@ -211,12 +208,6 @@ static shared_ptr<ModOutput> prepare_output(
                 s.normalise = 1.0f / normalise_factor_file_max;
             else if (s.gainMode == GainMode::GAIN_VAR)
                 s.normalise = 1.0f / normalise_factor_file_var;
-            output = make_shared<OutputFile>(s.outputName, s.fileOutputShowMetadata);
-        }
-        else if (s.fileOutputFormat == "s16" and s.useBladeRFOutput) {
-            // For bladeRF, we must normalise the samples to the interval [-2048; 2047]
-            s.normalise = 2047.0f / normalise_factor; // has to be confirmed
-
             output = make_shared<OutputFile>(s.outputName, s.fileOutputShowMetadata);
         }
         else if (s.fileOutputFormat == "s16") {
@@ -270,8 +261,8 @@ static shared_ptr<ModOutput> prepare_output(
 #endif
 #if defined(HAVE_BLADERF)
     else if (s.useBladeRFOutput) {
-        /* We normalise the same way as for the UHD output */
-        s.normalise = 1.0f / normalise_factor;
+        /* We normalise specifically for the BladeRF output : range [-2048; 2047] */
+        s.normalise = 2047.0f * (1.0f / normalise_factor);
         s.sdr_device_config.sampleRate = s.outputRate;
         auto bladerfdevice = make_shared<Output::BladeRF>(s.sdr_device_config);
         output = make_shared<Output::SDR>(s.sdr_device_config, bladerfdevice);
