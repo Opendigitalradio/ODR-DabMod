@@ -15,6 +15,7 @@
         "initializer_list": "cpp",
         "regex": "cpp",
         "utility": "cpp",
-        "string": "cpp"
+        "string": "cpp",
+        "iostream": "cpp"
     }
 }
