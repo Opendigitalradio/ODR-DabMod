@@ -114,8 +114,8 @@ AS_IF([test "x$enable_limesdr" = "xyes"],
                        [AC_MSG_ERROR([LimeSDR LimeSuite is required])])])
 
 AS_IF([test "x$enable_bladerf" = "xyes"],
-         [AC_CHECK_LIB([bladeRF], [bladerf_open], [BLADERF_LIBS="-lbladeRF"],
-                       [AC_MSG_ERROR([BladeRF library is required])])])
+         [AC_CHECK_LIB([libbladerf], [bladerf_open], [BLADERF_LIBS="-llibbladerf"],
+                       [AC_MSG_ERROR([BladeRF libbladerf is required])])])
 
 AC_SUBST([CFLAGS], ["$CFLAGS $EXTRA $FFTW_CFLAGS $SOAPYSDR_CFLAGS $PTHREAD_CFLAGS"])
 AC_SUBST([CXXFLAGS], ["$CXXFLAGS $EXTRA $FFTW_CFLAGS $SOAPYSDR_CFLAGS $PTHREAD_CFLAGS"])
