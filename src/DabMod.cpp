@@ -262,7 +262,7 @@ static shared_ptr<ModOutput> prepare_output(
 #if defined(HAVE_BLADERF)
     else if (s.useBladeRFOutput) {
         /* We normalise specifically for the BladeRF output : range [-2048; 2047] */
-        s.normalise = 2047.0f * (1.0f / normalise_factor);
+        s.normalise = 2047.0f / normalise_factor;
         s.sdr_device_config.sampleRate = s.outputRate;
         auto bladerfdevice = make_shared<Output::BladeRF>(s.sdr_device_config);
         output = make_shared<Output::SDR>(s.sdr_device_config, bladerfdevice);
