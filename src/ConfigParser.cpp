@@ -29,8 +29,6 @@
 #   include "config.h"
 #endif
 
-#define HAVE_BLADERF 1
-
 #include <cstdint>
 #include <algorithm>
 
