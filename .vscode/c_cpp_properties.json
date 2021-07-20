@@ -5,7 +5,7 @@
             "includePath": [
                 "${workspaceFolder}/**"
             ],
-            "defines": ["HAVE_CONFIG_H", "HAVE_BLADERF"],
+            "defines": [],
             "compilerPath": "/usr/bin/clang-10",
             "cStandard": "c11",
             "cppStandard": "c++14",
