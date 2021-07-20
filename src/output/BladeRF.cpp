@@ -314,7 +314,7 @@ void BladeRF::transmit_frame(const struct FrameData &frame)
 {
     // The frame buffer contains bytes representing SC16 samples
     const int16_t* data_in = reinterpret_cast<const int16_t*>(&frame.buf[0]);
-    const size_t num_samples = frame.buf.size() / (2*sizeof(int16_t)); // std::vector<int16_t>?
+    const size_t num_samples = frame.buf.size() / (2*sizeof(int16_t));
 
     int status;
     status = bladerf_sync_tx(m_device, data_in, num_samples, NULL, 1000);
