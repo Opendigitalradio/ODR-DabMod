@@ -104,7 +104,7 @@ BladeRF::BladeRF(SDRDeviceConfig &config) : SDRDevice(), m_conf(config)
     }
     etiLog.level(info) << "BladeRF sample rate set to " << std::to_string(host_sample_rate / 1000.0) << " kHz";
 
-    tune(m_conf.lo_offset, m_conf.frequency); //lo_offset?
+    tune(m_conf.lo_offset, m_conf.frequency);
 
     bladerf_frequency cur_frequency = 0;
 
@@ -313,11 +313,11 @@ double BladeRF::get_temperature(void) const
 void BladeRF::transmit_frame(const struct FrameData &frame)
 {
     // The frame buffer contains bytes representing SC16 samples
-    const size_t num_samples = frame.buf.size() / sizeof(std::vector<int16_t>);
     const int16_t* data_in = reinterpret_cast<const int16_t*>(&frame.buf[0]);
+    const size_t num_samples = frame.buf.size() / sizeof(int16_t); // std::vector<int16_t>?
 
     int status;
-    status = bladerf_sync_tx(m_device, data_in, num_samples, NULL, 5000);
+    status = bladerf_sync_tx(m_device, data_in, num_samples, NULL, 1000);
     if(status < 0)
     {
         etiLog.level(error) << "Error making BladeRF device: %s " << bladerf_strerror(status);

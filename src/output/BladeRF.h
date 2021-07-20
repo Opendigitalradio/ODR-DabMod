@@ -98,7 +98,6 @@ class BladeRF : public Output::SDRDevice
        struct bladerf *m_device;
        bladerf_channel m_channel = BLADERF_CHANNEL_TX(0); // channel TX0
        struct bladerf_stream* m_stream;
-       std::vector<short> m_i16samples;
 
        size_t underflows = 0;
        size_t overflows = 0;
