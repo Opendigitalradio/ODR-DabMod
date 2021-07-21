@@ -333,6 +333,9 @@ int launch_modulator(int argc, char* argv[])
              mod_settings.fileOutputFormat == "s16")) {
         format_converter = make_shared<FormatConverter>(mod_settings.fileOutputFormat);
     }
+    else if (mod_settings.useBladeRFOutput) {
+        format_converter = make_shared<FormatConverter>(mod_settings.BladeRFOutputFormat);
+    } 
 
     auto output = prepare_output(mod_settings);
 
