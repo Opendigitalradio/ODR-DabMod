@@ -53,6 +53,7 @@ struct mod_settings_t {
     bool useSoapyOutput = false;
     bool useLimeOutput = false;
     bool useBladeRFOutput = false;
+    const std::string BladeRFOutputFormat = "s16"; // to transmit SC16 IQ
 
     size_t outputRate = 2048000;
     size_t clockRate = 0;
