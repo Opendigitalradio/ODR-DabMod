@@ -59,7 +59,7 @@ BladeRF::BladeRF(SDRDeviceConfig &config) : SDRDevice(), m_conf(config)
         etiLog.level(error) << "Error making BladeRF device: %s " << bladerf_strerror(status);
         throw runtime_error("Cannot open BladeRF output device");
     }
-
+    
     if (m_conf.refclk_src == "pps")
     {
         status = bladerf_set_vctcxo_tamer_mode(m_device, BLADERF_VCTCXO_TAMER_1_PPS);
@@ -76,15 +76,6 @@ BladeRF::BladeRF(SDRDeviceConfig &config) : SDRDevice(), m_conf(config)
         {
             etiLog.level(error) << "Error making BladeRF device: %s " << bladerf_strerror(status);
             throw runtime_error("Cannot set BladeRF refclk to 10 MHz");
-        }
-    }
-    else
-    {
-        status = bladerf_set_vctcxo_tamer_mode(m_device, BLADERF_VCTCXO_TAMER_DISABLED);
-        if (status < 0)
-        {
-            etiLog.level(error) << "Error making BladeRF device: %s " << bladerf_strerror(status);
-            throw runtime_error("Cannot disable BladeRF refclk");
         }
     }
     
@@ -310,14 +301,12 @@ double BladeRF::get_temperature(void) const
 }
 
 
-void BladeRF::transmit_frame(const struct FrameData &frame)
+void BladeRF::transmit_frame(const struct FrameData &frame) // SC16 frames
 {
-    // The frame buffer contains bytes representing SC16 samples
-    const int16_t* data_in = reinterpret_cast<const int16_t*>(&frame.buf[0]);
     const size_t num_samples = frame.buf.size() / (2*sizeof(int16_t));
 
     int status;
-    status = bladerf_sync_tx(m_device, data_in, num_samples, NULL, 1000);
+    status = bladerf_sync_tx(m_device, &frame, num_samples, NULL, 1000);
     if(status < 0)
     {
         etiLog.level(error) << "Error making BladeRF device: %s " << bladerf_strerror(status);
