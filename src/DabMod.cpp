@@ -159,7 +159,7 @@ static void printModSettings(const mod_settings_t& mod_settings)
                 mod_settings.sdr_device_config.masterClockRate << "\n";
     }
 #endif
-#if defined (HAVE_BLADERF)
+#if defined(HAVE_BLADERF)
     else if (mod_settings.useBladeRFOutput) {
         ss << " BladeRF\n"
             "  Device: " << mod_settings.sdr_device_config.device << "\n" <<
