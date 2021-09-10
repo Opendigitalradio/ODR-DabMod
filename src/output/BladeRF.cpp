@@ -4,7 +4,7 @@
 
    Copyright (C) 2019
    Matthias P. Braendli, matthias.braendli@mpb.li
-   
+
    Copyright (C) 2021
    Steven Rossel, steven.rossel@bluewin.ch
 
@@ -35,6 +35,8 @@
 #include <limits>
 #include <cstdio>
 #include <iomanip>
+#include <algorithm>
+#include <iterator>
 
 #include "Log.h"
 #include "Utils.h"
@@ -48,21 +50,22 @@ BladeRF::BladeRF(SDRDeviceConfig &config) : SDRDevice(), m_conf(config)
 {
 
     etiLog.level(info) << "BladeRF:Creating the device with: " << m_conf.device;
-    
+
     struct bladerf_devinfo devinfo;
 
+    // init device infos
     bladerf_init_devinfo(&devinfo); // this function does not return a status
-    
-    int status = bladerf_open_with_devinfo(&m_device, &devinfo);
+
+    int status = bladerf_open_with_devinfo(&m_device, &devinfo); // open device with info
     if (status < 0)
     {
         etiLog.level(error) << "Error making BladeRF device: %s " << bladerf_strerror(status);
         throw runtime_error("Cannot open BladeRF output device");
     }
-    
+
     if (m_conf.refclk_src == "pps")
     {
-        status = bladerf_set_vctcxo_tamer_mode(m_device, BLADERF_VCTCXO_TAMER_1_PPS);
+        status = bladerf_set_vctcxo_tamer_mode(m_device, BLADERF_VCTCXO_TAMER_1_PPS); // 1 PPS tames the clock
         if (status < 0)
         {
             etiLog.level(error) << "Error making BladeRF device: %s " << bladerf_strerror(status);
@@ -71,21 +74,21 @@ BladeRF::BladeRF(SDRDeviceConfig &config) : SDRDevice(), m_conf(config)
     }
     else if (m_conf.refclk_src == "10mhz")
     {
-        status = bladerf_set_vctcxo_tamer_mode(m_device, BLADERF_VCTCXO_TAMER_10_MHZ);
+        status = bladerf_set_vctcxo_tamer_mode(m_device, BLADERF_VCTCXO_TAMER_10_MHZ); // 10 MHz tames the clock
         if (status < 0)
         {
             etiLog.level(error) << "Error making BladeRF device: %s " << bladerf_strerror(status);
             throw runtime_error("Cannot set BladeRF refclk to 10 MHz");
         }
     }
-    
+
     status = bladerf_set_sample_rate(m_device, m_channel, (bladerf_sample_rate)m_conf.sampleRate, NULL);
     if (status < 0)
     {
         etiLog.level(error) << "Error making BladeRF device: %s " << bladerf_strerror(status);
         throw runtime_error("Cannot set BladeRF sample rate");
     }
-    
+
     bladerf_sample_rate host_sample_rate = 0;
     status =  bladerf_get_sample_rate(m_device, m_channel, &host_sample_rate);
     if (status < 0)
@@ -127,6 +130,7 @@ BladeRF::BladeRF(SDRDeviceConfig &config) : SDRDevice(), m_conf(config)
     const unsigned int buffer_size = 8192; // "to hold 2048 samples for one channel, a buffer must be at least 8192 bytes large"
     const unsigned int num_transfers = 8;  // active USB transfers
     const unsigned int timeout_ms = 3500;
+
     /* Configure the device's x1 TX (SISO) channel for use with the
     * synchronous interface. SC16 Q11 samples *without* metadata are used. */
     status = bladerf_sync_config(m_device, BLADERF_TX_X1, BLADERF_FORMAT_SC16_Q11, num_buffers,
@@ -149,7 +153,7 @@ BladeRF::~BladeRF()
 {
     if (m_device != nullptr)
     {
-        bladerf_deinit_stream(m_stream);
+        //bladerf_deinit_stream(m_stream); /* Asynchronous API function*/
         bladerf_enable_module(m_device, m_channel, false);
         bladerf_close(m_device);
     }
@@ -189,7 +193,7 @@ double BladeRF::get_tx_freq(void) const
         etiLog.level(error) << "Error getting BladeRF TX frequency: %s " << bladerf_strerror(status);
     }
 
-    return double(cur_frequency);
+    return (double)cur_frequency;
 }
 
 void BladeRF::set_txgain(double txgain)
@@ -220,7 +224,7 @@ double BladeRF::get_txgain(void) const
     {
         etiLog.level(error) << "Error getting BladeRF TX gain: %s " << bladerf_strerror(status);
     }
-    return double(txgain);
+    return (double)txgain;
 }
 
 void BladeRF::set_bandwidth(double bandwidth)
@@ -232,7 +236,7 @@ double BladeRF::get_bandwidth(void) const
 {
     bladerf_bandwidth bw;
     bladerf_get_bandwidth(m_device, m_channel, &bw);
-    return double(bw);
+    return (double)bw;
 }
 
 SDRDevice::RunStatistics BladeRF::get_run_statistics(void) const
@@ -306,7 +310,7 @@ void BladeRF::transmit_frame(const struct FrameData &frame) // SC16 frames
     const size_t num_samples = frame.buf.size() / (2*sizeof(int16_t));
 
     int status;
-    status = bladerf_sync_tx(m_device, &frame, num_samples, NULL, 1000);
+    status = bladerf_sync_tx(m_device, &frame, num_samples, NULL, 0);
     if(status < 0)
     {
         etiLog.level(error) << "Error making BladeRF device: %s " << bladerf_strerror(status);

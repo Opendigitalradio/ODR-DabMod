@@ -97,7 +97,7 @@ class BladeRF : public Output::SDRDevice
        SDRDeviceConfig& m_conf;
        struct bladerf *m_device;
        bladerf_channel m_channel = BLADERF_CHANNEL_TX(0); // channel TX0
-       struct bladerf_stream* m_stream;
+       //struct bladerf_stream* m_stream; /* used for asynchronous api */
 
        size_t underflows = 0;
        size_t overflows = 0;
