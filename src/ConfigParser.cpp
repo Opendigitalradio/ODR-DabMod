@@ -350,6 +350,7 @@ static void parse_configfile(
         outputbladerf_conf.refclk_src = pt.Get("bladerfoutput.refclk_source", "");
         outputbladerf_conf.txgain = pt.GetReal("bladerfoutput.txgain", 0.0);
         outputbladerf_conf.frequency = pt.GetReal("bladerfoutput.frequency", 0);
+        outputbladerf_conf.bandwidth = pt.GetReal("bladerfoutput.bandwidth", 0);
         std::string chan = pt.Get("bladerfoutput.channel", "");
         outputbladerf_conf.dabMode = mod_settings.dabMode;
 
