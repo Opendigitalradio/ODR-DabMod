@@ -310,7 +310,7 @@ void BladeRF::transmit_frame(const struct FrameData &frame) // SC16 frames
     const size_t num_samples = frame.buf.size() / (2*sizeof(int16_t));
 
     int status;
-    status = bladerf_sync_tx(m_device, &frame, num_samples, NULL, 0);
+    status = bladerf_sync_tx(m_device, frame.buf.data(), num_samples, NULL, 0);
     if(status < 0)
     {
         etiLog.level(error) << "Error making BladeRF device: %s " << bladerf_strerror(status);
