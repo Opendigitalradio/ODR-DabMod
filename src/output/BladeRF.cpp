@@ -294,14 +294,13 @@ double BladeRF::get_temperature(void) const
 
     float temp = 0.0;
 
-    int status;
-    status = bladerf_get_rfic_temperature(m_device, &temp);
+    int status = bladerf_get_rfic_temperature(m_device, &temp);
     if (status < 0)
     {
         etiLog.level(error) << "Error getting BladeRF temperature: %s " << bladerf_strerror(status);
     }
 
-    return temp;
+    return (double)temp;
 }
 
 
@@ -309,13 +308,13 @@ void BladeRF::transmit_frame(const struct FrameData &frame) // SC16 frames
 {
     const size_t num_samples = frame.buf.size() / (2*sizeof(int16_t));
 
-    int status;
-    status = bladerf_sync_tx(m_device, frame.buf.data(), num_samples, NULL, 0);
-    if(status < 0)
-    {
-        etiLog.level(error) << "Error making BladeRF device: %s " << bladerf_strerror(status);
+    const int status = bladerf_sync_tx(m_device, frame.buf.data(), num_samples, NULL, 0);
+    if (status < 0) {
+        etiLog.level(error) << "Error transmitting samples with BladeRF: %s " << bladerf_strerror(status);
         throw runtime_error("Cannot transmit TX samples");
     }
+
+    num_frames_modulated++;
 }
 } // namespace Output
 
