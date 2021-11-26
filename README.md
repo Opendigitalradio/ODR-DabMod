@@ -17,13 +17,15 @@ Features
 - Supports native DAB sample rate and can also resample to other rates
 - Supports all four DAB transmission modes
 - Configuration file support, see `doc/example.ini`
-- Integrated UHD output for [USRP devices](https://www.ettus.com/product)
+- First-class support for [USRP devices](https://www.ettus.com/product) using UHD driver
   - Tested for B200, B100, USRP2, USRP1
   - With WBX daughterboard (where appropriate)
-- [SoapySDR](https://github.com/pothosware/SoapySDR/wiki) output
-  - Can be used to drive the [LimeSDR board](https://myriadrf.org/projects/limesdr/), the [HackRF](https://greatscottgadgets.com/hackrf/) and others.
-- Timestamping support required for SFN
-- GPSDO monitoring (both Ettus and [ODR LEA-M8F board](http://www.opendigitalradio.org/lea-m8f-gpsdo))
+  - Timestamping support required for SFN
+  - GPSDO monitoring (both Ettus and [ODR LEA-M8F board](http://www.opendigitalradio.org/lea-m8f-gpsdo))
+- Second-class support for devices using [SoapySDR](https://github.com/pothosware/SoapySDR/wiki)
+  - Known to work with [LimeSDR board](https://myriadrf.org/projects/limesdr/), the [HackRF](https://greatscottgadgets.com/hackrf/).
+- Second-class support for LimeSDR through LimeSuite
+- Second-class support for [BladeRF 2.0](https://www.nuand.com/bladerf-2-0-micro/) devices
 - Monitoring integration with munin
 - A FIR filter for improved spectrum mask
 - TII insertion
@@ -33,11 +35,11 @@ Features
 - A Telnet and ZeroMQ remote-control that can be used to change
   some parameters during runtime and retrieve statistics.
   See `doc/README-RC.md` for more information
-- ZeroMQ PUB and REP output.
-- Ongoing work about digital predistortion for PA linearisation.
-  See `python/dpd/README.md`
-- A web GUI for control and supervision of modulator and predistortion engine. See `python/gui/README.md`
-- A prototype algorithm for crest factor reduction.
+- ZeroMQ PUB and REP output, useful for sending IQ to GNURadio flowgraphs.
+- Development has stalled on the following topics:
+  - Experimental prototype about digital predistortion for PA linearisation.
+    - See `python/dpd/README.md`
+  - A web GUI for control and supervision of modulator and predistortion engine. See `python/gui/README.md`
 
 The `src/` directory contains the source code of ODR-DabMod.
 

@@ -17,6 +17,7 @@ Matthias P. Braendli <matthias [at] mpb [dot] li>
     - TII
     - SoapySDR integration
     - CFR
+    - EDI input
 
 Jörgen Scott
     - ZeroMQ remote control
@@ -30,3 +31,6 @@ Andreas Steger
 
 Evariste F5OEO
     - LimeSDR integration
+
+Steven Rossel
+    - BladeRF integration

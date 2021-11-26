@@ -8,6 +8,7 @@ Required dependencies:
 * Optional UHD for USRP
 * Optional LimeSuite for LimeSDR support
 * Optional SoapySDR (see below)
+* Optional bladerf (see below)
 * Optional ZeroMQ http://www.zeromq.org
 
 Simple install procedure:
@@ -105,3 +106,8 @@ your system, and will print at the end of `./configure` if support is enabled or
 not.
 
 A configuration example is available in `doc/example.ini`
+
+BladeRF support
+===============
+
+In order to use `--enable-bladerf`, you need to install the `libbladerf2` including the -dev package.
