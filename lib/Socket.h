@@ -168,6 +168,7 @@ class TCPSocket {
 
         bool valid(void) const;
         void connect(const std::string& hostname, int port, bool nonblock = false);
+        void connect(const std::string& hostname, int port, int timeout_ms);
         void listen(int port, const std::string& name);
         void close(void);
 

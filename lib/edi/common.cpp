@@ -153,24 +153,33 @@ void TagDispatcher::push_bytes(const vector<uint8_t> &buf)
 
     while (m_input_data.size() > 2) {
         if (m_input_data[0] == 'A' and m_input_data[1] == 'F') {
-            const decode_state_t st = decode_afpacket(m_input_data);
-
-            if (st.num_bytes_consumed == 0 and not st.complete) {
-                // We need to refill our buffer
-                break;
+            const auto r = decode_afpacket(m_input_data);
+            bool leave_loop = false;
+            switch (r.st) {
+                case decode_state_e::Ok:
+                    m_last_sequences.pseq_valid = false;
+                    m_af_packet_completed();
+                    break;
+                case decode_state_e::MissingData:
+                    /* Continue filling buffer */
+                    leave_loop = true;
+                    break;
+                case decode_state_e::Error:
+                    m_last_sequences.pseq_valid = false;
+                    leave_loop = true;
+                    break;
             }
 
-            if (st.num_bytes_consumed) {
+            if (r.num_bytes_consumed) {
                 vector<uint8_t> remaining_data;
-                copy(m_input_data.begin() + st.num_bytes_consumed,
+                copy(m_input_data.begin() + r.num_bytes_consumed,
                         m_input_data.end(),
                         back_inserter(remaining_data));
                 m_input_data = remaining_data;
             }
 
-            m_last_sequences.pseq_valid = false;
-            if (st.complete) {
-                m_af_packet_completed();
+            if (leave_loop) {
+                break;
             }
         }
         else if (m_input_data[0] == 'P' and m_input_data[1] == 'F') {
@@ -194,12 +203,21 @@ void TagDispatcher::push_bytes(const vector<uint8_t> &buf)
 
             auto af = m_pft.getNextAFPacket();
             if (not af.af_packet.empty()) {
-                const decode_state_t st = decode_afpacket(af.af_packet);
-                m_last_sequences.pseq = af.pseq;
-                m_last_sequences.pseq_valid = true;
+                const auto r = decode_afpacket(af.af_packet);
 
-                if (st.complete) {
-                    m_af_packet_completed();
+                switch (r.st) {
+                    case decode_state_e::Ok:
+                        m_last_sequences.pseq = af.pseq;
+                        m_last_sequences.pseq_valid = true;
+                        m_af_packet_completed();
+                        break;
+                    case decode_state_e::MissingData:
+                        etiLog.level(error) << "ETI MissingData on PFT push_bytes";
+                        m_last_sequences.pseq_valid = false;
+                        break;
+                    case decode_state_e::Error:
+                        m_last_sequences.pseq_valid = false;
+                        break;
                 }
             }
         }
@@ -219,10 +237,10 @@ void TagDispatcher::push_packet(const Packet &packet)
     }
 
     if (buf[0] == 'A' and buf[1] == 'F') {
-        const decode_state_t st = decode_afpacket(buf);
+        const auto r = decode_afpacket(buf);
         m_last_sequences.pseq_valid = false;
 
-        if (st.complete) {
+        if (r.st == decode_state_e::Ok) {
             m_af_packet_completed();
         }
 
@@ -237,11 +255,11 @@ void TagDispatcher::push_packet(const Packet &packet)
 
         auto af = m_pft.getNextAFPacket();
         if (not af.af_packet.empty()) {
-            const decode_state_t st = decode_afpacket(af.af_packet);
-            m_last_sequences.pseq = af.pseq;
-            m_last_sequences.pseq_valid = true;
+            const auto r = decode_afpacket(af.af_packet);
 
-            if (st.complete) {
+            if (r.st == decode_state_e::Ok) {
+                m_last_sequences.pseq = af.pseq;
+                m_last_sequences.pseq_valid = true;
                 m_af_packet_completed();
             }
         }
@@ -261,11 +279,11 @@ void TagDispatcher::setMaxDelay(int num_af_packets)
 
 
 #define AFPACKET_HEADER_LEN 10 // includes SYNC
-decode_state_t TagDispatcher::decode_afpacket(
+TagDispatcher::decode_result_t TagDispatcher::decode_afpacket(
         const std::vector<uint8_t> &input_data)
 {
     if (input_data.size() < AFPACKET_HEADER_LEN) {
-        return {false, 0};
+        return {decode_state_e::MissingData, 0};
     }
 
     // read length from packet
@@ -274,7 +292,7 @@ decode_state_t TagDispatcher::decode_afpacket(
 
     const size_t crclength = 2;
     if (input_data.size() < AFPACKET_HEADER_LEN + taglength + crclength) {
-        return {false, 0};
+        return {decode_state_e::MissingData, 0};
     }
 
     // SEQ wraps at 0xFFFF, unsigned integer overflow is intentional
@@ -291,22 +309,23 @@ decode_state_t TagDispatcher::decode_afpacket(
     }
     m_last_sequences.seq = seq;
 
+    const size_t crclen = 2;
     bool has_crc = (input_data[8] & 0x80) ? true : false;
     uint8_t major_revision = (input_data[8] & 0x70) >> 4;
     uint8_t minor_revision = input_data[8] & 0x0F;
     if (major_revision != 1 or minor_revision != 0) {
-        throw invalid_argument("EDI AF Packet has wrong revision " +
-                to_string(major_revision) + "." + to_string(minor_revision));
+        etiLog.level(warn) << "EDI AF Packet has wrong revision " <<
+                (int)major_revision << "." << (int)minor_revision;
+    }
+
+    if (not has_crc) {
+        etiLog.level(warn) << "AF packet not supported, has no CRC";
+        return {decode_state_e::Error, AFPACKET_HEADER_LEN + taglength};
     }
     uint8_t pt = input_data[9];
     if (pt != 'T') {
         // only support Tag
-        return {false, 0};
-    }
-
-
-    if (not has_crc) {
-        throw invalid_argument("AF packet not supported, has no CRC");
+        return {decode_state_e::Error, AFPACKET_HEADER_LEN + taglength + crclen};
     }
 
     uint16_t crc = 0xffff;
@@ -318,7 +337,8 @@ decode_state_t TagDispatcher::decode_afpacket(
     uint16_t packet_crc = read_16b(input_data.begin() + AFPACKET_HEADER_LEN + taglength);
 
     if (packet_crc != crc) {
-        throw invalid_argument("AF Packet crc wrong");
+        etiLog.level(warn) << "AF Packet crc wrong";
+        return {decode_state_e::Error, AFPACKET_HEADER_LEN + taglength + crclen};
     }
     else {
         vector<uint8_t> payload(taglength);
@@ -326,8 +346,9 @@ decode_state_t TagDispatcher::decode_afpacket(
                 input_data.begin() + AFPACKET_HEADER_LEN + taglength,
                 payload.begin());
 
-        return {decode_tagpacket(payload),
-            AFPACKET_HEADER_LEN + taglength + 2};
+        return {
+            decode_tagpacket(payload) ? decode_state_e::Ok : decode_state_e::Error,
+            AFPACKET_HEADER_LEN + taglength + crclen};
     }
 }
 

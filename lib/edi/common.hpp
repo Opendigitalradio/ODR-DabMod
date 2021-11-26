@@ -49,13 +49,6 @@ struct frame_timestamp_t {
     static frame_timestamp_t from_unix_epoch(std::time_t time, uint32_t tai_utc_offset, uint32_t tsta);
 };
 
-struct decode_state_t {
-    decode_state_t(bool _complete, size_t _num_bytes_consumed) :
-        complete(_complete), num_bytes_consumed(_num_bytes_consumed) {}
-    bool complete;
-    size_t num_bytes_consumed;
-};
-
 using tag_name_t = std::array<uint8_t, 4>;
 
 std::string tag_name_to_human_readable(const tag_name_t& name);
@@ -122,7 +115,17 @@ class TagDispatcher {
         }
 
     private:
-        decode_state_t decode_afpacket(const std::vector<uint8_t> &input_data);
+        enum class decode_state_e {
+            Ok, MissingData, Error
+        };
+        struct decode_result_t {
+            decode_result_t(decode_state_e _st, size_t _num_bytes_consumed) :
+                st(_st), num_bytes_consumed(_num_bytes_consumed) {}
+            decode_state_e st;
+            size_t num_bytes_consumed;
+        };
+
+        decode_result_t decode_afpacket(const std::vector<uint8_t> &input_data);
         bool decode_tagpacket(const std::vector<uint8_t> &payload);
 
         PFT::PFT m_pft;
