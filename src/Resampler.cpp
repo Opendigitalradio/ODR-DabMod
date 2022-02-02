@@ -93,6 +93,7 @@ Resampler::Resampler(size_t inputRate, size_t outputRate, size_t resolution) :
 
     myFftIn = (FFT_TYPE*)fftwf_malloc(sizeof(FFT_TYPE) * myFftSizeIn);
     myFront = (FFT_TYPE*)fftwf_malloc(sizeof(FFT_TYPE) * myFftSizeIn);
+    fftwf_set_timelimit(2);
     myFftPlan1 = fftwf_plan_dft_1d(myFftSizeIn,
             myFftIn, myFront,
             FFTW_FORWARD, FFTW_MEASURE);

@@ -104,6 +104,7 @@ OfdmGenerator::OfdmGenerator(size_t nbSymbols,
     const int N = mySpacing; // The size of the FFT
     myFftIn = (FFT_TYPE*)fftwf_malloc(sizeof(FFT_TYPE) * N);
     myFftOut = (FFT_TYPE*)fftwf_malloc(sizeof(FFT_TYPE) * N);
+    fftwf_set_timelimit(2);
     myFftPlan = fftwf_plan_dft_1d(N,
             myFftIn, myFftOut,
             FFTW_BACKWARD, FFTW_MEASURE);
