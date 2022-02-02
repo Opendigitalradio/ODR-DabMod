@@ -1,6 +1,13 @@
 This file contains information about the changes done to
 ODR-DabMod in this repository
 
+2022-02-02: Matthias P. Braendli <matthias@mpb.li>
+	(v2.5.0):
+		Add support for BladeRF devices.
+		Improve EDI input.
+		Improve compilation on arm devices.
+		Avoid stalling the input when FFTW planner takes too much time.
+
 2021-02-22: Matthias P. Braendli <matthias@mpb.li>
 	(v2.4.2):
 		Fix some compilation issues for GCC 10 and due to missing includes.
