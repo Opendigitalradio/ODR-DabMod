@@ -35,7 +35,7 @@ namespace EdiDecoder {
 struct frame_timestamp_t {
     uint32_t seconds = 0;
     uint32_t utco = 0;
-    uint32_t tsta = 0; // According to EN 300 797 Annex B
+    uint32_t tsta = 0xFFFFFF; // According to EN 300 797 Annex B
 
     bool valid() const;
     std::string to_string() const;
@@ -47,6 +47,33 @@ struct frame_timestamp_t {
     frame_timestamp_t& operator+=(const std::chrono::milliseconds& ms);
 
     static frame_timestamp_t from_unix_epoch(std::time_t time, uint32_t tai_utc_offset, uint32_t tsta);
+
+    friend bool operator==(const frame_timestamp_t& l, const frame_timestamp_t& r) {
+        return (l.seconds - l.utco) == (r.seconds - r.utco) and l.tsta == r.tsta;
+    }
+
+    friend bool operator!=(const frame_timestamp_t& l, const frame_timestamp_t& r) {
+        return not (l == r);
+    }
+
+    friend bool operator< (const frame_timestamp_t& l, const frame_timestamp_t& r) {
+        if (l.seconds - l.utco == r.seconds - r.utco) {
+            return l.tsta < r.tsta;
+        }
+        return l.seconds - l.utco < r.seconds - r.utco;
+    }
+
+    friend bool operator<= (const frame_timestamp_t& l, const frame_timestamp_t& r) {
+        return l < r or l == r;
+    }
+
+    friend bool operator> (const frame_timestamp_t& l, const frame_timestamp_t& r) {
+        return r < l;
+    }
+
+    friend bool operator>= (const frame_timestamp_t& l, const frame_timestamp_t& r) {
+        return l > r or l == r;
+    }
 };
 
 using tag_name_t = std::array<uint8_t, 4>;

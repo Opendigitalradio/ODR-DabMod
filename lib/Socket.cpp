@@ -259,6 +259,15 @@ void UDPSocket::send(const std::vector<uint8_t>& data, InetAddress destination)
     }
 }
 
+void UDPSocket::send(const std::string& data, InetAddress destination)
+{
+    const int ret = sendto(m_sock, data.data(), data.size(), 0,
+            destination.as_sockaddr(), sizeof(*destination.as_sockaddr()));
+    if (ret == SOCKET_ERROR && errno != ECONNREFUSED) {
+        throw runtime_error(string("Can't send UDP packet: ") + strerror(errno));
+    }
+}
+
 void UDPSocket::joinGroup(const char* groupname, const char* if_addr)
 {
     ip_mreqn group;

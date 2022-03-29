@@ -115,6 +115,7 @@ class UDPSocket
         void close(void);
         void send(UDPPacket& packet);
         void send(const std::vector<uint8_t>& data, InetAddress destination);
+        void send(const std::string& data, InetAddress destination);
         UDPPacket receive(size_t max_size);
         void joinGroup(const char* groupname, const char* if_addr = nullptr);
         void setMulticastSource(const char* source_addr);
@@ -197,6 +198,8 @@ class TCPSocket {
          * on error
          */
         ssize_t recv(void *buffer, size_t length, int flags, int timeout_ms);
+
+        SOCKET get_sockfd() const { return m_sock; }
 
     private:
         explicit TCPSocket(int sockfd);
