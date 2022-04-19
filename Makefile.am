@@ -174,3 +174,4 @@ odr_dabmod_SOURCES += \
 odr_dabmod_LDADD   += $(UHD_LIBS) $(LIMESDR_LIBS) $(ADDITIONAL_UHD_LIBS)
 endif
 
+man_MANS = man/odr-dabmod.1

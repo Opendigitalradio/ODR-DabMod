@@ -1,0 +1,87 @@
+.TH ODR-DABMOD "1" "April 2022" "" "User Commands"
+.SH NAME
+odr-dabmod \- DAB modulator compliant to ETSI EN 300 401
+.SH SYNOPSIS
+.SY odr-dabmod
+<configuration_file>
+.YS
+.SY odr-dabmod
+input
+(\fB\-f\fR filename \fB\-F\fR format | \fB\-u\fR uhddevice \fB\-F\fR frequency)
+[\fB\-o\fR offset][\fB\-G\fR txgain] [\fB\-T\fR filter_taps_file]
+[\fB\-a\fR gain] [\fB\-c\fR clockrate] [\fB\-g\fR gainMode] 
+[\fB\-m\fR dabMode] [\fB\-r\fR samplingRate] [\fB\-l\fR] [\fB\-h\fR]
+.YS
+.PP
+Where input is:
+.IP
+ETI input filename (default: stdin), or
+.IP
+tcp://source:port for ETI\-over\-TCP input, or
+.IP
+zmq+tcp://source:port for ZMQ input, or
+.IP
+udp://:port for EDI input.
+.SH DESCRIPTION
+ODR-DabMod is a software-defined DAB modulator that receives or reads ETI,
+and generates modulated I/Q data usable for transmission. It can directly 
+interface the Ettus USRP devices, and can also be used with other SDR signal sources.
+.PP
+This I/Q data which is encoded as complex floats (32bits per complex sample)
+can be written to a file or pipe, sent to a USRP device using the integrated output
+for the open-source USRP Hardware Driver (UHD) or to other software-defined
+radio (SDR) devices using the SoapySDR5 library.
+.PP
+The output of the modulator can also be sent to a GNURadio flow-graph for
+further processing, conversion or analysis using a ZeroMQ network connection.
+.SH OPTIONS
+.TP
+\fB\-f\fR
+Use file output with given filename. (use \fI\,/dev/stdout\/\fP for standard output)
+.TP
+\fB\-F\fR
+Set the output format (see doc/example.ini for formats) for the file output.
+.TP
+\fB\-o\fR
+Set the timestamp offset added to the timestamp in the ETI. The offset is a double.
+.IP
+Specifying this option has two implications: It enables synchronous transmission,
+requiring an external REFCLK and PPS signal and frames that do not contain a valid timestamp
+get muted.
+.TP
+\fB\-u\fR
+Use UHD output with given device string. (use  for default device)
+.TP
+\fB\-F\fR
+Set the transmit frequency when using UHD output. (mandatory option when using UHD)
+.TP
+\fB\-G\fR
+Set the transmit gain for the UHD driver (default: 0)
+.TP
+\fB\-T\fR
+Enable filtering before the output, using the specified file containing the filter taps.
+.IP
+Use 'default' as taps_file to use the internal taps.
+.TP
+\fB\-a\fR
+Apply digital amplitude gain.
+.TP
+\fB\-c\fR
+Set the DAC clock rate and enable Cic Equalisation.
+.TP
+\fB\-g\fR
+Set computation gain mode: fix, max or var
+.TP
+\fB\-m\fR
+Set DAB mode: (0: auto, 1\-4: force).
+.TP
+\fB\-r\fR
+Set output sampling rate (default: 2048000).
+.TP
+\fB\-l\fR
+Loop file when reach end of file.
+.TP
+\fB\-h\fR
+Print this help.
+.SH SEE ALSO
+odr-dabmux(1)
