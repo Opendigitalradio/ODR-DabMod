@@ -1,6 +1,10 @@
 This file contains information about the changes done to
 ODR-DabMod in this repository
 
+2022-04-20: Matthias P. Braendli <matthias@mpb.li>
+	(v2.6.0):
+		Add timestamps to log output.
+
 2022-02-02: Matthias P. Braendli <matthias@mpb.li>
 	(v2.5.0):
 		Add support for BladeRF devices.
