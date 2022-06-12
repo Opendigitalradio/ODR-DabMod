@@ -29,7 +29,9 @@
 #include <algorithm>
 
 #include "RemoteControl.h"
-#include "zmq.hpp"
+#if defined(HAVE_ZEROMQ)
+    #include "zmq.hpp"
+#endif
 
 using namespace std;
 
