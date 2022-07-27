@@ -51,9 +51,9 @@ struct mod_settings_t {
     bool fileOutputShowMetadata = false;
     bool useUHDOutput = false;
     bool useSoapyOutput = false;
+    bool useDexterOutput = false;
     bool useLimeOutput = false;
     bool useBladeRFOutput = false;
-    const std::string BladeRFOutputFormat = "s16"; // to transmit SC16 IQ
 
     size_t outputRate = 2048000;
     size_t clockRate = 0;
@@ -87,7 +87,7 @@ struct mod_settings_t {
     // Settings for the OFDM windowing
     size_t ofdmWindowOverlap = 0;
 
-#if defined(HAVE_OUTPUT_UHD) || defined(HAVE_SOAPYSDR) || defined(HAVE_LIMESDR) || defined(HAVE_BLADERF)
+#if defined(HAVE_OUTPUT_UHD) || defined(HAVE_SOAPYSDR) || defined(HAVE_LIMESDR) || defined(HAVE_BLADERF) || defined(HAVE_DEXTER)
     Output::SDRDeviceConfig sdr_device_config;
 #endif
 

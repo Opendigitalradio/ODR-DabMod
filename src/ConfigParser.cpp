@@ -312,6 +312,30 @@ static void parse_configfile(
         mod_settings.useSoapyOutput = true;
     }
 #endif
+#if defined(HAVE_DEXTER)
+    else if (output_selected == "dexter") {
+        auto& outputdexter_conf = mod_settings.sdr_device_config;
+        outputdexter_conf.txgain = pt.GetReal("dexteroutput.txgain", 0.0);
+        outputdexter_conf.lo_offset = pt.GetReal("dexteroutput.lo_offset", 0.0);
+        outputdexter_conf.frequency = pt.GetReal("dexteroutput.frequency", 0);
+        std::string chan = pt.Get("dexteroutput.channel", "");
+        outputdexter_conf.dabMode = mod_settings.dabMode;
+
+        if (outputdexter_conf.frequency == 0 && chan == "") {
+            std::cerr << "       dexter output enabled, but neither frequency nor channel defined.\n";
+            throw std::runtime_error("Configuration error");
+        }
+        else if (outputdexter_conf.frequency == 0) {
+            outputdexter_conf.frequency =  parseChannel(chan);
+        }
+        else if (outputdexter_conf.frequency != 0 && chan != "") {
+            std::cerr << "       dexter output: cannot define both frequency and channel.\n";
+            throw std::runtime_error("Configuration error");
+        }
+
+        mod_settings.useDexterOutput = true;
+    }
+#endif
 #if defined(HAVE_LIMESDR)
     else if (output_selected == "limesdr") {
         auto& outputlime_conf = mod_settings.sdr_device_config;

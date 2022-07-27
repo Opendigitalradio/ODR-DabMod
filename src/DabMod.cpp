@@ -56,6 +56,7 @@
 #include "output/SDR.h"
 #include "output/UHD.h"
 #include "output/Soapy.h"
+#include "output/Dexter.h"
 #include "output/Lime.h"
 #include "output/BladeRF.h"
 #include "OutputZeroMQ.h"
@@ -151,6 +152,11 @@ static void printModSettings(const mod_settings_t& mod_settings)
                 mod_settings.sdr_device_config.masterClockRate << "\n";
     }
 #endif
+#if defined(HAVE_DEXTER)
+    else if (mod_settings.useDexterOutput) {
+        ss << " PrecisionWave DEXTER\n";
+    }
+#endif
 #if defined(HAVE_LIMESDR)
     else if (mod_settings.useLimeOutput) {
         ss << " LimeSDR\n"
@@ -192,8 +198,7 @@ static void printModSettings(const mod_settings_t& mod_settings)
     fprintf(stderr, "%s", ss.str().c_str());
 }
 
-static shared_ptr<ModOutput> prepare_output(
-        mod_settings_t& s)
+static shared_ptr<ModOutput> prepare_output(mod_settings_t& s)
 {
     shared_ptr<ModOutput> output;
 
@@ -246,6 +251,16 @@ static shared_ptr<ModOutput> prepare_output(
         s.sdr_device_config.sampleRate = s.outputRate;
         auto soapydevice = make_shared<Output::Soapy>(s.sdr_device_config);
         output = make_shared<Output::SDR>(s.sdr_device_config, soapydevice);
+        rcs.enrol((Output::SDR*)output.get());
+    }
+#endif
+#if defined(HAVE_DEXTER)
+    else if (s.useDexterOutput) {
+        /* We normalise specifically range [-32768; 32767] */
+        s.normalise = 32767.0f / normalise_factor;
+        s.sdr_device_config.sampleRate = s.outputRate;
+        auto dexterdevice = make_shared<Output::Dexter>(s.sdr_device_config);
+        output = make_shared<Output::SDR>(s.sdr_device_config, dexterdevice);
         rcs.enrol((Output::SDR*)output.get());
     }
 #endif
@@ -319,6 +334,7 @@ int launch_modulator(int argc, char* argv[])
              mod_settings.useUHDOutput or
              mod_settings.useZeroMQOutput or
              mod_settings.useSoapyOutput or
+             mod_settings.useDexterOutput or
              mod_settings.useLimeOutput or
              mod_settings.useBladeRFOutput)) {
         throw std::runtime_error("Configuration error: Output not specified");
@@ -333,9 +349,9 @@ int launch_modulator(int argc, char* argv[])
              mod_settings.fileOutputFormat == "s16")) {
         format_converter = make_shared<FormatConverter>(mod_settings.fileOutputFormat);
     }
-    else if (mod_settings.useBladeRFOutput) {
-        format_converter = make_shared<FormatConverter>(mod_settings.BladeRFOutputFormat);
-    } 
+    else if (mod_settings.useBladeRFOutput or mod_settings.useDexterOutput) {
+        format_converter = make_shared<FormatConverter>("s16");
+    }
 
     auto output = prepare_output(mod_settings);
 

@@ -55,6 +55,9 @@ AC_ARG_ENABLE([native],
 AC_ARG_ENABLE([easydabv3],
         [AS_HELP_STRING([--enable-easydabv3], [Build for EasyDABv3 board])],
         [], [enable_easydabv3=no])
+AC_ARG_ENABLE([dexter],
+        [AS_HELP_STRING([--enable-dexter], [Build for PrecisionWave Dexter board])],
+        [], [enable_dexter=no])
 AC_ARG_ENABLE([limesdr],
         [AS_HELP_STRING([--enable-limesdr], [Build for LimeSDR board])],
         [], [enable_limesdr=no])
@@ -113,13 +116,17 @@ AS_IF([test "x$enable_limesdr" = "xyes"],
          [AC_CHECK_LIB([LimeSuite], [LMS_Init], [LIMESDR_LIBS="-lLimeSuite"],
                        [AC_MSG_ERROR([LimeSDR LimeSuite is required])])])
 
+AS_IF([test "x$enable_dexter" = "xyes"],
+         [AC_CHECK_LIB([iio], [iio_create_scan_context], [IIO_LIBS="-liio"],
+                       [AC_MSG_ERROR([libiio is required])])])
+
 AS_IF([test "x$enable_bladerf" = "xyes"],
          [AC_CHECK_LIB([bladeRF], [bladerf_open], [BLADERF_LIBS="-lbladeRF"],
                        [AC_MSG_ERROR([BladeRF library is required])])])
 
 AC_SUBST([CFLAGS], ["$CFLAGS $EXTRA $FFTW_CFLAGS $SOAPYSDR_CFLAGS $PTHREAD_CFLAGS"])
 AC_SUBST([CXXFLAGS], ["$CXXFLAGS $EXTRA $FFTW_CFLAGS $SOAPYSDR_CFLAGS $PTHREAD_CFLAGS"])
-AC_SUBST([LIBS], ["$FFTW_LIBS $SOAPYSDR_LIBS $PTHREAD_LIBS $ZMQ_LIBS $LIMESDR_LIBS $BLADERF_LIBS"])
+AC_SUBST([LIBS], ["$FFTW_LIBS $SOAPYSDR_LIBS $PTHREAD_LIBS $ZMQ_LIBS $LIMESDR_LIBS $IIO_LIBS $BLADERF_LIBS"])
 
 AS_IF([test "x$enable_easydabv3" = "xyes" && test "x$enable_output_uhd" == "xyes"],
       AC_MSG_ERROR([Cannot enable both EasyDABv3 and UHD output]))
@@ -143,6 +150,9 @@ AS_IF([test "x$enable_soapysdr" = "xyes"],
 
 AS_IF([test "x$enable_limesdr" = "xyes"],
       [AC_DEFINE(HAVE_LIMESDR, [1], [Define if LimeSDR output is enabled]) ])
+
+AS_IF([test "x$enable_dexter" = "xyes"],
+      [AC_DEFINE(HAVE_DEXTER, [1], [Define if Dexter output is enabled])])
 
 AS_IF([test "x$enable_bladerf" = "xyes"],
       [AC_DEFINE(HAVE_BLADERF, [1], [Define if BladeRF output is enabled]) ])
@@ -217,7 +227,7 @@ echo "***********************************************"
 echo
 enabled=""
 disabled=""
-for feat in prof trace output_uhd zeromq soapysdr easydabv3 limesdr bladerf
+for feat in prof trace output_uhd zeromq soapysdr easydabv3 limesdr bladerf dexter
 do
     eval var=\$enable_$feat
     AS_IF([test "x$var" = "xyes"],

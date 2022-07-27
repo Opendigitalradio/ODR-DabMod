@@ -138,6 +138,8 @@ odr_dabmod_SOURCES += \
 					  src/output/SDR.cpp \
 					  src/output/SDR.h \
 					  src/output/SDRDevice.h \
+					  src/output/Dexter.cpp \
+					  src/output/Dexter.h \
 					  src/output/Soapy.cpp \
 					  src/output/Soapy.h \
 					  src/output/UHD.cpp \
