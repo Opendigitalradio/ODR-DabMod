@@ -74,7 +74,7 @@ class Soapy : public Output::SDRDevice
         virtual size_t receive_frame(
                 complexf *buf,
                 size_t num_samples,
-                struct frame_timestamp& ts,
+                frame_timestamp& ts,
                 double timeout_secs) override;
 
         // Return true if GPS and reference clock inputs are ok

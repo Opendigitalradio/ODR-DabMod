@@ -51,6 +51,7 @@ class SDR : public ModOutput, public ModMetadata, public RemoteControllable {
         SDR operator=(const SDR& other) = delete;
         virtual ~SDR();
 
+        virtual void set_sample_size(size_t size);
         virtual int process(Buffer *dataIn) override;
         virtual meta_vec_t process_metadata(const meta_vec_t& metadataIn) override;
 
@@ -75,6 +76,7 @@ class SDR : public ModOutput, public ModMetadata, public RemoteControllable {
 
         std::atomic<bool> m_running = ATOMIC_VAR_INIT(false);
         std::thread m_device_thread;
+        size_t m_size = sizeof(complexf);
         std::vector<uint8_t> m_frame;
         ThreadsafeQueue<FrameData> m_queue;
 

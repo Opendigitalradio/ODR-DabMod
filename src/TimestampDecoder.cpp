@@ -36,6 +36,20 @@
 //#define MDEBUG(fmt, args...) fprintf (LOG, "*****" fmt , ## args)
 #define MDEBUG(fmt, args...) PDEBUG(fmt, ## args)
 
+double frame_timestamp::offset_to_system_time() const
+{
+    if (not timestamp_valid) {
+        throw new std::runtime_error("Cannot calculate offset for invalid timestamp");
+    }
+
+    struct timespec t;
+    if (clock_gettime(CLOCK_REALTIME, &t) != 0) {
+        throw std::runtime_error(std::string("Failed to retrieve CLOCK_REALTIME") + strerror(errno));
+    }
+
+    return get_real_secs() - (double)t.tv_sec - (t.tv_nsec / 1000000000.0);
+}
+
 frame_timestamp& frame_timestamp::operator+=(const double& diff)
 {
     double offset_pps, offset_secs;
@@ -75,20 +89,20 @@ TimestampDecoder::TimestampDecoder(double& offset_s) :
         timestamp_offset << " offset";
 }
 
-std::shared_ptr<frame_timestamp> TimestampDecoder::getTimestamp()
+frame_timestamp TimestampDecoder::getTimestamp()
 {
-    auto ts = std::make_shared<frame_timestamp>();
+    frame_timestamp ts;
 
-    ts->timestamp_valid = full_timestamp_received;
-    ts->timestamp_sec = time_secs;
-    ts->timestamp_pps = time_pps;
-    ts->fct = latestFCT;
-    ts->fp = latestFP;
+    ts.timestamp_valid = full_timestamp_received;
+    ts.timestamp_sec = time_secs;
+    ts.timestamp_pps = time_pps;
+    ts.fct = latestFCT;
+    ts.fp = latestFP;
 
-    ts->timestamp_refresh = offset_changed;
+    ts.timestamp_refresh = offset_changed;
     offset_changed = false;
 
-    *ts += timestamp_offset;
+    ts += timestamp_offset;
 
     return ts;
 }

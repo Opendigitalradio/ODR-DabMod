@@ -98,10 +98,11 @@ struct SDRDeviceConfig {
 struct FrameData {
     // Buffer holding frame data
     std::vector<uint8_t> buf;
+    size_t sampleSize = sizeof(complexf);
 
     // A full timestamp contains a TIST according to standard
     // and time information within MNSC with tx_second.
-    struct frame_timestamp ts;
+    frame_timestamp ts;
 };
 
 
@@ -132,7 +133,7 @@ class SDRDevice {
         virtual size_t receive_frame(
                 complexf *buf,
                 size_t num_samples,
-                struct frame_timestamp& ts,
+                frame_timestamp& ts,
                 double timeout_secs) = 0;
 
         // Returns device temperature in degrees C or NaN if not available

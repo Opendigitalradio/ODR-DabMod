@@ -39,6 +39,7 @@ DESCRIPTION:
 
 #include <string>
 #include <memory>
+#include <ctime>
 
 #include "output/SDR.h"
 #include "ModPlugin.h"
@@ -70,7 +71,7 @@ class Dexter : public Output::SDRDevice
         virtual size_t receive_frame(
                 complexf *buf,
                 size_t num_samples,
-                struct frame_timestamp& ts,
+                frame_timestamp& ts,
                 double timeout_secs) override;
 
         // Return true if GPS and reference clock inputs are ok
@@ -90,9 +91,12 @@ class Dexter : public Output::SDRDevice
         struct iio_buffer *m_buffer = nullptr;
 
         size_t underflows = 0;
-        size_t overflows = 0;
-        size_t late_packets = 0;
+        size_t num_late = 0;
         size_t num_frames_modulated = 0;
+
+        uint64_t m_utc_seconds_at_startup;
+        uint64_t m_clock_count_at_startup = 0;
+        uint64_t m_clock_count_frame = 0;
 };
 
 } // namespace Output

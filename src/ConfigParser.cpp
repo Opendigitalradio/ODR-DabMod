@@ -409,7 +409,7 @@ static void parse_configfile(
     }
 
 
-#if defined(HAVE_OUTPUT_UHD)
+#if defined(HAVE_OUTPUT_UHD) || defined(HAVE_DEXTER)
     mod_settings.sdr_device_config.enableSync = (pt.GetInteger("delaymanagement.synchronous", 0) == 1);
     mod_settings.sdr_device_config.muteNoTimestamps = (pt.GetInteger("delaymanagement.mutenotimestamps", 0) == 1);
     if (mod_settings.sdr_device_config.enableSync) {
@@ -430,7 +430,6 @@ static void parse_configfile(
             throw std::runtime_error("Configuration error");
         }
     }
-
 #endif
 
 

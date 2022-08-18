@@ -115,7 +115,7 @@ enum class run_modulator_state_t {
     reconfigure // Some sort of change of configuration we cannot handle happened
 };
 
-static run_modulator_state_t run_modulator(modulator_data& m);
+static run_modulator_state_t run_modulator(const mod_settings_t& mod_settings, modulator_data& m);
 
 static void printModSettings(const mod_settings_t& mod_settings)
 {
@@ -426,6 +426,10 @@ int launch_modulator(int argc, char* argv[])
         if (format_converter) {
             flowgraph.connect(modulator, format_converter);
             flowgraph.connect(format_converter, output);
+
+            if (auto o = dynamic_pointer_cast<Output::SDR>(output)) {
+                o->set_sample_size(format_converter->get_format_size());
+            }
         }
         else {
             flowgraph.connect(modulator, output);
@@ -435,7 +439,7 @@ int launch_modulator(int argc, char* argv[])
             etiLog.level(info) << inputReader->GetPrintableInfo();
         }
 
-        run_modulator_state_t st = run_modulator(m);
+        run_modulator_state_t st = run_modulator(mod_settings, m);
         etiLog.log(trace, "DABMOD,run_modulator() = %d", st);
 
         switch (st) {
@@ -505,12 +509,13 @@ struct zmq_input_timeout : public std::exception
     }
 };
 
-static run_modulator_state_t run_modulator(modulator_data& m)
+static run_modulator_state_t run_modulator(const mod_settings_t& mod_settings, modulator_data& m)
 {
     auto ret = run_modulator_state_t::failure;
     try {
         int last_eti_fct = -1;
         auto last_frame_received = chrono::steady_clock::now();
+        frame_timestamp ts;
         Buffer data;
         if (m.inputReader) {
             data.setLength(6144);
@@ -584,6 +589,7 @@ static run_modulator_state_t run_modulator(modulator_data& m)
 
                 fct = m.etiReader->getFct();
                 fp = m.etiReader->getFp();
+                ts = m.ediInput->ediReader.getTimestamp();
             }
             else if (m.ediInput) {
                 while (running and not m.ediInput->ediReader.isFrameReady()) {
@@ -612,9 +618,10 @@ static run_modulator_state_t run_modulator(modulator_data& m)
 
                 fct = m.ediInput->ediReader.getFct();
                 fp = m.ediInput->ediReader.getFp();
+                ts = m.ediInput->ediReader.getTimestamp();
             }
 
-            const unsigned expected_fct = (last_eti_fct + 1) % 250;
+            bool fct_good = false;
             if (last_eti_fct == -1) {
                 if (fp != 0) {
                     // Do not start the flowgraph before we get to FP 0
@@ -625,19 +632,37 @@ static run_modulator_state_t run_modulator(modulator_data& m)
                     continue;
                 }
                 else {
-                    last_eti_fct = fct;
-                    m.framecount++;
-                    m.flowgraph->run();
+                    fct_good = true;
                 }
             }
-            else if (fct == expected_fct) {
+            else {
+                const unsigned expected_fct = (last_eti_fct + 1) % 250;
+                if (fct == expected_fct) {
+                    fct_good = true;
+                }
+                else {
+                    etiLog.level(info) << "ETI FCT discontinuity, expected " <<
+                        expected_fct << " received " << fct;
+                    if (m.ediInput) {
+                        m.ediInput->ediReader.clearFrame();
+                    }
+                    return run_modulator_state_t::again;
+                }
+            }
+
+            // timestamp is good if we run unsynchronised, or if it's in the future
+            bool ts_good = not mod_settings.sdr_device_config.enableSync or
+                (ts.timestamp_valid and ts.offset_to_system_time() > 0);
+
+            if (fct_good and ts_good) {
                 last_eti_fct = fct;
                 m.framecount++;
                 m.flowgraph->run();
             }
             else {
-                etiLog.level(info) << "ETI FCT discontinuity, expected " <<
-                    expected_fct << " received " << fct;
+                etiLog.level(warn) << "Skipping frame " << fct << " FCT " <<
+                    (fct_good ? "good" : "bad") << " TS " <<
+                    (ts_good ? "good" : "bad");
                 if (m.ediInput) {
                     m.ediInput->ediReader.clearFrame();
                 }

@@ -2,7 +2,7 @@
    Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010, 2011 Her Majesty
    the Queen in Right of Canada (Communications Research Center Canada)
 
-   Copyright (C) 2017
+   Copyright (C) 2022
    Matthias P. Braendli, matthias.braendli@mpb.li
 
     http://opendigitalradio.org
@@ -40,10 +40,13 @@
 class FormatConverter : public ModCodec
 {
     public:
+        // Allowed formats: s8, u8 and s16
         FormatConverter(const std::string& format);
 
         int process(Buffer* const dataIn, Buffer* dataOut);
         const char* name();
+
+        size_t get_format_size() const;
 
     private:
         std::string m_format;

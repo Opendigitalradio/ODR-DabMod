@@ -74,28 +74,23 @@ meta_vec_t OutputFile::process_metadata(const meta_vec_t& metadataIn)
         frame_timestamp first_ts;
 
         for (const auto& md : metadataIn) {
-            if (md.ts) {
-                // The following code assumes TM I, where we get called every 96ms.
-                // Support for other transmission modes skipped because this is mostly
-                // debugging code.
+            // The following code assumes TM I, where we get called every 96ms.
+            // Support for other transmission modes skipped because this is mostly
+            // debugging code.
 
-                if (md.ts->fp == 0 or md.ts->fp == 4) {
-                    first_ts = *md.ts;
-                }
+            if (md.ts.fp == 0 or md.ts.fp == 4) {
+                first_ts = md.ts;
+            }
 
-                ss << " FCT=" << md.ts->fct <<
-                    " FP=" << (int)md.ts->fp;
-                if (md.ts->timestamp_valid) {
-                    ss << " TS=" << md.ts->timestamp_sec << " + " <<
-                        std::fixed
-                        << (double)md.ts->timestamp_pps / 163840000.0 << ";";
-                }
-                else {
-                    ss << " TS invalid;";
-                }
+            ss << " FCT=" << md.ts.fct <<
+                " FP=" << (int)md.ts.fp;
+            if (md.ts.timestamp_valid) {
+                ss << " TS=" << md.ts.timestamp_sec << " + " <<
+                    std::fixed
+                    << (double)md.ts.timestamp_pps / 163840000.0 << ";";
             }
             else {
-                ss << " void, ";
+                ss << " TS invalid;";
             }
         }
 

@@ -104,6 +104,12 @@ SDR::~SDR()
     }
 }
 
+void SDR::set_sample_size(size_t size)
+{
+    etiLog.level(debug) << "Setting sample size to " << size;
+    m_size = size;
+}
+
 int SDR::process(Buffer *dataIn)
 {
     if (not m_running) {
@@ -125,6 +131,7 @@ meta_vec_t SDR::process_metadata(const meta_vec_t& metadataIn)
     if (m_device and m_running) {
         FrameData frame;
         frame.buf = std::move(m_frame);
+        frame.sampleSize = m_size;
 
         if (metadataIn.empty()) {
             etiLog.level(info) <<
@@ -138,7 +145,7 @@ meta_vec_t SDR::process_metadata(const meta_vec_t& metadataIn)
              * This behaviour is different to earlier versions of ODR-DabMod,
              * which took the timestamp from the latest ETI frame.
              */
-            frame.ts = *(metadataIn[0].ts);
+            frame.ts = metadataIn[0].ts;
 
             // TODO check device running
 
@@ -261,8 +268,6 @@ void SDR::handle_frame(struct FrameData& frame)
 {
     // Assumes m_device is valid
 
-    constexpr double tx_timeout = 20.0;
-
     if (not m_device->is_clk_source_ok()) {
         sleep_through_frame();
         return;
@@ -298,7 +303,7 @@ void SDR::handle_frame(struct FrameData& frame)
         }
 
         if (last_tx_time_initialised) {
-            const size_t sizeIn = frame.buf.size() / sizeof(complexf);
+            const size_t sizeIn = frame.buf.size() / frame.sampleSize;
 
             // Checking units for the increment calculation:
             // samps  * ticks/s  / (samps/s)
@@ -337,7 +342,7 @@ void SDR::handle_frame(struct FrameData& frame)
 
         etiLog.log(trace, "SDR,tist %f", time_spec.get_real_secs());
 
-        if (time_spec.get_real_secs() + tx_timeout < device_time) {
+        if (time_spec.get_real_secs() < device_time) {
             etiLog.level(warn) <<
                 "OutputSDR: Timestamp in the past at FCT=" << frame.ts.fct << " offset: " <<
                 std::fixed <<

@@ -353,7 +353,7 @@ double Lime::get_rxgain(void) const
 size_t Lime::receive_frame(
     complexf *buf,
     size_t num_samples,
-    struct frame_timestamp &ts,
+    frame_timestamp &ts,
     double timeout_secs)
 {
     // TODO

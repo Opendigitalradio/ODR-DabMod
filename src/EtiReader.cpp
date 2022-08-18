@@ -78,6 +78,11 @@ unsigned EtiReader::getFct()
     return eti_fc.FCT;
 }
 
+frame_timestamp EtiReader::getTimestamp()
+{
+    return myTimestampDecoder.getTimestamp();
+}
+
 
 const std::vector<std::shared_ptr<SubchannelSource> > EtiReader::getSubchannels() const
 {
@@ -278,21 +283,14 @@ int EtiReader::loadEtiData(const Buffer& dataIn)
     return dataIn.getLength() - input_size;
 }
 
-bool EtiReader::sourceContainsTimestamp()
-{
-    return (ntohl(eti_tist.TIST) & 0xFFFFFF) != 0xFFFFFF;
-    /* See ETS 300 799, Annex C.2.2 */
-}
-
 uint32_t EtiReader::getPPSOffset()
 {
-    if (!sourceContainsTimestamp()) {
-        //fprintf(stderr, "****** SOURCE NO TS\n");
+    const uint32_t timestamp = ntohl(eti_tist.TIST) & 0xFFFFFF;
+
+    /* See ETS 300 799, Annex C.2.2 */
+    if (timestamp == 0xFFFFFF) {
         return 0.0;
     }
-
-    uint32_t timestamp = ntohl(eti_tist.TIST) & 0xFFFFFF;
-    //fprintf(stderr, "****** TIST 0x%x\n", timestamp);
 
     return timestamp;
 }
@@ -329,6 +327,11 @@ unsigned EdiReader::getFct()
     return m_fc.fct();
 }
 
+frame_timestamp EdiReader::getTimestamp()
+{
+    return m_timestamp_decoder.getTimestamp();
+}
+
 const std::vector<std::shared_ptr<SubchannelSource> > EdiReader::getSubchannels() const
 {
     std::vector<std::shared_ptr<SubchannelSource> > sources;
@@ -344,15 +347,6 @@ const std::vector<std::shared_ptr<SubchannelSource> > EdiReader::getSubchannels(
     }
 
     return sources;
-}
-
-bool EdiReader::sourceContainsTimestamp()
-{
-    if (not (m_frameReady and m_fc_valid)) {
-        throw std::runtime_error("Trying to get timestamp before it is ready");
-    }
-
-    return m_fc.tsta != 0xFFFFFF;
 }
 
 bool EdiReader::isFrameReady()

@@ -56,6 +56,8 @@ struct frame_timestamp
         return timestamp_pps / 16384000.0;
     }
 
+    double offset_to_system_time() const;
+
     double get_real_secs() const {
         double t = timestamp_sec;
         t += pps_offset();
@@ -93,7 +95,7 @@ class TimestampDecoder : public RemoteControllable
          */
         TimestampDecoder(double& offset_s);
 
-        std::shared_ptr<frame_timestamp> getTimestamp(void);
+        frame_timestamp getTimestamp(void);
 
         /* Update timestamp data from ETI */
         void updateTimestampEti(

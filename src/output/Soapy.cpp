@@ -216,7 +216,7 @@ double Soapy::get_rxgain(void) const
 size_t Soapy::receive_frame(
         complexf *buf,
         size_t num_samples,
-        struct frame_timestamp& ts,
+        frame_timestamp& ts,
         double timeout_secs)
 {
     int flags = 0;

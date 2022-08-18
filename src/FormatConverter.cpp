@@ -2,7 +2,7 @@
    Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010, 2011 Her Majesty
    the Queen in Right of Canada (Communications Research Center Canada)
 
-   Copyright (C) 2017
+   Copyright (C) 2022
    Matthias P. Braendli, matthias.braendli@mpb.li
 
     http://opendigitalradio.org
@@ -34,10 +34,6 @@
 #include <stdexcept>
 #include <assert.h>
 
-#ifdef __SSE__
-#  include <xmmintrin.h>
-#endif
-
 FormatConverter::FormatConverter(const std::string& format) :
     ModCodec(),
     m_format(format)
@@ -68,13 +64,16 @@ int FormatConverter::process(Buffer* const dataIn, Buffer* dataOut)
             out[i] = in[i] + 128;
         }
     }
-    else {
+    else if (m_format == "s8") {
         dataOut->setLength(sizeIn * sizeof(int8_t));
         int8_t* out = reinterpret_cast<int8_t*>(dataOut->getData());
 
         for (size_t i = 0; i < sizeIn; i++) {
             out[i] = in[i];
         }
+    }
+    else {
+        throw std::runtime_error("FormatConverter: Invalid format " + m_format);
     }
 
     return dataOut->getLength();
@@ -85,3 +84,19 @@ const char* FormatConverter::name()
     return "FormatConverter";
 }
 
+size_t FormatConverter::get_format_size() const
+{
+    // Returns 2*sizeof(SAMPLE_TYPE) because we have I + Q
+    if (m_format == "s16") {
+        return 4;
+    }
+    else if (m_format == "u8") {
+        return 2;
+    }
+    else if (m_format == "s8") {
+        return 2;
+    }
+    else {
+        throw std::runtime_error("FormatConverter: Invalid format " + m_format);
+    }
+}

@@ -84,7 +84,7 @@ DPDFeedbackServer::~DPDFeedbackServer()
 
 void DPDFeedbackServer::set_tx_frame(
         const std::vector<uint8_t> &buf,
-        const struct frame_timestamp &buf_ts)
+        const frame_timestamp &buf_ts)
 {
     if (not m_running) {
         throw runtime_error("DPDFeedbackServer not running");

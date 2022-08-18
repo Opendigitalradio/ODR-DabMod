@@ -46,11 +46,14 @@ USRPTime::USRPTime(
     m_conf(conf),
     time_last_check(timepoint_t::clock::now())
 {
-    if (m_conf.pps_src == "none") {
+    if (m_conf.refclk_src == "internal" and m_conf.pps_src != "none") {
+        etiLog.level(warn) << "OutputUHD: Unusal refclk and pps source settings. Setting time once, no monitoring.";
+        set_usrp_time_from_pps();
+    }
+    else if (m_conf.pps_src == "none") {
         if (m_conf.enableSync) {
             etiLog.level(warn) <<
-                "OutputUHD: WARNING:"
-                " you are using synchronous transmission without PPS input!";
+                "OutputUHD: you are using synchronous transmission without PPS input!";
         }
 
         set_usrp_time_from_localtime();

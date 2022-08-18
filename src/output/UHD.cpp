@@ -411,7 +411,7 @@ double UHD::get_rxgain() const
 size_t UHD::receive_frame(
         complexf *buf,
         size_t num_samples,
-        struct frame_timestamp& ts,
+        frame_timestamp& ts,
         double timeout_secs)
 {
     uhd::stream_cmd_t cmd(
