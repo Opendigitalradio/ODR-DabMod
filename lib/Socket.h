@@ -2,7 +2,7 @@
    Copyright (C) 2003, 2004, 2005, 2006, 2007, 2008, 2009 Her Majesty the
    Queen in Right of Canada (Communications Research Center Canada)
 
-   Copyright (C) 2020
+   Copyright (C) 2022
    Matthias P. Braendli, matthias.braendli@mpb.li
 
     http://www.opendigitalradio.org
@@ -173,6 +173,11 @@ class TCPSocket {
         void listen(int port, const std::string& name);
         void close(void);
 
+        /* Enable TCP keepalive. See
+         * https://tldp.org/HOWTO/TCP-Keepalive-HOWTO/usingkeepalive.html
+         */
+        void enable_keepalive(int time, int intvl, int probes);
+
         /* throws a runtime_error on failure, an invalid socket on timeout */
         TCPSocket accept(int timeout_ms);
 
@@ -254,7 +259,7 @@ class TCPConnection
 class TCPDataDispatcher
 {
     public:
-        TCPDataDispatcher(size_t max_queue_size);
+        TCPDataDispatcher(size_t max_queue_size, size_t buffers_to_preroll);
         ~TCPDataDispatcher();
         TCPDataDispatcher(const TCPDataDispatcher&) = delete;
         TCPDataDispatcher& operator=(const TCPDataDispatcher&) = delete;
@@ -266,11 +271,16 @@ class TCPDataDispatcher
         void process();
 
         size_t m_max_queue_size;
+        size_t m_buffers_to_preroll;
+
 
         std::atomic<bool> m_running = ATOMIC_VAR_INIT(false);
         std::string m_exception_data;
         std::thread m_listener_thread;
         TCPSocket m_listener_socket;
+
+        std::mutex m_mutex;
+        std::deque<std::vector<uint8_t> > m_preroll_queue;
         std::list<TCPConnection> m_connections;
 };
 
