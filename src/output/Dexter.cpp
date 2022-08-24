@@ -370,6 +370,7 @@ void Dexter::transmit_frame(const struct FrameData& frame)
             etiLog.level(error) << "Failed to get dexter_dsp_tx.pps_clks: " << get_iio_error(r);
         }
 
+        /*
         etiLog.level(debug) << "Dexter: TS CLK " <<
             ((int64_t)frame.ts.timestamp_sec - (int64_t)m_utc_seconds_at_startup) * DSP_CLOCK << " + " <<
             m_clock_count_at_startup << " + " <<
@@ -377,6 +378,7 @@ void Dexter::transmit_frame(const struct FrameData& frame)
             frame_ts_clocks << " DELTA " <<
             frame_ts_clocks << " - " << pps_clks << " = " <<
             (double)((int64_t)frame_ts_clocks - pps_clks) / DSP_CLOCK;
+        */
 
         // Ensure we hand the frame over to HW at least 0.1s before timestamp
         if (((int64_t)frame_ts_clocks - pps_clks) < (int64_t)DSP_CLOCK / 10) {

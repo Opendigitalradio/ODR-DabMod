@@ -50,6 +50,17 @@ double frame_timestamp::offset_to_system_time() const
     return get_real_secs() - (double)t.tv_sec - (t.tv_nsec / 1000000000.0);
 }
 
+std::string frame_timestamp::to_string() const
+{
+    time_t s = timestamp_sec;
+    std::stringstream ss;
+    char timestr[100];
+    if (std::strftime(timestr, sizeof(timestr), "%Y-%m-%dZ%H:%M:%S", std::gmtime(&s))) {
+        ss << timestr << " + " << ((double)timestamp_pps / 16384000.0);
+    }
+    return ss.str();
+}
+
 frame_timestamp& frame_timestamp::operator+=(const double& diff)
 {
     double offset_pps, offset_secs;

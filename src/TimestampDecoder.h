@@ -39,7 +39,7 @@ struct frame_timestamp
     int32_t fct;
     uint8_t fp; // Frame Phase
 
-    uint32_t timestamp_sec;
+    uint32_t timestamp_sec; // seconds in unix epoch
     uint32_t timestamp_pps; // In units of 1/16384000 s
     bool timestamp_valid = false;
     bool timestamp_refresh;
@@ -75,6 +75,8 @@ struct frame_timestamp
         const long long int subsecond = time_ns % 1000000000ull;
         timestamp_pps = lrint(subsecond * 16384000.0);
     }
+
+    std::string to_string() const;
 
     void print(const char* t) const {
         etiLog.log(debug,
