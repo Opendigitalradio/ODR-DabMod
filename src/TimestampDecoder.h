@@ -2,7 +2,7 @@
    Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010 Her Majesty the
    Queen in Right of Canada (Communications Research Center Canada)
 
-   Copyright (C) 2018
+   Copyright (C) 2022
    Matthias P. Braendli, matthias.braendli@mpb.li
 
     http://opendigitalradio.org
@@ -42,7 +42,7 @@ struct frame_timestamp
     uint32_t timestamp_sec;
     uint32_t timestamp_pps; // In units of 1/16384000 s
     bool timestamp_valid = false;
-    bool timestamp_refresh;
+    bool offset_changed = false;
 
     frame_timestamp& operator+=(const double& diff);
 
