@@ -97,6 +97,14 @@ class Dexter : public Output::SDRDevice
         uint64_t m_utc_seconds_at_startup;
         uint64_t m_clock_count_at_startup = 0;
         uint64_t m_clock_count_frame = 0;
+
+        enum class timestamp_state_t {
+            REQUIRES_SET,
+            STREAMING,
+            WAIT_FOR_UNDERRUN,
+        };
+
+        timestamp_state_t timestamp_state = timestamp_state_t::REQUIRES_SET;
 };
 
 } // namespace Output

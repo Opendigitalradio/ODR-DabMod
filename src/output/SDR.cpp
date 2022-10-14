@@ -331,6 +331,7 @@ void SDR::handle_frame(struct FrameData& frame)
                     "(" << tx_pps << ")";
 
                 frame.ts.timestamp_refresh = true;
+#error "wrong, as the frame could be discarded"
             }
         }
 

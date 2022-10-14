@@ -347,9 +347,13 @@ void Dexter::transmit_frame(const struct FrameData& frame)
         throw std::runtime_error("Dexter: invalid buffer size");
     }
 
-    const bool has_time_spec = (m_conf.enableSync and frame.ts.timestamp_valid);
+    const bool require_timestamped_tx = (m_conf.enableSync and frame.ts.timestamp_valid);
 
-    if (has_time_spec) {
+    if (not require_timestamped_tx) {
+        etiLog.level(debug) << "TIMESTAMP_STATE STREAMING 1";
+        timestamp_state = timestamp_state_t::STREAMING;
+    }
+    else if (require_timestamped_tx and timestamp_state == timestamp_state_t::REQUIRES_SET) {
         /*
         uint64_t timeS = frame.ts.timestamp_sec;
         etiLog.level(debug) << "Dexter: TS S " << timeS << " - " << m_utc_seconds_at_startup << " = " <<
@@ -393,31 +397,58 @@ void Dexter::transmit_frame(const struct FrameData& frame)
             num_late++;
             return;
         }
+        timestamp_state = timestamp_state_t::STREAMING;
+        etiLog.level(debug) << "TIMESTAMP_STATE STREAMING 2";
+    }
+
+    if (frame.ts.timestamp_refresh) {
+        etiLog.level(debug) << "TIMESTAMP_STATE WAIT_FOR_UNDERRUN";
+        timestamp_state = timestamp_state_t::WAIT_FOR_UNDERRUN;
+        long long attr_value = 0;
+        int r = 0;
+
+        if ((r = iio_device_attr_read_longlong(m_dexter_dsp_tx, "buffer_underflows0", &attr_value)) == 0) {
+            underflows = attr_value;
+            etiLog.level(debug) << "UNDERFLOWS CAPTURE " << underflows;
+        }
     }
 
     // DabMod::launch_modulator ensures we get int16_t IQ here
     //const size_t num_samples = frame.buf.size() / (2*sizeof(int16_t));
     //const int16_t *buf = reinterpret_cast<const int16_t*>(frame.buf.data());
 
-    for (size_t i = 0; i < IIO_BUFFERS; i++) {
-        constexpr size_t buflen = TRANSMISSION_FRAME_LEN / IIO_BUFFERS;
+    if (timestamp_state == timestamp_state_t::STREAMING) {
+        for (size_t i = 0; i < IIO_BUFFERS; i++) {
+            constexpr size_t buflen = TRANSMISSION_FRAME_LEN / IIO_BUFFERS;
 
-        memcpy(iio_buffer_start(m_buffer), frame.buf.data() + (i * buflen), buflen);
-        ssize_t pushed = iio_buffer_push(m_buffer);
-        if (pushed < 0) {
-            etiLog.level(error) << "Dexter: failed to push buffer " << get_iio_error(pushed);
+            memcpy(iio_buffer_start(m_buffer), frame.buf.data() + (i * buflen), buflen);
+            ssize_t pushed = iio_buffer_push(m_buffer);
+            if (pushed < 0) {
+                etiLog.level(error) << "Dexter: failed to push buffer " << get_iio_error(pushed);
+                etiLog.level(debug) << "TIMESTAMP_STATE REQUIRES_SET";
+                timestamp_state = timestamp_state_t::REQUIRES_SET;
+            }
         }
+        num_frames_modulated++;
     }
 
-    num_frames_modulated++;
+#warning "We should update underflows all the time"
+    if (timestamp_state == timestamp_state_t::WAIT_FOR_UNDERRUN) {
+        long long attr_value = 0;
+        int r = 0;
 
-    long long attr_value = 0;
-    int r = 0;
+        if ((r = iio_device_attr_read_longlong(m_dexter_dsp_tx, "buffer_underflows0", &attr_value)) == 0) {
+            size_t underflows_new = attr_value;
+            etiLog.level(debug) << "UNDERFLOWS COMPARE " << underflows_new;
 
-    if ((r = iio_device_attr_read_longlong(m_dexter_dsp_tx, "buffer_underflows0", &attr_value)) == 0) {
-        if ((size_t)attr_value != underflows and underflows != 0) {
-            etiLog.level(warn) << "Dexter: underflow! " << underflows << " -> " << attr_value;
-            underflows = attr_value;
+            if (underflows_new != underflows and attr_value != 0) {
+                etiLog.level(warn) << "Dexter: underflow! " << underflows << " -> " << underflows_new;
+                underflows = underflows_new;
+                if (timestamp_state == timestamp_state_t::WAIT_FOR_UNDERRUN) {
+                    etiLog.level(debug) << "TIMESTAMP_STATE REQUIRES_SET";
+                    timestamp_state = timestamp_state_t::REQUIRES_SET;
+                }
+            }
         }
     }
 }

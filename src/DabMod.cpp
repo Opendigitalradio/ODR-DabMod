@@ -662,7 +662,9 @@ static run_modulator_state_t run_modulator(const mod_settings_t& mod_settings, m
             else {
                 etiLog.level(warn) << "Skipping frame " << fct << " FCT " <<
                     (fct_good ? "good" : "bad") << " TS " <<
-                    (ts_good ? "good" : "bad");
+                    (ts_good ? "good, " : "bad, ") <<
+                    (ts.timestamp_valid ? (ts.offset_to_system_time() > 0 ? "in the future" : "in the past") : "invalid");
+
                 if (m.ediInput) {
                     m.ediInput->ediReader.clearFrame();
                 }
