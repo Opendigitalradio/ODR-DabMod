@@ -348,7 +348,7 @@ void UHD::transmit_frame(const struct FrameData& frame)
         // EOB and quit the loop afterwards, to avoid an underrun.
         md_tx.end_of_burst = eob_because_muting or (
                 frame.ts.timestamp_valid and
-                frame.ts.timestamp_refresh and
+                m_require_timestamp_refresh and
                 samps_to_send <= usrp_max_num_samps );
 
         //send a single packet

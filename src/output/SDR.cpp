@@ -2,7 +2,7 @@
    Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010 Her Majesty the
    Queen in Right of Canada (Communications Research Center Canada)
 
-   Copyright (C) 2018
+   Copyright (C) 2022
    Matthias P. Braendli, matthias.braendli@mpb.li
 
     http://opendigitalradio.org
@@ -302,6 +302,10 @@ void SDR::handle_frame(struct FrameData& frame)
             return;
         }
 
+        if (frame.ts.offset_changed) {
+            m_device->require_timestamp_refresh();
+        }
+
         if (last_tx_time_initialised) {
             const size_t sizeIn = frame.buf.size() / frame.sampleSize;
 
@@ -330,8 +334,7 @@ void SDR::handle_frame(struct FrameData& frame)
                     tx_second << "+" << (double)tx_pps/16384000.0 <<
                     "(" << tx_pps << ")";
 
-                frame.ts.timestamp_refresh = true;
-#error "wrong, as the frame could be discarded"
+                m_device->require_timestamp_refresh();
             }
         }
 

@@ -401,7 +401,7 @@ void Dexter::transmit_frame(const struct FrameData& frame)
         etiLog.level(debug) << "TIMESTAMP_STATE STREAMING 2";
     }
 
-    if (frame.ts.timestamp_refresh) {
+    if (m_require_timestamp_refresh) {
         etiLog.level(debug) << "TIMESTAMP_STATE WAIT_FOR_UNDERRUN";
         timestamp_state = timestamp_state_t::WAIT_FOR_UNDERRUN;
         long long attr_value = 0;

@@ -110,7 +110,7 @@ frame_timestamp TimestampDecoder::getTimestamp()
     ts.fct = latestFCT;
     ts.fp = latestFP;
 
-    ts.timestamp_refresh = offset_changed;
+    ts.offset_changed = offset_changed;
     offset_changed = false;
 
     ts += timestamp_offset;

@@ -2,7 +2,7 @@
    Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010 Her Majesty the
    Queen in Right of Canada (Communications Research Center Canada)
 
-   Copyright (C) 2019
+   Copyright (C) 2022
    Matthias P. Braendli, matthias.braendli@mpb.li
 
     http://opendigitalradio.org
@@ -143,6 +143,11 @@ class SDRDevice {
         virtual bool is_clk_source_ok(void) const = 0;
 
         virtual const char* device_name(void) const = 0;
+
+        virtual void require_timestamp_refresh() { m_require_timestamp_refresh = true; }
+
+    protected:
+        bool m_require_timestamp_refresh = false;
 };
 
 } // namespace Output

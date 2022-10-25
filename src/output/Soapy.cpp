@@ -311,7 +311,7 @@ void Soapy::transmit_frame(const struct FrameData& frame)
         const bool eob_because_muting = m_conf.muting;
         const bool end_of_burst = eob_because_muting or (
                 frame.ts.timestamp_valid and
-                frame.ts.timestamp_refresh and
+                m_require_timestamp_refresh and
                 samps_to_send <= mtu );
 
         int flags = 0;
