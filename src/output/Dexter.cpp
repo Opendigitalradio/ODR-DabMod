@@ -188,10 +188,21 @@ Dexter::Dexter(SDRDeviceConfig& config) :
     if (!m_buffer) {
         throw std::runtime_error("Dexter: Cannot create IIO buffer.");
     }
+
+#warning "TODO underflow thread"
+    /* Disabled because it still provokes failed to push buffer Unknown error -110
+    m_running = true;
+    m_underflow_read_thread = std::thread(&Dexter::underflow_read_process, this);
+    */
 }
 
 Dexter::~Dexter()
 {
+    m_running = false;
+    if (m_underflow_read_thread.joinable()) {
+        m_underflow_read_thread.join();
+    }
+
     if (m_ctx) {
         if (m_dexter_dsp_tx) {
             iio_device_attr_write_longlong(m_dexter_dsp_tx, "gain0", 0);
@@ -271,7 +282,10 @@ double Dexter::get_bandwidth(void) const
 SDRDevice::RunStatistics Dexter::get_run_statistics(void) const
 {
     RunStatistics rs;
-    rs.num_underruns = underflows;
+    {
+        std::unique_lock<std::mutex> lock(m_underflows_mutex);
+        rs.num_underruns = underflows;
+    }
     rs.num_overruns = 0;
     rs.num_late_packets = num_late;
     rs.num_frames_modulated = num_frames_modulated;
@@ -374,19 +388,18 @@ void Dexter::transmit_frame(const struct FrameData& frame)
             etiLog.level(error) << "Failed to get dexter_dsp_tx.pps_clks: " << get_iio_error(r);
         }
 
-        /*
+        const double margin = (double)((int64_t)frame_ts_clocks - pps_clks) / DSP_CLOCK;
+
         etiLog.level(debug) << "Dexter: TS CLK " <<
             ((int64_t)frame.ts.timestamp_sec - (int64_t)m_utc_seconds_at_startup) * DSP_CLOCK << " + " <<
             m_clock_count_at_startup << " + " <<
             (uint64_t)frame.ts.timestamp_pps * TIMESTAMP_PPS_PER_DSP_CLOCKS << " = " <<
             frame_ts_clocks << " DELTA " <<
-            frame_ts_clocks << " - " << pps_clks << " = " <<
-            (double)((int64_t)frame_ts_clocks - pps_clks) / DSP_CLOCK;
-        */
+            frame_ts_clocks << " - " << pps_clks << " = " << margin;
 
-        // Ensure we hand the frame over to HW at least 0.1s before timestamp
-        if (((int64_t)frame_ts_clocks - pps_clks) < (int64_t)DSP_CLOCK / 10) {
-            etiLog.level(warn) << "Skip frame short margin";
+        // Ensure we hand the frame over to HW at least 0.2s before timestamp
+        if (margin < 0.2) {
+            etiLog.level(warn) << "Skip frame short margin " << margin;
             num_late++;
             return;
         }
@@ -404,13 +417,6 @@ void Dexter::transmit_frame(const struct FrameData& frame)
     if (m_require_timestamp_refresh) {
         etiLog.level(debug) << "TIMESTAMP_STATE WAIT_FOR_UNDERRUN";
         timestamp_state = timestamp_state_t::WAIT_FOR_UNDERRUN;
-        long long attr_value = 0;
-        int r = 0;
-
-        if ((r = iio_device_attr_read_longlong(m_dexter_dsp_tx, "buffer_underflows0", &attr_value)) == 0) {
-            underflows = attr_value;
-            etiLog.level(debug) << "UNDERFLOWS CAPTURE " << underflows;
-        }
     }
 
     // DabMod::launch_modulator ensures we get int16_t IQ here
@@ -424,33 +430,55 @@ void Dexter::transmit_frame(const struct FrameData& frame)
             memcpy(iio_buffer_start(m_buffer), frame.buf.data() + (i * buflen), buflen);
             ssize_t pushed = iio_buffer_push(m_buffer);
             if (pushed < 0) {
-                etiLog.level(error) << "Dexter: failed to push buffer " << get_iio_error(pushed);
+                etiLog.level(error) << "Dexter: failed to push buffer " << get_iio_error(pushed) <<
+                    " after " << num_buffers_pushed << " bufs";
+                num_buffers_pushed = 0;
                 etiLog.level(debug) << "TIMESTAMP_STATE REQUIRES_SET";
                 timestamp_state = timestamp_state_t::REQUIRES_SET;
+                break;
             }
+            num_buffers_pushed++;
         }
         num_frames_modulated++;
     }
 
-#warning "We should update underflows all the time"
-    if (timestamp_state == timestamp_state_t::WAIT_FOR_UNDERRUN) {
+    {
+        std::unique_lock<std::mutex> lock(m_underflows_mutex);
+        size_t u = underflows;
+        lock.unlock();
+
+        if (u != 0 and u != prev_underflows) {
+            etiLog.level(warn) << "Dexter: underflow! " << prev_underflows << " -> " << u;
+            if (timestamp_state == timestamp_state_t::WAIT_FOR_UNDERRUN) {
+                etiLog.level(debug) << "TIMESTAMP_STATE REQUIRES_SET";
+                timestamp_state = timestamp_state_t::REQUIRES_SET;
+            }
+        }
+
+        prev_underflows = u;
+    }
+}
+
+void Dexter::underflow_read_process()
+{
+    set_thread_name("dexter_underflow");
+
+    while (m_running) {
         long long attr_value = 0;
         int r = 0;
 
         if ((r = iio_device_attr_read_longlong(m_dexter_dsp_tx, "buffer_underflows0", &attr_value)) == 0) {
             size_t underflows_new = attr_value;
-            etiLog.level(debug) << "UNDERFLOWS COMPARE " << underflows_new;
 
+            std::unique_lock<std::mutex> lock(m_underflows_mutex);
+            etiLog.level(debug) << "UNDERFLOWS INC BY " << attr_value - (ssize_t)underflows;
             if (underflows_new != underflows and attr_value != 0) {
-                etiLog.level(warn) << "Dexter: underflow! " << underflows << " -> " << underflows_new;
                 underflows = underflows_new;
-                if (timestamp_state == timestamp_state_t::WAIT_FOR_UNDERRUN) {
-                    etiLog.level(debug) << "TIMESTAMP_STATE REQUIRES_SET";
-                    timestamp_state = timestamp_state_t::REQUIRES_SET;
-                }
             }
         }
+        this_thread::sleep_for(chrono::seconds(1));
     }
+    m_running = false;
 }
 
 } // namespace Output

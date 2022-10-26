@@ -493,8 +493,7 @@ int launch_modulator(int argc, char* argv[])
                 break;
         }
 
-        etiLog.level(info) << m.framecount << " DAB frames encoded";
-        etiLog.level(info) << ((float)m.framecount * 0.024f) << " seconds encoded";
+        etiLog.level(info) << m.framecount << " DAB frames, " << ((float)m.framecount * 0.024f) << " seconds encoded";
     }
 
     etiLog.level(info) << "Terminating";

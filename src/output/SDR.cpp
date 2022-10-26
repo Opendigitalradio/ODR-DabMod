@@ -106,7 +106,6 @@ SDR::~SDR()
 
 void SDR::set_sample_size(size_t size)
 {
-    etiLog.level(debug) << "Setting sample size to " << size;
     m_size = size;
 }
 

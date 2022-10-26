@@ -40,6 +40,8 @@ DESCRIPTION:
 #include <string>
 #include <memory>
 #include <ctime>
+#include <mutex>
+#include <thread>
 
 #include "output/SDR.h"
 #include "ModPlugin.h"
@@ -54,20 +56,20 @@ class Dexter : public Output::SDRDevice
         Dexter(SDRDeviceConfig& config);
         Dexter(const Dexter& other) = delete;
         Dexter& operator=(const Dexter& other) = delete;
-        ~Dexter();
+        virtual ~Dexter();
 
         virtual void tune(double lo_offset, double frequency) override;
         virtual double get_tx_freq(void) const override;
         virtual void set_txgain(double txgain) override;
-        virtual double get_txgain(void) const override;
+        virtual double get_txgain() const override;
         virtual void set_bandwidth(double bandwidth) override;
-        virtual double get_bandwidth(void) const override;
+        virtual double get_bandwidth() const override;
         virtual void transmit_frame(const struct FrameData& frame) override;
-        virtual RunStatistics get_run_statistics(void) const override;
-        virtual double get_real_secs(void) const override;
+        virtual RunStatistics get_run_statistics() const override;
+        virtual double get_real_secs() const override;
 
         virtual void set_rxgain(double rxgain) override;
-        virtual double get_rxgain(void) const override;
+        virtual double get_rxgain() const override;
         virtual size_t receive_frame(
                 complexf *buf,
                 size_t num_samples,
@@ -75,10 +77,10 @@ class Dexter : public Output::SDRDevice
                 double timeout_secs) override;
 
         // Return true if GPS and reference clock inputs are ok
-        virtual bool is_clk_source_ok(void) const override;
-        virtual const char* device_name(void) const override;
+        virtual bool is_clk_source_ok() const override;
+        virtual const char* device_name() const override;
 
-        virtual double get_temperature(void) const override;
+        virtual double get_temperature() const override;
 
     private:
         SDRDeviceConfig& m_conf;
@@ -90,9 +92,18 @@ class Dexter : public Output::SDRDevice
         struct iio_channel* m_tx_channel = nullptr;
         struct iio_buffer *m_buffer = nullptr;
 
+        /* Underflows are counted in a separate thread */
+        std::atomic<bool> m_running = ATOMIC_VAR_INIT(false);
+        std::thread m_underflow_read_thread;
+        void underflow_read_process();
+        mutable std::mutex m_underflows_mutex;
         size_t underflows = 0;
+
+        size_t prev_underflows = 0;
         size_t num_late = 0;
         size_t num_frames_modulated = 0;
+
+        size_t num_buffers_pushed = 0;
 
         uint64_t m_utc_seconds_at_startup;
         uint64_t m_clock_count_at_startup = 0;
