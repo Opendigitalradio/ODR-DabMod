@@ -226,14 +226,9 @@ Lime::Lime(SDRDeviceConfig &config) : SDRDevice(), m_conf(config)
         throw runtime_error("Unsupported interpolate: " + to_string(m_interpolate));
     }
 
-    if (m_conf.sampleRate != 2048000)
-    {
-        throw runtime_error("Lime output only supports native samplerate = 2048000");
-        /* The buffer_size calculation below does not take into account resampling */
-    }
-
     // Frame duration is 96ms
-    size_t buffer_size = FRAME_LENGTH * m_interpolate * 10; // We take 10 Frame buffer size Fifo
+    const size_t samplerate_ratio = m_conf.sampleRate / 2048000;
+    const size_t buffer_size = FRAME_LENGTH * m_interpolate * samplerate_ratio * 10; // We take 10 Frame buffer size Fifo
     // Fifo seems to be round to multiple of SampleRate
     m_tx_stream.channel = m_channel;
     m_tx_stream.fifoSize = buffer_size;
