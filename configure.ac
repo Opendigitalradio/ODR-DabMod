@@ -52,9 +52,6 @@ AC_ARG_ENABLE([zeromq],
 AC_ARG_ENABLE([native],
         [AS_HELP_STRING([--disable-native], [Do not compile with -march=native])],
         [], [enable_native=yes])
-AC_ARG_ENABLE([easydabv3],
-        [AS_HELP_STRING([--enable-easydabv3], [Build for EasyDABv3 board])],
-        [], [enable_easydabv3=no])
 AC_ARG_ENABLE([dexter],
         [AS_HELP_STRING([--enable-dexter], [Build for PrecisionWave Dexter board])],
         [], [enable_dexter=no])
@@ -80,9 +77,7 @@ AX_CHECK_COMPILE_FLAG([-Wdouble-promotion], [CXXFLAGS="$CXXFLAGS -Wdouble-promot
 AX_CHECK_COMPILE_FLAG(["-Wformat=2"], [CXXFLAGS="$CXXFLAGS -Wformat=2"], [], ["-Werror"])
 AC_LANG_POP([C++])
 
-
-AS_IF([test "x$enable_easydabv3" = "xno"],
-    [PKG_CHECK_MODULES([FFTW], [fftw3f], [], [AC_MSG_ERROR([FFTW is required])])])
+PKG_CHECK_MODULES([FFTW], [fftw3f], [], [AC_MSG_ERROR([FFTW is required])])
 
 echo "Checking zeromq"
 
@@ -104,13 +99,11 @@ AS_IF([test "x$enable_trace" != "xno"],
 
 # Define conditionals for Makefile.am
 AM_CONDITIONAL([IS_GIT_REPO], [test -d '.git'])
-AM_CONDITIONAL([COMPILE_FOR_EASYDABV3], [test "x$enable_easydabv3" = "xyes"])
 
 # Defines for config.h
 AX_PTHREAD([], AC_MSG_ERROR([requires pthread]))
 
-AS_IF([test "x$enable_easydabv3" = "xno"],
-    [PKG_CHECK_MODULES([SOAPYSDR], [SoapySDR], enable_soapysdr=yes, enable_soapysdr=no)])
+PKG_CHECK_MODULES([SOAPYSDR], [SoapySDR], enable_soapysdr=yes, enable_soapysdr=no)
 
 AS_IF([test "x$enable_limesdr" = "xyes"],
          [AC_CHECK_LIB([LimeSuite], [LMS_Init], [LIMESDR_LIBS="-lLimeSuite"],
@@ -127,9 +120,6 @@ AS_IF([test "x$enable_bladerf" = "xyes"],
 AC_SUBST([CFLAGS], ["$CFLAGS $EXTRA $FFTW_CFLAGS $SOAPYSDR_CFLAGS $PTHREAD_CFLAGS"])
 AC_SUBST([CXXFLAGS], ["$CXXFLAGS $EXTRA $FFTW_CFLAGS $SOAPYSDR_CFLAGS $PTHREAD_CFLAGS"])
 AC_SUBST([LIBS], ["$FFTW_LIBS $SOAPYSDR_LIBS $PTHREAD_LIBS $ZMQ_LIBS $LIMESDR_LIBS $IIO_LIBS $BLADERF_LIBS"])
-
-AS_IF([test "x$enable_easydabv3" = "xyes" && test "x$enable_output_uhd" == "xyes"],
-      AC_MSG_ERROR([Cannot enable both EasyDABv3 and UHD output]))
 
 # Checks for UHD.
 AS_IF([test "x$enable_output_uhd" = "xyes"],
@@ -156,9 +146,6 @@ AS_IF([test "x$enable_dexter" = "xyes"],
 
 AS_IF([test "x$enable_bladerf" = "xyes"],
       [AC_DEFINE(HAVE_BLADERF, [1], [Define if BladeRF output is enabled]) ])
-
-AS_IF([test "x$enable_easydabv3" = "xyes"],
-      AC_DEFINE(BUILD_FOR_EASYDABV3, [1], [Define if we are building for EasyDABv3]))
 
 
 # Checks for header files.
@@ -227,7 +214,7 @@ echo "***********************************************"
 echo
 enabled=""
 disabled=""
-for feat in prof trace output_uhd zeromq soapysdr easydabv3 limesdr bladerf dexter
+for feat in prof trace output_uhd zeromq soapysdr limesdr bladerf dexter
 do
     eval var=\$enable_$feat
     AS_IF([test "x$var" = "xyes"],

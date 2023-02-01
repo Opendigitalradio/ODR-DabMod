@@ -39,7 +39,7 @@ odr_dabmod_CFLAGS   = -Wall -Isrc -Ilib \
 					  $(GITVERSION_FLAGS)
 odr_dabmod_CXXFLAGS = -Wall -Isrc -Ilib -std=c++11 \
 					  $(GITVERSION_FLAGS) $(BOOST_CPPFLAGS)
-odr_dabmod_LDADD    =  $(BOOST_LDFLAGS) $(BOOST_THREAD_LIB)
+odr_dabmod_LDADD    =  $(BOOST_LDFLAGS) $(BOOST_THREAD_LIB) $(UHD_LIBS) $(LIMESDR_LIBS) $(ADDITIONAL_UHD_LIBS)
 odr_dabmod_SOURCES  = src/DabMod.cpp \
 					  src/PcDebug.h \
 					  src/DabModulator.cpp \
@@ -123,10 +123,7 @@ odr_dabmod_SOURCES  = src/DabMod.cpp \
 					  lib/edi/ETIDecoder.hpp \
 					  lib/edi/ETIDecoder.cpp \
 					  lib/edi/PFT.hpp \
-					  lib/edi/PFT.cpp
-
-if !COMPILE_FOR_EASYDABV3
-odr_dabmod_SOURCES += \
+					  lib/edi/PFT.cpp \
 					  src/FIRFilter.cpp \
 					  src/FIRFilter.h \
 					  src/MemlessPoly.cpp \
@@ -173,7 +170,5 @@ odr_dabmod_SOURCES += \
 					  src/TII.cpp \
 					  src/TII.h
 
-odr_dabmod_LDADD   += $(UHD_LIBS) $(LIMESDR_LIBS) $(ADDITIONAL_UHD_LIBS)
-endif
 
 man_MANS = man/odr-dabmod.1

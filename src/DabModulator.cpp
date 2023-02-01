@@ -3,7 +3,7 @@
    Her Majesty the Queen in Right of Canada (Communications Research
    Center Canada)
 
-   Copyright (C) 2019
+   Copyright (C) 2023
    Matthias P. Braendli, matthias.braendli@mpb.li
 
     http://opendigitalradio.org
@@ -31,32 +31,29 @@
 #include "DabModulator.h"
 #include "PcDebug.h"
 
-#if !defined(BUILD_FOR_EASYDABV3)
-# include "QpskSymbolMapper.h"
-# include "FrequencyInterleaver.h"
-# include "PhaseReference.h"
-# include "DifferentialModulator.h"
-# include "NullSymbol.h"
-# include "CicEqualizer.h"
-# include "OfdmGenerator.h"
-# include "GainControl.h"
-# include "GuardIntervalInserter.h"
-# include "Resampler.h"
-# include "FIRFilter.h"
-# include "MemlessPoly.h"
-# include "TII.h"
-#endif
-
-#include "FrameMultiplexer.h"
-#include "PrbsGenerator.h"
 #include "BlockPartitioner.h"
-#include "SignalMultiplexer.h"
+#include "CicEqualizer.h"
 #include "ConvEncoder.h"
+#include "DifferentialModulator.h"
+#include "FIRFilter.h"
+#include "FrameMultiplexer.h"
+#include "FrequencyInterleaver.h"
+#include "GainControl.h"
+#include "GuardIntervalInserter.h"
+#include "Log.h"
+#include "MemlessPoly.h"
+#include "NullSymbol.h"
+#include "OfdmGenerator.h"
+#include "PhaseReference.h"
+#include "PrbsGenerator.h"
 #include "PuncturingEncoder.h"
+#include "QpskSymbolMapper.h"
+#include "RemoteControl.h"
+#include "Resampler.h"
+#include "SignalMultiplexer.h"
+#include "TII.h"
 #include "TimeInterleaver.h"
 #include "TimestampDecoder.h"
-#include "RemoteControl.h"
-#include "Log.h"
 
 using namespace std;
 
@@ -140,7 +137,6 @@ int DabModulator::process(Buffer* dataOut)
         auto cifMux = make_shared<FrameMultiplexer>(myEtiSource);
         auto cifPart = make_shared<BlockPartitioner>(mode);
 
-#if !defined(BUILD_FOR_EASYDABV3)
         auto cifMap = make_shared<QpskSymbolMapper>(myNbCarriers);
         auto cifRef = make_shared<PhaseReference>(mode);
         auto cifFreq = make_shared<FrequencyInterleaver>(mode);
@@ -231,7 +227,6 @@ int DabModulator::process(Buffer* dataOut)
                     m_settings.outputRate,
                     mySpacing);
         }
-#endif
 
         myOutput = make_shared<OutputMemory>(dataOut);
 
@@ -340,9 +335,6 @@ int DabModulator::process(Buffer* dataOut)
         }
 
         myFlowgraph->connect(cifMux, cifPart);
-#if defined(BUILD_FOR_EASYDABV3)
-        myFlowgraph->connect(cifPart, myOutput);
-#else
         myFlowgraph->connect(cifPart, cifMap);
         myFlowgraph->connect(cifMap, cifFreq);
         myFlowgraph->connect(cifRef, cifDiff);
@@ -372,7 +364,6 @@ int DabModulator::process(Buffer* dataOut)
                 prev_plugin = p;
             }
         }
-#endif
     }
 
     ////////////////////////////////////////////////////////////////////

@@ -3,7 +3,7 @@
    Her Majesty the Queen in Right of Canada (Communications Research
    Center Canada)
 
-   Copyright (C) 2018
+   Copyright (C) 2023
    Matthias P. Braendli, matthias.braendli@mpb.li
 
     http://opendigitalradio.org
@@ -62,10 +62,6 @@ static void printHeader()
         "SSE " <<
 #endif
         "\n";
-
-#if defined(BUILD_FOR_EASYDABV3)
-    std::cerr << " This is a build for the EasyDABv3 board" << std::endl;
-#endif
 }
 
 void printUsage(const char* progName)
@@ -77,13 +73,8 @@ void printUsage(const char* progName)
     fprintf(out, "Usage with command line options:\n");
     fprintf(out, "\t%s"
             " input"
-#if defined(BUILD_FOR_EASYDABV3)
-            " -f filename -F format"
-#else
             " (-f filename -F format | -u uhddevice -F frequency)"
-#endif
             " [-o offset]"
-#if !defined(BUILD_FOR_EASYDABV3)
             "\n\t"
             " [-G txgain]"
             " [-T filter_taps_file]"
@@ -93,7 +84,6 @@ void printUsage(const char* progName)
             " [-g gainMode]"
             " [-m dabMode]"
             " [-r samplingRate]"
-#endif
             " [-l]"
             " [-h]"
             "\n", progName);
@@ -108,7 +98,6 @@ void printUsage(const char* progName)
     fprintf(out, "                  Specifying this option has two implications: It enables synchronous transmission,\n"
                  "                  requiring an external REFCLK and PPS signal and frames that do not contain a valid timestamp\n"
                  "                  get muted.\n\n");
-#if !defined(BUILD_FOR_EASYDABV3)
     fprintf(out, "-u device:     Use UHD output with given device string. (use "" for default device)\n");
     fprintf(out, "-F frequency:  Set the transmit frequency when using UHD output. (mandatory option when using UHD)\n");
     fprintf(out, "-G txgain:     Set the transmit gain for the UHD driver (default: 0)\n");
@@ -119,7 +108,6 @@ void printUsage(const char* progName)
     fprintf(out, "-g gainmode:   Set computation gain mode: fix, max or var\n");
     fprintf(out, "-m mode:       Set DAB mode: (0: auto, 1-4: force).\n");
     fprintf(out, "-r rate:       Set output sampling rate (default: 2048000).\n\n");
-#endif
     fprintf(out, "-l:            Loop file when reach end of file.\n");
     fprintf(out, "-h:            Print this help.\n");
 }
@@ -132,7 +120,7 @@ void printVersion(void)
             "    ODR-DabMod is copyright (C) Her Majesty the Queen in Right of Canada,\n"
             "    2005 -- 2012 Communications Research Centre (CRC),\n"
             "     and\n"
-            "    Copyright (C) 2018 Matthias P. Braendli, matthias.braendli@mpb.li\n"
+            "    Copyright (C) 2023 Matthias P. Braendli, matthias.braendli@mpb.li\n"
             "\n"
             "    http://opendigitalradio.org\n"
             "\n"

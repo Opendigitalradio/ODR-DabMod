@@ -15,6 +15,9 @@ config.h
 config.h.in
 config.status
 odr-dabmod
+*~
+
+*.iq
 
 __pycache__/
 *.py[cod]
