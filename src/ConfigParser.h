@@ -3,7 +3,7 @@
    Her Majesty the Queen in Right of Canada (Communications Research
    Center Canada)
 
-   Copyright (C) 2017
+   Copyright (C) 2023
    Matthias P. Braendli, matthias.braendli@mpb.li
 
     http://opendigitalradio.org
@@ -40,8 +40,6 @@
 #include "output/Lime.h"
 #include "output/BladeRF.h"
 
-#define ZMQ_INPUT_MAX_FRAME_QUEUE 500
-
 struct mod_settings_t {
     std::string outputName;
     bool useZeroMQOutput = false;
@@ -69,7 +67,6 @@ struct mod_settings_t {
     bool loop = false;
     std::string inputName = "";
     std::string inputTransport = "file";
-    unsigned inputMaxFramesQueued = ZMQ_INPUT_MAX_FRAME_QUEUE;
     float edi_max_delay_ms = 0.0f;
 
     tii_config_t tiiConfig;

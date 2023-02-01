@@ -75,7 +75,6 @@ odr_dabmod_SOURCES  = src/DabMod.cpp \
 					  src/InputMemory.h \
 					  src/InputReader.h \
 					  src/InputTcpReader.cpp \
-					  src/InputZeroMQReader.cpp \
 					  src/OutputFile.cpp \
 					  src/OutputFile.h \
 					  src/FrameMultiplexer.cpp \

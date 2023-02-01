@@ -6,8 +6,7 @@
    Copyrigth (C) 2018
    Matthias P. Braendli, matthias.braendli@mpb.li
 
-
-   Input module for reading the ETI data from file or pipe, or ZeroMQ.
+   Input module for reading the ETI data from file or pipe.
 
    Supported file formats: RAW, FRAMED, STREAMED
    Supports re-sync to RAW ETI file

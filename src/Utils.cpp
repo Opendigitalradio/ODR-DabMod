@@ -90,7 +90,6 @@ void printUsage(const char* progName)
     fprintf(out, "Where:\n");
     fprintf(out, "input:         ETI input filename (default: stdin), or\n");
     fprintf(out, "                  tcp://source:port for ETI-over-TCP input, or\n");
-    fprintf(out, "                  zmq+tcp://source:port for ZMQ input.\n");
     fprintf(out, "                  udp://:port for EDI input.\n");
     fprintf(out, "-f name:       Use file output with given filename. (use /dev/stdout for standard output)\n");
     fprintf(out, "-F format:     Set the output format (see doc/example.ini for formats) for the file output.\n");

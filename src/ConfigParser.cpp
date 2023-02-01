@@ -3,7 +3,7 @@
    Her Majesty the Queen in Right of Canada (Communications Research
    Center Canada)
 
-   Copyright (C) 2018
+   Copyright (C) 2023
    Matthias P. Braendli, matthias.braendli@mpb.li
 
     http://opendigitalradio.org
@@ -113,8 +113,6 @@ static void parse_configfile(
     }
 
     mod_settings.inputTransport = pt.Get("input.transport", "file");
-    mod_settings.inputMaxFramesQueued = pt.GetInteger("input.max_frames_queued",
-            ZMQ_INPUT_MAX_FRAME_QUEUE);
 
     mod_settings.edi_max_delay_ms = pt.GetReal("input.edi_max_delay", 0.0f);
 
@@ -574,8 +572,7 @@ void parse_args(int argc, char **argv, mod_settings_t& mod_settings)
 
             if (mod_settings.inputName.substr(0, 4) == "zmq+" &&
                 mod_settings.inputName.find("://") != std::string::npos) {
-                // if the name starts with zmq+XYZ://somewhere:port
-                mod_settings.inputTransport = "zeromq";
+                throw std::runtime_error("Support for ZeroMQ input transport has been removed.");
             }
             else if (mod_settings.inputName.substr(0, 6) == "tcp://") {
                 mod_settings.inputTransport = "tcp";

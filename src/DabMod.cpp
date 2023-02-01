@@ -381,17 +381,6 @@ int launch_modulator(int argc, char* argv[])
 
         inputReader = inputFileReader;
     }
-    else if (mod_settings.inputTransport == "zeromq") {
-#if !defined(HAVE_ZEROMQ)
-        throw std::runtime_error("Unable to open input: "
-                "ZeroMQ input transport selected, but not compiled in!");
-#else
-        auto inputZeroMQReader = make_shared<InputZeroMQReader>();
-        inputZeroMQReader->Open(mod_settings.inputName, mod_settings.inputMaxFramesQueued);
-        rcs.enrol(inputZeroMQReader.get());
-        inputReader = inputZeroMQReader;
-#endif
-    }
     else if (mod_settings.inputTransport == "tcp") {
         auto inputTcpReader = make_shared<InputTcpReader>();
         inputTcpReader->Open(mod_settings.inputName);
@@ -460,17 +449,6 @@ int launch_modulator(int argc, char* argv[])
                         run_again = true;
                     }
                 }
-#if defined(HAVE_ZEROMQ)
-                else if (auto in_zmq = dynamic_pointer_cast<InputZeroMQReader>(inputReader)) {
-                    run_again = true;
-                    // Create a new input reader
-                    rcs.remove_controllable(in_zmq.get());
-                    auto inputZeroMQReader = make_shared<InputZeroMQReader>();
-                    inputZeroMQReader->Open(mod_settings.inputName, mod_settings.inputMaxFramesQueued);
-                    rcs.enrol(inputZeroMQReader.get());
-                    inputReader = inputZeroMQReader;
-                }
-#endif
                 else if (dynamic_pointer_cast<InputTcpReader>(inputReader)) {
                     // Keep the same inputReader, as there is no input buffer overflow
                     run_again = true;
@@ -500,14 +478,6 @@ int launch_modulator(int argc, char* argv[])
     return ret;
 }
 
-struct zmq_input_timeout : public std::exception
-{
-    const char* what() const throw()
-    {
-        return "InputZMQ timeout";
-    }
-};
-
 static run_modulator_state_t run_modulator(const mod_settings_t& mod_settings, modulator_data& m)
 {
     auto ret = run_modulator_state_t::failure;
@@ -535,36 +505,9 @@ static run_modulator_state_t run_modulator(const mod_settings_t& mod_settings, m
                         ret = run_modulator_state_t::normal_end;
                         break;
                     }
-#if defined(HAVE_ZEROMQ)
-                    else if (dynamic_pointer_cast<InputZeroMQReader>(m.inputReader)) {
-                        /* An empty frame marks a timeout. We ignore it, but we are
-                         * now able to handle SIGINT properly.
-                         *
-                         * Also, we reconnect zmq every 10 seconds to avoid some
-                         * issues, discussed in
-                         * https://stackoverflow.com/questions/26112992/zeromq-pub-sub-on-unreliable-connection
-                         *
-                         * > It is possible that the PUB socket sees the error
-                         * > while the SUB socket does not.
-                         * >
-                         * > The ZMTP RFC has a proposal for heartbeating that would
-                         * > solve this problem.  The current best solution is for
-                         * > PUB sockets to send heartbeats (e.g. 1 per second) when
-                         * > traffic is low, and for SUB sockets to disconnect /
-                         * > reconnect if they stop getting these.
-                         *
-                         * We don't need a heartbeat, because our application is constant frame rate,
-                         * the frames themselves can act as heartbeats.
-                         */
-
-                        const auto now = chrono::steady_clock::now();
-                        if (last_frame_received + chrono::seconds(10) < now) {
-                            throw zmq_input_timeout();
-                        }
-                    }
-#endif // defined(HAVE_ZEROMQ)
                     else if (dynamic_pointer_cast<InputTcpReader>(m.inputReader)) {
-                        /* Same as for ZeroMQ */
+                        /* An empty frame marks a timeout. We ignore it, but we are
+                         * now able to handle SIGINT properly. */
                     }
                     else {
                         throw logic_error("Unhandled framesize==0!");
@@ -680,16 +623,6 @@ static run_modulator_state_t run_modulator(const mod_settings_t& mod_settings, m
                 rcs.check_faults();
             }
         }
-    }
-    catch (const zmq_input_timeout&) {
-        // The ZeroMQ input timeout
-        etiLog.level(warn) << "Timeout";
-        ret = run_modulator_state_t::again;
-    }
-    catch (const zmq_input_overflow& e) {
-        // The ZeroMQ input has overflowed its buffer
-        etiLog.level(warn) << e.what();
-        ret = run_modulator_state_t::again;
     }
     catch (const FrameMultiplexerError& e) {
         // The FrameMultiplexer saw an error or a change in the size of a
