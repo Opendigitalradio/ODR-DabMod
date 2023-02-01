@@ -531,7 +531,7 @@ static run_modulator_state_t run_modulator(const mod_settings_t& mod_settings, m
 
                 fct = m.etiReader->getFct();
                 fp = m.etiReader->getFp();
-                ts = m.ediInput->ediReader.getTimestamp();
+                ts = m.etiReader->getTimestamp();
             }
             else if (m.ediInput) {
                 while (running and not m.ediInput->ediReader.isFrameReady()) {
@@ -592,9 +592,9 @@ static run_modulator_state_t run_modulator(const mod_settings_t& mod_settings, m
                 }
             }
 
-            // timestamp is good if we run unsynchronised, or if it's in the future
+            // timestamp is good if we run unsynchronised, or if margin is insufficient
             bool ts_good = not mod_settings.sdr_device_config.enableSync or
-                (ts.timestamp_valid and ts.offset_to_system_time() > 0);
+                (ts.timestamp_valid and ts.offset_to_system_time() > 1);
 
             if (fct_good and ts_good) {
                 last_eti_fct = fct;
@@ -602,15 +602,9 @@ static run_modulator_state_t run_modulator(const mod_settings_t& mod_settings, m
                 m.flowgraph->run();
             }
             else {
-                etiLog.level(warn) << "Skipping frame " << fct << " FCT " <<
-                    (fct_good ? "good" : "bad") << " TS " <<
-                    (ts_good ? "good, " : "bad, ") <<
-                    (ts.timestamp_valid ? (ts.offset_to_system_time() > 0 ? "in the future" : "in the past") : "invalid");
-
-                if (m.ediInput) {
-                    m.ediInput->ediReader.clearFrame();
-                }
-                return run_modulator_state_t::again;
+                etiLog.level(warn) << "Skipping frame " <<
+                    " TS " << (ts.timestamp_valid ? "valid" : "invalid") <<
+                    " offset " << (ts.timestamp_valid ? ts.offset_to_system_time() : 0);
             }
 
             if (m.ediInput) {
