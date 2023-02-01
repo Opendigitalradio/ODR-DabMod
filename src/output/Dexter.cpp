@@ -175,7 +175,16 @@ Dexter::Dexter(SDRDeviceConfig& config) :
         etiLog.level(warn) << "Failed to set dexter_dsp_tx.stream0_start_clks = " << 0 << " : " << get_iio_error(r);
     }
 
-    // Prepare streams
+#warning "TODO underflow thread"
+    /* Disabled because it still provokes failed to push buffer Unknown error -110
+    m_running = true;
+    m_underflow_read_thread = std::thread(&Dexter::underflow_read_process, this);
+    */
+}
+
+void Dexter::channel_up()
+{
+    etiLog.level(debug) << "DEXTER CHANNEL_UP";
     constexpr int CHANNEL_INDEX = 0;
     m_tx_channel = iio_device_get_channel(m_ad9957_tx0, CHANNEL_INDEX);
     if (m_tx_channel == nullptr) {
@@ -185,16 +194,22 @@ Dexter::Dexter(SDRDeviceConfig& config) :
     iio_channel_enable(m_tx_channel);
 
     m_buffer = iio_device_create_buffer(m_ad9957_tx0, IIO_BUFFER_LEN/sizeof(int16_t), 0);
-    if (!m_buffer) {
+    if (not m_buffer) {
         throw std::runtime_error("Dexter: Cannot create IIO buffer.");
     }
-
-#warning "TODO underflow thread"
-    /* Disabled because it still provokes failed to push buffer Unknown error -110
-    m_running = true;
-    m_underflow_read_thread = std::thread(&Dexter::underflow_read_process, this);
-    */
 }
+
+void Dexter::channel_down()
+{
+    iio_channel_disable(m_tx_channel);
+
+    etiLog.level(debug) << "DEXTER CHANNEL_DOWN";
+    if (m_buffer) {
+        iio_buffer_destroy(m_buffer);
+        m_buffer = nullptr;
+    }
+}
+
 
 Dexter::~Dexter()
 {
@@ -206,10 +221,6 @@ Dexter::~Dexter()
     if (m_ctx) {
         if (m_dexter_dsp_tx) {
             iio_device_attr_write_longlong(m_dexter_dsp_tx, "gain0", 0);
-        }
-
-        if (m_buffer) {
-            iio_buffer_destroy(m_buffer);
         }
 
         iio_context_destroy(m_ctx);
@@ -363,67 +374,66 @@ void Dexter::transmit_frame(const struct FrameData& frame)
 
     const bool require_timestamped_tx = (m_conf.enableSync and frame.ts.timestamp_valid);
 
-    if (not require_timestamped_tx) {
-        etiLog.level(debug) << "TIMESTAMP_STATE STREAMING 1";
-        timestamp_state = timestamp_state_t::STREAMING;
-    }
-    else if (require_timestamped_tx and timestamp_state == timestamp_state_t::REQUIRES_SET) {
-        /*
-        uint64_t timeS = frame.ts.timestamp_sec;
-        etiLog.level(debug) << "Dexter: TS S " << timeS << " - " << m_utc_seconds_at_startup << " = " <<
-            timeS - m_utc_seconds_at_startup;
-        */
+    if (m_buffer == nullptr) {
+        if (require_timestamped_tx) {
+            /*
+               uint64_t timeS = frame.ts.timestamp_sec;
+               etiLog.level(debug) << "Dexter: TS S " << timeS << " - " << m_utc_seconds_at_startup << " = " <<
+               timeS - m_utc_seconds_at_startup;
+               */
 
-        // 10 because timestamp_pps is represented in 16.384 MHz clocks
-        constexpr uint64_t TIMESTAMP_PPS_PER_DSP_CLOCKS = DSP_CLOCK / 16384000;
-        uint64_t frame_ts_clocks =
-            // at second level
-            ((int64_t)frame.ts.timestamp_sec - (int64_t)m_utc_seconds_at_startup) * DSP_CLOCK + m_clock_count_at_startup +
-            // at subsecond level
-            (uint64_t)frame.ts.timestamp_pps * TIMESTAMP_PPS_PER_DSP_CLOCKS;
+            // 10 because timestamp_pps is represented in 16.384 MHz clocks
+            constexpr uint64_t TIMESTAMP_PPS_PER_DSP_CLOCKS = DSP_CLOCK / 16384000;
+            uint64_t frame_ts_clocks =
+                // at second level
+                ((int64_t)frame.ts.timestamp_sec - (int64_t)m_utc_seconds_at_startup) * DSP_CLOCK + m_clock_count_at_startup +
+                // at subsecond level
+                (uint64_t)frame.ts.timestamp_pps * TIMESTAMP_PPS_PER_DSP_CLOCKS;
 
-        long long pps_clks = 0;
-        int r;
-        if ((r = iio_device_attr_read_longlong(m_dexter_dsp_tx, "pps_clks", &pps_clks)) != 0) {
-            etiLog.level(error) << "Failed to get dexter_dsp_tx.pps_clks: " << get_iio_error(r);
+            long long pps_clks = 0;
+            int r;
+            if ((r = iio_device_attr_read_longlong(m_dexter_dsp_tx, "pps_clks", &pps_clks)) != 0) {
+                etiLog.level(error) << "Failed to get dexter_dsp_tx.pps_clks: " << get_iio_error(r);
+            }
+
+            const double margin = (double)((int64_t)frame_ts_clocks - pps_clks) / DSP_CLOCK;
+
+            etiLog.level(debug) << "Dexter: TS CLK " <<
+                ((int64_t)frame.ts.timestamp_sec - (int64_t)m_utc_seconds_at_startup) * DSP_CLOCK << " + " <<
+                m_clock_count_at_startup << " + " <<
+                (uint64_t)frame.ts.timestamp_pps * TIMESTAMP_PPS_PER_DSP_CLOCKS << " = " <<
+                frame_ts_clocks << " DELTA " <<
+                frame_ts_clocks << " - " << pps_clks << " = " << margin;
+
+            // Ensure we hand the frame over to HW at least 0.2s before timestamp
+            if (margin < 0.2) {
+                etiLog.level(warn) << "Skip frame short margin " << margin;
+                num_late++;
+                return;
+            }
+
+
+            if ((r = iio_device_attr_write_longlong(m_dexter_dsp_tx, "stream0_start_clks", frame_ts_clocks)) != 0) {
+                etiLog.level(warn) << "Skip frame, failed to set dexter_dsp_tx.stream0_start_clks = " << frame_ts_clocks << " : " << get_iio_error(r);
+                num_late++;
+                return;
+            }
         }
 
-        const double margin = (double)((int64_t)frame_ts_clocks - pps_clks) / DSP_CLOCK;
-
-        etiLog.level(debug) << "Dexter: TS CLK " <<
-            ((int64_t)frame.ts.timestamp_sec - (int64_t)m_utc_seconds_at_startup) * DSP_CLOCK << " + " <<
-            m_clock_count_at_startup << " + " <<
-            (uint64_t)frame.ts.timestamp_pps * TIMESTAMP_PPS_PER_DSP_CLOCKS << " = " <<
-            frame_ts_clocks << " DELTA " <<
-            frame_ts_clocks << " - " << pps_clks << " = " << margin;
-
-        // Ensure we hand the frame over to HW at least 0.2s before timestamp
-        if (margin < 0.2) {
-            etiLog.level(warn) << "Skip frame short margin " << margin;
-            num_late++;
-            return;
-        }
-
-
-        if ((r = iio_device_attr_write_longlong(m_dexter_dsp_tx, "stream0_start_clks", frame_ts_clocks)) != 0) {
-            etiLog.level(warn) << "Skip frame, failed to set dexter_dsp_tx.stream0_start_clks = " << frame_ts_clocks << " : " << get_iio_error(r);
-            num_late++;
-            return;
-        }
-        timestamp_state = timestamp_state_t::STREAMING;
-        etiLog.level(debug) << "TIMESTAMP_STATE STREAMING 2";
+        channel_up();
     }
 
     if (m_require_timestamp_refresh) {
-        etiLog.level(debug) << "TIMESTAMP_STATE WAIT_FOR_UNDERRUN";
-        timestamp_state = timestamp_state_t::WAIT_FOR_UNDERRUN;
+        etiLog.level(debug) << "DEXTER REQUIRE REFRESH";
+        channel_down();
+        m_require_timestamp_refresh = false;
     }
 
     // DabMod::launch_modulator ensures we get int16_t IQ here
     //const size_t num_samples = frame.buf.size() / (2*sizeof(int16_t));
     //const int16_t *buf = reinterpret_cast<const int16_t*>(frame.buf.data());
 
-    if (timestamp_state == timestamp_state_t::STREAMING) {
+    if (m_buffer) {
         for (size_t i = 0; i < IIO_BUFFERS; i++) {
             constexpr size_t buflen = TRANSMISSION_FRAME_LEN / IIO_BUFFERS;
 
@@ -433,8 +443,7 @@ void Dexter::transmit_frame(const struct FrameData& frame)
                 etiLog.level(error) << "Dexter: failed to push buffer " << get_iio_error(pushed) <<
                     " after " << num_buffers_pushed << " bufs";
                 num_buffers_pushed = 0;
-                etiLog.level(debug) << "TIMESTAMP_STATE REQUIRES_SET";
-                timestamp_state = timestamp_state_t::REQUIRES_SET;
+                channel_down();
                 break;
             }
             num_buffers_pushed++;
@@ -449,10 +458,6 @@ void Dexter::transmit_frame(const struct FrameData& frame)
 
         if (u != 0 and u != prev_underflows) {
             etiLog.level(warn) << "Dexter: underflow! " << prev_underflows << " -> " << u;
-            if (timestamp_state == timestamp_state_t::WAIT_FOR_UNDERRUN) {
-                etiLog.level(debug) << "TIMESTAMP_STATE REQUIRES_SET";
-                timestamp_state = timestamp_state_t::REQUIRES_SET;
-            }
         }
 
         prev_underflows = u;
