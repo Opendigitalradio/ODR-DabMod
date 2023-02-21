@@ -350,6 +350,7 @@ void UHD::transmit_frame(const struct FrameData& frame)
                 frame.ts.timestamp_valid and
                 m_require_timestamp_refresh and
                 samps_to_send <= usrp_max_num_samps );
+        m_require_timestamp_refresh = false;
 
         //send a single packet
         size_t num_tx_samps = m_tx_stream->send(
@@ -359,7 +360,7 @@ void UHD::transmit_frame(const struct FrameData& frame)
 
         num_acc_samps += num_tx_samps;
 
-        md_tx.time_spec += uhd::time_spec_t(0, num_tx_samps/m_conf.sampleRate);
+        md_tx.time_spec += uhd::time_spec_t::from_ticks(num_tx_samps, (double)m_conf.sampleRate);
 
         if (num_tx_samps == 0) {
             etiLog.log(warn,

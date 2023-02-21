@@ -42,6 +42,8 @@ struct frame_timestamp
     uint32_t timestamp_sec; // seconds in unix epoch
     uint32_t timestamp_pps; // In units of 1/16384000 s
     bool timestamp_valid = false;
+
+    double timestamp_offset = 0.0; // copy of the configured modulator offset
     bool offset_changed = false;
 
     frame_timestamp& operator+=(const double& diff);

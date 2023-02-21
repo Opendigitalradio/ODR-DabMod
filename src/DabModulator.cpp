@@ -126,6 +126,7 @@ int DabModulator::process(Buffer* dataOut)
     PDEBUG("DabModulator::process(dataOut: %p)\n", dataOut);
 
     if (not myFlowgraph) {
+        etiLog.level(debug) << "Setting up DabModulator...";
         const unsigned mode = m_settings.dabMode;
         setMode(mode);
 
@@ -364,6 +365,7 @@ int DabModulator::process(Buffer* dataOut)
                 prev_plugin = p;
             }
         }
+        etiLog.level(debug) << "DabModulator set up.";
     }
 
     ////////////////////////////////////////////////////////////////////

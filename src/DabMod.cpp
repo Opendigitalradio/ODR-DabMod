@@ -25,6 +25,7 @@
    along with ODR-DabMod.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <fftw3.h>
 #ifdef HAVE_CONFIG_H
 #   include "config.h"
 #endif
@@ -342,6 +343,27 @@ int launch_modulator(int argc, char* argv[])
 
     printModSettings(mod_settings);
 
+    {
+        // This is mostly useful on ARM systems where FFTW planning takes some time. If we do it here
+        // it will be done before the modulator starts up
+        etiLog.level(debug) << "Running FFTW planning...";
+        constexpr size_t fft_size = 2048; // Transmission Mode I. If different, it'll recalculate on OfdmGenerator
+                                          // initialisation
+        auto *fft_in = (fftwf_complex*)fftwf_malloc(sizeof(fftwf_complex) * fft_size);
+        auto *fft_out = (fftwf_complex*)fftwf_malloc(sizeof(fftwf_complex) * fft_size);
+        if (fft_in == nullptr or fft_out == nullptr) {
+            throw std::runtime_error("FFTW malloc failed");
+        }
+        fftwf_set_timelimit(2);
+        fftwf_plan plan = fftwf_plan_dft_1d(fft_size, fft_in, fft_out, FFTW_FORWARD, FFTW_MEASURE);
+        fftwf_destroy_plan(plan);
+        plan = fftwf_plan_dft_1d(fft_size, fft_in, fft_out, FFTW_BACKWARD, FFTW_MEASURE);
+        fftwf_destroy_plan(plan);
+        fftwf_free(fft_in);
+        fftwf_free(fft_out);
+        etiLog.level(debug) << "FFTW planning done.";
+    }
+
     shared_ptr<FormatConverter> format_converter;
     if (mod_settings.useFileOutput and
             (mod_settings.fileOutputFormat == "s8" or
@@ -563,48 +585,46 @@ static run_modulator_state_t run_modulator(const mod_settings_t& mod_settings, m
                 ts = m.ediInput->ediReader.getTimestamp();
             }
 
-            bool fct_good = false;
-            if (last_eti_fct == -1) {
-                if (fp != 0) {
-                    // Do not start the flowgraph before we get to FP 0
-                    // to ensure all blocks are properly aligned.
-                    if (m.ediInput) {
-                        m.ediInput->ediReader.clearFrame();
-                    }
-                    continue;
-                }
-                else {
-                    fct_good = true;
-                }
-            }
-            else {
-                const unsigned expected_fct = (last_eti_fct + 1) % 250;
-                if (fct == expected_fct) {
-                    fct_good = true;
-                }
-                else {
-                    etiLog.level(info) << "ETI FCT discontinuity, expected " <<
-                        expected_fct << " received " << fct;
-                    if (m.ediInput) {
-                        m.ediInput->ediReader.clearFrame();
-                    }
-                    return run_modulator_state_t::again;
-                }
-            }
-
-            // timestamp is good if we run unsynchronised, or if margin is insufficient
+            // timestamp is good if we run unsynchronised, or if margin is sufficient
             bool ts_good = not mod_settings.sdr_device_config.enableSync or
-                (ts.timestamp_valid and ts.offset_to_system_time() > 1);
+                (ts.timestamp_valid and ts.offset_to_system_time() > 0.2);
 
-            if (fct_good and ts_good) {
-                last_eti_fct = fct;
-                m.framecount++;
-                m.flowgraph->run();
-            }
-            else {
-                etiLog.level(warn) << "Skipping frame " <<
+            if (!ts_good) {
+                etiLog.level(warn) << "Modulator skipping frame " << fct <<
                     " TS " << (ts.timestamp_valid ? "valid" : "invalid") <<
                     " offset " << (ts.timestamp_valid ? ts.offset_to_system_time() : 0);
+            }
+            else {
+                bool modulate = true;
+                if (last_eti_fct == -1) {
+                    if (fp != 0) {
+                        // Do not start the flowgraph before we get to FP 0
+                        // to ensure all blocks are properly aligned.
+                        modulate = false;
+                    }
+                    else {
+                        last_eti_fct = fct;
+                    }
+                }
+                else {
+                    const unsigned expected_fct = (last_eti_fct + 1) % 250;
+                    if (fct == expected_fct) {
+                        last_eti_fct = fct;
+                    }
+                    else {
+                        etiLog.level(info) << "ETI FCT discontinuity, expected " <<
+                            expected_fct << " received " << fct;
+                        if (m.ediInput) {
+                            m.ediInput->ediReader.clearFrame();
+                        }
+                        return run_modulator_state_t::again;
+                    }
+                }
+
+                if (modulate) {
+                    m.framecount++;
+                    m.flowgraph->run();
+                }
             }
 
             if (m.ediInput) {

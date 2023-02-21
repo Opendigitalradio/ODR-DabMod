@@ -46,6 +46,8 @@ namespace Output {
 
 static constexpr uint64_t DSP_CLOCK = 2048000uLL * 80;
 
+static constexpr uint64_t IIO_TIMEOUT_MS = 1000;
+
 static constexpr size_t TRANSMISSION_FRAME_LEN = (2656 + 76 * 2552) * 4;
 static constexpr size_t IIO_BUFFERS = 4;
 static constexpr size_t IIO_BUFFER_LEN = TRANSMISSION_FRAME_LEN / IIO_BUFFERS;
@@ -53,7 +55,7 @@ static constexpr size_t IIO_BUFFER_LEN = TRANSMISSION_FRAME_LEN / IIO_BUFFERS;
 static string get_iio_error(int err)
 {
     char dst[256];
-    iio_strerror(err, dst, sizeof(dst));
+    iio_strerror(-err, dst, sizeof(dst));
     return string(dst);
 }
 
@@ -75,6 +77,11 @@ Dexter::Dexter(SDRDeviceConfig& config) :
         throw std::runtime_error("Dexter: Unable to create iio scan context");
     }
 
+    int r;
+    if ((r = iio_context_set_timeout(m_ctx, IIO_TIMEOUT_MS)) != 0) {
+        etiLog.level(error) << "Failed to set IIO timeout " << get_iio_error(r);
+    }
+
     m_dexter_dsp_tx = iio_context_find_device(m_ctx, "dexter_dsp_tx");
     if (!m_dexter_dsp_tx) {
         throw std::runtime_error("Dexter: Unable to find dexter_dsp_tx iio device");
@@ -84,8 +91,6 @@ Dexter::Dexter(SDRDeviceConfig& config) :
     if (!m_ad9957_tx0) {
         throw std::runtime_error("Dexter: Unable to find ad9957_tx0 iio device");
     }
-
-    int r;
 
     // TODO make DC offset configurable and add to RC
     if ((r = iio_device_attr_write_longlong(m_dexter_dsp_tx, "dc0", 0)) != 0) {
@@ -97,11 +102,11 @@ Dexter::Dexter(SDRDeviceConfig& config) :
     }
 
     if ((r = iio_device_attr_write_longlong(m_dexter_dsp_tx, "stream0_start_clks", 0)) != 0) {
-        etiLog.level(warn) << "Failed to set dexter_dsp_tx.stream0_start_clks = 0: " << get_iio_error(r);
+        etiLog.level(error) << "Failed to set dexter_dsp_tx.stream0_start_clks = 0: " << get_iio_error(r);
     }
 
     if ((r = iio_device_attr_write_longlong(m_dexter_dsp_tx, "gain0", m_conf.txgain)) != 0) {
-        etiLog.level(warn) << "Failed to set dexter_dsp_tx.stream0_start_clks = 0: " << get_iio_error(r);
+        etiLog.level(error) << "Failed to set dexter_dsp_tx.stream0_start_clks = 0: " << get_iio_error(r);
     }
 
     if (m_conf.sampleRate != 2048000) {
@@ -396,28 +401,28 @@ void Dexter::transmit_frame(const struct FrameData& frame)
                 etiLog.level(error) << "Failed to get dexter_dsp_tx.pps_clks: " << get_iio_error(r);
             }
 
-            const double margin = (double)((int64_t)frame_ts_clocks - pps_clks) / DSP_CLOCK;
+            const double margin_s = (double)((int64_t)frame_ts_clocks - pps_clks) / DSP_CLOCK;
 
-            etiLog.level(debug) << "Dexter: TS CLK " <<
+            etiLog.level(debug) << "DEXTER FCT " << frame.ts.fct << " TS CLK " <<
                 ((int64_t)frame.ts.timestamp_sec - (int64_t)m_utc_seconds_at_startup) * DSP_CLOCK << " + " <<
                 m_clock_count_at_startup << " + " <<
                 (uint64_t)frame.ts.timestamp_pps * TIMESTAMP_PPS_PER_DSP_CLOCKS << " = " <<
                 frame_ts_clocks << " DELTA " <<
-                frame_ts_clocks << " - " << pps_clks << " = " << margin;
+                frame_ts_clocks << " - " << pps_clks << " = " << margin_s;
 
-            // Ensure we hand the frame over to HW at least 0.2s before timestamp
-            if (margin < 0.2) {
-                etiLog.level(warn) << "Skip frame short margin " << margin;
+            // Ensure we hand the frame over to HW with a bit of margin
+            if (margin_s < 0.1) {
+                etiLog.level(warn) << "Skip frame short margin " << margin_s;
                 num_late++;
                 return;
             }
-
 
             if ((r = iio_device_attr_write_longlong(m_dexter_dsp_tx, "stream0_start_clks", frame_ts_clocks)) != 0) {
                 etiLog.level(warn) << "Skip frame, failed to set dexter_dsp_tx.stream0_start_clks = " << frame_ts_clocks << " : " << get_iio_error(r);
                 num_late++;
                 return;
             }
+            m_require_timestamp_refresh = false;
         }
 
         channel_up();
@@ -469,6 +474,7 @@ void Dexter::underflow_read_process()
     set_thread_name("dexter_underflow");
 
     while (m_running) {
+        this_thread::sleep_for(chrono::seconds(1));
         long long attr_value = 0;
         int r = 0;
 
@@ -481,7 +487,6 @@ void Dexter::underflow_read_process()
                 underflows = underflows_new;
             }
         }
-        this_thread::sleep_for(chrono::seconds(1));
     }
     m_running = false;
 }

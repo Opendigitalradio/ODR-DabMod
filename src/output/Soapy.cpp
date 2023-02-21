@@ -349,6 +349,7 @@ void Soapy::transmit_frame(const struct FrameData& frame)
                         SoapySDR::errToStr(ret_deact));
             }
             m_tx_stream_active = false;
+            m_require_timestamp_refresh = false;
         }
 
         if (eob_because_muting) {

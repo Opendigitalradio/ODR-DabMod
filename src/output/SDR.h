@@ -88,6 +88,7 @@ class SDR : public ModOutput, public ModMetadata, public RemoteControllable {
         bool     last_tx_time_initialised = false;
         uint32_t last_tx_second = 0;
         uint32_t last_tx_pps = 0;
+        size_t   num_queue_overflows = 0;
 
         bool     t_last_frame_initialised = false;
         std::chrono::steady_clock::time_point t_last_frame;

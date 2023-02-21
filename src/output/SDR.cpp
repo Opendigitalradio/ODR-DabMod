@@ -2,7 +2,7 @@
    Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010 Her Majesty the
    Queen in Right of Canada (Communications Research Center Canada)
 
-   Copyright (C) 2022
+   Copyright (C) 2023
    Matthias P. Braendli, matthias.braendli@mpb.li
 
     http://opendigitalradio.org
@@ -46,16 +46,12 @@ using namespace std;
 
 namespace Output {
 
-// Maximum number of frames that can wait in frames
+// Maximum number of frames that can wait in frames, when not using synchronised transmission
 static constexpr size_t FRAMES_MAX_SIZE = 8;
 
 // If the timestamp is further in the future than
 // 100 seconds, abort
 static constexpr double TIMESTAMP_ABORT_FUTURE = 100;
-
-// Add a delay to increase buffers when
-// frames are too far in the future
-static constexpr double TIMESTAMP_MARGIN_FUTURE = 0.5;
 
 SDR::SDR(SDRDeviceConfig& config, std::shared_ptr<SDRDevice> device) :
     ModOutput(), ModMetadata(), RemoteControllable("sdr"),
@@ -127,6 +123,10 @@ int SDR::process(Buffer *dataIn)
 
 meta_vec_t SDR::process_metadata(const meta_vec_t& metadataIn)
 {
+    double frame_duration_s =
+        chrono::duration_cast<chrono::milliseconds>(
+                transmission_frame_duration(m_config.dabMode)).count() / 1000.0;
+
     if (m_device and m_running) {
         FrameData frame;
         frame.buf = std::move(m_frame);
@@ -163,9 +163,22 @@ meta_vec_t SDR::process_metadata(const meta_vec_t& metadataIn)
                         m_config.sampleRate);
             }
 
-            size_t num_frames = m_queue.push_wait_if_full(frame,
-                    FRAMES_MAX_SIZE);
-            etiLog.log(trace, "SDR,push %zu", num_frames);
+
+            const auto max_size = m_config.enableSync ?
+                (frame.ts.timestamp_offset * 4.0) / frame_duration_s
+                : FRAMES_MAX_SIZE;
+
+            auto r = m_queue.push_overflow(std::move(frame), max_size);
+            etiLog.log(trace, "SDR,push %d %zu", r.overflowed, r.new_size);
+
+            if (r.overflowed) {
+                fprintf(stderr, "o");
+            }
+            else {
+                fprintf(stderr, ".");
+            }
+
+            num_queue_overflows += r.overflowed ? 1 : 0;
         }
     }
     else {
@@ -186,16 +199,13 @@ void SDR::process_thread_entry()
 
     last_tx_time_initialised = false;
 
-    size_t last_num_underflows = 0;
-    size_t pop_prebuffering = FRAMES_MAX_SIZE;
-
     m_running.store(true);
 
     try {
         while (m_running.load()) {
             struct FrameData frame;
             etiLog.log(trace, "SDR,wait");
-            m_queue.wait_and_pop(frame, pop_prebuffering);
+            m_queue.wait_and_pop(frame);
             etiLog.log(trace, "SDR,pop");
 
             if (m_running.load() == false) {
@@ -204,19 +214,6 @@ void SDR::process_thread_entry()
 
             if (m_device) {
                 handle_frame(frame);
-
-                const auto rs = m_device->get_run_statistics();
-
-                /* Ensure we fill frames after every underrun and
-                 * at startup to reduce underrun likelihood. */
-                if (last_num_underflows < rs.num_underruns) {
-                    pop_prebuffering = FRAMES_MAX_SIZE;
-                }
-                else {
-                    pop_prebuffering = 1;
-                }
-
-                last_num_underflows = rs.num_underruns;
             }
         }
     }
@@ -302,6 +299,7 @@ void SDR::handle_frame(struct FrameData& frame)
         }
 
         if (frame.ts.offset_changed) {
+            etiLog.level(debug) << "TS offset changed";
             m_device->require_timestamp_refresh();
         }
 
@@ -354,8 +352,18 @@ void SDR::handle_frame(struct FrameData& frame)
                 " frame " << frame.ts.fct <<
                 ", tx_second " << tx_second <<
                 ", pps " << pps_offset;
+            m_device->require_timestamp_refresh();
             return;
         }
+
+        etiLog.level(debug) <<
+            "OutputSDR: Timestamp             at FCT=" << frame.ts.fct << " offset: " <<
+            std::fixed <<
+            time_spec.get_real_secs() - device_time <<
+            "  (" << device_time << ")"
+            " frame " << frame.ts.fct <<
+            ", tx_second " << tx_second <<
+            ", pps " << pps_offset;
 
         if (time_spec.get_real_secs() > device_time + TIMESTAMP_ABORT_FUTURE) {
             etiLog.level(error) <<
@@ -367,9 +375,8 @@ void SDR::handle_frame(struct FrameData& frame)
     }
 
     if (m_config.muting) {
-        etiLog.log(info,
-                "OutputSDR: Muting FCT=%d requested",
-                frame.ts.fct);
+        etiLog.log(info, "OutputSDR: Muting FCT=%d requested", frame.ts.fct);
+        m_device->require_timestamp_refresh();
         return;
     }
 
