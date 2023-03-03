@@ -2,7 +2,7 @@
    Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010 Her Majesty the
    Queen in Right of Canada (Communications Research Center Canada)
 
-   Copyright (C) 2022
+   Copyright (C) 2023
    Matthias P. Braendli, matthias.braendli@mpb.li
 
     http://opendigitalradio.org
@@ -64,7 +64,7 @@ class Dexter : public Output::SDRDevice
         virtual double get_txgain() const override;
         virtual void set_bandwidth(double bandwidth) override;
         virtual double get_bandwidth() const override;
-        virtual void transmit_frame(const struct FrameData& frame) override;
+        virtual void transmit_frame(struct FrameData&& frame) override;
         virtual RunStatistics get_run_statistics() const override;
         virtual double get_real_secs() const override;
 

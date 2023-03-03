@@ -304,7 +304,7 @@ double BladeRF::get_temperature(void) const
 }
 
 
-void BladeRF::transmit_frame(const struct FrameData &frame) // SC16 frames
+void BladeRF::transmit_frame(struct FrameData&& frame) // SC16 frames
 {
     const size_t num_samples = frame.buf.size() / (2*sizeof(int16_t));
 

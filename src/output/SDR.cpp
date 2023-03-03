@@ -213,7 +213,7 @@ void SDR::process_thread_entry()
             }
 
             if (m_device) {
-                handle_frame(frame);
+                handle_frame(std::move(frame));
             }
         }
     }
@@ -260,7 +260,7 @@ void SDR::sleep_through_frame()
     t_last_frame += wait_time;
 }
 
-void SDR::handle_frame(struct FrameData& frame)
+void SDR::handle_frame(struct FrameData&& frame)
 {
     // Assumes m_device is valid
 
@@ -386,7 +386,7 @@ void SDR::handle_frame(struct FrameData& frame)
             " TS " << frame.ts.to_string();
     }
 
-    m_device->transmit_frame(frame);
+    m_device->transmit_frame(std::move(frame));
 }
 
 // =======================================

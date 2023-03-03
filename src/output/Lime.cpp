@@ -389,7 +389,7 @@ float Lime::get_fifo_fill_percent(void) const
     return m_last_fifo_fill_percent * 100;
 }
 
-void Lime::transmit_frame(const struct FrameData &frame)
+void Lime::transmit_frame(struct FrameData&& frame)
 {
     if (not m_device)
         throw runtime_error("Lime device not set up");

@@ -65,7 +65,7 @@ class Soapy : public Output::SDRDevice
         virtual double get_txgain(void) const override;
         virtual void set_bandwidth(double bandwidth) override;
         virtual double get_bandwidth(void) const override;
-        virtual void transmit_frame(const struct FrameData& frame) override;
+        virtual void transmit_frame(struct FrameData&& frame) override;
         virtual RunStatistics get_run_statistics(void) const override;
         virtual double get_real_secs(void) const override;
 

@@ -2,7 +2,7 @@
    Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010 Her Majesty the
    Queen in Right of Canada (Communications Research Center Canada)
 
-   Copyright (C) 2022
+   Copyright (C) 2023
    Matthias P. Braendli, matthias.braendli@mpb.li
 
     http://opendigitalradio.org
@@ -369,7 +369,7 @@ double Dexter::get_temperature(void) const
     return std::numeric_limits<double>::quiet_NaN();
 }
 
-void Dexter::transmit_frame(const struct FrameData& frame)
+void Dexter::transmit_frame(struct FrameData&& frame)
 {
     if (frame.buf.size() != TRANSMISSION_FRAME_LEN) {
         etiLog.level(debug) << "Dexter::transmit_frame Expected " <<
@@ -379,6 +379,8 @@ void Dexter::transmit_frame(const struct FrameData& frame)
 
     const bool require_timestamped_tx = (m_conf.enableSync and frame.ts.timestamp_valid);
 
+    const double margin_s = frame.ts.offset_to_system_time();
+
     if (m_buffer == nullptr) {
         if (require_timestamped_tx) {
             /*
@@ -387,36 +389,28 @@ void Dexter::transmit_frame(const struct FrameData& frame)
                timeS - m_utc_seconds_at_startup;
                */
 
-            // 10 because timestamp_pps is represented in 16.384 MHz clocks
             constexpr uint64_t TIMESTAMP_PPS_PER_DSP_CLOCKS = DSP_CLOCK / 16384000;
+            // TIMESTAMP_PPS_PER_DSP_CLOCKS=10 because timestamp_pps is represented in 16.384 MHz clocks
             uint64_t frame_ts_clocks =
                 // at second level
                 ((int64_t)frame.ts.timestamp_sec - (int64_t)m_utc_seconds_at_startup) * DSP_CLOCK + m_clock_count_at_startup +
                 // at subsecond level
                 (uint64_t)frame.ts.timestamp_pps * TIMESTAMP_PPS_PER_DSP_CLOCKS;
 
-            long long pps_clks = 0;
-            int r;
-            if ((r = iio_device_attr_read_longlong(m_dexter_dsp_tx, "pps_clks", &pps_clks)) != 0) {
-                etiLog.level(error) << "Failed to get dexter_dsp_tx.pps_clks: " << get_iio_error(r);
-            }
-
-            const double margin_s = (double)((int64_t)frame_ts_clocks - pps_clks) / DSP_CLOCK;
-
             etiLog.level(debug) << "DEXTER FCT " << frame.ts.fct << " TS CLK " <<
                 ((int64_t)frame.ts.timestamp_sec - (int64_t)m_utc_seconds_at_startup) * DSP_CLOCK << " + " <<
                 m_clock_count_at_startup << " + " <<
                 (uint64_t)frame.ts.timestamp_pps * TIMESTAMP_PPS_PER_DSP_CLOCKS << " = " <<
-                frame_ts_clocks << " DELTA " <<
-                frame_ts_clocks << " - " << pps_clks << " = " << margin_s;
+                frame_ts_clocks << " DELTA " << margin_s;
 
             // Ensure we hand the frame over to HW with a bit of margin
-            if (margin_s < 0.1) {
+            if (margin_s < 0.2) {
                 etiLog.level(warn) << "Skip frame short margin " << margin_s;
                 num_late++;
                 return;
             }
 
+            int r;
             if ((r = iio_device_attr_write_longlong(m_dexter_dsp_tx, "stream0_start_clks", frame_ts_clocks)) != 0) {
                 etiLog.level(warn) << "Skip frame, failed to set dexter_dsp_tx.stream0_start_clks = " << frame_ts_clocks << " : " << get_iio_error(r);
                 num_late++;
@@ -427,6 +421,8 @@ void Dexter::transmit_frame(const struct FrameData& frame)
 
         channel_up();
     }
+
+    etiLog.level(debug) << "DEXTER TX  " << frame.ts.fct << " TS margin " << margin_s;
 
     if (m_require_timestamp_refresh) {
         etiLog.level(debug) << "DEXTER REQUIRE REFRESH";

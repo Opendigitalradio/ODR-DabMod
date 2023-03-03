@@ -272,7 +272,7 @@ double Soapy::get_temperature(void) const
     return std::numeric_limits<double>::quiet_NaN();
 }
 
-void Soapy::transmit_frame(const struct FrameData& frame)
+void Soapy::transmit_frame(struct FrameData&& frame)
 {
     if (not m_device) throw runtime_error("Soapy device not set up");
 

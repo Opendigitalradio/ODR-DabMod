@@ -123,7 +123,7 @@ class SDRDevice {
         virtual double get_tx_freq(void) const = 0;
         virtual void set_txgain(double txgain) = 0;
         virtual double get_txgain(void) const = 0;
-        virtual void transmit_frame(const struct FrameData& frame) = 0;
+        virtual void transmit_frame(struct FrameData&& frame) = 0;
         virtual RunStatistics get_run_statistics(void) const = 0;
         virtual double get_real_secs(void) const = 0;
         virtual void set_rxgain(double rxgain) = 0;

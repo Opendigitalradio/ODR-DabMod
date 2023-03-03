@@ -2,7 +2,7 @@
    Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010 Her Majesty the
    Queen in Right of Canada (Communications Research Center Canada)
 
-   Copyright (C) 2022
+   Copyright (C) 2023
    Matthias P. Braendli, matthias.braendli@mpb.li
 
     http://opendigitalradio.org
@@ -69,7 +69,7 @@ class SDR : public ModOutput, public ModMetadata, public RemoteControllable {
 
     private:
         void process_thread_entry(void);
-        void handle_frame(struct FrameData &frame);
+        void handle_frame(struct FrameData&& frame);
         void sleep_through_frame(void);
 
         SDRDeviceConfig& m_config;

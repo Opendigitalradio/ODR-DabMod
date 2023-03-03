@@ -315,7 +315,7 @@ double UHD::get_bandwidth(void) const
     return m_usrp->get_tx_bandwidth();
 }
 
-void UHD::transmit_frame(const struct FrameData& frame)
+void UHD::transmit_frame(struct FrameData&& frame)
 {
     const double tx_timeout = 20.0;
     const size_t sizeIn = frame.buf.size() / sizeof(complexf);
