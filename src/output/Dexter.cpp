@@ -101,12 +101,8 @@ Dexter::Dexter(SDRDeviceConfig& config) :
         etiLog.level(warn) << "Failed to set dexter_dsp_tx.dc1 = false: " << get_iio_error(r);
     }
 
-    if ((r = iio_device_attr_write_longlong(m_dexter_dsp_tx, "stream0_start_clks", 0)) != 0) {
-        etiLog.level(error) << "Failed to set dexter_dsp_tx.stream0_start_clks = 0: " << get_iio_error(r);
-    }
-
     if ((r = iio_device_attr_write_longlong(m_dexter_dsp_tx, "gain0", m_conf.txgain)) != 0) {
-        etiLog.level(error) << "Failed to set dexter_dsp_tx.stream0_start_clks = 0: " << get_iio_error(r);
+        etiLog.level(error) << "Failed to set dexter_dsp_tx.gain0 = 0: " << get_iio_error(r);
     }
 
     if (m_conf.sampleRate != 2048000) {
@@ -446,6 +442,9 @@ void Dexter::transmit_frame(struct FrameData&& frame)
                 num_buffers_pushed = 0;
                 channel_down();
                 break;
+            }
+            else {
+                fprintf(stderr, "p");
             }
             num_buffers_pushed++;
         }
