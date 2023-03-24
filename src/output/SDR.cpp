@@ -171,13 +171,6 @@ meta_vec_t SDR::process_metadata(const meta_vec_t& metadataIn)
             auto r = m_queue.push_overflow(std::move(frame), max_size);
             etiLog.log(trace, "SDR,push %d %zu", r.overflowed, r.new_size);
 
-            if (r.overflowed) {
-                fprintf(stderr, "o");
-            }
-            else {
-                fprintf(stderr, ".");
-            }
-
             num_queue_overflows += r.overflowed ? 1 : 0;
         }
     }
@@ -355,15 +348,6 @@ void SDR::handle_frame(struct FrameData&& frame)
             m_device->require_timestamp_refresh();
             return;
         }
-
-        etiLog.level(debug) <<
-            "OutputSDR: Timestamp             at FCT=" << frame.ts.fct << " offset: " <<
-            std::fixed <<
-            time_spec.get_real_secs() - device_time <<
-            "  (" << device_time << ")"
-            " frame " << frame.ts.fct <<
-            ", tx_second " << tx_second <<
-            ", pps " << pps_offset;
 
         if (time_spec.get_real_secs() > device_time + TIMESTAMP_ABORT_FUTURE) {
             etiLog.level(error) <<

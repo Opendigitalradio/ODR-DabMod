@@ -456,8 +456,6 @@ void Dexter::transmit_frame(struct FrameData&& frame)
         channel_up();
     }
 
-    etiLog.level(debug) << "DEXTER TX  " << frame.ts.fct << " TS margin " << margin_s;
-
     if (m_require_timestamp_refresh) {
         etiLog.level(debug) << "DEXTER REQUIRE REFRESH";
         channel_down();
@@ -481,9 +479,6 @@ void Dexter::transmit_frame(struct FrameData&& frame)
                 num_buffers_pushed = 0;
                 channel_down();
                 break;
-            }
-            else {
-                fprintf(stderr, "p");
             }
             num_buffers_pushed++;
         }
