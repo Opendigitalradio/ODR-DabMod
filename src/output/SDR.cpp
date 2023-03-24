@@ -165,7 +165,7 @@ meta_vec_t SDR::process_metadata(const meta_vec_t& metadataIn)
 
 
             const auto max_size = m_config.enableSync ?
-                (frame.ts.timestamp_offset * 4.0) / frame_duration_s
+                (frame.ts.timestamp_offset * 400.0) / frame_duration_s
                 : FRAMES_MAX_SIZE;
 
             auto r = m_queue.push_overflow(std::move(frame), max_size);

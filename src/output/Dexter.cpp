@@ -48,9 +48,9 @@ static constexpr uint64_t DSP_CLOCK = 2048000uLL * 80;
 
 static constexpr uint64_t IIO_TIMEOUT_MS = 1000;
 
-static constexpr size_t TRANSMISSION_FRAME_LEN = (2656 + 76 * 2552) * 4;
-static constexpr size_t IIO_BUFFERS = 4;
-static constexpr size_t IIO_BUFFER_LEN = TRANSMISSION_FRAME_LEN / IIO_BUFFERS;
+static constexpr size_t TRANSMISSION_FRAME_LEN_SAMPS = (2656 + 76 * 2552) * /* I+Q */ 2;
+static constexpr size_t IIO_BUFFERS = 2;
+static constexpr size_t IIO_BUFFER_LEN_SAMPS = TRANSMISSION_FRAME_LEN_SAMPS / IIO_BUFFERS;
 
 static string get_iio_error(int err)
 {
@@ -73,7 +73,7 @@ Dexter::Dexter(SDRDeviceConfig& config) :
     etiLog.level(info) << "Dexter:Creating the device";
 
     m_ctx = iio_create_local_context();
-    if (!m_ctx) {
+    if (not m_ctx) {
         throw std::runtime_error("Dexter: Unable to create iio scan context");
     }
 
@@ -83,12 +83,12 @@ Dexter::Dexter(SDRDeviceConfig& config) :
     }
 
     m_dexter_dsp_tx = iio_context_find_device(m_ctx, "dexter_dsp_tx");
-    if (!m_dexter_dsp_tx) {
+    if (not m_dexter_dsp_tx) {
         throw std::runtime_error("Dexter: Unable to find dexter_dsp_tx iio device");
     }
 
     m_ad9957_tx0 = iio_context_find_device(m_ctx, "ad9957_tx0");
-    if (!m_ad9957_tx0) {
+    if (not m_ad9957_tx0) {
         throw std::runtime_error("Dexter: Unable to find ad9957_tx0 iio device");
     }
 
@@ -99,10 +99,6 @@ Dexter::Dexter(SDRDeviceConfig& config) :
 
     if ((r = iio_device_attr_write_longlong(m_dexter_dsp_tx, "dc1", 0)) != 0) {
         etiLog.level(warn) << "Failed to set dexter_dsp_tx.dc1 = false: " << get_iio_error(r);
-    }
-
-    if ((r = iio_device_attr_write_longlong(m_dexter_dsp_tx, "gain0", m_conf.txgain)) != 0) {
-        etiLog.level(error) << "Failed to set dexter_dsp_tx.gain0 = 0: " << get_iio_error(r);
     }
 
     if (m_conf.sampleRate != 2048000) {
@@ -176,6 +172,42 @@ Dexter::Dexter(SDRDeviceConfig& config) :
         etiLog.level(warn) << "Failed to set dexter_dsp_tx.stream0_start_clks = " << 0 << " : " << get_iio_error(r);
     }
 
+    if ((r = iio_device_attr_write_longlong(m_dexter_dsp_tx, "gain0", 0)) != 0) {
+        etiLog.level(error) << "Failed to set dexter_dsp_tx.gain0 = 0" <<
+            " : " << get_iio_error(r);
+    }
+
+    constexpr int CHANNEL_INDEX = 0;
+    m_tx_channel = iio_device_get_channel(m_ad9957_tx0, CHANNEL_INDEX);
+    if (m_tx_channel == nullptr) {
+        throw std::runtime_error("Dexter: Cannot create IIO channel.");
+    }
+
+    iio_channel_enable(m_tx_channel);
+
+    m_buffer = iio_device_create_buffer(m_ad9957_tx0, IIO_BUFFER_LEN_SAMPS, 0);
+    if (not m_buffer) {
+        throw std::runtime_error("Dexter: Cannot create IIO buffer.");
+    }
+
+    // Flush the FPGA FIFO
+    {
+        constexpr size_t buflen_samps = TRANSMISSION_FRAME_LEN_SAMPS / IIO_BUFFERS;
+        constexpr size_t buflen = buflen_samps * sizeof(int16_t);
+
+        memset(iio_buffer_start(m_buffer), 0, buflen);
+        ssize_t pushed = iio_buffer_push(m_buffer);
+        if (pushed < 0) {
+            etiLog.level(error) << "Dexter: init push buffer " << get_iio_error(pushed);
+        }
+        this_thread::sleep_for(chrono::milliseconds(200));
+    }
+
+    if ((r = iio_device_attr_write_longlong(m_dexter_dsp_tx, "gain0", m_conf.txgain)) != 0) {
+        etiLog.level(error) << "Failed to set dexter_dsp_tx.gain0 = " << m_conf.txgain <<
+            " : " << get_iio_error(r);
+    }
+
 #warning "TODO underflow thread"
     /* Disabled because it still provokes failed to push buffer Unknown error -110
     m_running = true;
@@ -185,30 +217,30 @@ Dexter::Dexter(SDRDeviceConfig& config) :
 
 void Dexter::channel_up()
 {
+    int r;
+    if ((r = iio_device_attr_write_longlong(m_dexter_dsp_tx, "gain0", m_conf.txgain)) != 0) {
+        etiLog.level(error) << "Failed to set dexter_dsp_tx.gain0 = " << m_conf.txgain <<
+            " : " << get_iio_error(r);
+    }
+
+    m_channel_is_up = true;
     etiLog.level(debug) << "DEXTER CHANNEL_UP";
-    constexpr int CHANNEL_INDEX = 0;
-    m_tx_channel = iio_device_get_channel(m_ad9957_tx0, CHANNEL_INDEX);
-    if (m_tx_channel == nullptr) {
-        throw std::runtime_error("Dexter: Cannot create IIO channel.");
-    }
-
-    iio_channel_enable(m_tx_channel);
-
-    m_buffer = iio_device_create_buffer(m_ad9957_tx0, IIO_BUFFER_LEN/sizeof(int16_t), 0);
-    if (not m_buffer) {
-        throw std::runtime_error("Dexter: Cannot create IIO buffer.");
-    }
 }
 
 void Dexter::channel_down()
 {
-    iio_channel_disable(m_tx_channel);
-
-    etiLog.level(debug) << "DEXTER CHANNEL_DOWN";
-    if (m_buffer) {
-        iio_buffer_destroy(m_buffer);
-        m_buffer = nullptr;
+    int r;
+    if ((r = iio_device_attr_write_longlong(m_dexter_dsp_tx, "gain0", 0)) != 0) {
+        etiLog.level(error) << "Failed to set dexter_dsp_tx.gain0 = 0: " << get_iio_error(r);
     }
+
+    // This will flush out the FIFO
+    if ((r = iio_device_attr_write_longlong(m_dexter_dsp_tx, "stream0_start_clks", 0)) != 0) {
+        etiLog.level(warn) << "Failed to set dexter_dsp_tx.stream0_start_clks = 0 : " << get_iio_error(r);
+    }
+
+    m_channel_is_up = false;
+    etiLog.level(debug) << "DEXTER CHANNEL_DOWN";
 }
 
 
@@ -222,6 +254,11 @@ Dexter::~Dexter()
     if (m_ctx) {
         if (m_dexter_dsp_tx) {
             iio_device_attr_write_longlong(m_dexter_dsp_tx, "gain0", 0);
+        }
+
+        if (m_buffer) {
+            iio_buffer_destroy(m_buffer);
+            m_buffer = nullptr;
         }
 
         iio_context_destroy(m_ctx);
@@ -259,12 +296,12 @@ void Dexter::set_txgain(double txgain)
 {
     int r = 0;
     if ((r = iio_device_attr_write_longlong(m_dexter_dsp_tx, "gain0", txgain)) != 0) {
-        etiLog.level(warn) << "Failed to set dexter_dsp_tx.stream0_start_clks = 0: " << get_iio_error(r);
+        etiLog.level(warn) << "Failed to set dexter_dsp_tx.gain0 = 0: " << get_iio_error(r);
     }
 
     long long txgain_readback = 0;
     if ((r = iio_device_attr_read_longlong(m_dexter_dsp_tx, "gain0", &txgain_readback)) != 0) {
-        etiLog.level(warn) << "Failed to set dexter_dsp_tx.stream0_start_clks = 0: " << get_iio_error(r);
+        etiLog.level(warn) << "Failed to set dexter_dsp_tx.gain0 = 0: " << get_iio_error(r);
     }
     else {
         m_conf.txgain = txgain_readback;
@@ -276,7 +313,7 @@ double Dexter::get_txgain(void) const
     long long txgain_readback = 0;
     int r = 0;
     if ((r = iio_device_attr_read_longlong(m_dexter_dsp_tx, "gain0", &txgain_readback)) != 0) {
-        etiLog.level(warn) << "Failed to set dexter_dsp_tx.stream0_start_clks = 0: " << get_iio_error(r);
+        etiLog.level(warn) << "Failed to set dexter_dsp_tx.gain0 = 0: " << get_iio_error(r);
     }
     return txgain_readback;
 }
@@ -367,9 +404,10 @@ double Dexter::get_temperature(void) const
 
 void Dexter::transmit_frame(struct FrameData&& frame)
 {
-    if (frame.buf.size() != TRANSMISSION_FRAME_LEN) {
+    constexpr size_t frame_len_bytes = TRANSMISSION_FRAME_LEN_SAMPS * sizeof(int16_t);
+    if (frame.buf.size() != frame_len_bytes) {
         etiLog.level(debug) << "Dexter::transmit_frame Expected " <<
-            TRANSMISSION_FRAME_LEN << " got " << frame.buf.size();
+            frame_len_bytes << " got " << frame.buf.size();
         throw std::runtime_error("Dexter: invalid buffer size");
     }
 
@@ -377,7 +415,7 @@ void Dexter::transmit_frame(struct FrameData&& frame)
 
     const double margin_s = frame.ts.offset_to_system_time();
 
-    if (m_buffer == nullptr) {
+    if (not m_channel_is_up) {
         if (require_timestamped_tx) {
             /*
                uint64_t timeS = frame.ts.timestamp_sec;
@@ -430,9 +468,10 @@ void Dexter::transmit_frame(struct FrameData&& frame)
     //const size_t num_samples = frame.buf.size() / (2*sizeof(int16_t));
     //const int16_t *buf = reinterpret_cast<const int16_t*>(frame.buf.data());
 
-    if (m_buffer) {
+    if (m_channel_is_up) {
         for (size_t i = 0; i < IIO_BUFFERS; i++) {
-            constexpr size_t buflen = TRANSMISSION_FRAME_LEN / IIO_BUFFERS;
+            constexpr size_t buflen_samps = TRANSMISSION_FRAME_LEN_SAMPS / IIO_BUFFERS;
+            constexpr size_t buflen = buflen_samps * sizeof(int16_t);
 
             memcpy(iio_buffer_start(m_buffer), frame.buf.data() + (i * buflen), buflen);
             ssize_t pushed = iio_buffer_push(m_buffer);

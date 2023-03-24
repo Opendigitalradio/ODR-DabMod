@@ -83,9 +83,10 @@ class Dexter : public Output::SDRDevice
         virtual double get_temperature() const override;
 
     private:
-
         void channel_up();
         void channel_down();
+
+        bool m_channel_is_up = false;
 
         SDRDeviceConfig& m_conf;
 
