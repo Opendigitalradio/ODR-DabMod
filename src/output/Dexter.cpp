@@ -74,7 +74,7 @@ Dexter::Dexter(SDRDeviceConfig& config) :
 
     m_ctx = iio_create_local_context();
     if (not m_ctx) {
-        throw std::runtime_error("Dexter: Unable to create iio scan context");
+        throw std::runtime_error("Dexter: Unable to create iio context");
     }
 
     int r;
@@ -94,11 +94,11 @@ Dexter::Dexter(SDRDeviceConfig& config) :
 
     // TODO make DC offset configurable and add to RC
     if ((r = iio_device_attr_write_longlong(m_dexter_dsp_tx, "dc0", 0)) != 0) {
-        etiLog.level(warn) << "Failed to set dexter_dsp_tx.dc0 = false: " << get_iio_error(r);
+        throw std::runtime_error("Failed to set dexter_dsp_tx.dc0 = false: " + get_iio_error(r));
     }
 
     if ((r = iio_device_attr_write_longlong(m_dexter_dsp_tx, "dc1", 0)) != 0) {
-        etiLog.level(warn) << "Failed to set dexter_dsp_tx.dc1 = false: " << get_iio_error(r);
+        throw std::runtime_error("Failed to set dexter_dsp_tx.dc1 = false: " + get_iio_error(r));
     }
 
     if (m_conf.sampleRate != 2048000) {
@@ -167,14 +167,17 @@ Dexter::Dexter(SDRDeviceConfig& config) :
     m_utc_seconds_at_startup = time_now.tv_sec;
     m_clock_count_at_startup = pps_clks2;
 
-    // Reset start_clks
-    if ((r = iio_device_attr_write_longlong(m_dexter_dsp_tx, "stream0_start_clks", 0)) != 0) {
-        etiLog.level(warn) << "Failed to set dexter_dsp_tx.stream0_start_clks = " << 0 << " : " << get_iio_error(r);
+    // The FIFO should not contain data, but setting gain=0 before setting start_clks to zero is an additional security
+    if ((r = iio_device_attr_write_longlong(m_dexter_dsp_tx, "gain0", 0)) != 0) {
+        throw std::runtime_error("Failed to set dexter_dsp_tx.gain0 = 0 : " + get_iio_error(r));
     }
 
-    if ((r = iio_device_attr_write_longlong(m_dexter_dsp_tx, "gain0", 0)) != 0) {
-        etiLog.level(error) << "Failed to set dexter_dsp_tx.gain0 = 0" <<
-            " : " << get_iio_error(r);
+    if ((r = iio_device_attr_write_longlong(m_dexter_dsp_tx, "stream0_flush_fifo_trigger", 1)) != 0) {
+        throw std::runtime_error("Failed to set dexter_dsp_tx.stream0_flush_fifo_trigger = 1 : " + get_iio_error(r));
+    }
+
+    if ((r = iio_device_attr_write_longlong(m_dexter_dsp_tx, "stream0_start_clks", 0)) != 0) {
+        throw std::runtime_error("Failed to set dexter_dsp_tx.stream0_start_clks = 0 : " + get_iio_error(r));
     }
 
     constexpr int CHANNEL_INDEX = 0;
@@ -208,11 +211,8 @@ Dexter::Dexter(SDRDeviceConfig& config) :
             " : " << get_iio_error(r);
     }
 
-#warning "TODO underflow thread"
-    /* Disabled because it still provokes failed to push buffer Unknown error -110
     m_running = true;
     m_underflow_read_thread = std::thread(&Dexter::underflow_read_process, this);
-    */
 }
 
 void Dexter::channel_up()
@@ -261,8 +261,17 @@ Dexter::~Dexter()
             m_buffer = nullptr;
         }
 
+        if (m_tx_channel) {
+            iio_channel_disable(m_tx_channel);
+        }
+
         iio_context_destroy(m_ctx);
         m_ctx = nullptr;
+    }
+
+    if (m_underflow_ctx) {
+        iio_context_destroy(m_underflow_ctx);
+        m_underflow_ctx = nullptr;
     }
 }
 
@@ -296,12 +305,12 @@ void Dexter::set_txgain(double txgain)
 {
     int r = 0;
     if ((r = iio_device_attr_write_longlong(m_dexter_dsp_tx, "gain0", txgain)) != 0) {
-        etiLog.level(warn) << "Failed to set dexter_dsp_tx.gain0 = 0: " << get_iio_error(r);
+        etiLog.level(warn) << "Failed to set dexter_dsp_tx.gain0 = " << txgain << ": " << get_iio_error(r);
     }
 
     long long txgain_readback = 0;
     if ((r = iio_device_attr_read_longlong(m_dexter_dsp_tx, "gain0", &txgain_readback)) != 0) {
-        etiLog.level(warn) << "Failed to set dexter_dsp_tx.gain0 = 0: " << get_iio_error(r);
+        etiLog.level(warn) << "Failed to read dexter_dsp_tx.gain0: " << get_iio_error(r);
     }
     else {
         m_conf.txgain = txgain_readback;
@@ -313,14 +322,14 @@ double Dexter::get_txgain(void) const
     long long txgain_readback = 0;
     int r = 0;
     if ((r = iio_device_attr_read_longlong(m_dexter_dsp_tx, "gain0", &txgain_readback)) != 0) {
-        etiLog.level(warn) << "Failed to set dexter_dsp_tx.gain0 = 0: " << get_iio_error(r);
+        etiLog.level(warn) << "Failed to read dexter_dsp_tx.gain0: " << get_iio_error(r);
     }
     return txgain_readback;
 }
 
 void Dexter::set_bandwidth(double bandwidth)
 {
-    // TODO
+    return;
 }
 
 double Dexter::get_bandwidth(void) const
@@ -328,38 +337,51 @@ double Dexter::get_bandwidth(void) const
     return 0;
 }
 
-SDRDevice::RunStatistics Dexter::get_run_statistics(void) const
+SDRDevice::run_statistics_t Dexter::get_run_statistics(void) const
 {
-    RunStatistics rs;
+    run_statistics_t rs;
     {
-        std::unique_lock<std::mutex> lock(m_underflows_mutex);
-        rs.num_underruns = underflows;
+        std::unique_lock<std::mutex> lock(m_attr_thread_mutex);
+        rs["underruns"] = underflows;
     }
-    rs.num_overruns = 0;
-    rs.num_late_packets = num_late;
-    rs.num_frames_modulated = num_frames_modulated;
+    rs["overruns"] = 0;
+    rs["late_packets"] = num_late;
+    rs["frames"] = num_frames_modulated;
+
+    long long clks = 0;
+    int r = 0;
+    if ((r = iio_device_attr_read_longlong(m_dexter_dsp_tx, "clks", &clks)) == 0) {
+        rs["clks"] = (size_t)clks;
+    }
+    else {
+        rs["clks"] = (ssize_t)-1;
+        etiLog.level(error) << "Failed to get dexter_dsp_tx.clks: " << get_iio_error(r);
+    }
+
+    long long fifo_not_empty_clks = 0;
+
+    if ((r = iio_device_attr_read_longlong(
+                    m_dexter_dsp_tx, "stream0_fifo_not_empty_clks", &fifo_not_empty_clks)) == 0) {
+        rs["fifo_not_empty_clks"] = (size_t)fifo_not_empty_clks;
+    }
+    else {
+        rs["fifo_not_empty_clks"] = (ssize_t)-1;
+        etiLog.level(error) << "Failed to get dexter_dsp_tx.fifo_not_empty_clks: " << get_iio_error(r);
+    }
     return rs;
 }
 
 
 double Dexter::get_real_secs(void) const
 {
-    struct timespec time_now;
-    fill_time(&time_now);
-    return (double)time_now.tv_sec + time_now.tv_nsec / 1000000000.0;
-
-    /* We don't use actual device time, because we only have clock counter on pps edge available, not
-     * current clock counter. */
-#if 0
-    long long pps_clks = 0;
+    long long clks = 0;
     int r = 0;
-    if ((r = iio_device_attr_read_longlong(m_dexter_dsp_tx, "pps_clks", &pps_clks)) != 0) {
-        etiLog.level(error) << "Failed to get dexter_dsp_tx.pps_clks: " << get_iio_error(r);
+    if ((r = iio_device_attr_read_longlong(m_dexter_dsp_tx, "clks", &clks)) != 0) {
+        etiLog.level(error) << "Failed to get dexter_dsp_tx.clks: " << get_iio_error(r);
         throw std::runtime_error("Dexter: Cannot read IIO attribute");
     }
 
-    return (double)m_utc_seconds_at_startup + (double)(pps_clks - m_clock_count_at_startup) / (double)DSP_CLOCK;
-#endif
+    return (double)m_utc_seconds_at_startup + (double)(clks - m_clock_count_at_startup) / (double)DSP_CLOCK;
 }
 
 void Dexter::set_rxgain(double rxgain)
@@ -395,11 +417,10 @@ const char* Dexter::device_name(void) const
     return "Dexter";
 }
 
-double Dexter::get_temperature(void) const
+std::optional<double> Dexter::get_temperature(void) const
 {
-    // TODO
-    // XADC contains temperature, but value is weird
-    return std::numeric_limits<double>::quiet_NaN();
+    // TODO XADC contains temperature, but value is weird
+    return std::nullopt;
 }
 
 void Dexter::transmit_frame(struct FrameData&& frame)
@@ -413,29 +434,32 @@ void Dexter::transmit_frame(struct FrameData&& frame)
 
     const bool require_timestamped_tx = (m_conf.enableSync and frame.ts.timestamp_valid);
 
-    const double margin_s = frame.ts.offset_to_system_time();
-
     if (not m_channel_is_up) {
         if (require_timestamped_tx) {
-            /*
-               uint64_t timeS = frame.ts.timestamp_sec;
-               etiLog.level(debug) << "Dexter: TS S " << timeS << " - " << m_utc_seconds_at_startup << " = " <<
-               timeS - m_utc_seconds_at_startup;
-               */
-
             constexpr uint64_t TIMESTAMP_PPS_PER_DSP_CLOCKS = DSP_CLOCK / 16384000;
             // TIMESTAMP_PPS_PER_DSP_CLOCKS=10 because timestamp_pps is represented in 16.384 MHz clocks
-            uint64_t frame_ts_clocks =
+            uint64_t frame_start_clocks =
                 // at second level
                 ((int64_t)frame.ts.timestamp_sec - (int64_t)m_utc_seconds_at_startup) * DSP_CLOCK + m_clock_count_at_startup +
                 // at subsecond level
                 (uint64_t)frame.ts.timestamp_pps * TIMESTAMP_PPS_PER_DSP_CLOCKS;
 
+            const double margin_s = frame.ts.offset_to_system_time();
+
+            long long clks = 0;
+            int r = 0;
+            if ((r = iio_device_attr_read_longlong(m_dexter_dsp_tx, "clks", &clks)) != 0) {
+                etiLog.level(error) << "Failed to get dexter_dsp_tx.clks: " << get_iio_error(r);
+                throw std::runtime_error("Dexter: Cannot read IIO attribute");
+            }
+
+            const double margin_device_s = (double)(frame_start_clocks - clks) / DSP_CLOCK;
+
             etiLog.level(debug) << "DEXTER FCT " << frame.ts.fct << " TS CLK " <<
                 ((int64_t)frame.ts.timestamp_sec - (int64_t)m_utc_seconds_at_startup) * DSP_CLOCK << " + " <<
                 m_clock_count_at_startup << " + " <<
                 (uint64_t)frame.ts.timestamp_pps * TIMESTAMP_PPS_PER_DSP_CLOCKS << " = " <<
-                frame_ts_clocks << " DELTA " << margin_s;
+                frame_start_clocks << " DELTA " << margin_s << " " << margin_device_s;
 
             // Ensure we hand the frame over to HW with a bit of margin
             if (margin_s < 0.2) {
@@ -444,9 +468,8 @@ void Dexter::transmit_frame(struct FrameData&& frame)
                 return;
             }
 
-            int r;
-            if ((r = iio_device_attr_write_longlong(m_dexter_dsp_tx, "stream0_start_clks", frame_ts_clocks)) != 0) {
-                etiLog.level(warn) << "Skip frame, failed to set dexter_dsp_tx.stream0_start_clks = " << frame_ts_clocks << " : " << get_iio_error(r);
+            if ((r = iio_device_attr_write_longlong(m_dexter_dsp_tx, "stream0_start_clks", frame_start_clocks)) != 0) {
+                etiLog.level(warn) << "Skip frame, failed to set dexter_dsp_tx.stream0_start_clks = " << frame_start_clocks << " : " << get_iio_error(r);
                 num_late++;
                 return;
             }
@@ -486,7 +509,7 @@ void Dexter::transmit_frame(struct FrameData&& frame)
     }
 
     {
-        std::unique_lock<std::mutex> lock(m_underflows_mutex);
+        std::unique_lock<std::mutex> lock(m_attr_thread_mutex);
         size_t u = underflows;
         lock.unlock();
 
@@ -500,19 +523,29 @@ void Dexter::transmit_frame(struct FrameData&& frame)
 
 void Dexter::underflow_read_process()
 {
+    m_underflow_ctx = iio_create_local_context();
+    if (not m_underflow_ctx) {
+        throw std::runtime_error("Dexter: Unable to create iio context for underflow");
+    }
+
+    auto dexter_dsp_tx = iio_context_find_device(m_ctx, "dexter_dsp_tx");
+    if (not dexter_dsp_tx) {
+        throw std::runtime_error("Dexter: Unable to find dexter_dsp_tx iio device");
+    }
+
     set_thread_name("dexter_underflow");
 
     while (m_running) {
         this_thread::sleep_for(chrono::seconds(1));
-        long long attr_value = 0;
-        int r = 0;
+        long long underflows_attr = 0;
 
-        if ((r = iio_device_attr_read_longlong(m_dexter_dsp_tx, "buffer_underflows0", &attr_value)) == 0) {
-            size_t underflows_new = attr_value;
+        int r = iio_device_attr_read_longlong(m_dexter_dsp_tx, "buffer_underflows0", &underflows_attr);
 
-            std::unique_lock<std::mutex> lock(m_underflows_mutex);
-            etiLog.level(debug) << "UNDERFLOWS INC BY " << attr_value - (ssize_t)underflows;
-            if (underflows_new != underflows and attr_value != 0) {
+        if (r == 0) {
+            size_t underflows_new = underflows_attr;
+
+            std::unique_lock<std::mutex> lock(m_attr_thread_mutex);
+            if (underflows_new != underflows and underflows_attr != 0) {
                 underflows = underflows_new;
             }
         }

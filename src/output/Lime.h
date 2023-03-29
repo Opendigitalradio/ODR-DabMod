@@ -67,7 +67,7 @@ class Lime : public Output::SDRDevice
     virtual void set_bandwidth(double bandwidth) override;
     virtual double get_bandwidth(void) const override;
     virtual void transmit_frame(struct FrameData&& frame) override;
-    virtual RunStatistics get_run_statistics(void) const override;
+    virtual run_statistics_t get_run_statistics(void) const override;
     virtual double get_real_secs(void) const override;
 
     virtual void set_rxgain(double rxgain) override;
@@ -82,8 +82,7 @@ class Lime : public Output::SDRDevice
     virtual bool is_clk_source_ok(void) const override;
     virtual const char *device_name(void) const override;
 
-    virtual double get_temperature(void) const override;
-    virtual float get_fifo_fill_percent(void) const;
+    virtual std::optional<double> get_temperature(void) const override;
 
   private:
     SDRDeviceConfig &m_conf;
@@ -95,11 +94,10 @@ class Lime : public Output::SDRDevice
     std::vector<complexf> interpolatebuf;
     std::vector<short> m_i16samples; 
     std::atomic<float> m_last_fifo_fill_percent = ATOMIC_VAR_INIT(0);
-    
 
     size_t underflows = 0;
     size_t overflows = 0;
-    size_t late_packets = 0;
+    size_t dropped_packets = 0;
     size_t num_frames_modulated = 0;
 };
 

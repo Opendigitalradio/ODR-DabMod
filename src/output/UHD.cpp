@@ -377,18 +377,22 @@ void UHD::transmit_frame(struct FrameData&& frame)
 }
 
 
-SDRDevice::RunStatistics UHD::get_run_statistics(void) const
+SDRDevice::run_statistics_t UHD::get_run_statistics(void) const
 {
-    RunStatistics rs;
-    rs.num_underruns = num_underflows;
-    rs.num_overruns = num_overflows;
-    rs.num_late_packets = num_late_packets;
-    rs.num_frames_modulated = num_frames_modulated;
+    run_statistics_t rs;
+    rs["underruns"] = num_underflows;
+    rs["overruns"] = num_overflows;
+    rs["late_packets"] = num_late_packets;
+    rs["frames"] = num_frames_modulated;
 
     if (m_device_time) {
         const auto gpsdo_stat = m_device_time->get_gnss_stats();
-        rs.gpsdo_holdover = gpsdo_stat.holdover;
-        rs.gpsdo_num_sv = gpsdo_stat.num_sv;
+        rs["gpsdo_holdover"] = gpsdo_stat.holdover;
+        rs["gpsdo_num_sv"] = gpsdo_stat.num_sv;
+    }
+    else {
+        rs["gpsdo_holdover"] = true;
+        rs["gpsdo_num_sv"] = 0;
     }
     return rs;
 }
@@ -472,13 +476,13 @@ const char* UHD::device_name(void) const
     return "UHD";
 }
 
-double UHD::get_temperature(void) const
+std::optional<double> UHD::get_temperature(void) const
 {
     try {
         return std::round(m_usrp->get_tx_sensor("temp", 0).to_real());
     }
     catch (const uhd::lookup_error &e) {
-        return std::numeric_limits<double>::quiet_NaN();
+        return std::nullopt;
     }
 }
 

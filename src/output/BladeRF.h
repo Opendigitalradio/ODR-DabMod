@@ -75,7 +75,7 @@ class BladeRF : public Output::SDRDevice
        virtual void set_bandwidth(double bandwidth) override;
        virtual double get_bandwidth(void) const override;
        virtual void transmit_frame(struct FrameData&& frame) override;
-       virtual RunStatistics get_run_statistics(void) const override;
+       virtual run_statistics_t get_run_statistics(void) const override;
        virtual double get_real_secs(void) const override;
 
        virtual void set_rxgain(double rxgain) override;
@@ -90,7 +90,7 @@ class BladeRF : public Output::SDRDevice
        virtual bool is_clk_source_ok(void) const override;
        virtual const char* device_name(void) const override;
 
-       virtual double get_temperature(void) const override;
+       virtual std::optional<double> get_temperature(void) const override;
 
 
    private:
@@ -99,12 +99,7 @@ class BladeRF : public Output::SDRDevice
        bladerf_channel m_channel = BLADERF_CHANNEL_TX(0); // channel TX0
        //struct bladerf_stream* m_stream; /* used for asynchronous api */
 
-       size_t underflows = 0;
-       size_t overflows = 0;
-       size_t late_packets = 0;
        size_t num_frames_modulated = 0;
-       //size_t num_underflows_previous = 0;
-       //size_t num_late_packets_previous = 0;
 };
 
 } // namespace Output

@@ -2,7 +2,7 @@
    Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010 Her Majesty the
    Queen in Right of Canada (Communications Research Center Canada)
 
-   Copyright (C) 2022
+   Copyright (C) 2023
    Matthias P. Braendli, matthias.braendli@mpb.li
 
     http://opendigitalradio.org
@@ -38,6 +38,9 @@ DESCRIPTION:
 #include <string>
 #include <vector>
 #include <complex>
+#include <variant>
+#include <optional>
+#include <unordered_map>
 
 #include "TimestampDecoder.h"
 
@@ -109,22 +112,15 @@ struct FrameData {
 // All SDR Devices must implement the SDRDevice interface
 class SDRDevice {
     public:
-        struct RunStatistics {
-            size_t num_underruns = 0;
-            size_t num_late_packets = 0;
-            size_t num_overruns = 0;
-            size_t num_frames_modulated = 0;
-
-            int gpsdo_num_sv = 0;
-            bool gpsdo_holdover = false;
-        };
+        using run_statistic_t = std::variant<std::string, size_t, ssize_t, bool>;
+        using run_statistics_t = std::unordered_map<std::string, run_statistic_t>;
 
         virtual void tune(double lo_offset, double frequency) = 0;
         virtual double get_tx_freq(void) const = 0;
         virtual void set_txgain(double txgain) = 0;
         virtual double get_txgain(void) const = 0;
         virtual void transmit_frame(struct FrameData&& frame) = 0;
-        virtual RunStatistics get_run_statistics(void) const = 0;
+        virtual run_statistics_t get_run_statistics(void) const = 0;
         virtual double get_real_secs(void) const = 0;
         virtual void set_rxgain(double rxgain) = 0;
         virtual double get_rxgain(void) const = 0;
@@ -136,8 +132,8 @@ class SDRDevice {
                 frame_timestamp& ts,
                 double timeout_secs) = 0;
 
-        // Returns device temperature in degrees C or NaN if not available
-        virtual double get_temperature(void) const = 0;
+        // Returns device temperature in degrees C
+        virtual std::optional<double> get_temperature(void) const = 0;
 
         // Return true if GPS and reference clock inputs are ok
         virtual bool is_clk_source_ok(void) const = 0;

@@ -323,13 +323,14 @@ double Lime::get_bandwidth(void) const
     return bw;
 }
 
-SDRDevice::RunStatistics Lime::get_run_statistics(void) const
+SDRDevice::run_statistics_t Lime::get_run_statistics(void) const
 {
-    RunStatistics rs;
-    rs.num_underruns = underflows;
-    rs.num_overruns = overflows;
-    rs.num_late_packets = late_packets;
-    rs.num_frames_modulated = num_frames_modulated;
+    run_statistics_t rs;
+    rs["underruns"] = underflows;
+    rs["overruns"] = overflows;
+    rs["dropped_packets"] = dropped_packets;
+    rs["frames"] = num_frames_modulated;
+    rs["fifo_fill"] = m_last_fifo_fill_percent * 100;
     return rs;
 }
 
@@ -371,23 +372,21 @@ const char *Lime::device_name(void) const
     return "Lime";
 }
 
-double Lime::get_temperature(void) const
+std::optional<double> Lime::get_temperature(void) const
 {
     if (not m_device)
         throw runtime_error("Lime device not set up");
 
-    float_type temp = numeric_limits<float_type>::quiet_NaN();
-    if (LMS_GetChipTemperature(m_device, 0, &temp) < 0)
-    {
-        etiLog.level(error) << "Error getting LimeSDR temperature: %s " << LMS_GetLastErrorMessage();
+    float_type temp = 0;
+    if (LMS_GetChipTemperature(m_device, 0, &temp) >= 0) {
+        return temp;
     }
-    return temp;
+    else {
+        etiLog.level(error) << "Error getting LimeSDR temperature: %s " << LMS_GetLastErrorMessage();
+        return std::nullopt;
+    }
 }
 
-float Lime::get_fifo_fill_percent(void) const
-{
-    return m_last_fifo_fill_percent * 100;
-}
 
 void Lime::transmit_frame(struct FrameData&& frame)
 {
@@ -411,7 +410,7 @@ void Lime::transmit_frame(struct FrameData&& frame)
     LMS_GetStreamStatus(&m_tx_stream, &LimeStatus);
     overflows += LimeStatus.overrun;
     underflows += LimeStatus.underrun;
-    late_packets += LimeStatus.droppedPackets;
+    dropped_packets += LimeStatus.droppedPackets;
 
 #ifdef LIMEDEBUG
     etiLog.level(info) << LimeStatus.fifoFilledCount << "/" << LimeStatus.fifoSize << ":" << numSamples << "Rate" << LimeStatus.linkRate / (2 * 2.0);

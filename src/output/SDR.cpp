@@ -87,6 +87,11 @@ SDR::SDR(SDRDeviceConfig& config, std::shared_ptr<SDRDevice> device) :
         RC_ADD_PARAMETER(fifo_fill, "A value representing the Lime FIFO fullness [percent]");
     }
 #endif // HAVE_LIMESDR
+
+#ifdef HAVE_DEXTER
+    RC_ADD_PARAMETER(clks, "DEXTER internal clk counter value");
+    RC_ADD_PARAMETER(fifo_not_empty_clks, "DEXTER internal clk counter value when FIFO was last empty");
+#endif // HAVE_DEXTER
 }
 
 SDR::~SDR()
@@ -402,6 +407,7 @@ void SDR::set_parameter(const string& parameter, const string& value)
         ss >> m_config.muting;
     }
     else if (parameter == "underruns" or
+             parameter == "overruns" or
              parameter == "latepackets" or
              parameter == "frames" or
              parameter == "gpsdo_num_sv" or
@@ -440,55 +446,40 @@ const string SDR::get_parameter(const string& parameter) const
         if (not m_device) {
             throw ParameterError("OutputSDR has no device");
         }
-        const double temp = m_device->get_temperature();
-        if (std::isnan(temp)) {
+        const std::optional<double> temp = m_device->get_temperature();
+        if (temp) {
+            ss << *temp;
+        }
+        else {
             throw ParameterError("Temperature not available");
         }
-        else {
-            ss << temp;
-        }
     }
-    else if (parameter == "underruns" or
-            parameter == "latepackets" or
-            parameter == "frames" ) {
-        if (not m_device) {
-            throw ParameterError("OutputSDR has no device");
-        }
-        const auto stat = m_device->get_run_statistics();
-
-        if (parameter == "underruns") {
-            ss << stat.num_underruns;
-        }
-        else if (parameter == "latepackets") {
-            ss << stat.num_late_packets;
-        }
-        else if (parameter == "frames") {
-            ss << stat.num_frames_modulated;
-        }
-    }
-    else if (parameter == "gpsdo_num_sv") {
-        const auto stat = m_device->get_run_statistics();
-        ss << stat.gpsdo_num_sv;
-    }
-    else if (parameter == "gpsdo_holdover") {
-        const auto stat = m_device->get_run_statistics();
-        ss << (stat.gpsdo_holdover ? 1 : 0);
-    }
-#ifdef HAVE_LIMESDR
-    else if (parameter == "fifo_fill") {
-        const auto dev = std::dynamic_pointer_cast<Lime>(m_device);
-
-        if (dev) {
-            ss << dev->get_fifo_fill_percent();
-        }
-        else {
-            ss << "Parameter '" << parameter <<
-                "' is not exported by controllable " << get_rc_name();
-            throw ParameterError(ss.str());
-        }
-    }
-#endif // HAVE_LIMESDR
     else {
+        if (m_device) {
+            const auto stat = m_device->get_run_statistics();
+            try {
+                const auto& value = stat.at(parameter);
+                if (std::holds_alternative<string>(value)) {
+                    ss << std::get<string>(value);
+                }
+                else if (std::holds_alternative<ssize_t>(value)) {
+                    ss << std::get<ssize_t>(value);
+                }
+                else if (std::holds_alternative<size_t>(value)) {
+                    ss << std::get<size_t>(value);
+                }
+                else if (std::holds_alternative<bool>(value)) {
+                    ss << (std::get<bool>(value) ? 1 : 0);
+                }
+                else {
+                    throw std::logic_error("variant alternative not handled");
+                }
+                return ss.str();
+            }
+            catch (const std::out_of_range&) {
+            }
+        }
+
         ss << "Parameter '" << parameter <<
             "' is not exported by controllable " << get_rc_name();
         throw ParameterError(ss.str());

@@ -65,7 +65,7 @@ class Dexter : public Output::SDRDevice
         virtual void set_bandwidth(double bandwidth) override;
         virtual double get_bandwidth() const override;
         virtual void transmit_frame(struct FrameData&& frame) override;
-        virtual RunStatistics get_run_statistics() const override;
+        virtual run_statistics_t get_run_statistics() const override;
         virtual double get_real_secs() const override;
 
         virtual void set_rxgain(double rxgain) override;
@@ -80,7 +80,7 @@ class Dexter : public Output::SDRDevice
         virtual bool is_clk_source_ok() const override;
         virtual const char* device_name() const override;
 
-        virtual double get_temperature() const override;
+        virtual std::optional<double> get_temperature() const override;
 
     private:
         void channel_up();
@@ -98,10 +98,11 @@ class Dexter : public Output::SDRDevice
         struct iio_buffer *m_buffer = nullptr;
 
         /* Underflows are counted in a separate thread */
+        struct iio_context* m_underflow_ctx = nullptr;
         std::atomic<bool> m_running = ATOMIC_VAR_INIT(false);
         std::thread m_underflow_read_thread;
         void underflow_read_process();
-        mutable std::mutex m_underflows_mutex;
+        mutable std::mutex m_attr_thread_mutex;
         size_t underflows = 0;
 
         size_t prev_underflows = 0;
