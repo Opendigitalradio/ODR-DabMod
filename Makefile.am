@@ -1,7 +1,7 @@
 # Copyright (C) 2007, 2008, 2009, 2010 Her Majesty the Queen in Right
 # of Canada (Communications Research Center Canada)
 #
-#  Copyright (C) 2018
+#  Copyright (C) 2023
 #  Matthias P. Braendli, matthias.braendli@mpb.li
 #
 #   http://opendigitalradio.org
@@ -37,7 +37,7 @@ bin_PROGRAMS = odr-dabmod
 
 odr_dabmod_CFLAGS   = -Wall -Isrc -Ilib \
 					  $(GITVERSION_FLAGS)
-odr_dabmod_CXXFLAGS = -Wall -Isrc -Ilib -std=c++11 \
+odr_dabmod_CXXFLAGS = -Wall -Isrc -Ilib \
 					  $(GITVERSION_FLAGS) $(BOOST_CPPFLAGS)
 odr_dabmod_LDADD    =  $(BOOST_LDFLAGS) $(BOOST_THREAD_LIB) $(UHD_LIBS) $(LIMESDR_LIBS) $(ADDITIONAL_UHD_LIBS)
 odr_dabmod_SOURCES  = src/DabMod.cpp \

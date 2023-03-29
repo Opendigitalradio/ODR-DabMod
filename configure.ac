@@ -1,7 +1,7 @@
 # Copyright (C) 2007, 2008, 2009, 2010, 2011, 2012 Her Majesty the
 # Queen in Right of Canada (Communications Research Center Canada)
 
-# Copyright (C) 2022 Matthias P. Braendli, http://opendigitalradio.org
+# Copyright (C) 2023 Matthias P. Braendli, http://opendigitalradio.org
 
 # This file is part of ODR-DabMod.
 #
@@ -34,7 +34,7 @@ AC_PROG_CC
 AM_PROG_CC_C_O
 AC_PROG_INSTALL
 
-AX_CXX_COMPILE_STDCXX(11,noext,mandatory)
+AX_CXX_COMPILE_STDCXX(17,noext,mandatory)
 
 EXTRA=""
 AC_ARG_ENABLE([prof],
