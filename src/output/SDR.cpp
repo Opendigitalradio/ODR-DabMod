@@ -46,8 +46,11 @@ using namespace std;
 
 namespace Output {
 
-// Maximum number of frames that can wait in frames, when not using synchronised transmission
-static constexpr size_t FRAMES_MAX_SIZE = 8;
+// Maximum number of frames that can wait in frames.
+// Keep it low when not using synchronised transmission, in order to reduce delay.
+// When using synchronised transmission, use a 6s buffer to give us enough margin.
+static constexpr size_t FRAMES_MAX_SIZE_UNSYNC = 8;
+static constexpr size_t FRAMES_MAX_SIZE_SYNC = 250;
 
 // If the timestamp is further in the future than
 // 100 seconds, abort
@@ -81,6 +84,7 @@ SDR::SDR(SDRDeviceConfig& config, std::shared_ptr<SDRDevice> device) :
     RC_ADD_PARAMETER(frames, "Counter of number of frames modulated");
     RC_ADD_PARAMETER(gpsdo_num_sv, "Number of Satellite Vehicles tracked by GPSDO");
     RC_ADD_PARAMETER(gpsdo_holdover, "1 if the GPSDO is in holdover, 0 if it is using gnss");
+    RC_ADD_PARAMETER(queued_frames_ms, "Number of frames queued, represented in milliseconds");
 
 #ifdef HAVE_LIMESDR
     if (std::dynamic_pointer_cast<Lime>(device)) {
@@ -128,10 +132,6 @@ int SDR::process(Buffer *dataIn)
 
 meta_vec_t SDR::process_metadata(const meta_vec_t& metadataIn)
 {
-    double frame_duration_s =
-        chrono::duration_cast<chrono::milliseconds>(
-                transmission_frame_duration(m_config.dabMode)).count() / 1000.0;
-
     if (m_device and m_running) {
         FrameData frame;
         frame.buf = std::move(m_frame);
@@ -169,10 +169,7 @@ meta_vec_t SDR::process_metadata(const meta_vec_t& metadataIn)
             }
 
 
-            const auto max_size = m_config.enableSync ?
-                (frame.ts.timestamp_offset * 400.0) / frame_duration_s
-                : FRAMES_MAX_SIZE;
-
+            const auto max_size = m_config.enableSync ? FRAMES_MAX_SIZE_SYNC : FRAMES_MAX_SIZE_UNSYNC;
             auto r = m_queue.push_overflow(std::move(frame), max_size);
             etiLog.log(trace, "SDR,push %d %zu", r.overflowed, r.new_size);
 
@@ -406,19 +403,10 @@ void SDR::set_parameter(const string& parameter, const string& value)
     else if (parameter == "muting") {
         ss >> m_config.muting;
     }
-    else if (parameter == "underruns" or
-             parameter == "overruns" or
-             parameter == "latepackets" or
-             parameter == "frames" or
-             parameter == "gpsdo_num_sv" or
-             parameter == "gpsdo_holdover" or
-             parameter == "fifo_fill") {
-        throw ParameterError("Parameter " + parameter + " is read-only.");
-    }
     else {
         stringstream ss_err;
         ss_err << "Parameter '" << parameter
-            << "' is not exported by controllable " << get_rc_name();
+            << "' is read-only or not exported by controllable " << get_rc_name();
         throw ParameterError(ss_err.str());
     }
 }
@@ -453,6 +441,11 @@ const string SDR::get_parameter(const string& parameter) const
         else {
             throw ParameterError("Temperature not available");
         }
+    }
+    else if (parameter == "queued_frames_ms") {
+        ss << m_queue.size() *
+            chrono::duration_cast<chrono::milliseconds>(transmission_frame_duration(m_config.dabMode))
+            .count();
     }
     else {
         if (m_device) {
