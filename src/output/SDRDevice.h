@@ -112,7 +112,7 @@ struct FrameData {
 // All SDR Devices must implement the SDRDevice interface
 class SDRDevice {
     public:
-        using run_statistic_t = std::variant<std::string, size_t, ssize_t, bool>;
+        using run_statistic_t = std::variant<std::string, double, size_t, ssize_t, bool>;
         using run_statistics_t = std::unordered_map<std::string, run_statistic_t>;
 
         virtual void tune(double lo_offset, double frequency) = 0;

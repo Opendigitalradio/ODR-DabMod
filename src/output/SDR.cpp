@@ -25,7 +25,9 @@
  */
 
 #include "output/SDR.h"
+#include "output/UHD.h"
 #include "output/Lime.h"
+#include "output/Dexter.h"
 
 #include "PcDebug.h"
 #include "Log.h"
@@ -82,8 +84,14 @@ SDR::SDR(SDRDeviceConfig& config, std::shared_ptr<SDRDevice> device) :
     RC_ADD_PARAMETER(underruns, "Counter of number of underruns");
     RC_ADD_PARAMETER(latepackets, "Counter of number of late packets");
     RC_ADD_PARAMETER(frames, "Counter of number of frames modulated");
-    RC_ADD_PARAMETER(gpsdo_num_sv, "Number of Satellite Vehicles tracked by GPSDO");
-    RC_ADD_PARAMETER(gpsdo_holdover, "1 if the GPSDO is in holdover, 0 if it is using gnss");
+
+#ifdef HAVE_OUTPUT_UHD
+    if (std::dynamic_pointer_cast<UHD>(device)) {
+        RC_ADD_PARAMETER(gpsdo_num_sv, "Number of Satellite Vehicles tracked by GPSDO");
+        RC_ADD_PARAMETER(gpsdo_holdover, "1 if the GPSDO is in holdover, 0 if it is using gnss");
+    }
+#endif // HAVE_OUTPUT_UHD
+
     RC_ADD_PARAMETER(queued_frames_ms, "Number of frames queued, represented in milliseconds");
 
 #ifdef HAVE_LIMESDR
@@ -93,8 +101,24 @@ SDR::SDR(SDRDeviceConfig& config, std::shared_ptr<SDRDevice> device) :
 #endif // HAVE_LIMESDR
 
 #ifdef HAVE_DEXTER
-    RC_ADD_PARAMETER(clks, "DEXTER internal clk counter value");
-    RC_ADD_PARAMETER(fifo_not_empty_clks, "DEXTER internal clk counter value when FIFO was last empty");
+    if (std::dynamic_pointer_cast<Dexter>(device)) {
+        RC_ADD_PARAMETER(clks, "DEXTER internal clk counter value");
+        RC_ADD_PARAMETER(fifo_not_empty_clks, "DEXTER internal clk counter value when FIFO was last empty");
+        RC_ADD_PARAMETER(gpsdo_locked, "1 if GPSDO is locked");
+        RC_ADD_PARAMETER(pps_clk_error_hz, "Estimated error in Hz of clock");
+        RC_ADD_PARAMETER(pps_cnt, "Number of 1PPS pulses seen from GPS");
+        RC_ADD_PARAMETER(dsp_version, "Version of FPGA DSP");
+        RC_ADD_PARAMETER(vcc3v3, "Voltage of VCC 3V3");
+        RC_ADD_PARAMETER(vcc5v4, "Voltage of VCC 5V4");
+        RC_ADD_PARAMETER(vfan, "Fan voltage");
+        RC_ADD_PARAMETER(vcc_main_in, "Main input voltage");
+        RC_ADD_PARAMETER(vcc3v3pll, "Voltage of VCC 3V3 PLL");
+        RC_ADD_PARAMETER(vcc2v5io, "Voltage of VCC 2V5 IO");
+        RC_ADD_PARAMETER(vccocxo, "OCXO voltage");
+        RC_ADD_PARAMETER(tempfpga, "FPGA temperature [celsius]");
+        RC_ADD_PARAMETER(voltage_alarm, "Voltage out of bounds");
+        RC_ADD_PARAMETER(temp_alarm, "Temperature out of bounds");
+    }
 #endif // HAVE_DEXTER
 }
 
@@ -454,6 +478,9 @@ const string SDR::get_parameter(const string& parameter) const
                 const auto& value = stat.at(parameter);
                 if (std::holds_alternative<string>(value)) {
                     ss << std::get<string>(value);
+                }
+                else if (std::holds_alternative<double>(value)) {
+                    ss << std::get<double>(value);
                 }
                 else if (std::holds_alternative<ssize_t>(value)) {
                     ss << std::get<ssize_t>(value);
