@@ -2,7 +2,7 @@
    Copyright (C) 2007, 2008, 2009, 2010, 2011 Her Majesty the Queen in
    Right of Canada (Communications Research Center Canada)
 
-   Copyright (C) 2018
+   Copyright (C) 2023
    Matthias P. Braendli, matthias.braendli@mpb.li
    Andreas Steger, andreas.steger@digris.ch
 
@@ -467,3 +467,11 @@ const string MemlessPoly::get_parameter(const string& parameter) const
     return ss.str();
 }
 
+const RemoteControllable::map_t MemlessPoly::get_all_values() const
+{
+    map_t map;
+    map["ncoefs"] = m_coefs_am.size();
+    map["coefs"] = serialise_coefficients();
+    map["coeffile"] = m_coefs_file;
+    return map;
+}

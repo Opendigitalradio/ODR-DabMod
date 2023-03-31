@@ -410,3 +410,10 @@ const string DabModulator::get_parameter(const string& parameter) const
     }
     return ss.str();
 }
+
+const RemoteControllable::map_t DabModulator::get_all_values() const
+{
+    map_t map;
+    map["rate"] = m_settings.outputRate;
+    return map;
+}

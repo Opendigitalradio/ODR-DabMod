@@ -2,7 +2,7 @@
    Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010 Her Majesty the
    Queen in Right of Canada (Communications Research Center Canada)
 
-   Copyright (C) 2022
+   Copyright (C) 2023
    Matthias P. Braendli, matthias.braendli@mpb.li
 
     http://opendigitalradio.org
@@ -118,15 +118,11 @@ class TimestampDecoder : public RemoteControllable
         /*********** REMOTE CONTROL ***************/
 
         /* Base function to set parameters. */
-        virtual void set_parameter(const std::string& parameter,
-                const std::string& value);
-
-        /* Getting a parameter always returns a string. */
-        virtual const std::string get_parameter(
-                const std::string& parameter) const;
+        virtual void set_parameter(const std::string& parameter, const std::string& value) override;
+        virtual const std::string get_parameter(const std::string& parameter) const override;
+        virtual const RemoteControllable::map_t get_all_values() const override;
 
         const char* name() { return "TS"; }
-
 
     protected:
         /* Push a new MNSC field into the decoder */

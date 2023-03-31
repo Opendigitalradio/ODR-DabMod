@@ -2,7 +2,7 @@
    Copyright (C) 2005, 2206, 2007, 2008, 2009, 2010, 2011 Her Majesty
    the Queen in Right of Canada (Communications Research Center Canada)
 
-   Copyright (C) 2017
+   Copyright (C) 2023
    Matthias P. Braendli, matthias.braendli@mpb.li
 
     http://opendigitalradio.org
@@ -301,4 +301,11 @@ const std::string GuardIntervalInserter::get_parameter(const std::string& parame
         throw ParameterError(ss.str());
     }
     return ss.str();
+}
+
+const RemoteControllable::map_t GuardIntervalInserter::get_all_values() const
+{
+    map_t map;
+    map["windowlen"] = d_windowOverlap;
+    return map;
 }

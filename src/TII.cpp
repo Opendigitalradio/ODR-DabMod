@@ -2,7 +2,7 @@
    Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010, 2011 Her Majesty
    the Queen in Right of Canada (Communications Research Center Canada)
 
-   Copyright (C) 2018
+   Copyright (C) 2023
    Matthias P. Braendli, matthias.braendli@mpb.li
 
     http://opendigitalradio.org
@@ -385,3 +385,12 @@ const std::string TII::get_parameter(const std::string& parameter) const
     return ss.str();
 }
 
+const RemoteControllable::map_t TII::get_all_values() const
+{
+    map_t map;
+    map["enable"] = m_conf.enable;
+    map["pattern"] = m_conf.pattern;
+    map["comb"] = m_conf.comb;
+    map["old_variant"] = m_conf.old_variant;
+    return map;
+}

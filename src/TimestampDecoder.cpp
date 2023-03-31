@@ -2,7 +2,7 @@
    Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010 Her Majesty the
    Queen in Right of Canada (Communications Research Center Canada)
 
-   Copyright (C) 2018
+   Copyright (C) 2023
    Matthias P. Braendli, matthias.braendli@mpb.li
 
     http://opendigitalradio.org
@@ -301,3 +301,22 @@ const std::string TimestampDecoder::get_parameter(
     return ss.str();
 }
 
+const RemoteControllable::map_t TimestampDecoder::get_all_values() const
+{
+    map_t map;
+    map["offset"] = timestamp_offset;
+    if (full_timestamp_received) {
+        map["timestamp"] = time_secs + ((double)time_pps / 16384000.0);
+    }
+    else {
+        map["timestamp"] = std::nullopt;
+    }
+
+    if (full_timestamp_received) {
+        map["timestamp0"] = time_secs_of_frame0 + ((double)time_pps_of_frame0 / 16384000.0);
+    }
+    else {
+        map["timestamp0"] = std::nullopt;
+    }
+    return map;
+}

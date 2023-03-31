@@ -2,7 +2,7 @@
    Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010, 2011 Her Majesty
    the Queen in Right of Canada (Communications Research Center Canada)
 
-   Copyright (C) 2017
+   Copyright (C) 2023
    Matthias P. Braendli, matthias.braendli@mpb.li
 
     http://opendigitalradio.org
@@ -52,15 +52,13 @@ class GuardIntervalInserter : public ModCodec, public RemoteControllable
                 size_t symSize,
                 size_t& windowOverlap);
 
-        int process(Buffer* const dataIn, Buffer* dataOut);
-        const char* name() { return "GuardIntervalInserter"; }
+        int process(Buffer* const dataIn, Buffer* dataOut) override;
+        const char* name() override { return "GuardIntervalInserter"; }
 
         /******* REMOTE CONTROL ********/
-        virtual void set_parameter(const std::string& parameter,
-                const std::string& value);
-
-        virtual const std::string get_parameter(
-                const std::string& parameter) const;
+        virtual void set_parameter(const std::string& parameter, const std::string& value) override;
+        virtual const std::string get_parameter(const std::string& parameter) const override;
+        virtual const RemoteControllable::map_t get_all_values() const override;
 
     protected:
         void update_window(size_t new_window_overlap);

@@ -3,7 +3,7 @@
    Her Majesty the Queen in Right of Canada (Communications Research
    Center Canada)
 
-   Copyright (C) 2019
+   Copyright (C) 2023
    Matthias P. Braendli, matthias.braendli@mpb.li
 
     http://www.opendigitalradio.org
@@ -36,6 +36,8 @@
 #endif
 
 #include <list>
+#include <unordered_map>
+#include <variant>
 #include <map>
 #include <memory>
 #include <string>
@@ -113,12 +115,15 @@ class RemoteControllable {
             }
 
         /* Base function to set parameters. */
-        virtual void set_parameter(
-                const std::string& parameter,
-                const std::string& value) = 0;
+        virtual void set_parameter(const std::string& parameter, const std::string& value) = 0;
 
         /* Getting a parameter always returns a string. */
         virtual const std::string get_parameter(const std::string& parameter) const = 0;
+
+        using value_t = std::variant<std::string, double, size_t, ssize_t, bool, std::nullopt_t>;
+        using map_t = std::unordered_map<std::string, value_t>;
+
+        virtual const map_t get_all_values() const = 0;
 
     protected:
         std::string m_rc_name;
@@ -135,6 +140,7 @@ class RemoteControllers {
         void check_faults();
         std::list< std::vector<std::string> > get_param_list_values(const std::string& name);
         std::string get_param(const std::string& name, const std::string& param);
+        std::string get_params_json(const std::string& name);
 
         void set_param(
                 const std::string& name,

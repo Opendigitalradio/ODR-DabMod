@@ -3,7 +3,7 @@
    Her Majesty the Queen in Right of Canada (Communications Research
    Center Canada)
 
-   Copyright (C) 2017
+   Copyright (C) 2023
    Matthias P. Braendli, matthias.braendli@mpb.li
 
     http://opendigitalradio.org
@@ -574,3 +574,21 @@ const string GainControl::get_parameter(const string& parameter) const
     return ss.str();
 }
 
+const RemoteControllable::map_t GainControl::get_all_values() const
+{
+    map_t map;
+    map["digital"] = m_digGain;
+    switch (m_gainmode) {
+        case GainMode::GAIN_FIX:
+            map["mode"] = "fix";
+            break;
+        case GainMode::GAIN_MAX:
+            map["mode"] = "max";
+            break;
+        case GainMode::GAIN_VAR:
+            map["mode"] = "var";
+            break;
+    }
+    map["var"] = m_var_variance_rc;
+    return map;
+}

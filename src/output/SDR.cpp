@@ -491,6 +491,9 @@ const string SDR::get_parameter(const string& parameter) const
                 else if (std::holds_alternative<bool>(value)) {
                     ss << (std::get<bool>(value) ? 1 : 0);
                 }
+                else if (std::holds_alternative<std::nullopt_t>(value)) {
+                    ss << "";
+                }
                 else {
                     throw std::logic_error("variant alternative not handled");
                 }
@@ -505,6 +508,29 @@ const string SDR::get_parameter(const string& parameter) const
         throw ParameterError(ss.str());
     }
     return ss.str();
+}
+
+const RemoteControllable::map_t SDR::get_all_values() const
+{
+    map_t stat = m_device->get_run_statistics();
+
+    stat["txgain"] = m_config.txgain;
+    stat["rxgain"] = m_config.rxgain;
+    stat["freq"] = m_config.frequency;
+    stat["muting"] = m_config.muting;
+    stat["temp"] = std::nullopt;
+
+    if (m_device) {
+        const std::optional<double> temp = m_device->get_temperature();
+        if (temp) {
+            stat["temp"] = *temp;
+        }
+    }
+    stat["queued_frames_ms"] = m_queue.size() *
+            (size_t)chrono::duration_cast<chrono::milliseconds>(transmission_frame_duration(m_config.dabMode))
+            .count();
+
+    return stat;
 }
 
 } // namespace Output

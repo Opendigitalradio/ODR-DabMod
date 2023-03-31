@@ -67,6 +67,8 @@ class SDR : public ModOutput, public ModMetadata, public RemoteControllable {
         virtual const std::string get_parameter(
                 const std::string& parameter) const override;
 
+        virtual const RemoteControllable::map_t get_all_values() const override;
+
     private:
         void process_thread_entry(void);
         void handle_frame(struct FrameData&& frame);

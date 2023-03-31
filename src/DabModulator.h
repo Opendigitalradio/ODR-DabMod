@@ -3,7 +3,7 @@
    Her Majesty the Queen in Right of Canada (Communications Research
    Center Canada)
 
-   Copyright (C) 2019
+   Copyright (C) 2023
    Matthias P. Braendli, matthias.braendli@mpb.li
 
     http://opendigitalradio.org
@@ -60,11 +60,9 @@ public:
     EtiSource* getEtiSource() { return &myEtiSource; }
 
     /******* REMOTE CONTROL ********/
-    virtual void set_parameter(const std::string& parameter,
-            const std::string& value) override;
-
-    virtual const std::string get_parameter(
-            const std::string& parameter) const override;
+    virtual void set_parameter(const std::string& parameter, const std::string& value) override;
+    virtual const std::string get_parameter(const std::string& parameter) const override;
+    virtual const RemoteControllable::map_t get_all_values() const override;
 
 protected:
     void setMode(unsigned mode);

@@ -55,14 +55,6 @@ DESCRIPTION:
 #include <stdio.h>
 #include <sys/types.h>
 
-// If the timestamp is further in the future than
-// 100 seconds, abort
-#define TIMESTAMP_ABORT_FUTURE 100
-
-// Add a delay to increase buffers when
-// frames are too far in the future
-#define TIMESTAMP_MARGIN_FUTURE 0.5
-
 namespace Output {
 
 class UHD : public Output::SDRDevice
