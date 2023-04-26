@@ -87,6 +87,11 @@ Dexter::Dexter(SDRDeviceConfig& config) :
         throw std::runtime_error("Dexter: Unable to find dexter_dsp_tx iio device");
     }
 
+    m_ad9957 = iio_context_find_device(m_ctx, "ad9957");
+    if (not m_ad9957) {
+        throw std::runtime_error("Dexter: Unable to find ad9957 iio device");
+    }
+
     m_ad9957_tx0 = iio_context_find_device(m_ctx, "ad9957_tx0");
     if (not m_ad9957_tx0) {
         throw std::runtime_error("Dexter: Unable to find ad9957_tx0 iio device");
@@ -281,8 +286,8 @@ void Dexter::tune(double lo_offset, double frequency)
 
     long long freq = frequency;
     int r = 0;
-    if ((r = iio_device_attr_write_longlong(m_ad9957_tx0, "center_frequency", freq)) != 0) {
-        etiLog.level(warn) << "Failed to set ad9957_tx0.center_frequency = " << freq << " : " << get_iio_error(r);
+    if ((r = iio_device_attr_write_longlong(m_ad9957, "center_frequency", freq)) != 0) {
+        etiLog.level(warn) << "Failed to set ad9957.center_frequency = " << freq << " : " << get_iio_error(r);
     }
 
     long long lo_offs = lo_offset;
@@ -294,17 +299,21 @@ void Dexter::tune(double lo_offset, double frequency)
 
 double Dexter::get_tx_freq(void) const
 {
-    long long frequency = 0;
+    long long lo_offset = 0;
     int r = 0;
 
-    if ((r = iio_device_attr_read_longlong(m_dexter_dsp_tx, "frequency0", &frequency)) != 0) {
-        etiLog.level(warn) << "Failed to read dexter_dsp_tx.frequency0 = " <<
-            frequency << " : " << get_iio_error(r);
+    if ((r = iio_device_attr_read_longlong(m_dexter_dsp_tx, "frequency0", &lo_offset)) != 0) {
+        etiLog.level(warn) << "Failed to read dexter_dsp_tx.frequency0: " << get_iio_error(r);
         return 0;
     }
-    else {
-        return frequency + 204800000;
+
+    long long frequency = 0;
+    if ((r = iio_device_attr_read_longlong(m_ad9957, "center_frequency", &frequency)) != 0) {
+        etiLog.level(warn) << "Failed to read ad9957.center_frequency: " << get_iio_error(r);
+        return 0;
     }
+
+    return frequency + lo_offset;
 }
 
 void Dexter::set_txgain(double txgain)

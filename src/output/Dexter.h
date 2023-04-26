@@ -93,6 +93,7 @@ class Dexter : public Output::SDRDevice
         struct iio_context* m_ctx = nullptr;
         struct iio_device* m_dexter_dsp_tx = nullptr;
 
+        struct iio_device* m_ad9957 = nullptr;
         struct iio_device* m_ad9957_tx0 = nullptr;
         struct iio_channel* m_tx_channel = nullptr;
         struct iio_buffer *m_buffer = nullptr;
