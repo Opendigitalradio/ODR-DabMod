@@ -277,12 +277,18 @@ Dexter::~Dexter()
 
 void Dexter::tune(double lo_offset, double frequency)
 {
-    // TODO lo_offset
-    long long freq = m_conf.frequency - 204800000;
-    int r = 0;
+    // lo_offset is applied to the DSP, and frequency is given to the ad9957
 
-    if ((r = iio_device_attr_write_longlong(m_dexter_dsp_tx, "frequency0", freq)) != 0) {
-        etiLog.level(warn) << "Failed to set dexter_dsp_tx.frequency0 = " << freq << " : " << get_iio_error(r);
+    long long freq = frequency;
+    int r = 0;
+    if ((r = iio_device_attr_write_longlong(m_ad9957_tx0, "center_frequency", freq)) != 0) {
+        etiLog.level(warn) << "Failed to set ad9957_tx0.center_frequency = " << freq << " : " << get_iio_error(r);
+    }
+
+    long long lo_offs = lo_offset;
+
+    if ((r = iio_device_attr_write_longlong(m_dexter_dsp_tx, "frequency0", lo_offs)) != 0) {
+        etiLog.level(warn) << "Failed to set dexter_dsp_tx.frequency0 = " << lo_offs << " : " << get_iio_error(r);
     }
 }
 
