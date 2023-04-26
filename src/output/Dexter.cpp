@@ -120,58 +120,6 @@ Dexter::Dexter(SDRDeviceConfig& config) :
 
     // skip: antenna
 
-    // get H/W time
-    /* Procedure:
-     * Wait 200ms after second change, fetch pps_clks attribute
-     * idem at the next second, and check that pps_clks incremented by DSP_CLOCK
-     * If ok, store the correspondence between current second change (measured in UTC clock time)
-     * and the counter value at pps rising edge. */
-
-    etiLog.level(info) << "Dexter: Waiting for second change...";
-
-    struct timespec time_at_startup;
-    fill_time(&time_at_startup);
-    time_at_startup.tv_nsec = 0;
-
-    struct timespec time_now;
-    do {
-        fill_time(&time_now);
-        this_thread::sleep_for(chrono::milliseconds(1));
-    } while (time_at_startup.tv_sec == time_now.tv_sec);
-    this_thread::sleep_for(chrono::milliseconds(200));
-
-    long long pps_clks = 0;
-    if ((r = iio_device_attr_read_longlong(m_dexter_dsp_tx, "pps_clks", &pps_clks)) != 0) {
-        etiLog.level(error) << "Failed to get dexter_dsp_tx.pps_clks: " << get_iio_error(r);
-        throw std::runtime_error("Dexter: Cannot read IIO attribute");
-    }
-
-    time_t tnow = time_now.tv_sec;
-    etiLog.level(info) << "Dexter: pps_clks " << pps_clks << " at UTC " <<
-        put_time(std::gmtime(&tnow), "%Y-%m-%d %H:%M:%S");
-
-    time_at_startup.tv_sec = time_now.tv_sec;
-    do {
-        fill_time(&time_now);
-        this_thread::sleep_for(chrono::milliseconds(1));
-    } while (time_at_startup.tv_sec == time_now.tv_sec);
-    this_thread::sleep_for(chrono::milliseconds(200));
-
-    long long pps_clks2 = 0;
-    if ((r = iio_device_attr_read_longlong(m_dexter_dsp_tx, "pps_clks", &pps_clks2)) != 0) {
-        etiLog.level(error) << "Failed to get dexter_dsp_tx.pps_clks: " << get_iio_error(r);
-        throw std::runtime_error("Dexter: Cannot read IIO attribute");
-    }
-    tnow = time_now.tv_sec;
-    etiLog.level(info) << "Dexter: pps_clks increased by " << pps_clks2 - pps_clks << " at UTC " <<
-        put_time(std::gmtime(&tnow), "%Y-%m-%d %H:%M:%S");
-
-    if ((uint64_t)pps_clks + DSP_CLOCK != (uint64_t)pps_clks2) {
-        throw std::runtime_error("Dexter: Wrong increase of pps_clks, expected " + to_string(DSP_CLOCK));
-    }
-    m_utc_seconds_at_startup = time_now.tv_sec;
-    m_clock_count_at_startup = pps_clks2;
-
     // The FIFO should not contain data, but setting gain=0 before setting start_clks to zero is an additional security
     if ((r = iio_device_attr_write_longlong(m_dexter_dsp_tx, "gain0", 0)) != 0) {
         throw std::runtime_error("Failed to set dexter_dsp_tx.gain0 = 0 : " + get_iio_error(r));
@@ -248,35 +196,118 @@ void Dexter::channel_down()
     etiLog.level(debug) << "DEXTER CHANNEL_DOWN";
 }
 
-
-Dexter::~Dexter()
+void Dexter::handle_hw_time()
 {
-    m_running = false;
-    if (m_underflow_read_thread.joinable()) {
-        m_underflow_read_thread.join();
-    }
+    /*
+     * On startup, wait until `gpsdo_locked==1` and `pps_loss_of_signal==0`,
+     * then do the clocks alignment and go to normal state.
+     *
+     * In normal state, if `pps_loss_of_signal==1`, go to holdover state.
+     *
+     * If we've been in holdover state for longer than the configured time, or
+     * if `pps_loss_of_signal==0` stop the mod and restart.
+     */
+    int r;
 
-    if (m_ctx) {
-        if (m_dexter_dsp_tx) {
-            iio_device_attr_write_longlong(m_dexter_dsp_tx, "gain0", 0);
-        }
+    switch (m_clock_state) {
+        case DexterClockState::Startup:
+            {
+                long long gpsdo_locked = 0;
+                if ((r = iio_device_attr_read_longlong(m_dexter_dsp_tx, "gpsdo_locked", &gpsdo_locked)) != 0) {
+                    etiLog.level(error) << "Failed to get dexter_dsp_tx.gpsdo_locked: " << get_iio_error(r);
+                    throw std::runtime_error("Dexter: Cannot read IIO attribute");
+                }
 
-        if (m_buffer) {
-            iio_buffer_destroy(m_buffer);
-            m_buffer = nullptr;
-        }
+                long long pps_loss_of_signal = 0;
+                if ((r = iio_device_attr_read_longlong(m_dexter_dsp_tx, "pps_loss_of_signal", &pps_loss_of_signal)) != 0) {
+                    etiLog.level(error) << "Failed to get dexter_dsp_tx.pps_loss_of_signal: " << get_iio_error(r);
+                    throw std::runtime_error("Dexter: Cannot read IIO attribute");
+                }
 
-        if (m_tx_channel) {
-            iio_channel_disable(m_tx_channel);
-        }
+                if (gpsdo_locked == 1 and pps_loss_of_signal == 0) {
+                    /* Procedure:
+                     * Wait 200ms after second change, fetch pps_clks attribute
+                     * idem at the next second, and check that pps_clks incremented by DSP_CLOCK
+                     * If ok, store the correspondence between current second change (measured in UTC clock time)
+                     * and the counter value at pps rising edge. */
 
-        iio_context_destroy(m_ctx);
-        m_ctx = nullptr;
-    }
+                    etiLog.level(info) << "Dexter: Waiting for second change...";
 
-    if (m_underflow_ctx) {
-        iio_context_destroy(m_underflow_ctx);
-        m_underflow_ctx = nullptr;
+                    struct timespec time_at_startup;
+                    fill_time(&time_at_startup);
+                    time_at_startup.tv_nsec = 0;
+
+                    struct timespec time_now;
+                    do {
+                        fill_time(&time_now);
+                        this_thread::sleep_for(chrono::milliseconds(1));
+                    } while (time_at_startup.tv_sec == time_now.tv_sec);
+                    this_thread::sleep_for(chrono::milliseconds(200));
+
+                    long long pps_clks = 0;
+                    if ((r = iio_device_attr_read_longlong(m_dexter_dsp_tx, "pps_clks", &pps_clks)) != 0) {
+                        etiLog.level(error) << "Failed to get dexter_dsp_tx.pps_clks: " << get_iio_error(r);
+                        throw std::runtime_error("Dexter: Cannot read IIO attribute");
+                    }
+
+                    time_t tnow = time_now.tv_sec;
+                    etiLog.level(info) << "Dexter: pps_clks " << pps_clks << " at UTC " <<
+                        put_time(std::gmtime(&tnow), "%Y-%m-%d %H:%M:%S");
+
+                    time_at_startup.tv_sec = time_now.tv_sec;
+                    do {
+                        fill_time(&time_now);
+                        this_thread::sleep_for(chrono::milliseconds(1));
+                    } while (time_at_startup.tv_sec == time_now.tv_sec);
+                    this_thread::sleep_for(chrono::milliseconds(200));
+
+                    long long pps_clks2 = 0;
+                    if ((r = iio_device_attr_read_longlong(m_dexter_dsp_tx, "pps_clks", &pps_clks2)) != 0) {
+                        etiLog.level(error) << "Failed to get dexter_dsp_tx.pps_clks: " << get_iio_error(r);
+                        throw std::runtime_error("Dexter: Cannot read IIO attribute");
+                    }
+                    tnow = time_now.tv_sec;
+                    etiLog.level(info) << "Dexter: pps_clks increased by " << pps_clks2 - pps_clks << " at UTC " <<
+                        put_time(std::gmtime(&tnow), "%Y-%m-%d %H:%M:%S");
+
+                    if ((uint64_t)pps_clks + DSP_CLOCK != (uint64_t)pps_clks2) {
+                        throw std::runtime_error("Dexter: Wrong increase of pps_clks, expected " + to_string(DSP_CLOCK));
+                    }
+
+                    m_utc_seconds_at_startup = time_now.tv_sec;
+                    m_clock_count_at_startup = pps_clks2;
+                    m_holdover_since = chrono::steady_clock::time_point::min();
+                    m_clock_state = DexterClockState::Normal;
+                }
+            }
+            break;
+        case DexterClockState::Normal:
+            {
+                long long pps_loss_of_signal = 0;
+                if ((r = iio_device_attr_read_longlong(m_dexter_dsp_tx, "pps_loss_of_signal", &pps_loss_of_signal)) != 0) {
+                    etiLog.level(error) << "Failed to get dexter_dsp_tx.pps_loss_of_signal: " << get_iio_error(r);
+                    throw std::runtime_error("Dexter: Cannot read IIO attribute");
+                }
+
+                if (pps_loss_of_signal == 1) {
+                    m_holdover_since = chrono::steady_clock::now();
+                    m_clock_state = DexterClockState::Holdover;
+                }
+            }
+            break;
+        case DexterClockState::Holdover:
+            {
+                using namespace chrono;
+                const duration<double> d = steady_clock::now() - m_holdover_since;
+                const auto max_holdover_duration = seconds(m_conf.maxGPSHoldoverTime);
+                if (d > max_holdover_duration) {
+                    m_clock_state = DexterClockState::Startup;
+                    m_utc_seconds_at_startup = 0;
+                    m_clock_count_at_startup = 0;
+                    m_holdover_since = chrono::steady_clock::time_point::min();
+                }
+            }
+            break;
     }
 }
 
@@ -526,7 +557,14 @@ double Dexter::get_real_secs(void) const
         throw std::runtime_error("Dexter: Cannot read IIO attribute");
     }
 
-    return (double)m_utc_seconds_at_startup + (double)(clks - m_clock_count_at_startup) / (double)DSP_CLOCK;
+    switch (m_clock_state) {
+        case DexterClockState::Startup:
+            return 0;
+        case DexterClockState::Normal:
+        case DexterClockState::Holdover:
+            return (double)m_utc_seconds_at_startup + (double)(clks - m_clock_count_at_startup) / (double)DSP_CLOCK;
+    }
+    throw std::logic_error("Unhandled switch");
 }
 
 void Dexter::set_rxgain(double rxgain)
@@ -585,46 +623,53 @@ void Dexter::transmit_frame(struct FrameData&& frame)
 
     const bool require_timestamped_tx = (m_conf.enableSync and frame.ts.timestamp_valid);
 
+    handle_hw_time();
+
     if (not m_channel_is_up) {
         if (require_timestamped_tx) {
-            constexpr uint64_t TIMESTAMP_PPS_PER_DSP_CLOCKS = DSP_CLOCK / 16384000;
-            // TIMESTAMP_PPS_PER_DSP_CLOCKS=10 because timestamp_pps is represented in 16.384 MHz clocks
-            uint64_t frame_start_clocks =
-                // at second level
-                ((int64_t)frame.ts.timestamp_sec - (int64_t)m_utc_seconds_at_startup) * DSP_CLOCK + m_clock_count_at_startup +
-                // at subsecond level
-                (uint64_t)frame.ts.timestamp_pps * TIMESTAMP_PPS_PER_DSP_CLOCKS;
-
-            const double margin_s = frame.ts.offset_to_system_time();
-
-            long long clks = 0;
-            int r = 0;
-            if ((r = iio_device_attr_read_longlong(m_dexter_dsp_tx, "clks", &clks)) != 0) {
-                etiLog.level(error) << "Failed to get dexter_dsp_tx.clks: " << get_iio_error(r);
-                throw std::runtime_error("Dexter: Cannot read IIO attribute");
+            if (m_clock_state == DexterClockState::Startup) {
+                return; // not ready
             }
+            else {
+                constexpr uint64_t TIMESTAMP_PPS_PER_DSP_CLOCKS = DSP_CLOCK / 16384000;
+                // TIMESTAMP_PPS_PER_DSP_CLOCKS=10 because timestamp_pps is represented in 16.384 MHz clocks
+                uint64_t frame_start_clocks =
+                    // at second level
+                    ((int64_t)frame.ts.timestamp_sec - (int64_t)m_utc_seconds_at_startup) * DSP_CLOCK + m_clock_count_at_startup +
+                    // at subsecond level
+                    (uint64_t)frame.ts.timestamp_pps * TIMESTAMP_PPS_PER_DSP_CLOCKS;
 
-            const double margin_device_s = (double)(frame_start_clocks - clks) / DSP_CLOCK;
+                const double margin_s = frame.ts.offset_to_system_time();
 
-            etiLog.level(debug) << "DEXTER FCT " << frame.ts.fct << " TS CLK " <<
-                ((int64_t)frame.ts.timestamp_sec - (int64_t)m_utc_seconds_at_startup) * DSP_CLOCK << " + " <<
-                m_clock_count_at_startup << " + " <<
-                (uint64_t)frame.ts.timestamp_pps * TIMESTAMP_PPS_PER_DSP_CLOCKS << " = " <<
-                frame_start_clocks << " DELTA " << margin_s << " " << margin_device_s;
+                long long clks = 0;
+                int r = 0;
+                if ((r = iio_device_attr_read_longlong(m_dexter_dsp_tx, "clks", &clks)) != 0) {
+                    etiLog.level(error) << "Failed to get dexter_dsp_tx.clks: " << get_iio_error(r);
+                    throw std::runtime_error("Dexter: Cannot read IIO attribute");
+                }
 
-            // Ensure we hand the frame over to HW with a bit of margin
-            if (margin_s < 0.2) {
-                etiLog.level(warn) << "Skip frame short margin " << margin_s;
-                num_late++;
-                return;
+                const double margin_device_s = (double)(frame_start_clocks - clks) / DSP_CLOCK;
+
+                etiLog.level(debug) << "DEXTER FCT " << frame.ts.fct << " TS CLK " <<
+                    ((int64_t)frame.ts.timestamp_sec - (int64_t)m_utc_seconds_at_startup) * DSP_CLOCK << " + " <<
+                    m_clock_count_at_startup << " + " <<
+                    (uint64_t)frame.ts.timestamp_pps * TIMESTAMP_PPS_PER_DSP_CLOCKS << " = " <<
+                    frame_start_clocks << " DELTA " << margin_s << " " << margin_device_s;
+
+                // Ensure we hand the frame over to HW with a bit of margin
+                if (margin_s < 0.2) {
+                    etiLog.level(warn) << "Skip frame short margin " << margin_s;
+                    num_late++;
+                    return;
+                }
+
+                if ((r = iio_device_attr_write_longlong(m_dexter_dsp_tx, "stream0_start_clks", frame_start_clocks)) != 0) {
+                    etiLog.level(warn) << "Skip frame, failed to set dexter_dsp_tx.stream0_start_clks = " << frame_start_clocks << " : " << get_iio_error(r);
+                    num_late++;
+                    return;
+                }
+                m_require_timestamp_refresh = false;
             }
-
-            if ((r = iio_device_attr_write_longlong(m_dexter_dsp_tx, "stream0_start_clks", frame_start_clocks)) != 0) {
-                etiLog.level(warn) << "Skip frame, failed to set dexter_dsp_tx.stream0_start_clks = " << frame_start_clocks << " : " << get_iio_error(r);
-                num_late++;
-                return;
-            }
-            m_require_timestamp_refresh = false;
         }
 
         channel_up();
@@ -704,8 +749,37 @@ void Dexter::underflow_read_process()
     m_running = false;
 }
 
+Dexter::~Dexter()
+{
+    m_running = false;
+    if (m_underflow_read_thread.joinable()) {
+        m_underflow_read_thread.join();
+    }
+
+    if (m_ctx) {
+        if (m_dexter_dsp_tx) {
+            iio_device_attr_write_longlong(m_dexter_dsp_tx, "gain0", 0);
+        }
+
+        if (m_buffer) {
+            iio_buffer_destroy(m_buffer);
+            m_buffer = nullptr;
+        }
+
+        if (m_tx_channel) {
+            iio_channel_disable(m_tx_channel);
+        }
+
+        iio_context_destroy(m_ctx);
+        m_ctx = nullptr;
+    }
+
+    if (m_underflow_ctx) {
+        iio_context_destroy(m_underflow_ctx);
+        m_underflow_ctx = nullptr;
+    }
+}
+
 } // namespace Output
 
 #endif // HAVE_DEXTER
-
-

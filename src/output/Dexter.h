@@ -42,6 +42,7 @@ DESCRIPTION:
 #include <ctime>
 #include <mutex>
 #include <thread>
+#include <variant>
 
 #include "output/SDR.h"
 #include "ModPlugin.h"
@@ -49,6 +50,12 @@ DESCRIPTION:
 #include "RemoteControl.h"
 
 namespace Output {
+
+enum class DexterClockState {
+   Startup,
+   Normal,
+   Holdover
+};
 
 class Dexter : public Output::SDRDevice
 {
@@ -85,6 +92,7 @@ class Dexter : public Output::SDRDevice
     private:
         void channel_up();
         void channel_down();
+        void handle_hw_time();
 
         bool m_channel_is_up = false;
 
@@ -112,9 +120,15 @@ class Dexter : public Output::SDRDevice
 
         size_t num_buffers_pushed = 0;
 
-        uint64_t m_utc_seconds_at_startup;
+        DexterClockState m_clock_state = DexterClockState::Startup;
+
+        // Only valid when m_clock_state is not Startup
+        uint64_t m_utc_seconds_at_startup = 0;
         uint64_t m_clock_count_at_startup = 0;
-        uint64_t m_clock_count_frame = 0;
+
+        // Only valid when m_clock_state Holdover
+        std::chrono::steady_clock::time_point m_holdover_since =
+            std::chrono::steady_clock::time_point::min();
 };
 
 } // namespace Output

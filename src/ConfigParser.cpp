@@ -278,7 +278,8 @@ static void parse_configfile(
         mod_settings.sdr_device_config = sdr_device_config;
         mod_settings.useUHDOutput = true;
     }
-#endif
+#endif // defined(HAVE_OUTPUT_UHD)
+
 #if defined(HAVE_SOAPYSDR)
     else if (output_selected == "soapysdr") {
         auto& outputsoapy_conf = mod_settings.sdr_device_config;
@@ -309,7 +310,8 @@ static void parse_configfile(
 
         mod_settings.useSoapyOutput = true;
     }
-#endif
+#endif // defined(HAVE_SOAPYSDR)
+
 #if defined(HAVE_DEXTER)
     else if (output_selected == "dexter") {
         auto& outputdexter_conf = mod_settings.sdr_device_config;
@@ -318,6 +320,7 @@ static void parse_configfile(
         outputdexter_conf.frequency = pt.GetReal("dexteroutput.frequency", 0);
         std::string chan = pt.Get("dexteroutput.channel", "");
         outputdexter_conf.dabMode = mod_settings.dabMode;
+        outputdexter_conf.maxGPSHoldoverTime = pt.GetInteger("dexteroutput.max_gps_holdover_time", 0);
 
         if (outputdexter_conf.frequency == 0 && chan == "") {
             std::cerr << "       dexter output enabled, but neither frequency nor channel defined.\n";
@@ -333,7 +336,8 @@ static void parse_configfile(
 
         mod_settings.useDexterOutput = true;
     }
-#endif
+#endif // defined(HAVE_DEXTER)
+
 #if defined(HAVE_LIMESDR)
     else if (output_selected == "limesdr") {
         auto& outputlime_conf = mod_settings.sdr_device_config;
@@ -363,7 +367,7 @@ static void parse_configfile(
 
         mod_settings.useLimeOutput = true;
     }
-#endif
+#endif // defined(HAVE_LIMESDR)
 
 #if defined(HAVE_BLADERF)
     else if (output_selected == "bladerf") {
@@ -392,7 +396,7 @@ static void parse_configfile(
 
         mod_settings.useBladeRFOutput = true;
     }
-#endif
+#endif // defined(HAVE_BLADERF)
 
 #if defined(HAVE_ZEROMQ)
     else if (output_selected == "zmq") {
