@@ -439,7 +439,7 @@ size_t UHD::receive_frame(
 }
 
 // Return true if GPS and reference clock inputs are ok
-bool UHD::is_clk_source_ok(void) const
+bool UHD::is_clk_source_ok(void)
 {
     bool ok = true;
 

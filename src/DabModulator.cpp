@@ -27,6 +27,7 @@
 
 #include <string>
 #include <memory>
+#include <vector>
 
 #include "DabModulator.h"
 #include "PcDebug.h"
@@ -348,7 +349,7 @@ int DabModulator::process(Buffer* dataOut)
         }
 
         shared_ptr<ModPlugin> prev_plugin = static_pointer_cast<ModPlugin>(cifSig);
-        const std::list<shared_ptr<ModPlugin> > plugins({
+        const std::vector<shared_ptr<ModPlugin> > plugins({
                 static_pointer_cast<ModPlugin>(cifCicEq),
                 static_pointer_cast<ModPlugin>(cifOfdm),
                 static_pointer_cast<ModPlugin>(cifGain),

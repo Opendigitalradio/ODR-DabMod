@@ -135,7 +135,7 @@ class SDRDevice {
         virtual std::optional<double> get_temperature(void) const = 0;
 
         // Return true if GPS and reference clock inputs are ok
-        virtual bool is_clk_source_ok(void) const = 0;
+        virtual bool is_clk_source_ok(void) = 0;
 
         virtual const char* device_name(void) const = 0;
 

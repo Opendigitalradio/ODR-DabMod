@@ -277,7 +277,9 @@ void Dexter::handle_hw_time()
                     m_utc_seconds_at_startup = time_now.tv_sec;
                     m_clock_count_at_startup = pps_clks2;
                     m_holdover_since = chrono::steady_clock::time_point::min();
+                    m_holdover_since_t = 0;
                     m_clock_state = DexterClockState::Normal;
+                    etiLog.level(debug) << "Dexter: switch clock state Startup -> Normal";
                 }
             }
             break;
@@ -291,20 +293,31 @@ void Dexter::handle_hw_time()
 
                 if (pps_loss_of_signal == 1) {
                     m_holdover_since = chrono::steady_clock::now();
+                    m_holdover_since_t = chrono::system_clock::to_time_t(chrono::system_clock::now());
                     m_clock_state = DexterClockState::Holdover;
+                    etiLog.level(debug) << "Dexter: switch clock state Normal -> Holdover";
                 }
             }
             break;
         case DexterClockState::Holdover:
             {
                 using namespace chrono;
+
+                long long pps_loss_of_signal = 0;
+                if ((r = iio_device_attr_read_longlong(m_dexter_dsp_tx, "pps_loss_of_signal", &pps_loss_of_signal)) != 0) {
+                    etiLog.level(error) << "Failed to get dexter_dsp_tx.pps_loss_of_signal: " << get_iio_error(r);
+                    throw std::runtime_error("Dexter: Cannot read IIO attribute");
+                }
+
                 const duration<double> d = steady_clock::now() - m_holdover_since;
                 const auto max_holdover_duration = seconds(m_conf.maxGPSHoldoverTime);
-                if (d > max_holdover_duration) {
+                if (d > max_holdover_duration or pps_loss_of_signal == 0) {
                     m_clock_state = DexterClockState::Startup;
                     m_utc_seconds_at_startup = 0;
                     m_clock_count_at_startup = 0;
                     m_holdover_since = chrono::steady_clock::time_point::min();
+                    m_holdover_since_t = 0;
+                    etiLog.level(debug) << "Dexter: switch clock state Holdover -> Startup";
                 }
             }
             break;
@@ -383,6 +396,21 @@ double Dexter::get_bandwidth(void) const
     return 0;
 }
 
+template <typename T>
+static void attr_to_stat(
+        Dexter::run_statistics_t& rs, iio_device *dexter_dsp_tx,
+        const char* attr_name, const char* stat_name) {
+    long long attr_value = 0;
+    int r = 0;
+    if ((r = iio_device_attr_read_longlong(dexter_dsp_tx, attr_name, &attr_value)) == 0) {
+        rs[stat_name] = (T)attr_value;
+    }
+    else {
+        rs[stat_name] = (ssize_t)-1;
+        etiLog.level(error) << "Failed to get dexter_dsp_tx." << attr_name << ": " << get_iio_error(r);
+    }
+};
+
 SDRDevice::run_statistics_t Dexter::get_run_statistics(void) const
 {
     run_statistics_t rs;
@@ -393,24 +421,25 @@ SDRDevice::run_statistics_t Dexter::get_run_statistics(void) const
     rs["latepackets"] = num_late;
     rs["frames"] = num_frames_modulated;
 
-    auto attr_to_stat = [&](const char* attr_name, const char* stat_name) {
-        long long attr_value = 0;
-        int r = 0;
-        if ((r = iio_device_attr_read_longlong(m_dexter_dsp_tx, attr_name, &attr_value)) == 0) {
-            rs[stat_name] = (size_t)attr_value;
-        }
-        else {
-            rs[stat_name] = (ssize_t)-1;
-            etiLog.level(error) << "Failed to get dexter_dsp_tx." << attr_name << ": " << get_iio_error(r);
-        }
-    };
+    attr_to_stat<size_t>(rs, m_dexter_dsp_tx, "clks", "clks");
+    attr_to_stat<size_t>(rs, m_dexter_dsp_tx, "stream0_fifo_not_empty_clks", "fifo_not_empty_clks");
+    attr_to_stat<size_t>(rs, m_dexter_dsp_tx, "gpsdo_locked", "gpsdo_locked");
+    attr_to_stat<ssize_t>(rs, m_dexter_dsp_tx, "pps_clk_error_hz", "pps_clk_error_hz");
+    attr_to_stat<size_t>(rs, m_dexter_dsp_tx, "pps_cnt", "pps_cnt");
+    attr_to_stat<size_t>(rs, m_dexter_dsp_tx, "pps_loss_of_signal", "pps_loss_of_signal");
+    attr_to_stat<size_t>(rs, m_dexter_dsp_tx, "dsp_version", "dsp_version");
 
-    attr_to_stat("clks", "clks");
-    attr_to_stat("stream0_fifo_not_empty_clks", "fifo_not_empty_clks");
-    attr_to_stat("gpsdo_locked", "gpsdo_locked");
-    attr_to_stat("pps_clk_error_hz", "pps_clk_error_hz");
-    attr_to_stat("pps_cnt", "pps_cnt");
-    attr_to_stat("dsp_version", "dsp_version");
+    rs["in_holdover_since"] = 0;
+    switch (m_clock_state) {
+        case DexterClockState::Startup:
+            rs["clock_state"] = "startup"; break;
+        case DexterClockState::Normal:
+            rs["clock_state"] = "normal"; break;
+        case DexterClockState::Holdover:
+            rs["clock_state"] = "holdover";
+            rs["in_holdover_since"] = m_holdover_since_t;
+            break;
+    }
 
     constexpr double VMINFACT = 0.85;
     constexpr double VMAXFACT = 1.15;
@@ -589,9 +618,11 @@ size_t Dexter::receive_frame(
 }
 
 
-bool Dexter::is_clk_source_ok() const
+bool Dexter::is_clk_source_ok()
 {
-    return true;
+    handle_hw_time();
+
+    return m_clock_state != DexterClockState::Startup;
 }
 
 const char* Dexter::device_name(void) const
@@ -622,8 +653,6 @@ void Dexter::transmit_frame(struct FrameData&& frame)
     }
 
     const bool require_timestamped_tx = (m_conf.enableSync and frame.ts.timestamp_valid);
-
-    handle_hw_time();
 
     if (not m_channel_is_up) {
         if (require_timestamped_tx) {

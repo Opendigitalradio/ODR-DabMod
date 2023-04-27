@@ -87,7 +87,7 @@ class BladeRF : public Output::SDRDevice
                double timeout_secs) override;
 
        // Return true if GPS and reference clock inputs are ok
-       virtual bool is_clk_source_ok(void) const override;
+       virtual bool is_clk_source_ok(void) override;
        virtual const char* device_name(void) const override;
 
        virtual std::optional<double> get_temperature(void) const override;

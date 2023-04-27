@@ -361,7 +361,7 @@ size_t Lime::receive_frame(
     return 0;
 }
 
-bool Lime::is_clk_source_ok() const
+bool Lime::is_clk_source_ok()
 {
     // TODO
     return true;

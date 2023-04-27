@@ -254,7 +254,7 @@ size_t Soapy::receive_frame(
 }
 
 
-bool Soapy::is_clk_source_ok() const
+bool Soapy::is_clk_source_ok()
 {
     // TODO
     return true;

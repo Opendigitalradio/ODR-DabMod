@@ -273,7 +273,7 @@ size_t BladeRF::receive_frame(
     return 0;
 }
 
-bool BladeRF::is_clk_source_ok() const
+bool BladeRF::is_clk_source_ok()
 {
     // TODO
     return true;

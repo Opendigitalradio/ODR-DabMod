@@ -258,44 +258,19 @@ const char* SDR::name()
     return m_name.c_str();
 }
 
-void SDR::sleep_through_frame()
-{
-    using namespace std::chrono;
-
-    const auto now = steady_clock::now();
-
-    if (not t_last_frame_initialised) {
-        t_last_frame = now;
-        t_last_frame_initialised = true;
-    }
-
-    const auto delta = now - t_last_frame;
-    const auto wait_time = transmission_frame_duration(m_config.dabMode);
-
-    if (wait_time > delta) {
-        this_thread::sleep_for(wait_time - delta);
-    }
-
-    t_last_frame += wait_time;
-}
 
 void SDR::handle_frame(struct FrameData&& frame)
 {
     // Assumes m_device is valid
 
     if (not m_device->is_clk_source_ok()) {
-        sleep_through_frame();
         return;
     }
 
     const auto& time_spec = frame.ts;
 
-    if (m_config.enableSync and m_config.muteNoTimestamps and
-            not time_spec.timestamp_valid) {
-        sleep_through_frame();
-        etiLog.log(info,
-                "OutputSDR: Muting sample %d : no timestamp\n",
-                frame.ts.fct);
+    if (m_config.enableSync and m_config.muteNoTimestamps and not time_spec.timestamp_valid) {
+        etiLog.log(info, "OutputSDR: Muting sample %d : no timestamp\n", frame.ts.fct);
         return;
     }
 

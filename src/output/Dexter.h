@@ -84,7 +84,7 @@ class Dexter : public Output::SDRDevice
                 double timeout_secs) override;
 
         // Return true if GPS and reference clock inputs are ok
-        virtual bool is_clk_source_ok() const override;
+        virtual bool is_clk_source_ok() override;
         virtual const char* device_name() const override;
 
         virtual std::optional<double> get_temperature() const override;
@@ -129,6 +129,7 @@ class Dexter : public Output::SDRDevice
         // Only valid when m_clock_state Holdover
         std::chrono::steady_clock::time_point m_holdover_since =
             std::chrono::steady_clock::time_point::min();
+        std::time_t m_holdover_since_t = 0;
 };
 
 } // namespace Output
