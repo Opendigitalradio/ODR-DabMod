@@ -127,21 +127,25 @@ int GainControl::internal_process(Buffer* const dataIn, Buffer* dataOut)
 
     if ((sizeIn % m_frameSize) != 0) {
         PDEBUG("%zu != %zu\n", sizeIn, m_frameSize);
-        throw std::runtime_error(
-                "GainControl::process input size not valid!");
+        throw std::runtime_error("GainControl::process input size not valid!");
     }
 
     const auto constantGain4 = _mm_set1_ps(constantGain);
 
     for (size_t i = 0; i < sizeIn; i += m_frameSize) {
-        gain128.m = computeGain(in, m_frameSize);
+        // Do not apply gain computation to the NULL symbol, which either
+        // is blank or contains TII. Apply the gain calculation from the next
+        // symbol on the NULL symbol to get consistent TII power.
+        if (i > 0) {
+            gain128.m = computeGain(in, m_frameSize);
+        }
+        else {
+            gain128.m = computeGain(in + m_frameSize, m_frameSize);
+        }
         gain128.m = _mm_mul_ps(gain128.m, constantGain4);
 
         PDEBUG("********** Gain: %10f **********\n", gain128.f[0]);
 
-        ////////////////////////////////////////////////////////////////////////
-        // Applying gain to output data
-        ////////////////////////////////////////////////////////////////////////
         for (size_t sample = 0; sample < m_frameSize; ++sample) {
             out[sample] = _mm_mul_ps(in[sample], gain128.m);
         }
@@ -163,7 +167,12 @@ int GainControl::internal_process(Buffer* const dataIn, Buffer* dataOut)
     }
 
     for (size_t i = 0; i < sizeIn; i += m_frameSize) {
-        gain = constantGain * computeGain(in, m_frameSize);
+        // Do not apply gain computation to the NULL symbol, which either
+        // is blank or contains TII. Apply the gain calculation from the next
+        // symbol on the NULL symbol to get consistent TII power.
+        gain = constantGain * (i > 0 ?
+                computeGain(in, m_frameSize) :
+                computeGain(in + m_frameSize, m_frameSize));
 
         PDEBUG("********** Gain: %10f **********\n", gain);
 

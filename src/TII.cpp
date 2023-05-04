@@ -189,8 +189,6 @@ int TII::process(Buffer* dataIn, Buffer* dataOut)
         complexf* in = reinterpret_cast<complexf*>(dataIn->getData());
         complexf* out = reinterpret_cast<complexf*>(dataOut->getData());
 
-        constexpr float normalisation = 0.144337f; // 1/sqrt(48);
-
         /* Normalise the TII carrier power according to ETSI TR 101 496-3
          * Clause 5.4.2.2 Paragraph 7:
          *
@@ -198,7 +196,8 @@ int TII::process(Buffer* dataIn, Buffer* dataOut)
          * > is 1:48 for all Modes, so that the signal power in a TII symbol is
          * > 16 dB below the signal power of the other symbols.
          *
-         * Divide by sqrt(48) because I and Q are separately normalised.
+         * This is because we only enable 32 out of 1536 carriers, not because
+         * every carrier is lower power.
          */
         for (size_t i = 0; i < m_Acp.size(); i++) {
             /* See header file for an explanation of the old variant.
@@ -219,8 +218,8 @@ int TII::process(Buffer* dataIn, Buffer* dataOut)
              * and fuse the two conditionals together:
              */
             if (m_Acp[i]) {
-                out[i] = in[i] * normalisation;
-                out[i+1] = (m_conf.old_variant ? in[i+1] : in[i]) * normalisation;
+                out[i] = in[i];
+                out[i+1] = (m_conf.old_variant ? in[i+1] : in[i]);
             }
         }
     }
