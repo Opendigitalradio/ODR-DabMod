@@ -620,9 +620,13 @@ size_t Dexter::receive_frame(
 
 bool Dexter::is_clk_source_ok()
 {
-    handle_hw_time();
-
-    return m_clock_state != DexterClockState::Startup;
+    if (m_conf.enableSync) {
+        handle_hw_time();
+        return m_clock_state != DexterClockState::Startup;
+    }
+    else {
+        return true;
+    }
 }
 
 const char* Dexter::device_name(void) const
