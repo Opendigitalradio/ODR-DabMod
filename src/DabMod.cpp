@@ -364,18 +364,24 @@ int launch_modulator(int argc, char* argv[])
         etiLog.level(debug) << "FFTW planning done.";
     }
 
-    shared_ptr<FormatConverter> format_converter;
+    std::string output_format;
     if (mod_settings.useFileOutput and
             (mod_settings.fileOutputFormat == "s8" or
              mod_settings.fileOutputFormat == "u8" or
              mod_settings.fileOutputFormat == "s16")) {
-        format_converter = make_shared<FormatConverter>(mod_settings.fileOutputFormat);
+        output_format = mod_settings.fileOutputFormat;
     }
     else if (mod_settings.useBladeRFOutput or mod_settings.useDexterOutput) {
-        format_converter = make_shared<FormatConverter>("s16");
+        output_format = "s16";
     }
 
     auto output = prepare_output(mod_settings);
+
+    if (not output_format.empty()) {
+        if (auto o = dynamic_pointer_cast<Output::SDR>(output)) {
+            o->set_sample_size(FormatConverter::get_format_size(output_format));
+        }
+    }
 
     // Set thread priority to realtime
     if (int r = set_realtime_prio(1)) {
@@ -426,25 +432,15 @@ int launch_modulator(int argc, char* argv[])
         shared_ptr<DabModulator> modulator;
         if (inputReader) {
             m.etiReader = make_shared<EtiReader>(mod_settings.tist_offset_s);
-            modulator = make_shared<DabModulator>(*m.etiReader, mod_settings);
+            modulator = make_shared<DabModulator>(*m.etiReader, mod_settings, output_format);
         }
         else if (ediInput) {
-            modulator = make_shared<DabModulator>(ediInput->ediReader, mod_settings);
+            modulator = make_shared<DabModulator>(ediInput->ediReader, mod_settings, output_format);
         }
 
         rcs.enrol(modulator.get());
 
-        if (format_converter) {
-            flowgraph.connect(modulator, format_converter);
-            flowgraph.connect(format_converter, output);
-
-            if (auto o = dynamic_pointer_cast<Output::SDR>(output)) {
-                o->set_sample_size(format_converter->get_format_size());
-            }
-        }
-        else {
-            flowgraph.connect(modulator, output);
-        }
+        flowgraph.connect(modulator, output);
 
         if (inputReader) {
             etiLog.level(info) << inputReader->GetPrintableInfo();

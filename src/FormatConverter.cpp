@@ -2,7 +2,7 @@
    Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010, 2011 Her Majesty
    the Queen in Right of Canada (Communications Research Center Canada)
 
-   Copyright (C) 2022
+   Copyright (C) 2023
    Matthias P. Braendli, matthias.braendli@mpb.li
 
     http://opendigitalradio.org
@@ -45,6 +45,8 @@ int FormatConverter::process(Buffer* const dataIn, Buffer* dataOut)
     PDEBUG("FormatConverter::process(dataIn: %p, dataOut: %p)\n",
             dataIn, dataOut);
 
+    size_t num_clipped_samples = 0;
+
     size_t sizeIn = dataIn->getLength() / sizeof(float);
     float* in = reinterpret_cast<float*>(dataIn->getData());
 
@@ -53,7 +55,17 @@ int FormatConverter::process(Buffer* const dataIn, Buffer* dataOut)
         int16_t* out = reinterpret_cast<int16_t*>(dataOut->getData());
 
         for (size_t i = 0; i < sizeIn; i++) {
-            out[i] = in[i];
+            if (in[i] < INT16_MIN) {
+                out[i] = INT16_MIN;
+                num_clipped_samples++;
+            }
+            else if (in[i] > INT16_MAX) {
+                out[i] = INT16_MAX;
+                num_clipped_samples++;
+            }
+            else {
+                out[i] = in[i];
+            }
         }
     }
     else if (m_format == "u8") {
@@ -61,7 +73,19 @@ int FormatConverter::process(Buffer* const dataIn, Buffer* dataOut)
         uint8_t* out = reinterpret_cast<uint8_t*>(dataOut->getData());
 
         for (size_t i = 0; i < sizeIn; i++) {
-            out[i] = in[i] + 128;
+            const auto samp = in[i] + 128.0f;
+            if (samp < 0) {
+                out[i] = 0;
+                num_clipped_samples++;
+            }
+            else if (samp > INT8_MAX) {
+                out[i] = INT8_MAX;
+                num_clipped_samples++;
+            }
+            else {
+                out[i] = samp;
+            }
+
         }
     }
     else if (m_format == "s8") {
@@ -69,12 +93,24 @@ int FormatConverter::process(Buffer* const dataIn, Buffer* dataOut)
         int8_t* out = reinterpret_cast<int8_t*>(dataOut->getData());
 
         for (size_t i = 0; i < sizeIn; i++) {
-            out[i] = in[i];
+            if (in[i] < INT8_MIN) {
+                out[i] = INT8_MIN;
+                num_clipped_samples++;
+            }
+            else if (in[i] > INT8_MAX) {
+                out[i] = INT8_MAX;
+                num_clipped_samples++;
+            }
+            else {
+                out[i] = in[i];
+            }
         }
     }
     else {
         throw std::runtime_error("FormatConverter: Invalid format " + m_format);
     }
+
+    m_num_clipped_samples.store(num_clipped_samples);
 
     return dataOut->getLength();
 }
@@ -84,19 +120,25 @@ const char* FormatConverter::name()
     return "FormatConverter";
 }
 
-size_t FormatConverter::get_format_size() const
+size_t FormatConverter::get_num_clipped_samples() const
+{
+    return m_num_clipped_samples.load();
+}
+
+
+size_t FormatConverter::get_format_size(const std::string& format)
 {
     // Returns 2*sizeof(SAMPLE_TYPE) because we have I + Q
-    if (m_format == "s16") {
+    if (format == "s16") {
         return 4;
     }
-    else if (m_format == "u8") {
+    else if (format == "u8") {
         return 2;
     }
-    else if (m_format == "s8") {
+    else if (format == "s8") {
         return 2;
     }
     else {
-        throw std::runtime_error("FormatConverter: Invalid format " + m_format);
+        throw std::runtime_error("FormatConverter: Invalid format " + format);
     }
 }

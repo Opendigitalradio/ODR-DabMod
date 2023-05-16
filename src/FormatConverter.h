@@ -34,22 +34,27 @@
 
 #include "ModPlugin.h"
 #include <complex>
+#include <atomic>
 #include <string>
 #include <cstdint>
 
 class FormatConverter : public ModCodec
 {
     public:
+        static size_t get_format_size(const std::string& format);
+
         // Allowed formats: s8, u8 and s16
         FormatConverter(const std::string& format);
 
         int process(Buffer* const dataIn, Buffer* dataOut);
         const char* name();
 
-        size_t get_format_size() const;
+        size_t get_num_clipped_samples() const;
 
     private:
         std::string m_format;
+
+        std::atomic<size_t> m_num_clipped_samples = 0;
 };
 
 

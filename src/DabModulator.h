@@ -39,6 +39,7 @@
 #include "ConfigParser.h"
 #include "EtiReader.h"
 #include "Flowgraph.h"
+#include "FormatConverter.h"
 #include "GainControl.h"
 #include "OutputMemory.h"
 #include "RemoteControl.h"
@@ -49,7 +50,8 @@
 class DabModulator : public ModInput, public ModMetadata, public RemoteControllable
 {
 public:
-    DabModulator(EtiSource& etiSource, mod_settings_t& settings);
+    DabModulator(EtiSource& etiSource, mod_settings_t& settings, const std::string& format);
+    // Allowed formats: s8, u8 and s16. Empty string means no conversion
 
     int process(Buffer* dataOut) override;
     const char* name() override { return "DabModulator"; }
@@ -57,7 +59,7 @@ public:
     virtual meta_vec_t process_metadata(const meta_vec_t& metadataIn) override;
 
     /* Required to get the timestamp */
-    EtiSource* getEtiSource() { return &myEtiSource; }
+    EtiSource* getEtiSource() { return &m_etiSource; }
 
     /******* REMOTE CONTROL ********/
     virtual void set_parameter(const std::string& parameter, const std::string& value) override;
@@ -68,17 +70,19 @@ protected:
     void setMode(unsigned mode);
 
     mod_settings_t& m_settings;
+    std::string m_format;
 
-    EtiSource& myEtiSource;
-    std::shared_ptr<Flowgraph> myFlowgraph;
+    EtiSource& m_etiSource;
+    std::shared_ptr<Flowgraph> m_flowgraph;
 
-    size_t myNbSymbols;
-    size_t myNbCarriers;
-    size_t mySpacing;
-    size_t myNullSize;
-    size_t mySymSize;
-    size_t myFicSizeOut;
+    size_t m_nbSymbols;
+    size_t m_nbCarriers;
+    size_t m_spacing;
+    size_t m_nullSize;
+    size_t m_symSize;
+    size_t m_ficSizeOut;
 
-    std::shared_ptr<OutputMemory> myOutput;
+    std::shared_ptr<FormatConverter> m_formatConverter;
+    std::shared_ptr<OutputMemory> m_output;
 };
 
