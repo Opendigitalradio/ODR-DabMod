@@ -532,6 +532,7 @@ void RemoteControllerZmq::send_fail_reply(zmq::socket_t &pSocket, const std::str
 void RemoteControllerZmq::process()
 {
     m_fault = false;
+    m_active = true;
 
     // create zmq reply socket for receiving ctrl parameters
     try {
