@@ -193,7 +193,7 @@ RemoteControllable* RemoteControllers::get_controllable_(const std::string& name
             [&](RemoteControllable* r) { return r->get_rc_name() == name; });
 
     if (rc == controllables.end()) {
-        throw ParameterError("Module name unknown");
+        throw ParameterError(string{"Module name '"} + name + "' unknown");
     }
     else {
         return *rc;

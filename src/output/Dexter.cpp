@@ -204,7 +204,7 @@ Dexter::Dexter(SDRDeviceConfig& config) :
         pacontrol_set_targetpower(m_zmq_sock, *m_conf.pacontrol_targetpower);
     }
     else {
-        etiLog.level(warn) << "Config does not defined PA target power";
+        etiLog.level(warn) << "Config does not define PA target power";
     }
 }
 
