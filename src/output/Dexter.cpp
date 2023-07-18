@@ -465,21 +465,6 @@ double Dexter::get_bandwidth(void) const
     return 0;
 }
 
-template <typename T>
-static void attr_to_stat(
-        Dexter::run_statistics_t& rs, iio_device *dexter_dsp_tx,
-        const char* attr_name, const char* stat_name) {
-    long long attr_value = 0;
-    int r = 0;
-    if ((r = iio_device_attr_read_longlong(dexter_dsp_tx, attr_name, &attr_value)) == 0) {
-        rs[stat_name] = (T)attr_value;
-    }
-    else {
-        rs[stat_name] = (ssize_t)-1;
-        etiLog.level(error) << "Failed to get dexter_dsp_tx." << attr_name << ": " << get_iio_error(r);
-    }
-};
-
 SDRDevice::run_statistics_t Dexter::get_run_statistics(void) const
 {
     run_statistics_t rs;
@@ -489,14 +474,6 @@ SDRDevice::run_statistics_t Dexter::get_run_statistics(void) const
     }
     rs["latepackets"] = num_late;
     rs["frames"] = num_frames_modulated;
-
-    attr_to_stat<size_t>(rs, m_dexter_dsp_tx, "clks", "clks");
-    attr_to_stat<size_t>(rs, m_dexter_dsp_tx, "stream0_fifo_not_empty_clks", "fifo_not_empty_clks");
-    attr_to_stat<size_t>(rs, m_dexter_dsp_tx, "gpsdo_locked", "gpsdo_locked");
-    attr_to_stat<ssize_t>(rs, m_dexter_dsp_tx, "pps_clk_error_hz", "pps_clk_error_hz");
-    attr_to_stat<size_t>(rs, m_dexter_dsp_tx, "pps_cnt", "pps_cnt");
-    attr_to_stat<size_t>(rs, m_dexter_dsp_tx, "pps_loss_of_signal", "pps_loss_of_signal");
-    attr_to_stat<size_t>(rs, m_dexter_dsp_tx, "dsp_version", "dsp_version");
 
     rs["in_holdover_since"] = 0;
     switch (m_clock_state) {
@@ -510,141 +487,8 @@ SDRDevice::run_statistics_t Dexter::get_run_statistics(void) const
             break;
     }
 
-    constexpr double VMINFACT = 0.85;
-    constexpr double VMAXFACT = 1.15;
-    bool voltage_ok = true;
-    bool temp_ok = true;
-
-    {
-        std::ifstream in("/sys/bus/i2c/devices/1-002f/hwmon/hwmon0/in2_input", std::ios::in | std::ios::binary);
-        if (in) {
-            double vcc3v3;
-            in >> vcc3v3;
-            rs["vcc3v3"] = vcc3v3 * (18+36)/36.0/1000.0;
-            voltage_ok = (vcc3v3 > VMINFACT * 3.3) and (vcc3v3 < VMAXFACT * 3.3);
-        }
-        else {
-            rs["vcc3v3"] = -1;
-            voltage_ok = false;
-        }
-    }
-    {
-        std::ifstream in("/sys/bus/i2c/devices/1-002f/hwmon/hwmon0/in1_input", std::ios::in | std::ios::binary);
-        if (in) {
-            double vcc5v4;
-            in >> vcc5v4;
-            rs["vcc5v4"] = vcc5v4 * (51+36)/36.0/1000.0;
-            voltage_ok = (vcc5v4 > VMINFACT * 5.4) and (vcc5v4 < VMAXFACT * 5.4);
-        }
-        else {
-            rs["vcc5v4"] = -1;
-            voltage_ok = false;
-        }
-    }
-    {
-        std::ifstream in("/sys/bus/i2c/devices/1-002f/hwmon/hwmon0/in3_input", std::ios::in | std::ios::binary);
-        if (in) {
-            double vfan;
-            in >> vfan;
-            rs["vfan"] = vfan * (560+22)/22.0/1000.0;
-        }
-        else {
-            rs["vfan"] = -1;
-            voltage_ok = false;
-        }
-    }
-    {
-        std::ifstream in("/sys/bus/i2c/devices/1-002f/hwmon/hwmon0/in0_input", std::ios::in | std::ios::binary);
-        if (in) {
-            double vccmainin;
-            in >> vccmainin;
-            rs["vcc_main_in"] = vccmainin * (560+22)/22.0/1000.0;
-            voltage_ok |= vccmainin > 10.0;
-        }
-        else {
-            rs["vcc_main_in"] = -1;
-            voltage_ok = false;
-        }
-    }
-    {
-        std::ifstream in("/sys/bus/i2c/devices/1-002f/hwmon/hwmon0/in4_input", std::ios::in | std::ios::binary);
-        if (in) {
-            double vcc3v3pll;
-            in >> vcc3v3pll;
-            rs["vcc3v3pll"] = vcc3v3pll * (18+36)/36.0/1000.0;
-            voltage_ok = (vcc3v3pll > VMINFACT * 3.3) and (vcc3v3pll < VMAXFACT * 3.3);
-        }
-        else {
-            rs["vcc3v3pll"] = -1;
-            voltage_ok = false;
-        }
-    }
-    {
-        std::ifstream in("/sys/bus/i2c/devices/1-002f/hwmon/hwmon0/in5_input", std::ios::in | std::ios::binary);
-        if (in) {
-            double vcc2v5io;
-            in >> vcc2v5io;
-            rs["vcc2v5io"] = vcc2v5io * (4.7+36)/36.0/1000.0;
-            voltage_ok = (vcc2v5io > VMINFACT * 2.5) and (vcc2v5io < VMAXFACT * 2.5);
-        }
-        else {
-            rs["vcc2v5io"] = -1;
-            voltage_ok = false;
-        }
-    }
-    {
-        std::ifstream in("/sys/bus/i2c/devices/1-002f/hwmon/hwmon0/in6_input", std::ios::in | std::ios::binary);
-        if (in) {
-            double vccocxo;
-            in >> vccocxo;
-            rs["vccocxo"] = vccocxo * (51+36)/36.0/1000.0;
-        }
-        else {
-            rs["vccocxo"] = -1;
-            voltage_ok = false;
-        }
-    }
-
-    optional<double> tfpga;
-    for (int i = 0; i < 100; i++) {
-        std::string path = "/sys/bus/iio/devices/iio:device";
-        path += to_string(i);
-
-        std::ifstream iio_name(path + "/name", std::ios::in | std::ios::binary);
-        std::ostringstream sstr;
-        sstr << iio_name.rdbuf();
-        if (sstr.str() == "xadc\n") {
-            std::ifstream in_scale(path + "/in_temp0_scale", std::ios::in | std::ios::binary);
-            std::ifstream in_offset(path + "/in_temp0_offset", std::ios::in | std::ios::binary);
-            std::ifstream in_temp0_raw(path + "/in_temp0_raw", std::ios::in | std::ios::binary);
-
-            if (in_scale and in_offset and in_temp0_raw) {
-                double scale, offset, temp0_raw ;
-                in_scale >> scale;
-                in_offset >> offset;
-                in_temp0_raw >> temp0_raw;
-
-                tfpga = (temp0_raw + offset) * scale / 1000.0;
-            }
-            break;
-        }
-    }
-
-    if (tfpga) {
-        rs["tempfpga"] = *tfpga;
-        temp_ok |= *tfpga <= 85;
-    }
-    else {
-        rs["tempfpga"] = -1;
-        temp_ok = false;
-    }
-
-    rs["voltage_alarm"] = not voltage_ok;
-    rs["temp_alarm"] = not temp_ok;
-
     return rs;
 }
-
 
 double Dexter::get_real_secs(void) const
 {
