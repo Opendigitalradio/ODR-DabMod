@@ -67,7 +67,7 @@ namespace json {
 
             ss << "\"" << escape_json(element.first) << "\": ";
 
-            const auto& value = element.second.data;
+            const auto& value = element.second.v;
             if (std::holds_alternative<std::string>(value)) {
                 ss << "\"" << escape_json(std::get<std::string>(value)) << "\"";
             }

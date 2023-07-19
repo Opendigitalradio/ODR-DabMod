@@ -54,6 +54,8 @@ odr_dabmod_SOURCES  = src/DabMod.cpp \
 					  src/EtiReader.h \
 					  src/Eti.cpp \
 					  src/Eti.h \
+					  src/Events.cpp \
+					  src/Events.h \
 					  src/FicSource.cpp \
 					  src/FicSource.h \
 					  src/PuncturingRule.cpp \

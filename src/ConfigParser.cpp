@@ -37,6 +37,7 @@
 #include "ConfigParser.h"
 #include "Utils.h"
 #include "Log.h"
+#include "Events.h"
 #include "DabModulator.h"
 #include "output/SDR.h"
 
@@ -114,11 +115,16 @@ static void parse_configfile(
 
     mod_settings.inputTransport = pt.Get("input.transport", "file");
 
-    mod_settings.edi_max_delay_ms = pt.GetReal("input.edi_max_delay", 0.0f);
+    mod_settings.edi_max_delay_ms = pt.GetReal("input.edi_max_delay", 0.0);
 
     mod_settings.inputName = pt.Get("input.source", "/dev/stdin");
 
     // log parameters:
+    const string events_endpoint = pt.Get("log.events_endpoint", "");
+    if (not events_endpoint.empty()) {
+        events.bind(events_endpoint);
+    }
+
     if (pt.GetInteger("log.syslog", 0) == 1) {
         etiLog.register_backend(make_shared<LogToSyslog>());
     }

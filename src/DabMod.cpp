@@ -47,6 +47,7 @@
 #   include <netinet/in.h>
 #endif
 
+#include "Events.h"
 #include "Utils.h"
 #include "Log.h"
 #include "DabModulator.h"
@@ -323,6 +324,8 @@ int launch_modulator(int argc, char* argv[])
 
     mod_settings_t mod_settings;
     parse_args(argc, argv, mod_settings);
+
+    etiLog.register_backend(make_shared<LogToEventSender>());
 
     etiLog.level(info) << "Configuration parsed. Starting up version " <<
 #if defined(GITVERSION)

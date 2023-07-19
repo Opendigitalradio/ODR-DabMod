@@ -350,7 +350,7 @@ const string FIRFilter::get_parameter(const string& parameter) const
 const json::map_t FIRFilter::get_all_values() const
 {
     json::map_t map;
-    map["ntaps"] = m_taps.size();
-    map["tapsfile"] = m_taps_file;
+    map["ntaps"].v = m_taps.size();
+    map["tapsfile"].v = m_taps_file;
     return map;
 }

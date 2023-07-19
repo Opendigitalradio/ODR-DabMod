@@ -438,7 +438,7 @@ const string DabModulator::get_parameter(const string& parameter) const
 const json::map_t DabModulator::get_all_values() const
 {
     json::map_t map;
-    map["rate"] = m_settings.outputRate;
-    map["num_clipped_samples"] = m_formatConverter ? m_formatConverter->get_num_clipped_samples() : 0;
+    map["rate"].v = m_settings.outputRate;
+    map["num_clipped_samples"].v = m_formatConverter ? m_formatConverter->get_num_clipped_samples() : 0;
     return map;
 }

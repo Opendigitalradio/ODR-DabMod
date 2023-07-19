@@ -31,28 +31,46 @@
 #  include "config.h"
 #endif
 
+#if defined(HAVE_ZEROMQ)
+#  include "zmq.hpp"
+#endif
+
 #include <list>
-#include <memory>
-#include <optional>
-#include <stdexcept>
-#include <string>
 #include <unordered_map>
 #include <variant>
+#include <map>
+#include <memory>
+#include <string>
+#include <stdexcept>
 
-namespace json {
+#include "Log.h"
+#include "Json.h"
 
-    using map_t = std::unordered_map<std::string, struct value_t>;
+class EventSender {
+    public:
+        EventSender();
+        EventSender(const EventSender& other) = delete;
+        const EventSender& operator=(const EventSender& other) = delete;
+        EventSender(EventSender&& other) = delete;
+        EventSender& operator=(EventSender&& other) = delete;
+        ~EventSender();
 
-    struct value_t {
-        std::variant<
-            map_t,
-            std::string,
-            double,
-            size_t,
-            ssize_t,
-            bool,
-            std::nullopt_t> v;
-    };
+        void bind(const std::string& bind_endpoint);
 
-    std::string map_to_json(const map_t& values);
-}
+        void send(const std::string& event_name, const json::map_t& detail);
+    private:
+        zmq::context_t m_zmq_context;
+        zmq::socket_t m_socket;
+};
+
+class LogToEventSender: public LogBackend {
+    public:
+        virtual ~LogToEventSender() {};
+        virtual void log(log_level_t level, const std::string& message);
+        virtual std::string get_name() const;
+};
+
+/* events is a singleton used in all parts of the program to output log messages.
+ * It is constructed in Events.cpp */
+extern EventSender events;
+

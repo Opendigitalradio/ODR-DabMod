@@ -380,19 +380,19 @@ void UHD::transmit_frame(struct FrameData&& frame)
 SDRDevice::run_statistics_t UHD::get_run_statistics(void) const
 {
     run_statistics_t rs;
-    rs["underruns"] = num_underflows;
-    rs["overruns"] = num_overflows;
-    rs["late_packets"] = num_late_packets;
-    rs["frames"] = num_frames_modulated;
+    rs["underruns"].v = num_underflows;
+    rs["overruns"].v = num_overflows;
+    rs["late_packets"].v = num_late_packets;
+    rs["frames"].v = num_frames_modulated;
 
     if (m_device_time) {
         const auto gpsdo_stat = m_device_time->get_gnss_stats();
-        rs["gpsdo_holdover"] = gpsdo_stat.holdover;
-        rs["gpsdo_num_sv"] = gpsdo_stat.num_sv;
+        rs["gpsdo_holdover"].v = gpsdo_stat.holdover;
+        rs["gpsdo_num_sv"].v = gpsdo_stat.num_sv;
     }
     else {
-        rs["gpsdo_holdover"] = true;
-        rs["gpsdo_num_sv"] = 0;
+        rs["gpsdo_holdover"].v = true;
+        rs["gpsdo_num_sv"].v = 0;
     }
     return rs;
 }

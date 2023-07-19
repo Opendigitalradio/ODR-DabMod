@@ -450,7 +450,7 @@ const string SDR::get_parameter(const string& parameter) const
         if (m_device) {
             const auto stat = m_device->get_run_statistics();
             try {
-                const auto& value = stat.at(parameter).data;
+                const auto& value = stat.at(parameter).v;
                 if (std::holds_alternative<string>(value)) {
                     ss << std::get<string>(value);
                 }
@@ -489,19 +489,19 @@ const json::map_t SDR::get_all_values() const
 {
     json::map_t stat = m_device->get_run_statistics();
 
-    stat["txgain"] = m_config.txgain;
-    stat["rxgain"] = m_config.rxgain;
-    stat["freq"] = m_config.frequency;
-    stat["muting"] = m_config.muting;
-    stat["temp"] = std::nullopt;
+    stat["txgain"].v = m_config.txgain;
+    stat["rxgain"].v = m_config.rxgain;
+    stat["freq"].v = m_config.frequency;
+    stat["muting"].v = m_config.muting;
+    stat["temp"].v = std::nullopt;
 
     if (m_device) {
         const std::optional<double> temp = m_device->get_temperature();
         if (temp) {
-            stat["temp"] = *temp;
+            stat["temp"].v = *temp;
         }
     }
-    stat["queued_frames_ms"] = m_queue.size() *
+    stat["queued_frames_ms"].v = m_queue.size() *
             (size_t)chrono::duration_cast<chrono::milliseconds>(transmission_frame_duration(m_config.dabMode))
             .count();
 

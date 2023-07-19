@@ -388,9 +388,9 @@ const std::string TII::get_parameter(const std::string& parameter) const
 const json::map_t TII::get_all_values() const
 {
     json::map_t map;
-    map["enable"] = m_conf.enable;
-    map["pattern"] = m_conf.pattern;
-    map["comb"] = m_conf.comb;
-    map["old_variant"] = m_conf.old_variant;
+    map["enable"].v = m_conf.enable;
+    map["pattern"].v = m_conf.pattern;
+    map["comb"].v = m_conf.comb;
+    map["old_variant"].v = m_conf.old_variant;
     return map;
 }
