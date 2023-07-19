@@ -435,9 +435,9 @@ const string DabModulator::get_parameter(const string& parameter) const
     return ss.str();
 }
 
-const RemoteControllable::map_t DabModulator::get_all_values() const
+const json::map_t DabModulator::get_all_values() const
 {
-    map_t map;
+    json::map_t map;
     map["rate"] = m_settings.outputRate;
     map["num_clipped_samples"] = m_formatConverter ? m_formatConverter->get_num_clipped_samples() : 0;
     return map;

@@ -105,71 +105,14 @@ std::list< std::vector<std::string> > RemoteControllers::get_param_list_values(c
 }
 
 
-static std::string escape_json(const std::string &s) {
-    std::ostringstream o;
-    for (auto c = s.cbegin(); c != s.cend(); c++) {
-        switch (*c) {
-        case '"': o << "\\\""; break;
-        case '\\': o << "\\\\"; break;
-        case '\b': o << "\\b"; break;
-        case '\f': o << "\\f"; break;
-        case '\n': o << "\\n"; break;
-        case '\r': o << "\\r"; break;
-        case '\t': o << "\\t"; break;
-        default:
-            if ('\x00' <= *c && *c <= '\x1f') {
-                o << "\\u"
-                  << std::hex << std::setw(4) << std::setfill('0') << static_cast<int>(*c);
-            } else {
-                o << *c;
-            }
-        }
+
+std::string RemoteControllers::get_showjson() {
+    json::map_t root;
+    for (auto &controllable : rcs.controllables) {
+        root[controllable->get_rc_name()].data = controllable->get_all_values();
     }
-    return o.str();
-}
 
-std::string RemoteControllers::get_params_json(const std::string& name) {
-    RemoteControllable* controllable = get_controllable_(name);
-    const auto& values = controllable->get_all_values();
-
-    std::ostringstream ss;
-    ss << "{ ";
-    size_t ix = 0;
-    for (const auto& element : values) {
-        if (ix > 0) {
-            ss << ",";
-        }
-
-        ss << "\"" << escape_json(element.first) << "\": ";
-
-        const auto& value = element.second;
-        if (std::holds_alternative<string>(value)) {
-            ss << "\"" << escape_json(std::get<string>(value)) << "\"";
-        }
-        else if (std::holds_alternative<double>(value)) {
-            ss << std::defaultfloat << std::get<double>(value);
-        }
-        else if (std::holds_alternative<ssize_t>(value)) {
-            ss << std::get<ssize_t>(value);
-        }
-        else if (std::holds_alternative<size_t>(value)) {
-            ss << std::get<size_t>(value);
-        }
-        else if (std::holds_alternative<bool>(value)) {
-            ss << (std::get<bool>(value) ? "true" : "false");
-        }
-        else if (std::holds_alternative<std::nullopt_t>(value)) {
-            ss << "null";
-        }
-        else {
-            throw std::logic_error("variant alternative not handled");
-        }
-
-        ix++;
-    }
-    ss << " }";
-
-    return ss.str();
+    return json::map_to_json(root);
 }
 
 std::string RemoteControllers::get_param(const std::string& name, const std::string& param) {
@@ -590,6 +533,19 @@ void RemoteControllerZmq::process()
                         repSocket.send(zmsg, (--cohort_size > 0) ? zmq::send_flags::sndmore : zmq::send_flags::none);
                     }
                 }
+                else if (msg.size() == 1 && command == "showjson") {
+                    try {
+                        std::string json = rcs.get_showjson();
+
+                        zmq::message_t zmsg(json.size());
+                        memcpy(zmsg.data(), json.data(), json.size());
+
+                        repSocket.send(zmsg, zmq::send_flags::none);
+                    }
+                    catch (const ParameterError &err) {
+                        send_fail_reply(repSocket, err.what());
+                    }
+                }
                 else if (msg.size() == 2 && command == "show") {
                     const std::string module((char*) msg[1].data(), msg[1].size());
                     try {
@@ -603,20 +559,6 @@ void RemoteControllerZmq::process()
 
                             repSocket.send(zmsg, (--r_size > 0) ? zmq::send_flags::sndmore : zmq::send_flags::none);
                         }
-                    }
-                    catch (const ParameterError &err) {
-                        send_fail_reply(repSocket, err.what());
-                    }
-                }
-                else if (msg.size() == 2 && command == "showjson") {
-                    const std::string module((char*) msg[1].data(), msg[1].size());
-                    try {
-                        std::string json = rcs.get_params_json(module);
-
-                        zmq::message_t zmsg(json.size());
-                        memcpy(zmsg.data(), json.data(), json.size());
-
-                        repSocket.send(zmsg, zmq::send_flags::none);
                     }
                     catch (const ParameterError &err) {
                         send_fail_reply(repSocket, err.what());

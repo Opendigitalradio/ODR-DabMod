@@ -98,6 +98,8 @@ odr_dabmod_SOURCES  = src/DabMod.cpp \
 					  lib/RemoteControl.h \
 					  lib/Log.cpp \
 					  lib/Log.h \
+					  lib/Json.h \
+					  lib/Json.cpp \
 					  lib/Globals.cpp \
 					  lib/INIReader.h \
 					  lib/crc.h \

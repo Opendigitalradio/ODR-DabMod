@@ -58,7 +58,7 @@ class GuardIntervalInserter : public ModCodec, public RemoteControllable
         /******* REMOTE CONTROL ********/
         virtual void set_parameter(const std::string& parameter, const std::string& value) override;
         virtual const std::string get_parameter(const std::string& parameter) const override;
-        virtual const RemoteControllable::map_t get_all_values() const override;
+        virtual const json::map_t get_all_values() const override;
 
     protected:
         void update_window(size_t new_window_overlap);

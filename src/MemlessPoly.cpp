@@ -467,9 +467,9 @@ const string MemlessPoly::get_parameter(const string& parameter) const
     return ss.str();
 }
 
-const RemoteControllable::map_t MemlessPoly::get_all_values() const
+const json::map_t MemlessPoly::get_all_values() const
 {
-    map_t map;
+    json::map_t map;
     map["ncoefs"] = m_coefs_am.size();
     map["coefs"] = serialise_coefficients();
     map["coeffile"] = m_coefs_file;

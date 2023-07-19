@@ -303,9 +303,9 @@ const std::string GuardIntervalInserter::get_parameter(const std::string& parame
     return ss.str();
 }
 
-const RemoteControllable::map_t GuardIntervalInserter::get_all_values() const
+const json::map_t GuardIntervalInserter::get_all_values() const
 {
-    map_t map;
+    json::map_t map;
     map["windowlen"] = d_windowOverlap;
     return map;
 }

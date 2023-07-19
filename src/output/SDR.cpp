@@ -450,7 +450,7 @@ const string SDR::get_parameter(const string& parameter) const
         if (m_device) {
             const auto stat = m_device->get_run_statistics();
             try {
-                const auto& value = stat.at(parameter);
+                const auto& value = stat.at(parameter).data;
                 if (std::holds_alternative<string>(value)) {
                     ss << std::get<string>(value);
                 }
@@ -485,9 +485,9 @@ const string SDR::get_parameter(const string& parameter) const
     return ss.str();
 }
 
-const RemoteControllable::map_t SDR::get_all_values() const
+const json::map_t SDR::get_all_values() const
 {
-    map_t stat = m_device->get_run_statistics();
+    json::map_t stat = m_device->get_run_statistics();
 
     stat["txgain"] = m_config.txgain;
     stat["rxgain"] = m_config.rxgain;

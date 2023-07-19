@@ -347,9 +347,9 @@ const string FIRFilter::get_parameter(const string& parameter) const
     return ss.str();
 }
 
-const RemoteControllable::map_t FIRFilter::get_all_values() const
+const json::map_t FIRFilter::get_all_values() const
 {
-    map_t map;
+    json::map_t map;
     map["ntaps"] = m_taps.size();
     map["tapsfile"] = m_taps_file;
     return map;

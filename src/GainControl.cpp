@@ -583,9 +583,9 @@ const string GainControl::get_parameter(const string& parameter) const
     return ss.str();
 }
 
-const RemoteControllable::map_t GainControl::get_all_values() const
+const json::map_t GainControl::get_all_values() const
 {
-    map_t map;
+    json::map_t map;
     map["digital"] = m_digGain;
     switch (m_gainmode) {
         case GainMode::GAIN_FIX:

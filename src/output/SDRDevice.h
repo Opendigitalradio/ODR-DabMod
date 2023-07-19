@@ -116,7 +116,7 @@ struct FrameData {
 // All SDR Devices must implement the SDRDevice interface
 class SDRDevice {
     public:
-        using run_statistics_t = RemoteControllable::map_t;
+        using run_statistics_t = json::map_t;
 
         virtual void tune(double lo_offset, double frequency) = 0;
         virtual double get_tx_freq(void) const = 0;

@@ -301,9 +301,9 @@ const std::string TimestampDecoder::get_parameter(
     return ss.str();
 }
 
-const RemoteControllable::map_t TimestampDecoder::get_all_values() const
+const json::map_t TimestampDecoder::get_all_values() const
 {
-    map_t map;
+    json::map_t map;
     map["offset"] = timestamp_offset;
     if (full_timestamp_received) {
         map["timestamp"] = time_secs + ((double)time_pps / 16384000.0);

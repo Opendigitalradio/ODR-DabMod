@@ -120,7 +120,7 @@ class TimestampDecoder : public RemoteControllable
         /* Base function to set parameters. */
         virtual void set_parameter(const std::string& parameter, const std::string& value) override;
         virtual const std::string get_parameter(const std::string& parameter) const override;
-        virtual const RemoteControllable::map_t get_all_values() const override;
+        virtual const json::map_t get_all_values() const override;
 
         const char* name() { return "TS"; }
 

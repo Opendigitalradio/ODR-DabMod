@@ -385,9 +385,9 @@ const std::string TII::get_parameter(const std::string& parameter) const
     return ss.str();
 }
 
-const RemoteControllable::map_t TII::get_all_values() const
+const json::map_t TII::get_all_values() const
 {
-    map_t map;
+    json::map_t map;
     map["enable"] = m_conf.enable;
     map["pattern"] = m_conf.pattern;
     map["comb"] = m_conf.comb;

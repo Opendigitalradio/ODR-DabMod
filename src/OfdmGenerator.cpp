@@ -458,9 +458,9 @@ const std::string OfdmGenerator::get_parameter(const std::string& parameter) con
     return ss.str();
 }
 
-const RemoteControllable::map_t OfdmGenerator::get_all_values() const
+const json::map_t OfdmGenerator::get_all_values() const
 {
-    map_t map;
+    json::map_t map;
     // TODO needs rework of the values
     return map;
 }

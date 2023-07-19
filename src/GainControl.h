@@ -66,7 +66,7 @@ class GainControl : public PipelinedModCodec, public RemoteControllable
         /* Functions for the remote control */
         virtual void set_parameter(const std::string& parameter, const std::string& value) override;
         virtual const std::string get_parameter(const std::string& parameter) const override;
-        virtual const RemoteControllable::map_t get_all_values() const override;
+        virtual const json::map_t get_all_values() const override;
 
     protected:
         virtual int internal_process(
