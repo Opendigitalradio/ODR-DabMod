@@ -98,6 +98,7 @@ class TimestampDecoder : public RemoteControllable
          * frame transmission
          */
         TimestampDecoder(double& offset_s);
+        virtual ~TimestampDecoder() {}
 
         frame_timestamp getTimestamp(void);
 

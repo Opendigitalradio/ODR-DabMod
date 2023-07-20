@@ -3,7 +3,7 @@
    Her Majesty the Queen in Right of Canada (Communications Research
    Center Canada)
 
-   Copyright (C) 2018
+   Copyright (C) 2023
    Matthias P. Braendli, matthias.braendli@mpb.li
 
     http://opendigitalradio.org
@@ -31,18 +31,21 @@
 #   include "config.h"
 #endif
 
-#include <stdlib.h>
-#include <unistd.h>
-#include <stdio.h>
-#include <time.h>
 #include <string>
 #include <chrono>
+#include <cstdio>
+#include <ctime>
+#include <cstdlib>
+#include <unistd.h>
+#include "ConfigParser.h"
 
 void printUsage(const char* progName);
 
 void printVersion(void);
 
 void printStartupInfo(void);
+
+void printModSettings(const mod_settings_t& mod_settings);
 
 // Set SCHED_RR with priority prio (0=lowest)
 int set_realtime_prio(int prio);

@@ -646,7 +646,7 @@ bool EdiTransport::rxPacket()
                 const int timeout_ms = 1000;
                 try {
                     ssize_t ret = m_tcpclient.recv(m_tcpbuffer.data(), m_tcpbuffer.size(), 0, timeout_ms);
-                    if (ret == 0 or ret == -1) {
+                    if (ret <= 0) {
                         return false;
                     }
                     else if (ret > (ssize_t)m_tcpbuffer.size()) {

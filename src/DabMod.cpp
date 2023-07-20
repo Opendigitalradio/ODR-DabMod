@@ -3,7 +3,7 @@
    Her Majesty the Queen in Right of Canada (Communications Research
    Center Canada)
 
-   Copyright (C) 2019
+   Copyright (C) 2023
    Matthias P. Braendli, matthias.braendli@mpb.li
 
     http://opendigitalradio.org
@@ -96,18 +96,58 @@ void signalHandler(int signalNb)
     running = 0;
 }
 
-struct modulator_data
-{
-    // For ETI
-    std::shared_ptr<InputReader> inputReader;
-    std::shared_ptr<EtiReader> etiReader;
+class ModulatorData : public RemoteControllable {
+    public:
+        // For ETI
+        std::shared_ptr<InputReader> inputReader;
+        std::shared_ptr<EtiReader> etiReader;
 
-    // For EDI
-    std::shared_ptr<EdiInput> ediInput;
+        // For EDI
+        std::shared_ptr<EdiInput> ediInput;
 
-    // Common to both EDI and EDI
-    uint64_t framecount = 0;
-    Flowgraph *flowgraph = nullptr;
+        // Common to both EDI and EDI
+        uint64_t framecount = 0;
+        Flowgraph *flowgraph = nullptr;
+
+
+        // RC-related
+        ModulatorData() : RemoteControllable("mainloop") {
+            RC_ADD_PARAMETER(num_modulator_restarts, "(Read-only) Number of mod restarts");
+            RC_ADD_PARAMETER(most_recent_edi_decoded, "(Read-only) UNIX Timestamp of most recently decoded EDI frame");
+        }
+
+        virtual ~ModulatorData() {}
+
+        virtual void set_parameter(const std::string& parameter, const std::string& value) {
+            throw ParameterError("Parameter " + parameter + " is read-only");
+        }
+
+        virtual const std::string get_parameter(const std::string& parameter) const {
+            stringstream ss;
+            if (parameter == "num_modulator_restarts") {
+                ss << num_modulator_restarts;
+            }
+            else if (parameter == "most_recent_edi_decoded") {
+                ss << most_recent_edi_decoded;
+            }
+            else {
+                ss << "Parameter '" << parameter <<
+                    "' is not exported by controllable " << get_rc_name();
+                throw ParameterError(ss.str());
+            }
+            return ss.str();
+        }
+
+        virtual const json::map_t get_all_values() const
+        {
+            json::map_t map;
+            map["num_modulator_restarts"].v = num_modulator_restarts;
+            map["most_recent_edi_decoded"].v = most_recent_edi_decoded;
+            return map;
+        }
+
+        size_t num_modulator_restarts = 0;
+        time_t most_recent_edi_decoded = 0;
 };
 
 enum class run_modulator_state_t {
@@ -117,88 +157,8 @@ enum class run_modulator_state_t {
     reconfigure // Some sort of change of configuration we cannot handle happened
 };
 
-static run_modulator_state_t run_modulator(const mod_settings_t& mod_settings, modulator_data& m);
+static run_modulator_state_t run_modulator(const mod_settings_t& mod_settings, ModulatorData& m);
 
-static void printModSettings(const mod_settings_t& mod_settings)
-{
-    stringstream ss;
-    // Print settings
-    ss << "Input\n";
-    ss << "  Type: " << mod_settings.inputTransport << "\n";
-    ss << "  Source: " << mod_settings.inputName << "\n";
-
-    ss << "Output\n";
-
-    if (mod_settings.useFileOutput) {
-        ss << "  Name: " << mod_settings.outputName << "\n";
-    }
-#if defined(HAVE_OUTPUT_UHD)
-    else if (mod_settings.useUHDOutput) {
-        ss << " UHD\n" <<
-            "  Device: " << mod_settings.sdr_device_config.device << "\n" <<
-            "  Subdevice: " <<
-                mod_settings.sdr_device_config.subDevice << "\n" <<
-            "  master_clock_rate: " <<
-                mod_settings.sdr_device_config.masterClockRate << "\n" <<
-            "  refclk: " <<
-                mod_settings.sdr_device_config.refclk_src << "\n" <<
-            "  pps source: " <<
-                mod_settings.sdr_device_config.pps_src << "\n";
-    }
-#endif
-#if defined(HAVE_SOAPYSDR)
-    else if (mod_settings.useSoapyOutput) {
-        ss << " SoapySDR\n"
-            "  Device: " << mod_settings.sdr_device_config.device << "\n" <<
-            "  master_clock_rate: " <<
-                mod_settings.sdr_device_config.masterClockRate << "\n";
-    }
-#endif
-#if defined(HAVE_DEXTER)
-    else if (mod_settings.useDexterOutput) {
-        ss << " PrecisionWave DEXTER\n";
-    }
-#endif
-#if defined(HAVE_LIMESDR)
-    else if (mod_settings.useLimeOutput) {
-        ss << " LimeSDR\n"
-            "  Device: " << mod_settings.sdr_device_config.device << "\n" <<
-            "  master_clock_rate: " <<
-                mod_settings.sdr_device_config.masterClockRate << "\n";
-    }
-#endif
-#if defined(HAVE_BLADERF)
-    else if (mod_settings.useBladeRFOutput) {
-        ss << " BladeRF\n"
-            "  Device: " << mod_settings.sdr_device_config.device << "\n" <<
-            "  refclk: " << mod_settings.sdr_device_config.refclk_src << "\n";
-    }
-#endif
-    else if (mod_settings.useZeroMQOutput) {
-        ss << " ZeroMQ\n" <<
-            "  Listening on: " << mod_settings.outputName << "\n" <<
-            "  Socket type : " << mod_settings.zmqOutputSocketType << "\n";
-    }
-
-    ss << "  Sampling rate: ";
-    if (mod_settings.outputRate > 1000) {
-        if (mod_settings.outputRate > 1000000) {
-            ss << std::fixed << std::setprecision(4) <<
-                mod_settings.outputRate / 1000000.0 <<
-                " MHz\n";
-        }
-        else {
-            ss << std::fixed << std::setprecision(4) <<
-                mod_settings.outputRate / 1000.0 <<
-                " kHz\n";
-        }
-    }
-    else {
-        ss << std::fixed << std::setprecision(4) <<
-            mod_settings.outputRate << " Hz\n";
-    }
-    fprintf(stderr, "%s", ss.str().c_str());
-}
 
 static shared_ptr<ModOutput> prepare_output(mod_settings_t& s)
 {
@@ -346,6 +306,9 @@ int launch_modulator(int argc, char* argv[])
 
     printModSettings(mod_settings);
 
+    ModulatorData m;
+    rcs.enrol(&m);
+
     {
         // This is mostly useful on ARM systems where FFTW planning takes some time. If we do it here
         // it will be done before the modulator starts up
@@ -422,14 +385,15 @@ int launch_modulator(int argc, char* argv[])
                 "invalid input transport " + mod_settings.inputTransport + " selected!");
     }
 
+    m.ediInput = ediInput;
+    m.inputReader = inputReader;
+
     bool run_again = true;
 
     while (run_again) {
         Flowgraph flowgraph(mod_settings.showProcessTime);
 
-        modulator_data m;
-        m.ediInput = ediInput;
-        m.inputReader = inputReader;
+        m.framecount = 0;
         m.flowgraph = &flowgraph;
 
         shared_ptr<DabModulator> modulator;
@@ -493,13 +457,14 @@ int launch_modulator(int argc, char* argv[])
         }
 
         etiLog.level(info) << m.framecount << " DAB frames, " << ((float)m.framecount * 0.024f) << " seconds encoded";
+        m.num_modulator_restarts++;
     }
 
     etiLog.level(info) << "Terminating";
     return ret;
 }
 
-static run_modulator_state_t run_modulator(const mod_settings_t& mod_settings, modulator_data& m)
+static run_modulator_state_t run_modulator(const mod_settings_t& mod_settings, ModulatorData& m)
 {
     auto ret = run_modulator_state_t::failure;
     try {
@@ -579,6 +544,12 @@ static run_modulator_state_t run_modulator(const mod_settings_t& mod_settings, m
                     break;
                 }
 
+                struct timespec t;
+                if (clock_gettime(CLOCK_REALTIME, &t) != 0) {
+                    throw std::runtime_error(std::string("Failed to retrieve CLOCK_REALTIME") + strerror(errno));
+                }
+
+                m.most_recent_edi_decoded = t.tv_sec;
                 fct = m.ediInput->ediReader.getFct();
                 fp = m.ediInput->ediReader.getFp();
                 ts = m.ediInput->ediReader.getTimestamp();
@@ -611,7 +582,7 @@ static run_modulator_state_t run_modulator(const mod_settings_t& mod_settings, m
                         last_eti_fct = fct;
                     }
                     else {
-                        etiLog.level(info) << "ETI FCT discontinuity, expected " <<
+                        etiLog.level(warn) << "ETI FCT discontinuity, expected " <<
                             expected_fct << " received " << fct;
                         if (m.ediInput) {
                             m.ediInput->ediReader.clearFrame();

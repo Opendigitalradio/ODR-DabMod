@@ -52,6 +52,8 @@ class GuardIntervalInserter : public ModCodec, public RemoteControllable
                 size_t symSize,
                 size_t& windowOverlap);
 
+        virtual ~GuardIntervalInserter() {}
+
         int process(Buffer* const dataIn, Buffer* dataOut) override;
         const char* name() override { return "GuardIntervalInserter"; }
 

@@ -82,6 +82,7 @@ class TII : public ModCodec, public RemoteControllable
 {
     public:
         TII(unsigned int dabmode, tii_config_t& tii_config);
+        virtual ~TII() {}
 
         int process(Buffer* dataIn, Buffer* dataOut) override;
         const char* name() override;

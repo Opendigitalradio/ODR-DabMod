@@ -893,7 +893,7 @@ ssize_t TCPClient::recv(void *buffer, size_t length, int flags, int timeout_ms)
         return 0;
     }
 
-    return 0;
+    throw std::logic_error("unreachable");
 }
 
 void TCPClient::reconnect()

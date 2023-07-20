@@ -53,6 +53,8 @@ public:
     DabModulator(EtiSource& etiSource, mod_settings_t& settings, const std::string& format);
     // Allowed formats: s8, u8 and s16. Empty string means no conversion
 
+    virtual ~DabModulator() {}
+
     int process(Buffer* dataOut) override;
     const char* name() override { return "DabModulator"; }
 

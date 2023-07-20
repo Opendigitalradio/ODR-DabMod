@@ -25,6 +25,7 @@
    along with ODR-DabMod.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include "sstream"
 #include "Utils.h"
 #include "GainControl.h"
 #if defined(HAVE_PRCTL)
@@ -142,6 +143,87 @@ void printVersion(void)
 void printStartupInfo()
 {
     printHeader();
+}
+
+void printModSettings(const mod_settings_t& mod_settings)
+{
+    std::stringstream ss;
+    // Print settings
+    ss << "Input\n";
+    ss << "  Type: " << mod_settings.inputTransport << "\n";
+    ss << "  Source: " << mod_settings.inputName << "\n";
+
+    ss << "Output\n";
+
+    if (mod_settings.useFileOutput) {
+        ss << "  Name: " << mod_settings.outputName << "\n";
+    }
+#if defined(HAVE_OUTPUT_UHD)
+    else if (mod_settings.useUHDOutput) {
+        ss << " UHD\n" <<
+            "  Device: " << mod_settings.sdr_device_config.device << "\n" <<
+            "  Subdevice: " <<
+                mod_settings.sdr_device_config.subDevice << "\n" <<
+            "  master_clock_rate: " <<
+                mod_settings.sdr_device_config.masterClockRate << "\n" <<
+            "  refclk: " <<
+                mod_settings.sdr_device_config.refclk_src << "\n" <<
+            "  pps source: " <<
+                mod_settings.sdr_device_config.pps_src << "\n";
+    }
+#endif
+#if defined(HAVE_SOAPYSDR)
+    else if (mod_settings.useSoapyOutput) {
+        ss << " SoapySDR\n"
+            "  Device: " << mod_settings.sdr_device_config.device << "\n" <<
+            "  master_clock_rate: " <<
+                mod_settings.sdr_device_config.masterClockRate << "\n";
+    }
+#endif
+#if defined(HAVE_DEXTER)
+    else if (mod_settings.useDexterOutput) {
+        ss << " PrecisionWave DEXTER\n";
+    }
+#endif
+#if defined(HAVE_LIMESDR)
+    else if (mod_settings.useLimeOutput) {
+        ss << " LimeSDR\n"
+            "  Device: " << mod_settings.sdr_device_config.device << "\n" <<
+            "  master_clock_rate: " <<
+                mod_settings.sdr_device_config.masterClockRate << "\n";
+    }
+#endif
+#if defined(HAVE_BLADERF)
+    else if (mod_settings.useBladeRFOutput) {
+        ss << " BladeRF\n"
+            "  Device: " << mod_settings.sdr_device_config.device << "\n" <<
+            "  refclk: " << mod_settings.sdr_device_config.refclk_src << "\n";
+    }
+#endif
+    else if (mod_settings.useZeroMQOutput) {
+        ss << " ZeroMQ\n" <<
+            "  Listening on: " << mod_settings.outputName << "\n" <<
+            "  Socket type : " << mod_settings.zmqOutputSocketType << "\n";
+    }
+
+    ss << "  Sampling rate: ";
+    if (mod_settings.outputRate > 1000) {
+        if (mod_settings.outputRate > 1000000) {
+            ss << std::fixed << std::setprecision(4) <<
+                mod_settings.outputRate / 1000000.0 <<
+                " MHz\n";
+        }
+        else {
+            ss << std::fixed << std::setprecision(4) <<
+                mod_settings.outputRate / 1000.0 <<
+                " kHz\n";
+        }
+    }
+    else {
+        ss << std::fixed << std::setprecision(4) <<
+            mod_settings.outputRate << " Hz\n";
+    }
+    fprintf(stderr, "%s", ss.str().c_str());
 }
 
 int set_realtime_prio(int prio)
