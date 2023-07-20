@@ -41,11 +41,12 @@
 
 namespace json {
 
-    using map_t = std::unordered_map<std::string, struct value_t>;
+    // STL containers are not required to support incomplete types,
+    // hence the shared_ptr
 
     struct value_t {
         std::variant<
-            map_t,
+            std::shared_ptr<std::unordered_map<std::string, value_t>>,
             std::string,
             double,
             size_t,
@@ -53,6 +54,8 @@ namespace json {
             bool,
             std::nullopt_t> v;
     };
+
+    using map_t = std::unordered_map<std::string, value_t>;
 
     std::string map_to_json(const map_t& values);
 }

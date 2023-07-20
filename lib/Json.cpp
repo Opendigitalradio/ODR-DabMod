@@ -86,8 +86,9 @@ namespace json {
             else if (std::holds_alternative<std::nullopt_t>(value)) {
                 ss << "null";
             }
-            else if (std::holds_alternative<json::map_t>(value)) {
-                ss << map_to_json(std::get<json::map_t>(value));
+            else if (std::holds_alternative<std::shared_ptr<json::map_t> >(value)) {
+                const map_t& v = *std::get<std::shared_ptr<json::map_t> >(value);
+                ss << map_to_json(v);
             }
             else {
                 throw std::logic_error("variant alternative not handled");

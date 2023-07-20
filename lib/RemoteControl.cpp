@@ -109,7 +109,8 @@ std::list< std::vector<std::string> > RemoteControllers::get_param_list_values(c
 std::string RemoteControllers::get_showjson() {
     json::map_t root;
     for (auto &controllable : rcs.controllables) {
-        root[controllable->get_rc_name()].v = controllable->get_all_values();
+        root[controllable->get_rc_name()].v =
+            std::make_shared<json::map_t>(controllable->get_all_values());
     }
 
     return json::map_to_json(root);
