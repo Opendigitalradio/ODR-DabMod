@@ -61,6 +61,7 @@ class EventSender {
     private:
         zmq::context_t m_zmq_context;
         zmq::socket_t m_socket;
+        bool m_socket_valid = false;
 };
 
 class LogToEventSender: public LogBackend {

@@ -13,7 +13,7 @@ from pprint import pprint
 context = zmq.Context()
 sock = context.socket(zmq.SUB)
 
-ep = "tcp://127.0.0.1:5557"
+ep = "tcp://127.0.0.1:5556"
 print(f"Receive from {ep}")
 sock.connect(ep)
 

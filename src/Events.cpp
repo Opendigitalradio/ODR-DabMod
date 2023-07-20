@@ -47,11 +47,21 @@ EventSender::~EventSender()
 
 void EventSender::bind(const std::string& bind_endpoint)
 {
-    m_socket.bind(bind_endpoint);
+    try {
+        m_socket.bind(bind_endpoint);
+        m_socket_valid = true;
+    }
+    catch (const zmq::error_t& err) {
+        fprintf(stderr, "Cannot bind event socket: %s", err.what());
+    }
 }
 
 void EventSender::send(const std::string& event_name, const json::map_t& detail)
 {
+    if (not m_socket_valid) {
+        return;
+    }
+
     zmq::message_t zmsg1(event_name.data(), event_name.size());
     const auto detail_json = json::map_to_json(detail);
     zmq::message_t zmsg2(detail_json.data(), detail_json.size());
