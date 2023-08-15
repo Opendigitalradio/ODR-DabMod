@@ -84,6 +84,7 @@ SDR::SDR(SDRDeviceConfig& config, std::shared_ptr<SDRDevice> device) :
     RC_ADD_PARAMETER(underruns, "Counter of number of underruns");
     RC_ADD_PARAMETER(latepackets, "Counter of number of late packets");
     RC_ADD_PARAMETER(frames, "Counter of number of frames modulated");
+    RC_ADD_PARAMETER(synchronous, "1 if configured for synchronous transmission");
 
 #ifdef HAVE_OUTPUT_UHD
     if (std::dynamic_pointer_cast<UHD>(device)) {
@@ -435,6 +436,9 @@ const string SDR::get_parameter(const string& parameter) const
             chrono::duration_cast<chrono::milliseconds>(transmission_frame_duration(m_config.dabMode))
             .count();
     }
+    else if (parameter == "synchronous") {
+        ss << m_config.enableSync;
+    }
     else {
         if (m_device) {
             const auto stat = m_device->get_run_statistics();
@@ -493,6 +497,8 @@ const json::map_t SDR::get_all_values() const
     stat["queued_frames_ms"].v = m_queue.size() *
             (size_t)chrono::duration_cast<chrono::milliseconds>(transmission_frame_duration(m_config.dabMode))
             .count();
+
+    stat["synchronous"].v = m_config.enableSync;
 
     return stat;
 }

@@ -25,7 +25,8 @@
    along with ODR-DabMod.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "sstream"
+#include <ctime>
+#include <sstream>
 #include "Utils.h"
 #include "GainControl.h"
 #if defined(HAVE_PRCTL)
@@ -304,3 +305,13 @@ std::chrono::milliseconds transmission_frame_duration(unsigned int dabmode)
     }
 }
 
+
+time_t get_clock_realtime_seconds()
+{
+    struct timespec t;
+    if (clock_gettime(CLOCK_REALTIME, &t) != 0) {
+        throw std::runtime_error(std::string("Failed to retrieve CLOCK_REALTIME") + strerror(errno));
+    }
+
+    return t.tv_sec;
+}

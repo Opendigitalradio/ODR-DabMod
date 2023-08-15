@@ -114,6 +114,7 @@ class ModulatorData : public RemoteControllable {
         ModulatorData() : RemoteControllable("mainloop") {
             RC_ADD_PARAMETER(num_modulator_restarts, "(Read-only) Number of mod restarts");
             RC_ADD_PARAMETER(most_recent_edi_decoded, "(Read-only) UNIX Timestamp of most recently decoded EDI frame");
+            RC_ADD_PARAMETER(running_since, "(Read-only) UNIX Timestamp of most recent modulator restart");
         }
 
         virtual ~ModulatorData() {}
@@ -126,6 +127,9 @@ class ModulatorData : public RemoteControllable {
             stringstream ss;
             if (parameter == "num_modulator_restarts") {
                 ss << num_modulator_restarts;
+            }
+            if (parameter == "running_since") {
+                ss << running_since;
             }
             else if (parameter == "most_recent_edi_decoded") {
                 ss << most_recent_edi_decoded;
@@ -142,12 +146,14 @@ class ModulatorData : public RemoteControllable {
         {
             json::map_t map;
             map["num_modulator_restarts"].v = num_modulator_restarts;
+            map["running_since"].v = running_since;
             map["most_recent_edi_decoded"].v = most_recent_edi_decoded;
             return map;
         }
 
         size_t num_modulator_restarts = 0;
         time_t most_recent_edi_decoded = 0;
+        time_t running_since = 0;
 };
 
 enum class run_modulator_state_t {
@@ -391,6 +397,8 @@ int launch_modulator(int argc, char* argv[])
     bool run_again = true;
 
     while (run_again) {
+        m.running_since = get_clock_realtime_seconds();
+
         Flowgraph flowgraph(mod_settings.showProcessTime);
 
         m.framecount = 0;
@@ -544,12 +552,7 @@ static run_modulator_state_t run_modulator(const mod_settings_t& mod_settings, M
                     break;
                 }
 
-                struct timespec t;
-                if (clock_gettime(CLOCK_REALTIME, &t) != 0) {
-                    throw std::runtime_error(std::string("Failed to retrieve CLOCK_REALTIME") + strerror(errno));
-                }
-
-                m.most_recent_edi_decoded = t.tv_sec;
+                m.most_recent_edi_decoded = get_clock_realtime_seconds();
                 fct = m.ediInput->ediReader.getFct();
                 fp = m.ediInput->ediReader.getFp();
                 ts = m.ediInput->ediReader.getTimestamp();

@@ -36,6 +36,7 @@
 #include <cstdio>
 #include <ctime>
 #include <cstdlib>
+#include <cstdint>
 #include <unistd.h>
 #include "ConfigParser.h"
 
@@ -59,3 +60,5 @@ double parseChannel(const std::string& chan);
 // dabMode is either 1, 2, 3, 4, corresponding to TM I, TM II, TM III and TM IV.
 // throws a runtime_error if dabMode is not one of these values.
 std::chrono::milliseconds transmission_frame_duration(unsigned int dabmode);
+
+time_t get_clock_realtime_seconds();
