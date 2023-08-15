@@ -420,7 +420,7 @@ SDRDevice::run_statistics_t Dexter::get_run_statistics(void) const
                 using namespace std::chrono;
                 const auto max_holdover_duration = seconds(m_conf.maxGPSHoldoverTime);
                 const duration<double> remaining = max_holdover_duration - (steady_clock::now() - m_holdover_since);
-                rs["remaining_holdover_s"].v = duration_cast<seconds>(remaining).count();
+                rs["remaining_holdover_s"].v = (ssize_t)duration_cast<seconds>(remaining).count();
             }
             break;
     }
