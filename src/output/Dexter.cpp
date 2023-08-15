@@ -66,35 +66,9 @@ static void fill_time(struct timespec *t)
     }
 }
 
-static void pacontrol_set_targetpower(zmq::socket_t& sock, int targetpower_dBm)
-{
-    stringstream message_builder;
-    message_builder << "{'PA0' : {'TargetPower': ";
-    message_builder << targetpower_dBm;
-    message_builder << "}}";
-    const auto message = message_builder.str();
-
-    try {
-        const auto r = sock.send(zmq::const_buffer{message.data(), message.size()});
-        if (r.has_value()) {
-            etiLog.level(debug) << "Sent TargetPower=" << targetpower_dBm << " to pacontrol";
-        }
-        else {
-            // zmq_send returned EAGAIN
-            etiLog.level(info) << "Send TargetPower=" << targetpower_dBm << " failed";
-        }
-    }
-    catch (const zmq::error_t& err) {
-        etiLog.level(warn) << "Failed to send TargetPower=" << targetpower_dBm << ": " << err.what();
-    }
-}
-
-
 Dexter::Dexter(SDRDeviceConfig& config) :
     SDRDevice(),
-    m_conf(config),
-    m_zmq_context(1),
-    m_zmq_sock(m_zmq_context, ZMQ_PUSH)
+    m_conf(config)
 {
     etiLog.level(info) << "Dexter:Creating the device";
 
@@ -192,41 +166,6 @@ Dexter::Dexter(SDRDeviceConfig& config) :
 
     m_running = true;
     m_underflow_read_thread = std::thread(&Dexter::underflow_read_process, this);
-
-    m_zmq_sock.setsockopt(ZMQ_SNDTIMEO, 0);
-    if (not m_conf.pacontrol_config_endpoint.empty()) {
-        etiLog.level(debug) << "Creating pacontrol connection to " <<
-            m_conf.pacontrol_config_endpoint;
-        m_zmq_sock.connect(m_conf.pacontrol_config_endpoint.c_str());
-    }
-
-    if (m_conf.pacontrol_targetpower.has_value()) {
-        pacontrol_set_targetpower(m_zmq_sock, *m_conf.pacontrol_targetpower);
-    }
-    else {
-        etiLog.level(warn) << "Config does not define PA target power";
-    }
-}
-
-static void pacontrol_set_mute(zmq::socket_t& sock, bool mute)
-{
-    string message = "{'PA0' : {'Mute': ";
-    message += (mute ? "True" : "False");
-    message += "}}";
-
-    try {
-        const auto r = sock.send(zmq::const_buffer{message.data(), message.size()});
-        if (r.has_value()) {
-            etiLog.level(debug) << "Sent mute=" << mute << " to pacontrol";
-        }
-        else {
-            // zmq_send returned EAGAIN
-            etiLog.level(info) << "Send mute=" << mute << " failed";
-        }
-    }
-    catch (const zmq::error_t& err) {
-        etiLog.level(warn) << "Failed to send mute=" << mute << ": " << err.what();
-    }
 }
 
 void Dexter::channel_up()
@@ -239,10 +178,6 @@ void Dexter::channel_up()
 
     m_channel_is_up = true;
     etiLog.level(debug) << "DEXTER CHANNEL_UP";
-
-    if (m_zmq_sock.connected()) {
-        pacontrol_set_mute(m_zmq_sock, false);
-    }
 }
 
 void Dexter::channel_down()
@@ -259,10 +194,6 @@ void Dexter::channel_down()
 
     m_channel_is_up = false;
     etiLog.level(debug) << "DEXTER CHANNEL_DOWN";
-
-    if (m_zmq_sock.connected()) {
-        pacontrol_set_mute(m_zmq_sock, true);
-    }
 }
 
 void Dexter::handle_hw_time()

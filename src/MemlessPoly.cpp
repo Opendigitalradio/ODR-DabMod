@@ -314,7 +314,7 @@ void MemlessPoly::worker_thread(MemlessPoly::worker_t *workerdata)
     set_thread_name("MemlessPoly");
 
     while (true) {
-        worker_t::input_data_t in_data = {};
+        worker_t::input_data_t in_data;
         try {
             workerdata->in_queue.wait_and_pop(in_data);
         }
@@ -386,7 +386,7 @@ int MemlessPoly::internal_process(Buffer* const dataIn, Buffer* dataOut)
 
             // Wait for completion of the tasks
             for (auto& worker : m_workers) {
-                int ret = 0;
+                int ret;
                 worker.out_queue.wait_and_pop(ret);
             }
         }

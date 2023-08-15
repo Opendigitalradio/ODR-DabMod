@@ -34,14 +34,8 @@ DESCRIPTION:
 #   include <config.h>
 #endif
 
-#if defined(HAVE_DEXTER)
-
-#if !defined(HAVE_ZEROMQ)
-#error "ZeroMQ is mandatory for DEXTER"
-#endif
-
+#ifdef HAVE_DEXTER
 #include "iio.h"
-#include "zmq.hpp"
 
 #include <string>
 #include <memory>
@@ -126,12 +120,6 @@ class Dexter : public Output::SDRDevice
 
         size_t num_buffers_pushed = 0;
 
-        /* Communication with pacontrol */
-        zmq::context_t m_zmq_context;
-        zmq::socket_t m_zmq_sock;
-        std::string m_pacontrol_endpoint;
-
-        /* Clock State */
         DexterClockState m_clock_state = DexterClockState::Startup;
 
         // Only valid when m_clock_state is not Startup

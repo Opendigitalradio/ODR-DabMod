@@ -94,10 +94,6 @@ struct SDRDeviceConfig {
     // TCP port on which to serve TX and RX samples for the
     // digital pre distortion learning tool
     uint16_t dpdFeedbackServerPort = 0;
-
-    // DEXTER-specific
-    std::string pacontrol_config_endpoint;
-    std::optional<int> pacontrol_targetpower; // dBm
 };
 
 // Each frame contains one OFDM frame, and its
