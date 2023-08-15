@@ -99,6 +99,16 @@ SDR::SDR(SDRDeviceConfig& config, std::shared_ptr<SDRDevice> device) :
         RC_ADD_PARAMETER(fifo_fill, "A value representing the Lime FIFO fullness [percent]");
     }
 #endif // HAVE_LIMESDR
+
+#ifdef HAVE_DEXTER
+    if (std::dynamic_pointer_cast<Dexter>(device)) {
+        RC_ADD_PARAMETER(in_holdover_since, "DEXTER timestamp when holdover began");
+        RC_ADD_PARAMETER(remaining_holdover_s, "DEXTER remaining number of seconds in holdover");
+        RC_ADD_PARAMETER(clock_state, "DEXTER clock state: startup/normal/holdover");
+    }
+#endif // HAVE_DEXTER
+
+
 }
 
 SDR::~SDR()
