@@ -244,7 +244,7 @@ void set_thread_name(const char *name)
 #endif
 }
 
-double parseChannel(const std::string& chan)
+double parse_channel(const std::string& chan)
 {
     double freq;
     if      (chan == "5A") freq = 174928000;
@@ -286,10 +286,57 @@ double parseChannel(const std::string& chan)
     else if (chan == "13E") freq = 237488000;
     else if (chan == "13F") freq = 239200000;
     else {
-        std::cerr << "       soapy output: channel " << chan << " does not exist in table\n";
-        throw std::out_of_range("soapy channel selection error");
+        std::cerr << "Channel " << chan << " does not exist in table\n";
+        throw std::out_of_range("channel out of range");
     }
     return freq;
+}
+
+std::optional<std::string> convert_frequency_to_channel(double frequency)
+{
+    const int freq = round(frequency);
+    std::string chan;
+    if      (freq == 174928000) chan = "5A";
+    else if (freq == 176640000) chan = "5B";
+    else if (freq == 178352000) chan = "5C";
+    else if (freq == 180064000) chan = "5D";
+    else if (freq == 181936000) chan = "6A";
+    else if (freq == 183648000) chan = "6B";
+    else if (freq == 185360000) chan = "6C";
+    else if (freq == 187072000) chan = "6D";
+    else if (freq == 188928000) chan = "7A";
+    else if (freq == 190640000) chan = "7B";
+    else if (freq == 192352000) chan = "7C";
+    else if (freq == 194064000) chan = "7D";
+    else if (freq == 195936000) chan = "8A";
+    else if (freq == 197648000) chan = "8B";
+    else if (freq == 199360000) chan = "8C";
+    else if (freq == 201072000) chan = "8D";
+    else if (freq == 202928000) chan = "9A";
+    else if (freq == 204640000) chan = "9B";
+    else if (freq == 206352000) chan = "9C";
+    else if (freq == 208064000) chan = "9D";
+    else if (freq == 209936000) chan = "10A";
+    else if (freq == 211648000) chan = "10B";
+    else if (freq == 213360000) chan = "10C";
+    else if (freq == 215072000) chan = "10D";
+    else if (freq == 216928000) chan = "11A";
+    else if (freq == 218640000) chan = "11B";
+    else if (freq == 220352000) chan = "11C";
+    else if (freq == 222064000) chan = "11D";
+    else if (freq == 223936000) chan = "12A";
+    else if (freq == 225648000) chan = "12B";
+    else if (freq == 227360000) chan = "12C";
+    else if (freq == 229072000) chan = "12D";
+    else if (freq == 230784000) chan = "13A";
+    else if (freq == 232496000) chan = "13B";
+    else if (freq == 234208000) chan = "13C";
+    else if (freq == 235776000) chan = "13D";
+    else if (freq == 237488000) chan = "13E";
+    else if (freq == 239200000) chan = "13F";
+    else { return std::nullopt; }
+
+    return chan;
 }
 
 std::chrono::milliseconds transmission_frame_duration(unsigned int dabmode)

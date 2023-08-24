@@ -251,7 +251,7 @@ static void parse_configfile(
             throw std::runtime_error("Configuration error");
         }
         else if (sdr_device_config.frequency == 0) {
-            sdr_device_config.frequency = parseChannel(chan);
+            sdr_device_config.frequency = parse_channel(chan);
         }
         else if (sdr_device_config.frequency != 0 && chan != "") {
             std::cerr << "       UHD output: cannot define both frequency and channel.\n";
@@ -305,7 +305,7 @@ static void parse_configfile(
             throw std::runtime_error("Configuration error");
         }
         else if (outputsoapy_conf.frequency == 0) {
-            outputsoapy_conf.frequency =  parseChannel(chan);
+            outputsoapy_conf.frequency = parse_channel(chan);
         }
         else if (outputsoapy_conf.frequency != 0 && chan != "") {
             std::cerr << "       soapy output: cannot define both frequency and channel.\n";
@@ -333,7 +333,7 @@ static void parse_configfile(
             throw std::runtime_error("Configuration error");
         }
         else if (outputdexter_conf.frequency == 0) {
-            outputdexter_conf.frequency =  parseChannel(chan);
+            outputdexter_conf.frequency = parse_channel(chan);
         }
         else if (outputdexter_conf.frequency != 0 && chan != "") {
             std::cerr << "       dexter output: cannot define both frequency and channel.\n";
@@ -362,7 +362,7 @@ static void parse_configfile(
             throw std::runtime_error("Configuration error");
         }
         else if (outputlime_conf.frequency == 0) {
-            outputlime_conf.frequency =  parseChannel(chan);
+            outputlime_conf.frequency = parse_channel(chan);
         }
         else if (outputlime_conf.frequency != 0 && chan != "") {
             std::cerr << "       Lime output: cannot define both frequency and channel.\n";
@@ -391,7 +391,7 @@ static void parse_configfile(
             throw std::runtime_error("Configuration error");
         }
         else if (outputbladerf_conf.frequency == 0) {
-            outputbladerf_conf.frequency =  parseChannel(chan);
+            outputbladerf_conf.frequency = parse_channel(chan);
         }
         else if (outputbladerf_conf.frequency != 0 && chan != "") {
             std::cerr << "       BladeRF output: cannot define both frequency and channel.\n";

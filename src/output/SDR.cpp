@@ -78,7 +78,8 @@ SDR::SDR(SDRDeviceConfig& config, std::shared_ptr<SDRDevice> device) :
     RC_ADD_PARAMETER(txgain, "TX gain");
     RC_ADD_PARAMETER(rxgain, "RX gain for DPD feedback");
     RC_ADD_PARAMETER(bandwidth, "Analog front-end bandwidth");
-    RC_ADD_PARAMETER(freq, "Transmission frequency");
+    RC_ADD_PARAMETER(freq, "Transmission frequency in Hz");
+    RC_ADD_PARAMETER(channel, "Transmission frequency as channel");
     RC_ADD_PARAMETER(muting, "Mute the output by stopping the transmitter");
     RC_ADD_PARAMETER(temp, "Temperature in degrees C of the device");
     RC_ADD_PARAMETER(underruns, "Counter of number of underruns");
@@ -389,6 +390,18 @@ void SDR::set_parameter(const string& parameter, const string& value)
         m_device->tune(m_config.lo_offset, m_config.frequency);
         m_config.frequency = m_device->get_tx_freq();
     }
+    else if (parameter == "channel") {
+        try {
+            const double frequency = parse_channel(value);
+
+            m_config.frequency = frequency;
+            m_device->tune(m_config.lo_offset, m_config.frequency);
+            m_config.frequency = m_device->get_tx_freq();
+        }
+        catch (const std::out_of_range& e) {
+            throw ParameterError("Cannot parse channel");
+        }
+    }
     else if (parameter == "muting") {
         ss >> m_config.muting;
     }
@@ -415,6 +428,16 @@ const string SDR::get_parameter(const string& parameter) const
     }
     else if (parameter == "freq") {
         ss << m_config.frequency;
+    }
+    else if (parameter == "channel") {
+        const auto maybe_freq = convert_frequency_to_channel(m_config.frequency);
+
+        if (maybe_freq.has_value()) {
+            ss << *maybe_freq;
+        }
+        else {
+            throw ParameterError("Frequency is outside list of channels");
+        }
     }
     else if (parameter == "muting") {
         ss << m_config.muting;
@@ -487,6 +510,15 @@ const json::map_t SDR::get_all_values() const
     stat["freq"].v = m_config.frequency;
     stat["muting"].v = m_config.muting;
     stat["temp"].v = std::nullopt;
+
+    const auto maybe_freq = convert_frequency_to_channel(m_config.frequency);
+
+    if (maybe_freq.has_value()) {
+        stat["channel"].v = *maybe_freq;
+    }
+    else {
+        stat["channel"].v = std::nullopt;
+    }
 
     if (m_device) {
         const std::optional<double> temp = m_device->get_temperature();

@@ -31,6 +31,7 @@
 #   include "config.h"
 #endif
 
+#include <optional>
 #include <string>
 #include <chrono>
 #include <cstdio>
@@ -54,8 +55,11 @@ int set_realtime_prio(int prio);
 // Set the name of the thread
 void set_thread_name(const char *name);
 
-// Convert a channel like 10A to a frequency
-double parseChannel(const std::string& chan);
+// Convert a channel like 10A to a frequency in Hz
+double parse_channel(const std::string& chan);
+
+// Convert a frequency in Hz to a channel.
+std::optional<std::string> convert_frequency_to_channel(double frequency);
 
 // dabMode is either 1, 2, 3, 4, corresponding to TM I, TM II, TM III and TM IV.
 // throws a runtime_error if dabMode is not one of these values.
