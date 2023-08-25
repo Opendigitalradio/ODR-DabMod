@@ -86,6 +86,7 @@ SDR::SDR(SDRDeviceConfig& config, std::shared_ptr<SDRDevice> device) :
     RC_ADD_PARAMETER(latepackets, "Counter of number of late packets");
     RC_ADD_PARAMETER(frames, "Counter of number of frames modulated");
     RC_ADD_PARAMETER(synchronous, "1 if configured for synchronous transmission");
+    RC_ADD_PARAMETER(max_gps_holdover_time, "Max holdover duration in seconds");
 
 #ifdef HAVE_OUTPUT_UHD
     if (std::dynamic_pointer_cast<UHD>(device)) {
@@ -405,6 +406,14 @@ void SDR::set_parameter(const string& parameter, const string& value)
     else if (parameter == "muting") {
         ss >> m_config.muting;
     }
+    else if (parameter == "synchronous") {
+        uint32_t enableSync = 0;
+        ss >> enableSync;
+        m_config.enableSync = enableSync > 0;
+    }
+    else if (parameter == "max_gps_holdover_time") {
+        ss >> m_config.maxGPSHoldoverTime;
+    }
     else {
         stringstream ss_err;
         ss_err << "Parameter '" << parameter
@@ -461,6 +470,9 @@ const string SDR::get_parameter(const string& parameter) const
     }
     else if (parameter == "synchronous") {
         ss << m_config.enableSync;
+    }
+    else if (parameter == "max_gps_holdover_time") {
+        ss << m_config.maxGPSHoldoverTime;
     }
     else {
         if (m_device) {
@@ -531,6 +543,7 @@ const json::map_t SDR::get_all_values() const
             .count();
 
     stat["synchronous"].v = m_config.enableSync;
+    stat["max_gps_holdover_time"].v = (size_t)m_config.maxGPSHoldoverTime;
 
     return stat;
 }
