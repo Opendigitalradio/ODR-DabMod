@@ -1,25 +1,28 @@
 You have 3 ways to install odr-dabmod on your host:
 
 # Using binary debian packages
-If your host is running a debian-based OS and its cpu is one of amd64, arm64 or arm/v7, then you can install odr-dabmod using the standard debian packaging system:
+If your host is running a debian-based OS on amd64, arm64 or arm/v7, then you can install this tool using the standard debian packaging system:
 1. Update the debian apt repository list:
    ```
-   curl -fsSL http://debian.opendigitalradio.org/odr.asc | sudo tee /etc/apt/trusted.gpg.d/odr.asc 1>/dev/null
-   curl -fsSL http://debian.opendigitalradio.org/odr.list | sudo tee /etc/apt/sources.list.d/odr.list 1>/dev/null
+   # Replace bullseye (debian-11) with bookworm (debian-12) if applicable
+
+   curl -fsSL http://debian.opendigitalradio.org/opendigitalradio-bullseye.sources > /etc/apt/sources.list.d/opendigitalradio-bullseye.sources
+
+   curl -fsSL http://debian.opendigitalradio.org/opendigitalradio.asc | gpg --dearmor > /etc/apt/trusted.gpg.d/opendigitalradio.gpg
    ```
 1. Refresh the debian packages list:
    ```
    apt update
    ```
-1. Install odr-audioenc:
+1. Install the package:
    ```
    sudo apt install --yes odr-dabmod
    ```
 
-**Attention**: odr- (2.6.0-1) does not include the web-based GUI and Digital Predistortion Computation engine
+**Notice**: this package does not include the web-based GUI and Digital Predistortion Computation engine
 
 # Using the dab-scripts
-You can compile odr-dabmod as well as the other main components of the mmbTools set with an installation script:
+You can compile this tool as well as the other main components of the mmbTools set with an installation script:
 1. Clone the dab-scripts repository:
    ```
    git clone https://github.com/opendigitalradio/dab-scripts.git
