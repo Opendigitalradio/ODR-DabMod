@@ -187,9 +187,31 @@ void Dexter::channel_down()
         etiLog.level(error) << "Failed to set dexter_dsp_tx.gain0 = 0: " << get_iio_error(r);
     }
 
-    // This will flush out the FIFO
+    // Setting stream0_start_clocks to 0 will flush out the FIFO, but we need to wait a bit before
+    // we "up" the channel again
     if ((r = iio_device_attr_write_longlong(m_dexter_dsp_tx, "stream0_start_clks", 0)) != 0) {
         etiLog.level(warn) << "Failed to set dexter_dsp_tx.stream0_start_clks = 0 : " << get_iio_error(r);
+    }
+
+    long long underflows_old = 0;
+
+    if ((r = iio_device_attr_read_longlong(m_dexter_dsp_tx, "buffer_underflows0", &underflows_old)) != 0) {
+        etiLog.level(warn) << "Failed to read dexter_dsp_tx.buffer_underflows0 : " << get_iio_error(r);
+    }
+
+    long long underflows = underflows_old;
+
+    // Limiting to 10*96ms is just a safety to avoid running into an infinite loop
+    for (size_t i = 0; underflows == underflows_old && i < 10; i++) {
+        if ((r = iio_device_attr_read_longlong(m_dexter_dsp_tx, "buffer_underflows0", &underflows)) != 0) {
+            etiLog.level(warn) << "Failed to read dexter_dsp_tx.buffer_underflows0 : " << get_iio_error(r);
+        }
+
+        this_thread::sleep_for(chrono::milliseconds(96));
+    }
+
+    if (underflows == underflows_old) {
+        etiLog.level(warn) << "DEXTER CHANNEL_DOWN, no underflow detected! " << underflows;
     }
 
     m_channel_is_up = false;
