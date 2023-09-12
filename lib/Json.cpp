@@ -72,7 +72,7 @@ namespace json {
                 ss << "\"" << escape_json(std::get<std::string>(value)) << "\"";
             }
             else if (std::holds_alternative<double>(value)) {
-                ss << std::defaultfloat << std::get<double>(value);
+                ss << std::fixed << std::get<double>(value);
             }
             else if (std::holds_alternative<ssize_t>(value)) {
                 ss << std::get<ssize_t>(value);
