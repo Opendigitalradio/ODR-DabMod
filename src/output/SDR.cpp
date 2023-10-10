@@ -357,12 +357,6 @@ void SDR::handle_frame(struct FrameData&& frame)
         return;
     }
 
-    if (frame.ts.fct == 0) {
-        etiLog.level(debug) <<
-            "OutputSDR: TX FCT=" << frame.ts.fct <<
-            " TS " << frame.ts.to_string();
-    }
-
     m_device->transmit_frame(std::move(frame));
 }
 
