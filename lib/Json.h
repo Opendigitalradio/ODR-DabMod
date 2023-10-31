@@ -31,7 +31,7 @@
 #  include "config.h"
 #endif
 
-#include <list>
+#include <vector>
 #include <memory>
 #include <optional>
 #include <stdexcept>
@@ -47,6 +47,7 @@ namespace json {
     struct value_t {
         std::variant<
             std::shared_ptr<std::unordered_map<std::string, value_t>>,
+            std::vector<value_t>,
             std::string,
             double,
             size_t,
@@ -58,4 +59,5 @@ namespace json {
     using map_t = std::unordered_map<std::string, value_t>;
 
     std::string map_to_json(const map_t& values);
+    std::string value_to_json(const value_t& value);
 }

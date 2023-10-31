@@ -46,6 +46,8 @@ odr_dabmod_SOURCES  = src/DabMod.cpp \
 					  src/DabModulator.h \
 					  src/Buffer.cpp \
 					  src/Buffer.h \
+					  src/CharsetTools.cpp \
+					  src/CharsetTools.h \
 					  src/ConfigParser.cpp \
 					  src/ConfigParser.h \
 					  src/ModPlugin.cpp \
@@ -56,6 +58,8 @@ odr_dabmod_SOURCES  = src/DabMod.cpp \
 					  src/Eti.h \
 					  src/Events.cpp \
 					  src/Events.h \
+					  src/FigParser.cpp \
+					  src/FigParser.h \
 					  src/FicSource.cpp \
 					  src/FicSource.h \
 					  src/PuncturingRule.cpp \

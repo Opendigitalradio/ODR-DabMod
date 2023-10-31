@@ -115,6 +115,9 @@ class ModulatorData : public RemoteControllable {
             RC_ADD_PARAMETER(num_modulator_restarts, "(Read-only) Number of mod restarts");
             RC_ADD_PARAMETER(most_recent_edi_decoded, "(Read-only) UNIX Timestamp of most recently decoded EDI frame");
             RC_ADD_PARAMETER(running_since, "(Read-only) UNIX Timestamp of most recent modulator restart");
+            RC_ADD_PARAMETER(ensemble_label, "(Read-only) Label of the ensemble");
+            RC_ADD_PARAMETER(ensemble_eid, "(Read-only) Ensemble ID");
+            RC_ADD_PARAMETER(num_services, "(Read-only) Number of services in the ensemble");
         }
 
         virtual ~ModulatorData() {}
@@ -134,6 +137,42 @@ class ModulatorData : public RemoteControllable {
             else if (parameter == "most_recent_edi_decoded") {
                 ss << most_recent_edi_decoded;
             }
+            else if (parameter == "ensemble_label") {
+                if (ediInput) {
+                    const auto ens = ediInput->ediReader.getEnsembleInfo();
+                    if (ens) {
+                        ss << FICDecoder::ConvertLabelToUTF8(ens->label, nullptr);
+                    }
+                    else {
+                        throw ParameterError("Not available yet");
+                    }
+                }
+                else {
+                    throw ParameterError("Not available yet");
+                }
+            }
+            else if (parameter == "ensemble_eid") {
+                if (ediInput) {
+                    const auto ens = ediInput->ediReader.getEnsembleInfo();
+                    if (ens) {
+                        ss << ens->eid;
+                    }
+                    else {
+                        throw ParameterError("Not available yet");
+                    }
+                }
+                else {
+                    throw ParameterError("Not available yet");
+                }
+            }
+            else if (parameter == "num_services") {
+                if (ediInput) {
+                    ss << ediInput->ediReader.getSubchannels().size();
+                }
+                else {
+                    throw ParameterError("Not available yet");
+                }
+            }
             else {
                 ss << "Parameter '" << parameter <<
                     "' is not exported by controllable " << get_rc_name();
@@ -148,6 +187,36 @@ class ModulatorData : public RemoteControllable {
             map["num_modulator_restarts"].v = num_modulator_restarts;
             map["running_since"].v = running_since;
             map["most_recent_edi_decoded"].v = most_recent_edi_decoded;
+
+            if (ediInput) {
+                map["num_services"].v = ediInput->ediReader.getSubchannels().size();
+
+                const auto ens = ediInput->ediReader.getEnsembleInfo();
+                if (ens) {
+                    map["ensemble_label"].v = FICDecoder::ConvertLabelToUTF8(ens->label, nullptr);
+                    map["ensemble_eid"].v = ens->eid;
+                }
+                else {
+                    map["ensemble_label"].v = nullopt;
+                    map["ensemble_eid"].v = nullopt;
+                }
+
+                std::vector<json::value_t> services;
+
+                for (const auto& s : ediInput->ediReader.getServiceInfo()) {
+                    auto service_map = make_shared<json::map_t>();
+                    (*service_map)["sad"].v = s.second.subchannel.start;
+                    (*service_map)["sid"].v = s.second.sid;
+                    (*service_map)["label"].v = FICDecoder::ConvertLabelToUTF8(s.second.label, nullptr);
+                    (*service_map)["bitrate"].v = s.second.subchannel.bitrate;
+                    json::value_t v;
+                    v.v = service_map;
+                    services.push_back(v);
+                }
+
+                map["ensemble_services"].v = services;
+
+            }
             return map;
         }
 

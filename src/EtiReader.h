@@ -34,6 +34,7 @@
 #include "Eti.h"
 #include "Log.h"
 #include "FicSource.h"
+#include "FigParser.h"
 #include "Socket.h"
 #include "SubchannelSource.h"
 #include "TimestampDecoder.h"
@@ -174,6 +175,15 @@ public:
 
     // Gets called by the EDI library to tell us that all data for a frame was given to us
     virtual void assemble(EdiDecoder::ReceivedTagPacket&& tagpacket) override;
+
+    std::optional<FIC_ENSEMBLE> getEnsembleInfo() const {
+        return m_fic_decoder.observer.ensemble;
+    }
+
+    std::map<int /*SId*/, LISTED_SERVICE> getServiceInfo() const {
+        return m_fic_decoder.observer.services;
+    }
+
 private:
     bool m_proto_valid = false;
     bool m_frameReady = false;
@@ -197,6 +207,7 @@ private:
     std::map<uint8_t, std::shared_ptr<SubchannelSource> > m_sources;
 
     TimestampDecoder m_timestamp_decoder;
+    FICDecoder m_fic_decoder;
 };
 
 /* The EDI input does not use the inputs defined in InputReader.h, as they were

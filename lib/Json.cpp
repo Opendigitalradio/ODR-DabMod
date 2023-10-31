@@ -22,7 +22,6 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-#include <list>
 #include <string>
 #include <iostream>
 #include <sstream>
@@ -66,37 +65,57 @@ namespace json {
             }
 
             ss << "\"" << escape_json(element.first) << "\": ";
-
-            const auto& value = element.second.v;
-            if (std::holds_alternative<std::string>(value)) {
-                ss << "\"" << escape_json(std::get<std::string>(value)) << "\"";
-            }
-            else if (std::holds_alternative<double>(value)) {
-                ss << std::fixed << std::get<double>(value);
-            }
-            else if (std::holds_alternative<ssize_t>(value)) {
-                ss << std::get<ssize_t>(value);
-            }
-            else if (std::holds_alternative<size_t>(value)) {
-                ss << std::get<size_t>(value);
-            }
-            else if (std::holds_alternative<bool>(value)) {
-                ss << (std::get<bool>(value) ? "true" : "false");
-            }
-            else if (std::holds_alternative<std::nullopt_t>(value)) {
-                ss << "null";
-            }
-            else if (std::holds_alternative<std::shared_ptr<json::map_t> >(value)) {
-                const map_t& v = *std::get<std::shared_ptr<json::map_t> >(value);
-                ss << map_to_json(v);
-            }
-            else {
-                throw std::logic_error("variant alternative not handled");
-            }
+            ss << value_to_json(element.second);
 
             ix++;
         }
         ss << " }";
+
+        return ss.str();
+    }
+
+    std::string value_to_json(const value_t& value)
+    {
+        std::ostringstream ss;
+
+        if (std::holds_alternative<std::string>(value.v)) {
+            ss << "\"" << escape_json(std::get<std::string>(value.v)) << "\"";
+        }
+        else if (std::holds_alternative<double>(value.v)) {
+            ss << std::fixed << std::get<double>(value.v);
+        }
+        else if (std::holds_alternative<ssize_t>(value.v)) {
+            ss << std::get<ssize_t>(value.v);
+        }
+        else if (std::holds_alternative<size_t>(value.v)) {
+            ss << std::get<size_t>(value.v);
+        }
+        else if (std::holds_alternative<bool>(value.v)) {
+            ss << (std::get<bool>(value.v) ? "true" : "false");
+        }
+        else if (std::holds_alternative<std::nullopt_t>(value.v)) {
+            ss << "null";
+        }
+        else if (std::holds_alternative<std::vector<json::value_t> >(value.v)) {
+            const auto& vec = std::get<std::vector<json::value_t> >(value.v);
+            ss << "[ ";
+            size_t list_ix = 0;
+            for (const auto& list_element : vec) {
+                if (list_ix > 0) {
+                    ss << ",";
+                }
+                ss << value_to_json(list_element);
+                list_ix++;
+            }
+            ss << "]";
+        }
+        else if (std::holds_alternative<std::shared_ptr<json::map_t> >(value.v)) {
+            const map_t& v = *std::get<std::shared_ptr<json::map_t> >(value.v);
+            ss << map_to_json(v);
+        }
+        else {
+            throw std::logic_error("variant alternative not handled");
+        }
 
         return ss.str();
     }
