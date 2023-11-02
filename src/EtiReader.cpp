@@ -540,8 +540,8 @@ void EdiTransport::Open(const std::string& uri)
 {
     etiLog.level(info) << "Opening EDI :" << uri;
 
-    const string proto = uri.substr(0, 3);
-    if (proto == "udp") {
+    const string proto = uri.substr(0, 6);
+    if (proto == "udp://") {
         if (m_proto == Proto::TCP) {
             throw std::invalid_argument("Cannot specify both TCP and UDP urls");
         }
@@ -571,7 +571,7 @@ void EdiTransport::Open(const std::string& uri)
         m_proto = Proto::UDP;
         m_enabled = true;
     }
-    else if (proto == "tcp") {
+    else if (proto == "tcp://") {
         if (m_proto != Proto::Unspecified) {
             throw std::invalid_argument("Cannot call Open several times with TCP");
         }
@@ -582,10 +582,11 @@ void EdiTransport::Open(const std::string& uri)
         }
 
         m_port = std::stoi(uri.substr(found_port+1));
-        const std::string hostname = uri.substr(6, found_port-6);// skip tcp://
+        const std::string hostname = uri.substr(6, found_port-6);
 
         etiLog.level(info) << "EDI TCP connect to " << hostname << ":" << m_port;
 
+        m_tcp_uri = uri;
         m_tcpclient.connect(hostname, m_port);
         m_proto = Proto::TCP;
         m_enabled = true;

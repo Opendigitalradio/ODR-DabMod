@@ -114,9 +114,11 @@ class ModulatorData : public RemoteControllable {
         ModulatorData() : RemoteControllable("mainloop") {
             RC_ADD_PARAMETER(num_modulator_restarts, "(Read-only) Number of mod restarts");
             RC_ADD_PARAMETER(most_recent_edi_decoded, "(Read-only) UNIX Timestamp of most recently decoded EDI frame");
+            RC_ADD_PARAMETER(edi_source, "(Read-only) URL of the EDI/TCP source");
             RC_ADD_PARAMETER(running_since, "(Read-only) UNIX Timestamp of most recent modulator restart");
             RC_ADD_PARAMETER(ensemble_label, "(Read-only) Label of the ensemble");
             RC_ADD_PARAMETER(ensemble_eid, "(Read-only) Ensemble ID");
+            RC_ADD_PARAMETER(ensemble_services, "(Read-only, only JSON) Ensemble service information");
             RC_ADD_PARAMETER(num_services, "(Read-only) Number of services in the ensemble");
         }
 
@@ -165,6 +167,14 @@ class ModulatorData : public RemoteControllable {
                     throw ParameterError("Not available yet");
                 }
             }
+            else if (parameter == "edi_source") {
+                if (ediInput) {
+                    ss << ediInput->ediTransport.getTcpUri();
+                }
+                else {
+                    throw ParameterError("Not available yet");
+                }
+            }
             else if (parameter == "num_services") {
                 if (ediInput) {
                     ss << ediInput->ediReader.getSubchannels().size();
@@ -172,6 +182,9 @@ class ModulatorData : public RemoteControllable {
                 else {
                     throw ParameterError("Not available yet");
                 }
+            }
+            else if (parameter == "ensemble_services") {
+                throw ParameterError("ensemble_services is only available through 'showjson'");
             }
             else {
                 ss << "Parameter '" << parameter <<
@@ -189,6 +202,7 @@ class ModulatorData : public RemoteControllable {
             map["most_recent_edi_decoded"].v = most_recent_edi_decoded;
 
             if (ediInput) {
+                map["edi_source"].v = ediInput->ediTransport.getTcpUri();
                 map["num_services"].v = ediInput->ediReader.getSubchannels().size();
 
                 const auto ens = ediInput->ediReader.getEnsembleInfo();

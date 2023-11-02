@@ -221,6 +221,7 @@ class EdiTransport {
         void Open(const std::string& uri);
 
         bool isEnabled(void) const { return m_enabled; }
+        std::string getTcpUri(void) const { return m_tcp_uri; }
 
         /* Receive a packet and give it to the decoder. Returns
          * true if a packet was received, false in case of socket
@@ -229,6 +230,7 @@ class EdiTransport {
         bool rxPacket(void);
 
     private:
+        std::string m_tcp_uri;
         bool m_enabled;
         int m_port;
         std::string m_bindto;
