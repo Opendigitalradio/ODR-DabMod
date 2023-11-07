@@ -84,9 +84,7 @@ struct mod_settings_t {
     // Settings for the OFDM windowing
     size_t ofdmWindowOverlap = 0;
 
-#if defined(HAVE_OUTPUT_UHD) || defined(HAVE_SOAPYSDR) || defined(HAVE_LIMESDR) || defined(HAVE_BLADERF) || defined(HAVE_DEXTER)
     Output::SDRDeviceConfig sdr_device_config;
-#endif
 
     bool showProcessTime = true;
 };
