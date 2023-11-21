@@ -78,6 +78,11 @@ unsigned EtiReader::getFct()
     return eti_fc.FCT;
 }
 
+frame_timestamp EtiReader::getTimestamp()
+{
+    return myTimestampDecoder.getTimestamp();
+}
+
 
 const std::vector<std::shared_ptr<SubchannelSource> > EtiReader::getSubchannels() const
 {
@@ -223,7 +228,7 @@ int EtiReader::loadEtiData(const Buffer& dataIn)
                     unsigned size = mySources[i]->framesize();
                     PDEBUG("Writting %i bytes of subchannel data\n", size);
                     Buffer subch(size, in);
-                    mySources[i]->loadSubchannelData(move(subch));
+                    mySources[i]->loadSubchannelData(std::move(subch));
                     input_size -= size;
                     framesize -= size;
                     in += size;
@@ -278,28 +283,21 @@ int EtiReader::loadEtiData(const Buffer& dataIn)
     return dataIn.getLength() - input_size;
 }
 
-bool EtiReader::sourceContainsTimestamp()
-{
-    return (ntohl(eti_tist.TIST) & 0xFFFFFF) != 0xFFFFFF;
-    /* See ETS 300 799, Annex C.2.2 */
-}
-
 uint32_t EtiReader::getPPSOffset()
 {
-    if (!sourceContainsTimestamp()) {
-        //fprintf(stderr, "****** SOURCE NO TS\n");
+    const uint32_t timestamp = ntohl(eti_tist.TIST) & 0xFFFFFF;
+
+    /* See ETS 300 799, Annex C.2.2 */
+    if (timestamp == 0xFFFFFF) {
         return 0.0;
     }
-
-    uint32_t timestamp = ntohl(eti_tist.TIST) & 0xFFFFFF;
-    //fprintf(stderr, "****** TIST 0x%x\n", timestamp);
 
     return timestamp;
 }
 
-EdiReader::EdiReader(
-        double& tist_offset_s) :
-    m_timestamp_decoder(tist_offset_s)
+EdiReader::EdiReader(double& tist_offset_s) :
+    m_timestamp_decoder(tist_offset_s),
+    m_fic_decoder(/*verbose*/ false)
 {
     rcs.enrol(&m_timestamp_decoder);
 }
@@ -329,6 +327,11 @@ unsigned EdiReader::getFct()
     return m_fc.fct();
 }
 
+frame_timestamp EdiReader::getTimestamp()
+{
+    return m_timestamp_decoder.getTimestamp();
+}
+
 const std::vector<std::shared_ptr<SubchannelSource> > EdiReader::getSubchannels() const
 {
     std::vector<std::shared_ptr<SubchannelSource> > sources;
@@ -344,15 +347,6 @@ const std::vector<std::shared_ptr<SubchannelSource> > EdiReader::getSubchannels(
     }
 
     return sources;
-}
-
-bool EdiReader::sourceContainsTimestamp()
-{
-    if (not (m_frameReady and m_fc_valid)) {
-        throw std::runtime_error("Trying to get timestamp before it is ready");
-    }
-
-    return m_fc.tsta != 0xFFFFFF;
 }
 
 bool EdiReader::isFrameReady()
@@ -417,7 +411,10 @@ void EdiReader::update_fic(std::vector<uint8_t>&& fic)
     if (not m_proto_valid) {
         throw std::logic_error("Cannot update FIC before protocol");
     }
-    m_fic = move(fic);
+
+    m_fic_decoder.Process(fic.data(), fic.size());
+
+    m_fic = std::move(fic);
 }
 
 void EdiReader::update_edi_time(
@@ -469,7 +466,7 @@ void EdiReader::add_subchannel(EdiDecoder::eti_stc_data&& stc)
         throw std::invalid_argument(
                 "EDI: MST data length inconsistent with FIC");
     }
-    source->loadSubchannelData(move(stc.mst));
+    source->loadSubchannelData(std::move(stc.mst));
 
     if (m_sources.size() > 64) {
         throw std::invalid_argument("Too many subchannels");
@@ -543,8 +540,8 @@ void EdiTransport::Open(const std::string& uri)
 {
     etiLog.level(info) << "Opening EDI :" << uri;
 
-    const string proto = uri.substr(0, 3);
-    if (proto == "udp") {
+    const string proto = uri.substr(0, 6);
+    if (proto == "udp://") {
         if (m_proto == Proto::TCP) {
             throw std::invalid_argument("Cannot specify both TCP and UDP urls");
         }
@@ -574,7 +571,7 @@ void EdiTransport::Open(const std::string& uri)
         m_proto = Proto::UDP;
         m_enabled = true;
     }
-    else if (proto == "tcp") {
+    else if (proto == "tcp://") {
         if (m_proto != Proto::Unspecified) {
             throw std::invalid_argument("Cannot call Open several times with TCP");
         }
@@ -585,10 +582,11 @@ void EdiTransport::Open(const std::string& uri)
         }
 
         m_port = std::stoi(uri.substr(found_port+1));
-        const std::string hostname = uri.substr(6, found_port-6);// skip tcp://
+        const std::string hostname = uri.substr(6, found_port-6);
 
         etiLog.level(info) << "EDI TCP connect to " << hostname << ":" << m_port;
 
+        m_tcp_uri = uri;
         m_tcpclient.connect(hostname, m_port);
         m_proto = Proto::TCP;
         m_enabled = true;
@@ -615,7 +613,7 @@ bool EdiTransport::rxPacket()
                         received_from = rp.received_from;
 
                         EdiDecoder::Packet p;
-                        p.buf = move(rp.packetdata);
+                        p.buf = std::move(rp.packetdata);
                         p.received_on_port = rp.port_received_on;
                         m_decoder.push_packet(p);
                     }
@@ -652,7 +650,7 @@ bool EdiTransport::rxPacket()
                 const int timeout_ms = 1000;
                 try {
                     ssize_t ret = m_tcpclient.recv(m_tcpbuffer.data(), m_tcpbuffer.size(), 0, timeout_ms);
-                    if (ret == 0 or ret == -1) {
+                    if (ret <= 0) {
                         return false;
                     }
                     else if (ret > (ssize_t)m_tcpbuffer.size()) {

@@ -34,6 +34,7 @@
 #include "Eti.h"
 #include "Log.h"
 #include "FicSource.h"
+#include "FigParser.h"
 #include "Socket.h"
 #include "SubchannelSource.h"
 #include "TimestampDecoder.h"
@@ -59,8 +60,8 @@ public:
     /* Get the current Frame Count */
     virtual unsigned getFct() = 0;
 
-    /* Returns true if we have valid time stamps in the ETI*/
-    virtual bool sourceContainsTimestamp() = 0;
+    /* Returns current Timestamp */
+    virtual frame_timestamp getTimestamp() = 0;
 
     /* Return the FIC source to be used for modulation */
     virtual std::shared_ptr<FicSource>& getFic(void);
@@ -97,18 +98,17 @@ class EtiReader : public EtiSource
 public:
     EtiReader(double& tist_offset_s);
 
-    virtual unsigned getMode();
-    virtual unsigned getFp();
-    virtual unsigned getFct();
+    virtual unsigned getMode() override;
+    virtual unsigned getFp() override;
+    virtual unsigned getFct() override;
+    virtual frame_timestamp getTimestamp() override;
 
     /* Read ETI data from dataIn. Returns the number of bytes
      * read from the buffer.
      */
     int loadEtiData(const Buffer& dataIn);
 
-    virtual bool sourceContainsTimestamp();
-
-    virtual const std::vector<std::shared_ptr<SubchannelSource> > getSubchannels() const;
+    virtual const std::vector<std::shared_ptr<SubchannelSource> > getSubchannels() const override;
 
 private:
     /* Transform the ETI TIST to a PPS offset in units of 1/16384000 s */
@@ -141,7 +141,7 @@ public:
     virtual unsigned getMode() override;
     virtual unsigned getFp() override;
     virtual unsigned getFct() override;
-    virtual bool sourceContainsTimestamp() override;
+    virtual frame_timestamp getTimestamp() override;
     virtual const std::vector<std::shared_ptr<SubchannelSource> > getSubchannels() const override;
 
     virtual bool isFrameReady(void);
@@ -175,6 +175,15 @@ public:
 
     // Gets called by the EDI library to tell us that all data for a frame was given to us
     virtual void assemble(EdiDecoder::ReceivedTagPacket&& tagpacket) override;
+
+    std::optional<FIC_ENSEMBLE> getEnsembleInfo() const {
+        return m_fic_decoder.observer.ensemble;
+    }
+
+    std::map<int /*SId*/, LISTED_SERVICE> getServiceInfo() const {
+        return m_fic_decoder.observer.services;
+    }
+
 private:
     bool m_proto_valid = false;
     bool m_frameReady = false;
@@ -198,6 +207,7 @@ private:
     std::map<uint8_t, std::shared_ptr<SubchannelSource> > m_sources;
 
     TimestampDecoder m_timestamp_decoder;
+    FICDecoder m_fic_decoder;
 };
 
 /* The EDI input does not use the inputs defined in InputReader.h, as they were
@@ -211,6 +221,7 @@ class EdiTransport {
         void Open(const std::string& uri);
 
         bool isEnabled(void) const { return m_enabled; }
+        std::string getTcpUri(void) const { return m_tcp_uri; }
 
         /* Receive a packet and give it to the decoder. Returns
          * true if a packet was received, false in case of socket
@@ -219,6 +230,7 @@ class EdiTransport {
         bool rxPacket(void);
 
     private:
+        std::string m_tcp_uri;
         bool m_enabled;
         int m_port;
         std::string m_bindto;

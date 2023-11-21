@@ -2,7 +2,7 @@
    Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010 Her Majesty the
    Queen in Right of Canada (Communications Research Center Canada)
 
-   Copyright (C) 2022
+   Copyright (C) 2023
    Matthias P. Braendli, matthias.braendli@mpb.li
 
     http://opendigitalradio.org
@@ -25,7 +25,9 @@
  */
 
 #include "output/SDR.h"
+#include "output/UHD.h"
 #include "output/Lime.h"
+#include "output/Dexter.h"
 
 #include "PcDebug.h"
 #include "Log.h"
@@ -46,16 +48,15 @@ using namespace std;
 
 namespace Output {
 
-// Maximum number of frames that can wait in frames
-static constexpr size_t FRAMES_MAX_SIZE = 8;
+// Maximum number of frames that can wait in frames.
+// Keep it low when not using synchronised transmission, in order to reduce delay.
+// When using synchronised transmission, use a 6s buffer to give us enough margin.
+static constexpr size_t FRAMES_MAX_SIZE_UNSYNC = 8;
+static constexpr size_t FRAMES_MAX_SIZE_SYNC = 250;
 
 // If the timestamp is further in the future than
 // 100 seconds, abort
 static constexpr double TIMESTAMP_ABORT_FUTURE = 100;
-
-// Add a delay to increase buffers when
-// frames are too far in the future
-static constexpr double TIMESTAMP_MARGIN_FUTURE = 0.5;
 
 SDR::SDR(SDRDeviceConfig& config, std::shared_ptr<SDRDevice> device) :
     ModOutput(), ModMetadata(), RemoteControllable("sdr"),
@@ -77,20 +78,40 @@ SDR::SDR(SDRDeviceConfig& config, std::shared_ptr<SDRDevice> device) :
     RC_ADD_PARAMETER(txgain, "TX gain");
     RC_ADD_PARAMETER(rxgain, "RX gain for DPD feedback");
     RC_ADD_PARAMETER(bandwidth, "Analog front-end bandwidth");
-    RC_ADD_PARAMETER(freq, "Transmission frequency");
+    RC_ADD_PARAMETER(freq, "Transmission frequency in Hz");
+    RC_ADD_PARAMETER(channel, "Transmission frequency as channel");
     RC_ADD_PARAMETER(muting, "Mute the output by stopping the transmitter");
     RC_ADD_PARAMETER(temp, "Temperature in degrees C of the device");
     RC_ADD_PARAMETER(underruns, "Counter of number of underruns");
     RC_ADD_PARAMETER(latepackets, "Counter of number of late packets");
     RC_ADD_PARAMETER(frames, "Counter of number of frames modulated");
-    RC_ADD_PARAMETER(gpsdo_num_sv, "Number of Satellite Vehicles tracked by GPSDO");
-    RC_ADD_PARAMETER(gpsdo_holdover, "1 if the GPSDO is in holdover, 0 if it is using gnss");
+    RC_ADD_PARAMETER(synchronous, "1 if configured for synchronous transmission");
+    RC_ADD_PARAMETER(max_gps_holdover_time, "Max holdover duration in seconds");
+
+#ifdef HAVE_OUTPUT_UHD
+    if (std::dynamic_pointer_cast<UHD>(device)) {
+        RC_ADD_PARAMETER(gpsdo_num_sv, "Number of Satellite Vehicles tracked by GPSDO");
+        RC_ADD_PARAMETER(gpsdo_holdover, "1 if the GPSDO is in holdover, 0 if it is using gnss");
+    }
+#endif // HAVE_OUTPUT_UHD
+
+    RC_ADD_PARAMETER(queued_frames_ms, "Number of frames queued, represented in milliseconds");
 
 #ifdef HAVE_LIMESDR
     if (std::dynamic_pointer_cast<Lime>(device)) {
         RC_ADD_PARAMETER(fifo_fill, "A value representing the Lime FIFO fullness [percent]");
     }
 #endif // HAVE_LIMESDR
+
+#ifdef HAVE_DEXTER
+    if (std::dynamic_pointer_cast<Dexter>(device)) {
+        RC_ADD_PARAMETER(in_holdover_since, "DEXTER timestamp when holdover began");
+        RC_ADD_PARAMETER(remaining_holdover_s, "DEXTER remaining number of seconds in holdover");
+        RC_ADD_PARAMETER(clock_state, "DEXTER clock state: startup/normal/holdover");
+    }
+#endif // HAVE_DEXTER
+
+
 }
 
 SDR::~SDR()
@@ -102,6 +123,11 @@ SDR::~SDR()
     if (m_device_thread.joinable()) {
         m_device_thread.join();
     }
+}
+
+void SDR::set_sample_size(size_t size)
+{
+    m_size = size;
 }
 
 int SDR::process(Buffer *dataIn)
@@ -125,6 +151,7 @@ meta_vec_t SDR::process_metadata(const meta_vec_t& metadataIn)
     if (m_device and m_running) {
         FrameData frame;
         frame.buf = std::move(m_frame);
+        frame.sampleSize = m_size;
 
         if (metadataIn.empty()) {
             etiLog.level(info) <<
@@ -138,7 +165,7 @@ meta_vec_t SDR::process_metadata(const meta_vec_t& metadataIn)
              * This behaviour is different to earlier versions of ODR-DabMod,
              * which took the timestamp from the latest ETI frame.
              */
-            frame.ts = *(metadataIn[0].ts);
+            frame.ts = metadataIn[0].ts;
 
             // TODO check device running
 
@@ -157,9 +184,12 @@ meta_vec_t SDR::process_metadata(const meta_vec_t& metadataIn)
                         m_config.sampleRate);
             }
 
-            size_t num_frames = m_queue.push_wait_if_full(frame,
-                    FRAMES_MAX_SIZE);
-            etiLog.log(trace, "SDR,push %zu", num_frames);
+
+            const auto max_size = m_config.enableSync ? FRAMES_MAX_SIZE_SYNC : FRAMES_MAX_SIZE_UNSYNC;
+            auto r = m_queue.push_overflow(std::move(frame), max_size);
+            etiLog.log(trace, "SDR,push %d %zu", r.overflowed, r.new_size);
+
+            num_queue_overflows += r.overflowed ? 1 : 0;
         }
     }
     else {
@@ -180,16 +210,13 @@ void SDR::process_thread_entry()
 
     last_tx_time_initialised = false;
 
-    size_t last_num_underflows = 0;
-    size_t pop_prebuffering = FRAMES_MAX_SIZE;
-
     m_running.store(true);
 
     try {
         while (m_running.load()) {
             struct FrameData frame;
             etiLog.log(trace, "SDR,wait");
-            m_queue.wait_and_pop(frame, pop_prebuffering);
+            m_queue.wait_and_pop(frame);
             etiLog.log(trace, "SDR,pop");
 
             if (m_running.load() == false) {
@@ -197,20 +224,7 @@ void SDR::process_thread_entry()
             }
 
             if (m_device) {
-                handle_frame(frame);
-
-                const auto rs = m_device->get_run_statistics();
-
-                /* Ensure we fill frames after every underrun and
-                 * at startup to reduce underrun likelihood. */
-                if (last_num_underflows < rs.num_underruns) {
-                    pop_prebuffering = FRAMES_MAX_SIZE;
-                }
-                else {
-                    pop_prebuffering = 1;
-                }
-
-                last_num_underflows = rs.num_underruns;
+                handle_frame(std::move(frame));
             }
         }
     }
@@ -236,46 +250,19 @@ const char* SDR::name()
     return m_name.c_str();
 }
 
-void SDR::sleep_through_frame()
-{
-    using namespace std::chrono;
 
-    const auto now = steady_clock::now();
-
-    if (not t_last_frame_initialised) {
-        t_last_frame = now;
-        t_last_frame_initialised = true;
-    }
-
-    const auto delta = now - t_last_frame;
-    const auto wait_time = transmission_frame_duration(m_config.dabMode);
-
-    if (wait_time > delta) {
-        this_thread::sleep_for(wait_time - delta);
-    }
-
-    t_last_frame += wait_time;
-}
-
-void SDR::handle_frame(struct FrameData& frame)
+void SDR::handle_frame(struct FrameData&& frame)
 {
     // Assumes m_device is valid
 
-    constexpr double tx_timeout = 20.0;
-
     if (not m_device->is_clk_source_ok()) {
-        sleep_through_frame();
         return;
     }
 
     const auto& time_spec = frame.ts;
 
-    if (m_config.enableSync and m_config.muteNoTimestamps and
-            not time_spec.timestamp_valid) {
-        sleep_through_frame();
-        etiLog.log(info,
-                "OutputSDR: Muting sample %d : no timestamp\n",
-                frame.ts.fct);
+    if (m_config.enableSync and m_config.muteNoTimestamps and not time_spec.timestamp_valid) {
+        etiLog.log(info, "OutputSDR: Muting sample %d : no timestamp\n", frame.ts.fct);
         return;
     }
 
@@ -298,11 +285,12 @@ void SDR::handle_frame(struct FrameData& frame)
         }
 
         if (frame.ts.offset_changed) {
+            etiLog.level(debug) << "TS offset changed";
             m_device->require_timestamp_refresh();
         }
 
         if (last_tx_time_initialised) {
-            const size_t sizeIn = frame.buf.size() / sizeof(complexf);
+            const size_t sizeIn = frame.buf.size() / frame.sampleSize;
 
             // Checking units for the increment calculation:
             // samps  * ticks/s  / (samps/s)
@@ -341,7 +329,7 @@ void SDR::handle_frame(struct FrameData& frame)
 
         etiLog.log(trace, "SDR,tist %f", time_spec.get_real_secs());
 
-        if (time_spec.get_real_secs() + tx_timeout < device_time) {
+        if (time_spec.get_real_secs() < device_time) {
             etiLog.level(warn) <<
                 "OutputSDR: Timestamp in the past at FCT=" << frame.ts.fct << " offset: " <<
                 std::fixed <<
@@ -350,6 +338,7 @@ void SDR::handle_frame(struct FrameData& frame)
                 " frame " << frame.ts.fct <<
                 ", tx_second " << tx_second <<
                 ", pps " << pps_offset;
+            m_device->require_timestamp_refresh();
             return;
         }
 
@@ -363,13 +352,12 @@ void SDR::handle_frame(struct FrameData& frame)
     }
 
     if (m_config.muting) {
-        etiLog.log(info,
-                "OutputSDR: Muting FCT=%d requested",
-                frame.ts.fct);
+        etiLog.log(info, "OutputSDR: Muting FCT=%d requested", frame.ts.fct);
+        m_device->require_timestamp_refresh();
         return;
     }
 
-    m_device->transmit_frame(frame);
+    m_device->transmit_frame(std::move(frame));
 }
 
 // =======================================
@@ -397,21 +385,33 @@ void SDR::set_parameter(const string& parameter, const string& value)
         m_device->tune(m_config.lo_offset, m_config.frequency);
         m_config.frequency = m_device->get_tx_freq();
     }
+    else if (parameter == "channel") {
+        try {
+            const double frequency = parse_channel(value);
+
+            m_config.frequency = frequency;
+            m_device->tune(m_config.lo_offset, m_config.frequency);
+            m_config.frequency = m_device->get_tx_freq();
+        }
+        catch (const std::out_of_range& e) {
+            throw ParameterError("Cannot parse channel");
+        }
+    }
     else if (parameter == "muting") {
         ss >> m_config.muting;
     }
-    else if (parameter == "underruns" or
-             parameter == "latepackets" or
-             parameter == "frames" or
-             parameter == "gpsdo_num_sv" or
-             parameter == "gpsdo_holdover" or
-             parameter == "fifo_fill") {
-        throw ParameterError("Parameter " + parameter + " is read-only.");
+    else if (parameter == "synchronous") {
+        uint32_t enableSync = 0;
+        ss >> enableSync;
+        m_config.enableSync = enableSync > 0;
+    }
+    else if (parameter == "max_gps_holdover_time") {
+        ss >> m_config.maxGPSHoldoverTime;
     }
     else {
         stringstream ss_err;
         ss_err << "Parameter '" << parameter
-            << "' is not exported by controllable " << get_rc_name();
+            << "' is read-only or not exported by controllable " << get_rc_name();
         throw ParameterError(ss_err.str());
     }
 }
@@ -432,6 +432,16 @@ const string SDR::get_parameter(const string& parameter) const
     else if (parameter == "freq") {
         ss << m_config.frequency;
     }
+    else if (parameter == "channel") {
+        const auto maybe_freq = convert_frequency_to_channel(m_config.frequency);
+
+        if (maybe_freq.has_value()) {
+            ss << *maybe_freq;
+        }
+        else {
+            throw ParameterError("Frequency is outside list of channels");
+        }
+    }
     else if (parameter == "muting") {
         ss << m_config.muting;
     }
@@ -439,60 +449,97 @@ const string SDR::get_parameter(const string& parameter) const
         if (not m_device) {
             throw ParameterError("OutputSDR has no device");
         }
-        const double temp = m_device->get_temperature();
-        if (std::isnan(temp)) {
+        const std::optional<double> temp = m_device->get_temperature();
+        if (temp) {
+            ss << *temp;
+        }
+        else {
             throw ParameterError("Temperature not available");
         }
-        else {
-            ss << temp;
-        }
     }
-    else if (parameter == "underruns" or
-            parameter == "latepackets" or
-            parameter == "frames" ) {
-        if (not m_device) {
-            throw ParameterError("OutputSDR has no device");
-        }
-        const auto stat = m_device->get_run_statistics();
-
-        if (parameter == "underruns") {
-            ss << stat.num_underruns;
-        }
-        else if (parameter == "latepackets") {
-            ss << stat.num_late_packets;
-        }
-        else if (parameter == "frames") {
-            ss << stat.num_frames_modulated;
-        }
+    else if (parameter == "queued_frames_ms") {
+        ss << m_queue.size() *
+            chrono::duration_cast<chrono::milliseconds>(transmission_frame_duration(m_config.dabMode))
+            .count();
     }
-    else if (parameter == "gpsdo_num_sv") {
-        const auto stat = m_device->get_run_statistics();
-        ss << stat.gpsdo_num_sv;
+    else if (parameter == "synchronous") {
+        ss << m_config.enableSync;
     }
-    else if (parameter == "gpsdo_holdover") {
-        const auto stat = m_device->get_run_statistics();
-        ss << (stat.gpsdo_holdover ? 1 : 0);
+    else if (parameter == "max_gps_holdover_time") {
+        ss << m_config.maxGPSHoldoverTime;
     }
-#ifdef HAVE_LIMESDR
-    else if (parameter == "fifo_fill") {
-        const auto dev = std::dynamic_pointer_cast<Lime>(m_device);
-
-        if (dev) {
-            ss << dev->get_fifo_fill_percent();
-        }
-        else {
-            ss << "Parameter '" << parameter <<
-                "' is not exported by controllable " << get_rc_name();
-            throw ParameterError(ss.str());
-        }
-    }
-#endif // HAVE_LIMESDR
     else {
+        if (m_device) {
+            const auto stat = m_device->get_run_statistics();
+            try {
+                const auto& value = stat.at(parameter).v;
+                if (std::holds_alternative<string>(value)) {
+                    ss << std::get<string>(value);
+                }
+                else if (std::holds_alternative<double>(value)) {
+                    ss << std::get<double>(value);
+                }
+                else if (std::holds_alternative<ssize_t>(value)) {
+                    ss << std::get<ssize_t>(value);
+                }
+                else if (std::holds_alternative<size_t>(value)) {
+                    ss << std::get<size_t>(value);
+                }
+                else if (std::holds_alternative<bool>(value)) {
+                    ss << (std::get<bool>(value) ? 1 : 0);
+                }
+                else if (std::holds_alternative<std::nullopt_t>(value)) {
+                    ss << "";
+                }
+                else {
+                    throw std::logic_error("variant alternative not handled");
+                }
+                return ss.str();
+            }
+            catch (const std::out_of_range&) {
+            }
+        }
+
         ss << "Parameter '" << parameter <<
             "' is not exported by controllable " << get_rc_name();
         throw ParameterError(ss.str());
     }
     return ss.str();
+}
+
+const json::map_t SDR::get_all_values() const
+{
+    json::map_t stat = m_device->get_run_statistics();
+
+    stat["txgain"].v = m_config.txgain;
+    stat["rxgain"].v = m_config.rxgain;
+    stat["freq"].v = m_config.frequency;
+    stat["muting"].v = m_config.muting;
+    stat["temp"].v = std::nullopt;
+
+    const auto maybe_freq = convert_frequency_to_channel(m_config.frequency);
+
+    if (maybe_freq.has_value()) {
+        stat["channel"].v = *maybe_freq;
+    }
+    else {
+        stat["channel"].v = std::nullopt;
+    }
+
+    if (m_device) {
+        const std::optional<double> temp = m_device->get_temperature();
+        if (temp) {
+            stat["temp"].v = *temp;
+        }
+    }
+    stat["queued_frames_ms"].v = m_queue.size() *
+            (size_t)chrono::duration_cast<chrono::milliseconds>(transmission_frame_duration(m_config.dabMode))
+            .count();
+
+    stat["synchronous"].v = m_config.enableSync;
+    stat["max_gps_holdover_time"].v = (size_t)m_config.maxGPSHoldoverTime;
+
+    return stat;
 }
 
 } // namespace Output

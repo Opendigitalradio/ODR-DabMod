@@ -3,7 +3,7 @@
    Her Majesty the Queen in Right of Canada (Communications Research
    Center Canada)
 
-   Copyright (C) 2017
+   Copyright (C) 2023
    Matthias P. Braendli, matthias.braendli@mpb.li
 
     http://opendigitalradio.org
@@ -40,8 +40,6 @@
 #include "output/Lime.h"
 #include "output/BladeRF.h"
 
-#define ZMQ_INPUT_MAX_FRAME_QUEUE 500
-
 struct mod_settings_t {
     std::string outputName;
     bool useZeroMQOutput = false;
@@ -51,9 +49,9 @@ struct mod_settings_t {
     bool fileOutputShowMetadata = false;
     bool useUHDOutput = false;
     bool useSoapyOutput = false;
+    bool useDexterOutput = false;
     bool useLimeOutput = false;
     bool useBladeRFOutput = false;
-    const std::string BladeRFOutputFormat = "s16"; // to transmit SC16 IQ
 
     size_t outputRate = 2048000;
     size_t clockRate = 0;
@@ -69,7 +67,6 @@ struct mod_settings_t {
     bool loop = false;
     std::string inputName = "";
     std::string inputTransport = "file";
-    unsigned inputMaxFramesQueued = ZMQ_INPUT_MAX_FRAME_QUEUE;
     float edi_max_delay_ms = 0.0f;
 
     tii_config_t tiiConfig;
@@ -87,9 +84,7 @@ struct mod_settings_t {
     // Settings for the OFDM windowing
     size_t ofdmWindowOverlap = 0;
 
-#if defined(HAVE_OUTPUT_UHD) || defined(HAVE_SOAPYSDR) || defined(HAVE_LIMESDR) || defined(HAVE_BLADERF)
     Output::SDRDeviceConfig sdr_device_config;
-#endif
 
     bool showProcessTime = true;
 };

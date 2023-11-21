@@ -239,13 +239,10 @@ double BladeRF::get_bandwidth(void) const
     return (double)bw;
 }
 
-SDRDevice::RunStatistics BladeRF::get_run_statistics(void) const
+SDRDevice::run_statistics_t BladeRF::get_run_statistics(void) const
 {
-    RunStatistics rs;
-    rs.num_underruns = underflows;
-    rs.num_overruns = overflows;
-    rs.num_late_packets = late_packets;
-    rs.num_frames_modulated = num_frames_modulated;
+    run_statistics_t rs;
+    rs["frames"] = num_frames_modulated;
     return rs;
 }
 
@@ -269,14 +266,14 @@ double BladeRF::get_rxgain(void) const
 size_t BladeRF::receive_frame(
     complexf *buf,
     size_t num_samples,
-    struct frame_timestamp &ts,
+    frame_timestamp &ts,
     double timeout_secs)
 {
     // TODO
     return 0;
 }
 
-bool BladeRF::is_clk_source_ok() const
+bool BladeRF::is_clk_source_ok()
 {
     // TODO
     return true;
@@ -287,24 +284,23 @@ const char *BladeRF::device_name(void) const
     return "BladeRF";
 }
 
-double BladeRF::get_temperature(void) const
+std::optional<double> BladeRF::get_temperature(void) const
 {
     if (not m_device)
         throw runtime_error("BladeRF device not set up");
 
     float temp = 0.0;
-
     int status = bladerf_get_rfic_temperature(m_device, &temp);
-    if (status < 0)
-    {
-        etiLog.level(error) << "Error getting BladeRF temperature: %s " << bladerf_strerror(status);
+    if (status >= 0) {
+        return (double)temp;
     }
-
-    return (double)temp;
+    else {
+        etiLog.level(error) << "Error getting BladeRF temperature: %s " << bladerf_strerror(status);
+        return std::nullopt;
+    }
 }
 
-
-void BladeRF::transmit_frame(const struct FrameData &frame) // SC16 frames
+void BladeRF::transmit_frame(struct FrameData&& frame) // SC16 frames
 {
     const size_t num_samples = frame.buf.size() / (2*sizeof(int16_t));
 

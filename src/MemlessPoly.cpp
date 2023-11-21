@@ -2,7 +2,7 @@
    Copyright (C) 2007, 2008, 2009, 2010, 2011 Her Majesty the Queen in
    Right of Canada (Communications Research Center Canada)
 
-   Copyright (C) 2018
+   Copyright (C) 2023
    Matthias P. Braendli, matthias.braendli@mpb.li
    Andreas Steger, andreas.steger@digris.ch
 
@@ -314,7 +314,7 @@ void MemlessPoly::worker_thread(MemlessPoly::worker_t *workerdata)
     set_thread_name("MemlessPoly");
 
     while (true) {
-        worker_t::input_data_t in_data;
+        worker_t::input_data_t in_data = {};
         try {
             workerdata->in_queue.wait_and_pop(in_data);
         }
@@ -386,7 +386,7 @@ int MemlessPoly::internal_process(Buffer* const dataIn, Buffer* dataOut)
 
             // Wait for completion of the tasks
             for (auto& worker : m_workers) {
-                int ret;
+                int ret = 0;
                 worker.out_queue.wait_and_pop(ret);
             }
         }
@@ -467,3 +467,11 @@ const string MemlessPoly::get_parameter(const string& parameter) const
     return ss.str();
 }
 
+const json::map_t MemlessPoly::get_all_values() const
+{
+    json::map_t map;
+    map["ncoefs"].v = m_coefs_am.size();
+    map["coefs"].v = serialise_coefficients();
+    map["coeffile"].v = m_coefs_file;
+    return map;
+}

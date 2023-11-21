@@ -2,7 +2,7 @@
    Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010, 2011 Her Majesty
    the Queen in Right of Canada (Communications Research Center Canada)
 
-   Copyright (C) 2016
+   Copyright (C) 2022
    Matthias P. Braendli, matthias.braendli@mpb.li
 
     http://opendigitalradio.org
@@ -33,6 +33,7 @@
 #include "PuncturingRule.h"
 #include "Eti.h"
 #include "ModPlugin.h"
+#include "TimestampDecoder.h"
 #include <vector>
 #include <sys/types.h>
 
@@ -41,21 +42,21 @@ class FicSource : public ModInput, public ModMetadata
 public:
     FicSource(unsigned ficf, unsigned mid);
 
-    size_t getFramesize();
-    const std::vector<PuncturingRule>& get_rules();
+    size_t getFramesize() const;
+    const std::vector<PuncturingRule>& get_rules() const;
 
     void loadFicData(const Buffer& fic);
     int process(Buffer* outputData) override;
     const char* name() override { return "FicSource"; }
 
-    void loadTimestamp(const std::shared_ptr<struct frame_timestamp>& ts);
-    virtual meta_vec_t process_metadata(
-            const meta_vec_t& metadataIn) override;
+    void loadTimestamp(const frame_timestamp& ts);
+    virtual meta_vec_t process_metadata(const meta_vec_t& metadataIn) override;
 
 private:
-    size_t d_framesize;
-    Buffer d_buffer;
-    std::shared_ptr<struct frame_timestamp> d_ts;
-    std::vector<PuncturingRule> d_puncturing_rules;
+    size_t m_framesize = 0;
+    Buffer m_buffer;
+    frame_timestamp m_ts;
+    bool m_ts_valid = false;
+    std::vector<PuncturingRule> m_puncturing_rules;
 };
 

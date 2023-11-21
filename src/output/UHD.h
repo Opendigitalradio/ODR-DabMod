@@ -55,14 +55,6 @@ DESCRIPTION:
 #include <stdio.h>
 #include <sys/types.h>
 
-// If the timestamp is further in the future than
-// 100 seconds, abort
-#define TIMESTAMP_ABORT_FUTURE 100
-
-// Add a delay to increase buffers when
-// frames are too far in the future
-#define TIMESTAMP_MARGIN_FUTURE 0.5
-
 namespace Output {
 
 class UHD : public Output::SDRDevice
@@ -79,8 +71,8 @@ class UHD : public Output::SDRDevice
         virtual double get_txgain(void) const override;
         virtual void set_bandwidth(double bandwidth) override;
         virtual double get_bandwidth(void) const override;
-        virtual void transmit_frame(const struct FrameData& frame) override;
-        virtual RunStatistics get_run_statistics(void) const override;
+        virtual void transmit_frame(struct FrameData&& frame) override;
+        virtual run_statistics_t get_run_statistics(void) const override;
         virtual double get_real_secs(void) const override;
 
         virtual void set_rxgain(double rxgain) override;
@@ -88,14 +80,14 @@ class UHD : public Output::SDRDevice
         virtual size_t receive_frame(
                 complexf *buf,
                 size_t num_samples,
-                struct frame_timestamp& ts,
+                frame_timestamp& ts,
                 double timeout_secs) override;
 
         // Return true if GPS and reference clock inputs are ok
-        virtual bool is_clk_source_ok(void) const override;
+        virtual bool is_clk_source_ok(void) override;
         virtual const char* device_name(void) const override;
 
-        virtual double get_temperature(void) const override;
+        virtual std::optional<double> get_temperature(void) const override;
 
     private:
         SDRDeviceConfig& m_conf;

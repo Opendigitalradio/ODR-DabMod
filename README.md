@@ -31,7 +31,7 @@ Features
 - TII insertion
 - Logging: log to file, to syslog
 - EDI sources: TCP and UDP, both with and without Protection and Fragmentation Layer.
-- ETI sources: ETI-over-TCP, file (Raw, Framed and Streamed) and ZeroMQ
+- ETI sources: ETI-over-TCP, file (Raw, Framed and Streamed)
 - A Telnet and ZeroMQ remote-control that can be used to change
   some parameters during runtime and retrieve statistics.
   See `doc/README-RC.md` for more information

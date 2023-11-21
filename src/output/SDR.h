@@ -2,7 +2,7 @@
    Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010 Her Majesty the
    Queen in Right of Canada (Communications Research Center Canada)
 
-   Copyright (C) 2022
+   Copyright (C) 2023
    Matthias P. Braendli, matthias.braendli@mpb.li
 
     http://opendigitalradio.org
@@ -51,6 +51,7 @@ class SDR : public ModOutput, public ModMetadata, public RemoteControllable {
         SDR operator=(const SDR& other) = delete;
         virtual ~SDR();
 
+        virtual void set_sample_size(size_t size);
         virtual int process(Buffer *dataIn) override;
         virtual meta_vec_t process_metadata(const meta_vec_t& metadataIn) override;
 
@@ -66,15 +67,17 @@ class SDR : public ModOutput, public ModMetadata, public RemoteControllable {
         virtual const std::string get_parameter(
                 const std::string& parameter) const override;
 
+        virtual const json::map_t get_all_values() const override;
+
     private:
         void process_thread_entry(void);
-        void handle_frame(struct FrameData &frame);
-        void sleep_through_frame(void);
+        void handle_frame(struct FrameData&& frame);
 
         SDRDeviceConfig& m_config;
 
         std::atomic<bool> m_running = ATOMIC_VAR_INIT(false);
         std::thread m_device_thread;
+        size_t m_size = sizeof(complexf);
         std::vector<uint8_t> m_frame;
         ThreadsafeQueue<FrameData> m_queue;
 
@@ -86,9 +89,7 @@ class SDR : public ModOutput, public ModMetadata, public RemoteControllable {
         bool     last_tx_time_initialised = false;
         uint32_t last_tx_second = 0;
         uint32_t last_tx_pps = 0;
-
-        bool     t_last_frame_initialised = false;
-        std::chrono::steady_clock::time_point t_last_frame;
+        size_t   num_queue_overflows = 0;
 };
 
 }

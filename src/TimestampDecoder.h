@@ -2,7 +2,7 @@
    Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010 Her Majesty the
    Queen in Right of Canada (Communications Research Center Canada)
 
-   Copyright (C) 2022
+   Copyright (C) 2023
    Matthias P. Braendli, matthias.braendli@mpb.li
 
     http://opendigitalradio.org
@@ -39,9 +39,11 @@ struct frame_timestamp
     int32_t fct;
     uint8_t fp; // Frame Phase
 
-    uint32_t timestamp_sec;
+    uint32_t timestamp_sec; // seconds in unix epoch
     uint32_t timestamp_pps; // In units of 1/16384000 s
     bool timestamp_valid = false;
+
+    double timestamp_offset = 0.0; // copy of the configured modulator offset
     bool offset_changed = false;
 
     frame_timestamp& operator+=(const double& diff);
@@ -55,6 +57,8 @@ struct frame_timestamp
     double pps_offset() const {
         return timestamp_pps / 16384000.0;
     }
+
+    double offset_to_system_time() const;
 
     double get_real_secs() const {
         double t = timestamp_sec;
@@ -74,6 +78,8 @@ struct frame_timestamp
         timestamp_pps = lrint(subsecond * 16384000.0);
     }
 
+    std::string to_string() const;
+
     void print(const char* t) const {
         etiLog.log(debug,
                 "%s <frame_timestamp(%s, %d, %.9f, %d)>\n",
@@ -92,8 +98,9 @@ class TimestampDecoder : public RemoteControllable
          * frame transmission
          */
         TimestampDecoder(double& offset_s);
+        virtual ~TimestampDecoder() {}
 
-        std::shared_ptr<frame_timestamp> getTimestamp(void);
+        frame_timestamp getTimestamp(void);
 
         /* Update timestamp data from ETI */
         void updateTimestampEti(
@@ -112,15 +119,11 @@ class TimestampDecoder : public RemoteControllable
         /*********** REMOTE CONTROL ***************/
 
         /* Base function to set parameters. */
-        virtual void set_parameter(const std::string& parameter,
-                const std::string& value);
-
-        /* Getting a parameter always returns a string. */
-        virtual const std::string get_parameter(
-                const std::string& parameter) const;
+        virtual void set_parameter(const std::string& parameter, const std::string& value) override;
+        virtual const std::string get_parameter(const std::string& parameter) const override;
+        virtual const json::map_t get_all_values() const override;
 
         const char* name() { return "TS"; }
-
 
     protected:
         /* Push a new MNSC field into the decoder */

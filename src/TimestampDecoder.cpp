@@ -2,7 +2,7 @@
    Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010 Her Majesty the
    Queen in Right of Canada (Communications Research Center Canada)
 
-   Copyright (C) 2018
+   Copyright (C) 2023
    Matthias P. Braendli, matthias.braendli@mpb.li
 
     http://opendigitalradio.org
@@ -35,6 +35,31 @@
 
 //#define MDEBUG(fmt, args...) fprintf (LOG, "*****" fmt , ## args)
 #define MDEBUG(fmt, args...) PDEBUG(fmt, ## args)
+
+double frame_timestamp::offset_to_system_time() const
+{
+    if (not timestamp_valid) {
+        throw new std::runtime_error("Cannot calculate offset for invalid timestamp");
+    }
+
+    struct timespec t;
+    if (clock_gettime(CLOCK_REALTIME, &t) != 0) {
+        throw std::runtime_error(std::string("Failed to retrieve CLOCK_REALTIME") + strerror(errno));
+    }
+
+    return get_real_secs() - (double)t.tv_sec - (t.tv_nsec / 1000000000.0);
+}
+
+std::string frame_timestamp::to_string() const
+{
+    time_t s = timestamp_sec;
+    std::stringstream ss;
+    char timestr[100];
+    if (std::strftime(timestr, sizeof(timestr), "%Y-%m-%dZ%H:%M:%S", std::gmtime(&s))) {
+        ss << timestr << " + " << ((double)timestamp_pps / 16384000.0);
+    }
+    return ss.str();
+}
 
 frame_timestamp& frame_timestamp::operator+=(const double& diff)
 {
@@ -75,20 +100,21 @@ TimestampDecoder::TimestampDecoder(double& offset_s) :
         timestamp_offset << " offset";
 }
 
-std::shared_ptr<frame_timestamp> TimestampDecoder::getTimestamp()
+frame_timestamp TimestampDecoder::getTimestamp()
 {
-    auto ts = std::make_shared<frame_timestamp>();
+    frame_timestamp ts;
 
-    ts->timestamp_valid = full_timestamp_received;
-    ts->timestamp_sec = time_secs;
-    ts->timestamp_pps = time_pps;
-    ts->fct = latestFCT;
-    ts->fp = latestFP;
+    ts.timestamp_valid = full_timestamp_received;
+    ts.timestamp_sec = time_secs;
+    ts.timestamp_pps = time_pps;
+    ts.fct = latestFCT;
+    ts.fp = latestFP;
 
-    ts->offset_changed = offset_changed;
+    ts.timestamp_offset = timestamp_offset;
+    ts.offset_changed = offset_changed;
     offset_changed = false;
 
-    *ts += timestamp_offset;
+    ts += timestamp_offset;
 
     return ts;
 }
@@ -275,3 +301,22 @@ const std::string TimestampDecoder::get_parameter(
     return ss.str();
 }
 
+const json::map_t TimestampDecoder::get_all_values() const
+{
+    json::map_t map;
+    map["offset"].v = timestamp_offset;
+    if (full_timestamp_received) {
+        map["timestamp"].v = time_secs + ((double)time_pps / 16384000.0);
+    }
+    else {
+        map["timestamp"].v = std::nullopt;
+    }
+
+    if (full_timestamp_received) {
+        map["timestamp0"].v = time_secs_of_frame0 + ((double)time_pps_of_frame0 / 16384000.0);
+    }
+    else {
+        map["timestamp0"].v = std::nullopt;
+    }
+    return map;
+}

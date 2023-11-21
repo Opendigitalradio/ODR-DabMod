@@ -3,7 +3,7 @@
    Her Majesty the Queen in Right of Canada (Communications Research
    Center Canada)
 
-   Copyright (C) 2019
+   Copyright (C) 2023
    Matthias P. Braendli, matthias.braendli@mpb.li
 
     http://www.opendigitalradio.org
@@ -36,6 +36,8 @@
 #endif
 
 #include <list>
+#include <unordered_map>
+#include <variant>
 #include <map>
 #include <memory>
 #include <string>
@@ -46,6 +48,7 @@
 
 #include "Log.h"
 #include "Socket.h"
+#include "Json.h"
 
 #define RC_ADD_PARAMETER(p, desc) {   \
   std::vector<std::string> p; \
@@ -113,12 +116,12 @@ class RemoteControllable {
             }
 
         /* Base function to set parameters. */
-        virtual void set_parameter(
-                const std::string& parameter,
-                const std::string& value) = 0;
+        virtual void set_parameter(const std::string& parameter, const std::string& value) = 0;
 
         /* Getting a parameter always returns a string. */
         virtual const std::string get_parameter(const std::string& parameter) const = 0;
+
+        virtual const json::map_t get_all_values() const = 0;
 
     protected:
         std::string m_rc_name;
@@ -135,6 +138,7 @@ class RemoteControllers {
         void check_faults();
         std::list< std::vector<std::string> > get_param_list_values(const std::string& name);
         std::string get_param(const std::string& name, const std::string& param);
+        std::string get_showjson();
 
         void set_param(
                 const std::string& name,

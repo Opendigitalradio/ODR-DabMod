@@ -94,7 +94,7 @@ class DPDFeedbackServer {
         ~DPDFeedbackServer();
 
         void set_tx_frame(const std::vector<uint8_t> &buf,
-                const struct frame_timestamp& ts);
+                const frame_timestamp& ts);
 
     private:
         // Thread that reacts to burstRequests and receives from the SDR device

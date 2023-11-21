@@ -2,7 +2,7 @@
    Copyright (C) 2007, 2008, 2009, 2010, 2011 Her Majesty the Queen in
    Right of Canada (Communications Research Center Canada)
 
-   Copyright (C) 2017
+   Copyright (C) 2023
    Matthias P. Braendli, matthias.braendli@mpb.li
 
     http://opendigitalradio.org
@@ -347,3 +347,10 @@ const string FIRFilter::get_parameter(const string& parameter) const
     return ss.str();
 }
 
+const json::map_t FIRFilter::get_all_values() const
+{
+    json::map_t map;
+    map["ntaps"].v = m_taps.size();
+    map["tapsfile"].v = m_taps_file;
+    return map;
+}

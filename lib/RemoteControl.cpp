@@ -25,6 +25,8 @@
 #include <list>
 #include <string>
 #include <iostream>
+#include <sstream>
+#include <iomanip>
 #include <string>
 #include <algorithm>
 
@@ -102,6 +104,18 @@ std::list< std::vector<std::string> > RemoteControllers::get_param_list_values(c
     return allparams;
 }
 
+
+
+std::string RemoteControllers::get_showjson() {
+    json::map_t root;
+    for (auto &controllable : rcs.controllables) {
+        root[controllable->get_rc_name()].v =
+            std::make_shared<json::map_t>(controllable->get_all_values());
+    }
+
+    return json::map_to_json(root);
+}
+
 std::string RemoteControllers::get_param(const std::string& name, const std::string& param) {
     RemoteControllable* controllable = get_controllable_(name);
     return controllable->get_parameter(param);
@@ -123,7 +137,7 @@ RemoteControllable* RemoteControllers::get_controllable_(const std::string& name
             [&](RemoteControllable* r) { return r->get_rc_name() == name; });
 
     if (rc == controllables.end()) {
-        throw ParameterError("Module name unknown");
+        throw ParameterError(string{"Module name '"} + name + "' unknown");
     }
     else {
         return *rc;
@@ -427,10 +441,15 @@ void RemoteControllerZmq::recv_all(zmq::socket_t& pSocket, std::vector<std::stri
     bool more = true;
     do {
         zmq::message_t msg;
-        pSocket.recv(msg);
-        std::string incoming((char*)msg.data(), msg.size());
-        message.push_back(incoming);
-        more = msg.more();
+        const auto zresult = pSocket.recv(msg);
+        if (zresult) {
+            std::string incoming((char*)msg.data(), msg.size());
+            message.push_back(incoming);
+            more = msg.more();
+        }
+        else {
+            more = false;
+        }
     } while (more);
 }
 
@@ -457,6 +476,7 @@ void RemoteControllerZmq::send_fail_reply(zmq::socket_t &pSocket, const std::str
 void RemoteControllerZmq::process()
 {
     m_fault = false;
+    m_active = true;
 
     // create zmq reply socket for receiving ctrl parameters
     try {
@@ -514,8 +534,21 @@ void RemoteControllerZmq::process()
                         repSocket.send(zmsg, (--cohort_size > 0) ? zmq::send_flags::sndmore : zmq::send_flags::none);
                     }
                 }
+                else if (msg.size() == 1 && command == "showjson") {
+                    try {
+                        std::string json = rcs.get_showjson();
+
+                        zmq::message_t zmsg(json.size());
+                        memcpy(zmsg.data(), json.data(), json.size());
+
+                        repSocket.send(zmsg, zmq::send_flags::none);
+                    }
+                    catch (const ParameterError &err) {
+                        send_fail_reply(repSocket, err.what());
+                    }
+                }
                 else if (msg.size() == 2 && command == "show") {
-                    std::string module((char*) msg[1].data(), msg[1].size());
+                    const std::string module((char*) msg[1].data(), msg[1].size());
                     try {
                         list< vector<string> > r = rcs.get_param_list_values(module);
                         size_t r_size = r.size();
@@ -533,8 +566,8 @@ void RemoteControllerZmq::process()
                     }
                 }
                 else if (msg.size() == 3 && command == "get") {
-                    std::string module((char*) msg[1].data(), msg[1].size());
-                    std::string parameter((char*) msg[2].data(), msg[2].size());
+                    const std::string module((char*) msg[1].data(), msg[1].size());
+                    const std::string parameter((char*) msg[2].data(), msg[2].size());
 
                     try {
                         std::string value = rcs.get_param(module, parameter);
@@ -547,9 +580,9 @@ void RemoteControllerZmq::process()
                     }
                 }
                 else if (msg.size() == 4 && command == "set") {
-                    std::string module((char*) msg[1].data(), msg[1].size());
-                    std::string parameter((char*) msg[2].data(), msg[2].size());
-                    std::string value((char*) msg[3].data(), msg[3].size());
+                    const std::string module((char*) msg[1].data(), msg[1].size());
+                    const std::string parameter((char*) msg[2].data(), msg[2].size());
+                    const std::string value((char*) msg[3].data(), msg[3].size());
 
                     try {
                         rcs.set_param(module, parameter, value);
@@ -561,7 +594,7 @@ void RemoteControllerZmq::process()
                 }
                 else {
                     send_fail_reply(repSocket,
-                            "Unsupported command. commands: list, show, get, set");
+                            "Unsupported command. commands: list, show, get, set, showjson");
                 }
             }
         }

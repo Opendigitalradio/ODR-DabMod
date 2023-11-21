@@ -315,7 +315,7 @@ double UHD::get_bandwidth(void) const
     return m_usrp->get_tx_bandwidth();
 }
 
-void UHD::transmit_frame(const struct FrameData& frame)
+void UHD::transmit_frame(struct FrameData&& frame)
 {
     const double tx_timeout = 20.0;
     const size_t sizeIn = frame.buf.size() / sizeof(complexf);
@@ -350,6 +350,7 @@ void UHD::transmit_frame(const struct FrameData& frame)
                 frame.ts.timestamp_valid and
                 m_require_timestamp_refresh and
                 samps_to_send <= usrp_max_num_samps );
+        m_require_timestamp_refresh = false;
 
         //send a single packet
         size_t num_tx_samps = m_tx_stream->send(
@@ -359,7 +360,7 @@ void UHD::transmit_frame(const struct FrameData& frame)
 
         num_acc_samps += num_tx_samps;
 
-        md_tx.time_spec += uhd::time_spec_t(0, num_tx_samps/m_conf.sampleRate);
+        md_tx.time_spec += uhd::time_spec_t::from_ticks(num_tx_samps, (double)m_conf.sampleRate);
 
         if (num_tx_samps == 0) {
             etiLog.log(warn,
@@ -376,18 +377,22 @@ void UHD::transmit_frame(const struct FrameData& frame)
 }
 
 
-SDRDevice::RunStatistics UHD::get_run_statistics(void) const
+SDRDevice::run_statistics_t UHD::get_run_statistics(void) const
 {
-    RunStatistics rs;
-    rs.num_underruns = num_underflows;
-    rs.num_overruns = num_overflows;
-    rs.num_late_packets = num_late_packets;
-    rs.num_frames_modulated = num_frames_modulated;
+    run_statistics_t rs;
+    rs["underruns"].v = num_underflows;
+    rs["overruns"].v = num_overflows;
+    rs["late_packets"].v = num_late_packets;
+    rs["frames"].v = num_frames_modulated;
 
     if (m_device_time) {
         const auto gpsdo_stat = m_device_time->get_gnss_stats();
-        rs.gpsdo_holdover = gpsdo_stat.holdover;
-        rs.gpsdo_num_sv = gpsdo_stat.num_sv;
+        rs["gpsdo_holdover"].v = gpsdo_stat.holdover;
+        rs["gpsdo_num_sv"].v = gpsdo_stat.num_sv;
+    }
+    else {
+        rs["gpsdo_holdover"].v = true;
+        rs["gpsdo_num_sv"].v = 0;
     }
     return rs;
 }
@@ -411,7 +416,7 @@ double UHD::get_rxgain() const
 size_t UHD::receive_frame(
         complexf *buf,
         size_t num_samples,
-        struct frame_timestamp& ts,
+        frame_timestamp& ts,
         double timeout_secs)
 {
     uhd::stream_cmd_t cmd(
@@ -434,7 +439,7 @@ size_t UHD::receive_frame(
 }
 
 // Return true if GPS and reference clock inputs are ok
-bool UHD::is_clk_source_ok(void) const
+bool UHD::is_clk_source_ok(void)
 {
     bool ok = true;
 
@@ -471,13 +476,13 @@ const char* UHD::device_name(void) const
     return "UHD";
 }
 
-double UHD::get_temperature(void) const
+std::optional<double> UHD::get_temperature(void) const
 {
     try {
         return std::round(m_usrp->get_tx_sensor("temp", 0).to_real());
     }
     catch (const uhd::lookup_error &e) {
-        return std::numeric_limits<double>::quiet_NaN();
+        return std::nullopt;
     }
 }
 

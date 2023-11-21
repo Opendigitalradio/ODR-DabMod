@@ -28,6 +28,7 @@
 #include "Buffer.h"
 #include "PcDebug.h"
 
+#include <unistd.h>
 #include <string>
 #include <stdexcept>
 #include <cstdlib>

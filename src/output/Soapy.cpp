@@ -180,13 +180,13 @@ double Soapy::get_bandwidth(void) const
     return m_device->getBandwidth(SOAPY_SDR_TX, 0);
 }
 
-SDRDevice::RunStatistics Soapy::get_run_statistics(void) const
+SDRDevice::run_statistics_t Soapy::get_run_statistics(void) const
 {
-    RunStatistics rs;
-    rs.num_underruns = underflows;
-    rs.num_overruns = overflows;
-    rs.num_late_packets = late_packets;
-    rs.num_frames_modulated = num_frames_modulated;
+    run_statistics_t rs;
+    rs["underruns"].v = underflows;
+    rs["overruns"].v = overflows;
+    rs["timeouts"].v = timeouts;
+    rs["frames"].v = num_frames_modulated;
     return rs;
 }
 
@@ -216,7 +216,7 @@ double Soapy::get_rxgain(void) const
 size_t Soapy::receive_frame(
         complexf *buf,
         size_t num_samples,
-        struct frame_timestamp& ts,
+        frame_timestamp& ts,
         double timeout_secs)
 {
     int flags = 0;
@@ -254,7 +254,7 @@ size_t Soapy::receive_frame(
 }
 
 
-bool Soapy::is_clk_source_ok() const
+bool Soapy::is_clk_source_ok()
 {
     // TODO
     return true;
@@ -265,14 +265,14 @@ const char* Soapy::device_name(void) const
     return "Soapy";
 }
 
-double Soapy::get_temperature(void) const
+std::optional<double> Soapy::get_temperature(void) const
 {
     // TODO Unimplemented
     // LimeSDR exports 'lms7_temp'
-    return std::numeric_limits<double>::quiet_NaN();
+    return std::nullopt;
 }
 
-void Soapy::transmit_frame(const struct FrameData& frame)
+void Soapy::transmit_frame(struct FrameData&& frame)
 {
     if (not m_device) throw runtime_error("Soapy device not set up");
 
@@ -320,6 +320,7 @@ void Soapy::transmit_frame(const struct FrameData& frame)
                 m_tx_stream, buffs, samps_to_send, flags, timeNs);
 
         if (num_sent == SOAPY_SDR_TIMEOUT) {
+            timeouts++;
             continue;
         }
         else if (num_sent == SOAPY_SDR_OVERFLOW) {
@@ -349,6 +350,7 @@ void Soapy::transmit_frame(const struct FrameData& frame)
                         SoapySDR::errToStr(ret_deact));
             }
             m_tx_stream_active = false;
+            m_require_timestamp_refresh = false;
         }
 
         if (eob_because_muting) {

@@ -3,7 +3,7 @@
    Her Majesty the Queen in Right of Canada (Communications Research
    Center Canada)
 
-   Copyright (C) 2018
+   Copyright (C) 2023
    Matthias P. Braendli, matthias.braendli@mpb.li
 
     http://opendigitalradio.org
@@ -37,6 +37,7 @@
 #include "ConfigParser.h"
 #include "Utils.h"
 #include "Log.h"
+#include "Events.h"
 #include "DabModulator.h"
 #include "output/SDR.h"
 
@@ -113,14 +114,17 @@ static void parse_configfile(
     }
 
     mod_settings.inputTransport = pt.Get("input.transport", "file");
-    mod_settings.inputMaxFramesQueued = pt.GetInteger("input.max_frames_queued",
-            ZMQ_INPUT_MAX_FRAME_QUEUE);
 
-    mod_settings.edi_max_delay_ms = pt.GetReal("input.edi_max_delay", 0.0f);
+    mod_settings.edi_max_delay_ms = pt.GetReal("input.edi_max_delay", 0.0);
 
     mod_settings.inputName = pt.Get("input.source", "/dev/stdin");
 
     // log parameters:
+    const string events_endpoint = pt.Get("log.events_endpoint", "");
+    if (not events_endpoint.empty()) {
+        events.bind(events_endpoint);
+    }
+
     if (pt.GetInteger("log.syslog", 0) == 1) {
         etiLog.register_backend(make_shared<LogToSyslog>());
     }
@@ -247,7 +251,7 @@ static void parse_configfile(
             throw std::runtime_error("Configuration error");
         }
         else if (sdr_device_config.frequency == 0) {
-            sdr_device_config.frequency = parseChannel(chan);
+            sdr_device_config.frequency = parse_channel(chan);
         }
         else if (sdr_device_config.frequency != 0 && chan != "") {
             std::cerr << "       UHD output: cannot define both frequency and channel.\n";
@@ -280,7 +284,8 @@ static void parse_configfile(
         mod_settings.sdr_device_config = sdr_device_config;
         mod_settings.useUHDOutput = true;
     }
-#endif
+#endif // defined(HAVE_OUTPUT_UHD)
+
 #if defined(HAVE_SOAPYSDR)
     else if (output_selected == "soapysdr") {
         auto& outputsoapy_conf = mod_settings.sdr_device_config;
@@ -300,7 +305,7 @@ static void parse_configfile(
             throw std::runtime_error("Configuration error");
         }
         else if (outputsoapy_conf.frequency == 0) {
-            outputsoapy_conf.frequency =  parseChannel(chan);
+            outputsoapy_conf.frequency = parse_channel(chan);
         }
         else if (outputsoapy_conf.frequency != 0 && chan != "") {
             std::cerr << "       soapy output: cannot define both frequency and channel.\n";
@@ -311,7 +316,34 @@ static void parse_configfile(
 
         mod_settings.useSoapyOutput = true;
     }
-#endif
+#endif // defined(HAVE_SOAPYSDR)
+
+#if defined(HAVE_DEXTER)
+    else if (output_selected == "dexter") {
+        auto& outputdexter_conf = mod_settings.sdr_device_config;
+        outputdexter_conf.txgain = pt.GetReal("dexteroutput.txgain", 0.0);
+        outputdexter_conf.lo_offset = pt.GetReal("dexteroutput.lo_offset", 0.0);
+        outputdexter_conf.frequency = pt.GetReal("dexteroutput.frequency", 0);
+        std::string chan = pt.Get("dexteroutput.channel", "");
+        outputdexter_conf.dabMode = mod_settings.dabMode;
+        outputdexter_conf.maxGPSHoldoverTime = pt.GetInteger("dexteroutput.max_gps_holdover_time", 0);
+
+        if (outputdexter_conf.frequency == 0 && chan == "") {
+            std::cerr << "       dexter output enabled, but neither frequency nor channel defined.\n";
+            throw std::runtime_error("Configuration error");
+        }
+        else if (outputdexter_conf.frequency == 0) {
+            outputdexter_conf.frequency = parse_channel(chan);
+        }
+        else if (outputdexter_conf.frequency != 0 && chan != "") {
+            std::cerr << "       dexter output: cannot define both frequency and channel.\n";
+            throw std::runtime_error("Configuration error");
+        }
+
+        mod_settings.useDexterOutput = true;
+    }
+#endif // defined(HAVE_DEXTER)
+
 #if defined(HAVE_LIMESDR)
     else if (output_selected == "limesdr") {
         auto& outputlime_conf = mod_settings.sdr_device_config;
@@ -330,7 +362,7 @@ static void parse_configfile(
             throw std::runtime_error("Configuration error");
         }
         else if (outputlime_conf.frequency == 0) {
-            outputlime_conf.frequency =  parseChannel(chan);
+            outputlime_conf.frequency = parse_channel(chan);
         }
         else if (outputlime_conf.frequency != 0 && chan != "") {
             std::cerr << "       Lime output: cannot define both frequency and channel.\n";
@@ -341,7 +373,7 @@ static void parse_configfile(
 
         mod_settings.useLimeOutput = true;
     }
-#endif
+#endif // defined(HAVE_LIMESDR)
 
 #if defined(HAVE_BLADERF)
     else if (output_selected == "bladerf") {
@@ -359,7 +391,7 @@ static void parse_configfile(
             throw std::runtime_error("Configuration error");
         }
         else if (outputbladerf_conf.frequency == 0) {
-            outputbladerf_conf.frequency =  parseChannel(chan);
+            outputbladerf_conf.frequency = parse_channel(chan);
         }
         else if (outputbladerf_conf.frequency != 0 && chan != "") {
             std::cerr << "       BladeRF output: cannot define both frequency and channel.\n";
@@ -370,7 +402,7 @@ static void parse_configfile(
 
         mod_settings.useBladeRFOutput = true;
     }
-#endif
+#endif // defined(HAVE_BLADERF)
 
 #if defined(HAVE_ZEROMQ)
     else if (output_selected == "zmq") {
@@ -385,7 +417,7 @@ static void parse_configfile(
     }
 
 
-#if defined(HAVE_OUTPUT_UHD)
+#if defined(HAVE_OUTPUT_UHD) || defined(HAVE_DEXTER)
     mod_settings.sdr_device_config.enableSync = (pt.GetInteger("delaymanagement.synchronous", 0) == 1);
     mod_settings.sdr_device_config.muteNoTimestamps = (pt.GetInteger("delaymanagement.mutenotimestamps", 0) == 1);
     if (mod_settings.sdr_device_config.enableSync) {
@@ -406,7 +438,6 @@ static void parse_configfile(
             throw std::runtime_error("Configuration error");
         }
     }
-
 #endif
 
 
@@ -551,8 +582,7 @@ void parse_args(int argc, char **argv, mod_settings_t& mod_settings)
 
             if (mod_settings.inputName.substr(0, 4) == "zmq+" &&
                 mod_settings.inputName.find("://") != std::string::npos) {
-                // if the name starts with zmq+XYZ://somewhere:port
-                mod_settings.inputTransport = "zeromq";
+                throw std::runtime_error("Support for ZeroMQ input transport has been removed.");
             }
             else if (mod_settings.inputName.substr(0, 6) == "tcp://") {
                 mod_settings.inputTransport = "tcp";

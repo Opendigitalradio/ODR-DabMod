@@ -2,12 +2,13 @@
    Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010, 2011 Her Majesty
    the Queen in Right of Canada (Communications Research Center Canada)
 
-   Copyright (C) 2022
+   Most parts of this file are taken from dablin,
+   Copyright (C) 2015-2022 Stefan Pöschel
+
+   Copyright (C) 2023
    Matthias P. Braendli, matthias.braendli@mpb.li
 
     http://opendigitalradio.org
-
-    This flowgraph block converts complexf to signed integer.
  */
 /*
    This file is part of ODR-DabMod.
@@ -27,34 +28,31 @@
  */
 
 #pragma once
-
-#ifdef HAVE_CONFIG_H
-#   include <config.h>
-#endif
-
-#include "ModPlugin.h"
-#include <complex>
-#include <atomic>
+#include <vector>
+#include <stdexcept>
 #include <string>
+#include <ctime>
 #include <cstdint>
+#include <cstdlib>
+#include <cstring>
 
-class FormatConverter : public ModCodec
-{
-    public:
-        static size_t get_format_size(const std::string& format);
-
-        // Allowed formats: s8, u8 and s16
-        FormatConverter(const std::string& format);
-
-        int process(Buffer* const dataIn, Buffer* dataOut);
-        const char* name();
-
-        size_t get_num_clipped_samples() const;
-
+class CharsetTools {
     private:
-        std::string m_format;
-
-        std::atomic<size_t> m_num_clipped_samples = 0;
+        static const char* no_char;
+        static const char* ebu_values_0x00_to_0x1F[];
+        static const char* ebu_values_0x7B_to_0xFF[];
+        static std::string ConvertCharEBUToUTF8(const uint8_t value);
+    public:
+        static std::string ConvertTextToUTF8(const uint8_t *data, size_t len, int charset, std::string* charset_name);
 };
 
+typedef std::vector<std::string> string_vector_t;
 
+// --- StringTools -----------------------------------------------------------------
+class StringTools {
+private:
+	static size_t UTF8CharsLen(const std::string &s, size_t chars);
+public:
+	static size_t UTF8Len(const std::string &s);
+	static std::string UTF8Substr(const std::string &s, size_t pos, size_t count);
+};

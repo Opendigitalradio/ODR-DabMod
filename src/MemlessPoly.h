@@ -2,7 +2,7 @@
    Copyright (C) 2007, 2008, 2009, 2010, 2011 Her Majesty the Queen in
    Right of Canada (Communications Research Center Canada)
 
-   Copyright (C) 2018
+   Copyright (C) 2023
    Matthias P. Braendli, matthias.braendli@mpb.li
 
     http://opendigitalradio.org
@@ -63,17 +63,15 @@ public:
     MemlessPoly& operator=(const MemlessPoly& other) = delete;
     virtual ~MemlessPoly();
 
-    virtual const char* name() { return "MemlessPoly"; }
+    virtual const char* name() override { return "MemlessPoly"; }
 
     /******* REMOTE CONTROL ********/
-    virtual void set_parameter(const std::string& parameter,
-            const std::string& value);
-
-    virtual const std::string get_parameter(
-            const std::string& parameter) const;
+    virtual void set_parameter(const std::string& parameter, const std::string& value) override;
+    virtual const std::string get_parameter(const std::string& parameter) const override;
+    virtual const json::map_t get_all_values() const override;
 
 private:
-    int internal_process(Buffer* const dataIn, Buffer* dataOut);
+    int internal_process(Buffer* const dataIn, Buffer* dataOut) override;
     void load_coefficients(std::istream& coefData);
     std::string serialise_coefficients() const;
 

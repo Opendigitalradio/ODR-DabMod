@@ -3,7 +3,7 @@
    Her Majesty the Queen in Right of Canada (Communications Research
    Center Canada)
 
-   Copyright (C) 2017
+   Copyright (C) 2023
    Matthias P. Braendli, matthias.braendli@mpb.li
 
     http://opendigitalradio.org
@@ -38,6 +38,7 @@
 #include <complex>
 #include <string>
 #include <mutex>
+
 #ifdef __SSE__
 #   include <xmmintrin.h>
 #endif
@@ -63,13 +64,9 @@ class GainControl : public PipelinedModCodec, public RemoteControllable
         const char* name() override { return "GainControl"; }
 
         /* Functions for the remote control */
-        /* Base function to set parameters. */
-        virtual void set_parameter(const std::string& parameter,
-                const std::string& value) override;
-
-        /* Getting a parameter always returns a string. */
-        virtual const std::string get_parameter(
-                const std::string& parameter) const override;
+        virtual void set_parameter(const std::string& parameter, const std::string& value) override;
+        virtual const std::string get_parameter(const std::string& parameter) const override;
+        virtual const json::map_t get_all_values() const override;
 
     protected:
         virtual int internal_process(

@@ -79,6 +79,9 @@ int InputTcpReader::GetNextFrame(void* buffer)
         etiLog.level(debug) << "TCP input auto reconnect";
         std::this_thread::sleep_for(std::chrono::seconds(1));
     }
+    else if (ret == -2) {
+        etiLog.level(debug) << "TCP input timeout";
+    }
 
     return ret;
 }
