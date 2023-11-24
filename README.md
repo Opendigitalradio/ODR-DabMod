@@ -5,7 +5,6 @@ to ETSI EN 300 401. It is the continuation of the work started by
 the Communications Research Center Canada, and is now pursued in the
 [Opendigitalradio project](http://opendigitalradio.org).
 
-
 ODR-DabMod is part of the ODR-mmbTools tool-set. More information about the
 ODR-mmbTools is available in the *guide*, available on the
 [Opendigitalradio mmbTools page](http://www.opendigitalradio.org/mmbtools).
@@ -17,6 +16,7 @@ Features
 - Supports native DAB sample rate and can also resample to other rates
 - Supports all four DAB transmission modes
 - Configuration file support, see `doc/example.ini`
+- First-class support for the [PrecisionWave DEXTER](https://precisionwave.com/products/dexter) device
 - First-class support for [USRP devices](https://www.ettus.com/product) using UHD driver
   - Tested for B200, B100, USRP2, USRP1
   - With WBX daughterboard (where appropriate)
@@ -36,10 +36,11 @@ Features
   some parameters during runtime and retrieve statistics.
   See `doc/README-RC.md` for more information
 - ZeroMQ PUB and REP output, useful for sending IQ to GNURadio flowgraphs.
-- Development has stalled on the following topics:
-  - Experimental prototype about digital predistortion for PA linearisation.
-    - See `python/dpd/README.md`
-  - A web GUI for control and supervision of modulator and predistortion engine. See `python/gui/README.md`
+
+Development has stalled on the following topics:
+- Experimental prototype about digital predistortion for PA linearisation.
+  - See `python/dpd/README.md`
+- A web GUI for control and supervision of modulator and predistortion engine. See `python/gui/README.md`
 
 The `src/` directory contains the source code of ODR-DabMod.
 
@@ -63,8 +64,6 @@ See the files `LICENCE` and `COPYING`
 CONTACT
 =======
 Matthias P. Braendli *matthias [at] mpb [dot] li*
-
-Pascal Charest *pascal [dot] charest [at] crc [dot] ca*
 
 With thanks to other contributors listed in AUTHORS
 

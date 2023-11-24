@@ -1,6 +1,17 @@
 This file contains information about the changes done to
 ODR-DabMod in this repository
 
+2023-11-21: Matthias P. Braendli <matthias@mpb.li>
+	(upcoming release):
+		Add support for the PrecisionWave DEXTER Modulator.
+		Improve timestamp decoding and handling.
+		Fix TII carrier levels.
+		Add `showjson` command to RC to support structured output,
+		and add useful metrics to the RC for monitoring, e.g. some Ensemble information from FIC.
+		Remove EasyDABv3 support.
+		Remove ZeroMQ input.
+		Require C++17.
+
 2022-04-20: Matthias P. Braendli <matthias@mpb.li>
 	(v2.6.0):
 		Add timestamps to log output.
