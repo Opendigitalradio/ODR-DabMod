@@ -623,12 +623,6 @@ static run_modulator_state_t run_modulator(const mod_settings_t& mod_settings, M
                         running = 0;
                         break;
                     }
-
-                    if (last_frame_received + chrono::seconds(10) < chrono::steady_clock::now()) {
-                        etiLog.level(error) << "No EDI data received in 10 seconds.";
-                        running = 0;
-                        break;
-                    }
                 }
 
                 if (!running) {
