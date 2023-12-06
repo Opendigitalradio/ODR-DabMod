@@ -223,6 +223,7 @@ class ModulatorData : public RemoteControllable {
                     (*service_map)["sid"].v = s.second.sid;
                     (*service_map)["label"].v = FICDecoder::ConvertLabelToUTF8(s.second.label, nullptr);
                     (*service_map)["bitrate"].v = s.second.subchannel.bitrate;
+                    (*service_map)["protection_level"].v = s.second.subchannel.pl;
                     json::value_t v;
                     v.v = service_map;
                     services.push_back(v);
