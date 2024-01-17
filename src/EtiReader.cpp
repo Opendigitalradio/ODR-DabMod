@@ -561,7 +561,7 @@ void EdiTransport::Open(const std::string& uri)
             m_mcastaddr = host_full.substr(found_mcast+1);
         }
         else if (found_port != 6) {
-            m_bindto=host_full;
+            m_bindto = host_full;
         }
 
         etiLog.level(info) << "EDI UDP input: host:" << m_bindto <<
@@ -648,22 +648,18 @@ bool EdiTransport::rxPacket()
                 // discontinuity.
                 m_tcpbuffer.resize(512);
                 const int timeout_ms = 1000;
-                try {
-                    ssize_t ret = m_tcpclient.recv(m_tcpbuffer.data(), m_tcpbuffer.size(), 0, timeout_ms);
-                    if (ret <= 0) {
-                        return false;
-                    }
-                    else if (ret > (ssize_t)m_tcpbuffer.size()) {
-                        throw logic_error("EDI TCP: invalid recv() return value");
-                    }
-                    else {
-                        m_tcpbuffer.resize(ret);
-                        m_decoder.push_bytes(m_tcpbuffer);
-                        return true;
-                    }
-                }
-                catch (const Socket::TCPSocket::Timeout&) {
+
+                ssize_t ret = m_tcpclient.recv(m_tcpbuffer.data(), m_tcpbuffer.size(), 0, timeout_ms);
+                if (ret <= 0) {
                     return false;
+                }
+                else if (ret > (ssize_t)m_tcpbuffer.size()) {
+                    throw logic_error("EDI TCP: invalid recv() return value");
+                }
+                else {
+                    m_tcpbuffer.resize(ret);
+                    m_decoder.push_bytes(m_tcpbuffer);
+                    return true;
                 }
             }
     }
