@@ -78,8 +78,8 @@ int FormatConverter::process(Buffer* const dataIn, Buffer* dataOut)
                 out[i] = 0;
                 num_clipped_samples++;
             }
-            else if (samp > INT8_MAX) {
-                out[i] = INT8_MAX;
+            else if (samp > UINT8_MAX) {
+                out[i] = UINT8_MAX;
                 num_clipped_samples++;
             }
             else {
