@@ -47,7 +47,7 @@ AC_ARG_ENABLE([trace],
         [AS_HELP_STRING([--enable-trace], [Enable trace output])],
         [], [enable_trace=no])
 AC_ARG_ENABLE([zeromq],
-        [AS_HELP_STRING([--disable-zeromq], [Disable ZeroMQ input, output and remote control])],
+        [AS_HELP_STRING([--disable-zeromq], [Disable ZeroMQ output and remote control])],
         [], [enable_zeromq=yes])
 AC_ARG_ENABLE([native],
         [AS_HELP_STRING([--disable-native], [Do not compile with -march=native])],
