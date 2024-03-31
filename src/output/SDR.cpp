@@ -2,7 +2,7 @@
    Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010 Her Majesty the
    Queen in Right of Canada (Communications Research Center Canada)
 
-   Copyright (C) 2023
+   Copyright (C) 2024
    Matthias P. Braendli, matthias.braendli@mpb.li
 
     http://opendigitalradio.org
@@ -66,6 +66,7 @@ SDR::SDR(SDRDeviceConfig& config, std::shared_ptr<SDRDevice> device) :
     // muting is remote-controllable
     m_config.muting = false;
 
+    m_running.store(true);
     m_device_thread = std::thread(&SDR::process_thread_entry, this);
 
     if (m_config.dpdFeedbackServerPort > 0) {
@@ -209,8 +210,6 @@ void SDR::process_thread_entry()
     set_thread_name("sdrdevice");
 
     last_tx_time_initialised = false;
-
-    m_running.store(true);
 
     try {
         while (m_running.load()) {
