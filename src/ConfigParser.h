@@ -34,13 +34,11 @@
 #include <string>
 #include "GainControl.h"
 #include "TII.h"
-#include "output/SDR.h"
-#include "output/UHD.h"
-#include "output/Soapy.h"
-#include "output/Lime.h"
-#include "output/BladeRF.h"
+#include "output/SDRDevice.h"
 
 struct mod_settings_t {
+    std::string startupCheck;
+
     std::string outputName;
     bool useZeroMQOutput = false;
     std::string zmqOutputSocketType = "";

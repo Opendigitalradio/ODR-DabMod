@@ -394,6 +394,25 @@ int launch_modulator(int argc, char* argv[])
         throw std::runtime_error("Configuration error: Output not specified");
     }
 
+    if (not mod_settings.startupCheck.empty()) {
+        etiLog.level(info) << "Running startup check '" << mod_settings.startupCheck << "'";
+        int wstatus = system(mod_settings.startupCheck.c_str());
+
+        if (WIFEXITED(wstatus)) {
+            if (WEXITSTATUS(wstatus) == 0) {
+                etiLog.level(info) << "Startup check ok";
+            }
+            else {
+                etiLog.level(error) << "Startup check failed, returned " << WEXITSTATUS(wstatus);
+                return 1;
+            }
+        }
+        else {
+            etiLog.level(error) << "Startup check failed, child didn't terminate normally";
+            return 1;
+        }
+    }
+
     printModSettings(mod_settings);
 
     ModulatorData m;

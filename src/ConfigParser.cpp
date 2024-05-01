@@ -80,6 +80,8 @@ static void parse_configfile(
         throw std::runtime_error("Cannot read configuration file");
     }
 
+    mod_settings.startupCheck = pt.Get("general.startupcheck", "");
+
     // remote controller interfaces:
     if (pt.GetInteger("remotecontrol.telnet", 0) == 1) {
         try {
