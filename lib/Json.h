@@ -50,8 +50,10 @@ namespace json {
             std::vector<value_t>,
             std::string,
             double,
-            size_t,
-            ssize_t,
+            int64_t,
+            uint64_t,
+            int32_t,
+            uint32_t,
             bool,
             std::nullopt_t> v;
     };

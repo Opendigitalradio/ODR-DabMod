@@ -84,11 +84,17 @@ namespace json {
         else if (std::holds_alternative<double>(value.v)) {
             ss << std::fixed << std::get<double>(value.v);
         }
-        else if (std::holds_alternative<ssize_t>(value.v)) {
-            ss << std::get<ssize_t>(value.v);
+        else if (std::holds_alternative<uint64_t>(value.v)) {
+            ss << std::get<uint64_t>(value.v);
         }
-        else if (std::holds_alternative<size_t>(value.v)) {
-            ss << std::get<size_t>(value.v);
+        else if (std::holds_alternative<int64_t>(value.v)) {
+            ss << std::get<int64_t>(value.v);
+        }
+        else if (std::holds_alternative<uint32_t>(value.v)) {
+            ss << std::get<uint32_t>(value.v);
+        }
+        else if (std::holds_alternative<int32_t>(value.v)) {
+            ss << std::get<int32_t>(value.v);
         }
         else if (std::holds_alternative<bool>(value.v)) {
             ss << (std::get<bool>(value.v) ? "true" : "false");
