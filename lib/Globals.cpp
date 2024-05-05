@@ -32,5 +32,7 @@
 
 // the RC needs logging, and needs to be initialised later.
 Logger etiLog;
+#if ENABLE_REMOTECONTROL
 RemoteControllers rcs;
+#endif // ENABLE_REMOTECONTROL
 

@@ -31,6 +31,8 @@
 #  include "config.h"
 #endif
 
+#define ENABLE_REMOTECONTROL 1
+
 #if defined(HAVE_ZEROMQ)
 #  include "zmq.hpp"
 #endif
