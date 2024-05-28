@@ -2,7 +2,7 @@
    Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010 Her Majesty the
    Queen in Right of Canada (Communications Research Center Canada)
 
-   Copyright (C) 2023
+   Copyright (C) 2024
    Matthias P. Braendli, matthias.braendli@mpb.li
 
     http://opendigitalradio.org
@@ -111,13 +111,22 @@ Dexter::Dexter(SDRDeviceConfig& config) :
     }
 
     tune(m_conf.lo_offset, m_conf.frequency);
-    // TODO m_conf.frequency = m_dexter_dsp_tx->getFrequency(SOAPY_SDR_TX, 0);
+    const double actual_freq = get_tx_freq();
     etiLog.level(info) << "Dexter:Actual frequency: " <<
-        std::fixed << std::setprecision(3) <<
-        m_conf.frequency / 1000.0 << " kHz.";
+        std::fixed << std::setprecision(3) << actual_freq / 1000.0 << " kHz.";
+
+    const auto actual_freq_long = llrint(round(actual_freq));
+    const auto configured_freq_long = llrint(round(m_conf.frequency - m_conf.lo_offset));
+
+    if (actual_freq_long != configured_freq_long) {
+        etiLog.level(error) << "Frequency tune: should " <<
+            std::fixed << std::setprecision(3) <<
+            (m_conf.frequency - m_conf.lo_offset) << " (" << configured_freq_long << ") " <<
+            " read back " << actual_freq << " (" << actual_freq_long << ")";
+        throw std::runtime_error("Could not set frequency!");
+    }
 
     // skip: Set bandwidth
-
     // skip: antenna
 
     // The FIFO should not contain data, but setting gain=0 before setting start_clks to zero is an additional security
@@ -348,33 +357,36 @@ void Dexter::handle_hw_time()
 
 void Dexter::tune(double lo_offset, double frequency)
 {
-    // lo_offset is applied to the DSP, and frequency is given to the ad9957
+    // lo_offset is applied to the DSP, and frequency is given to the ad9957, this gives lower spurs
 
-    long long freq = frequency;
     int r = 0;
-    if ((r = iio_device_attr_write_longlong(m_ad9957, "center_frequency", freq)) != 0) {
+
+    const double freq = frequency - lo_offset;
+    if ((r = iio_device_attr_write_double(m_ad9957, "center_frequency", freq)) != 0) {
         etiLog.level(warn) << "Failed to set ad9957.center_frequency = " << freq << " : " << get_iio_error(r);
     }
 
-    long long lo_offs = lo_offset;
+    long long lo_offs = std::round(lo_offset);
 
     if ((r = iio_device_attr_write_longlong(m_dexter_dsp_tx, "frequency0", lo_offs)) != 0) {
         etiLog.level(warn) << "Failed to set dexter_dsp_tx.frequency0 = " << lo_offs << " : " << get_iio_error(r);
     }
+
+    m_conf.frequency = get_tx_freq();
 }
 
 double Dexter::get_tx_freq(void) const
 {
-    long long lo_offset = 0;
     int r = 0;
 
+    long long lo_offset = 0;
     if ((r = iio_device_attr_read_longlong(m_dexter_dsp_tx, "frequency0", &lo_offset)) != 0) {
         etiLog.level(warn) << "Failed to read dexter_dsp_tx.frequency0: " << get_iio_error(r);
         return 0;
     }
 
-    long long frequency = 0;
-    if ((r = iio_device_attr_read_longlong(m_ad9957, "center_frequency", &frequency)) != 0) {
+    double frequency = 0;
+    if ((r = iio_device_attr_read_double(m_ad9957, "center_frequency", &frequency)) != 0) {
         etiLog.level(warn) << "Failed to read ad9957.center_frequency: " << get_iio_error(r);
         return 0;
     }

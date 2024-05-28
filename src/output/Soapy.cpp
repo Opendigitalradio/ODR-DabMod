@@ -86,7 +86,6 @@ Soapy::Soapy(SDRDeviceConfig& config) :
         " ksps.";
 
     tune(m_conf.lo_offset, m_conf.frequency);
-    m_conf.frequency = m_device->getFrequency(SOAPY_SDR_TX, 0);
     etiLog.level(info) << "SoapySDR:Actual frequency: " <<
         std::fixed << std::setprecision(3) <<
         m_conf.frequency / 1000.0 << " kHz.";
@@ -143,6 +142,8 @@ void Soapy::tune(double lo_offset, double frequency)
     SoapySDR::Kwargs offset_arg;
     offset_arg["OFFSET"] = to_string(lo_offset);
     m_device->setFrequency(SOAPY_SDR_TX, 0, m_conf.frequency, offset_arg);
+
+    m_conf.frequency = m_device->getFrequency(SOAPY_SDR_TX, 0);
 }
 
 double Soapy::get_tx_freq(void) const

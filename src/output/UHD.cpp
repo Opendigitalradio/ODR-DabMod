@@ -204,7 +204,6 @@ UHD::UHD(SDRDeviceConfig& config) :
 
     tune(m_conf.lo_offset, m_conf.frequency);
 
-    m_conf.frequency = m_usrp->get_tx_freq();
     etiLog.level(debug) << std::fixed << std::setprecision(3) <<
         "OutputUHD:Actual TX frequency: " << m_conf.frequency;
 
@@ -285,6 +284,8 @@ void UHD::tune(double lo_offset, double frequency)
 
         m_usrp->set_rx_freq(frequency);
     }
+
+    m_conf.frequency = m_usrp->get_tx_freq();
 }
 
 double UHD::get_tx_freq(void) const

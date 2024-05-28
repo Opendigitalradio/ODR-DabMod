@@ -382,7 +382,6 @@ void SDR::set_parameter(const string& parameter, const string& value)
     else if (parameter == "freq") {
         ss >> m_config.frequency;
         m_device->tune(m_config.lo_offset, m_config.frequency);
-        m_config.frequency = m_device->get_tx_freq();
     }
     else if (parameter == "channel") {
         try {
@@ -390,7 +389,6 @@ void SDR::set_parameter(const string& parameter, const string& value)
 
             m_config.frequency = frequency;
             m_device->tune(m_config.lo_offset, m_config.frequency);
-            m_config.frequency = m_device->get_tx_freq();
         }
         catch (const std::out_of_range& e) {
             throw ParameterError("Cannot parse channel");
