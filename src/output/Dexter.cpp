@@ -361,8 +361,8 @@ void Dexter::tune(double lo_offset, double frequency)
 
     int r = 0;
 
-    const double freq = frequency - lo_offset;
-    if ((r = iio_device_attr_write_double(m_ad9957, "center_frequency", freq)) != 0) {
+    const long long freq = frequency - lo_offset;
+    if ((r = iio_device_attr_write_longlong(m_ad9957, "center_frequency", freq)) != 0) {
         etiLog.level(warn) << "Failed to set ad9957.center_frequency = " << freq << " : " << get_iio_error(r);
     }
 
