@@ -129,10 +129,9 @@ std::string tag_name_to_human_readable(const tag_name_t& name)
     return s;
 }
 
-TagDispatcher::TagDispatcher(
-        std::function<void()>&& af_packet_completed) :
-    m_af_packet_completed(move(af_packet_completed)),
-    m_tagpacket_handler([](const std::vector<uint8_t>& /*ignore*/){})
+TagDispatcher::TagDispatcher(std::function<void()>&& af_packet_completed) :
+    m_af_packet_completed(std::move(af_packet_completed)),
+    m_afpacket_handler([](std::vector<uint8_t>&& /*ignore*/){})
 {
 }
 
@@ -278,7 +277,6 @@ void TagDispatcher::setMaxDelay(int num_af_packets)
 }
 
 
-#define AFPACKET_HEADER_LEN 10 // includes SYNC
 TagDispatcher::decode_result_t TagDispatcher::decode_afpacket(
         const std::vector<uint8_t> &input_data)
 {
@@ -341,25 +339,30 @@ TagDispatcher::decode_result_t TagDispatcher::decode_afpacket(
         return {decode_state_e::Error, AFPACKET_HEADER_LEN + taglength + crclen};
     }
     else {
+        vector<uint8_t> afpacket(AFPACKET_HEADER_LEN + taglength + crclen);
+        copy(input_data.begin(),
+                input_data.begin() + AFPACKET_HEADER_LEN + taglength + crclen,
+                afpacket.begin());
+        m_afpacket_handler(std::move(afpacket));
+
         vector<uint8_t> payload(taglength);
         copy(input_data.begin() + AFPACKET_HEADER_LEN,
                 input_data.begin() + AFPACKET_HEADER_LEN + taglength,
                 payload.begin());
 
-        return {
-            decode_tagpacket(payload) ? decode_state_e::Ok : decode_state_e::Error,
-            AFPACKET_HEADER_LEN + taglength + crclen};
+        auto result = decode_tagpacket(payload) ? decode_state_e::Ok : decode_state_e::Error;
+        return {result, AFPACKET_HEADER_LEN + taglength + crclen};
     }
 }
 
 void TagDispatcher::register_tag(const std::string& tag, tag_handler&& h)
 {
-    m_handlers[tag] = move(h);
+    m_handlers[tag] = std::move(h);
 }
 
-void TagDispatcher::register_tagpacket_handler(tagpacket_handler&& h)
+void TagDispatcher::register_afpacket_handler(afpacket_handler&& h)
 {
-    m_tagpacket_handler = move(h);
+    m_afpacket_handler = std::move(h);
 }
 
 
@@ -427,8 +430,6 @@ bool TagDispatcher::decode_tagpacket(const vector<uint8_t> &payload)
             break;
         }
     }
-
-    m_tagpacket_handler(payload);
 
     return success;
 }

@@ -58,7 +58,7 @@ struct eti_stc_data {
 };
 
 struct ReceivedTagPacket {
-    std::vector<uint8_t> tagpacket;
+    std::vector<uint8_t> afpacket;
     frame_timestamp_t timestamp;
     seq_info_t seq;
 };
@@ -133,7 +133,7 @@ class ETIDecoder {
         bool decode_estn(const std::vector<uint8_t>& value, const tag_name_t& n);
         bool decode_stardmy(const std::vector<uint8_t>& value, const tag_name_t& n);
 
-        bool decode_tagpacket(const std::vector<uint8_t>& value);
+        bool decode_afpacket(std::vector<uint8_t>&& value);
 
         void packet_completed();
 

@@ -32,6 +32,8 @@
 
 namespace EdiDecoder {
 
+constexpr size_t AFPACKET_HEADER_LEN = 10; // includes SYNC
+
 struct frame_timestamp_t {
     uint32_t seconds = 0;
     uint32_t utco = 0;
@@ -133,9 +135,9 @@ class TagDispatcher {
          */
         void register_tag(const std::string& tag, tag_handler&& h);
 
-        /* The complete tagpacket can also be retrieved */
-        using tagpacket_handler = std::function<void(const std::vector<uint8_t>&)>;
-        void register_tagpacket_handler(tagpacket_handler&& h);
+        /* The complete AF packet can also be retrieved */
+        using afpacket_handler = std::function<void(std::vector<uint8_t>&&)>;
+        void register_afpacket_handler(afpacket_handler&& h);
 
         seq_info_t get_seq_info() const {
             return m_last_sequences;
@@ -160,7 +162,7 @@ class TagDispatcher {
         std::vector<uint8_t> m_input_data;
         std::map<std::string, tag_handler> m_handlers;
         std::function<void()> m_af_packet_completed;
-        tagpacket_handler m_tagpacket_handler;
+        afpacket_handler m_afpacket_handler;
 
         std::vector<std::string> m_ignored_tags;
 };
