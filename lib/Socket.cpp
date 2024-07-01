@@ -193,6 +193,34 @@ void UDPSocket::reinit(int port, const std::string& name)
     }
 }
 
+void UDPSocket::init_receive_multicast(int port, const string& local_if_addr, const string& mcastaddr)
+{
+    if (m_sock != INVALID_SOCKET) {
+        ::close(m_sock);
+    }
+
+    m_port = port;
+    m_sock = ::socket(AF_INET, SOCK_DGRAM, 0);
+
+    int reuse_setting = 1;
+    if (setsockopt(m_sock, SOL_SOCKET, SO_REUSEADDR, &reuse_setting, sizeof(reuse_setting)) == -1) {
+        throw runtime_error("Can't reuse address");
+    }
+
+    struct sockaddr_in la;
+    memset((char *) &la, 0, sizeof(la));
+    la.sin_family = AF_INET;
+    la.sin_port = htons(port);
+    la.sin_addr.s_addr = INADDR_ANY;
+    if (::bind(m_sock, (struct sockaddr*)&la, sizeof(la))) {
+        throw runtime_error(string("Could not bind: ") + strerror(errno));
+    }
+
+    joinGroup(mcastaddr.c_str(), local_if_addr.c_str());
+
+}
+
+
 void UDPSocket::close()
 {
     if (m_sock != INVALID_SOCKET) {
@@ -276,7 +304,7 @@ void UDPSocket::joinGroup(const char* groupname, const char* if_addr)
         throw runtime_error("Cannot convert multicast group name");
     }
     if (!IN_MULTICAST(ntohl(group.imr_multiaddr.s_addr))) {
-        throw runtime_error("Group name is not a multicast address");
+        throw runtime_error(string("Group name '") + groupname + "' is not a multicast address");
     }
 
     if (if_addr) {
@@ -309,7 +337,7 @@ void UDPSocket::setMulticastTTL(int ttl)
 {
     if (setsockopt(m_sock, IPPROTO_IP, IP_MULTICAST_TTL, &ttl, sizeof(ttl))
             == SOCKET_ERROR) {
-        throw runtime_error(string("Can't set multicast ttl") + strerror(errno));
+        throw runtime_error(string("Can't set multicast ttl: ") + strerror(errno));
     }
 }
 
@@ -327,15 +355,13 @@ void UDPReceiver::add_receive_port(int port, const string& bindto, const string&
     UDPSocket sock;
 
     if (IN_MULTICAST(ntohl(inet_addr(mcastaddr.c_str())))) {
-        sock.reinit(port, mcastaddr);
-        sock.setMulticastSource(bindto.c_str());
-        sock.joinGroup(mcastaddr.c_str(), bindto.c_str());
+        sock.init_receive_multicast(port, bindto, mcastaddr);
     }
     else {
         sock.reinit(port, bindto);
     }
 
-    m_sockets.push_back(move(sock));
+    m_sockets.push_back(std::move(sock));
 }
 
 vector<UDPReceiver::ReceivedPacket> UDPReceiver::receive(int timeout_ms)

@@ -111,6 +111,7 @@ class UDPSocket
         /** Close the already open socket, and create a new one. Throws a runtime_error on error.  */
         void reinit(int port);
         void reinit(int port, const std::string& name);
+        void init_receive_multicast(int port, const std::string& local_if_addr, const std::string& mcastaddr);
 
         void close(void);
         void send(UDPPacket& packet);
