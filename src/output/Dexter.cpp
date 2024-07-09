@@ -441,7 +441,7 @@ SDRDevice::run_statistics_t Dexter::get_run_statistics(void) const
     rs["frames"].v = num_frames_modulated;
 
     rs["in_holdover_since"].v = 0;
-    rs["remaining_holdover_s"].v = nullopt;
+    rs["remaining_holdover_s"].v = m_conf.maxGPSHoldoverTime;
     switch (m_clock_state) {
         case DexterClockState::Startup:
             rs["clock_state"].v = "startup"; break;
