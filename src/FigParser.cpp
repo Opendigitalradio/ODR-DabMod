@@ -60,9 +60,14 @@ static bool checkCRC(const uint8_t *buf, size_t size)
 
 void FICDecoderObserver::FICChangeEnsemble(const FIC_ENSEMBLE& e)
 {
+    if (ensemble.has_value() and e.eid == ensemble->eid and e.ecc == ensemble->ecc) {
+        return;
+    }
+
     services.clear();
     ensemble = e;
 }
+
 void FICDecoderObserver::FICChangeService(const LISTED_SERVICE& ls)
 {
     services[ls.sid] = ls;
