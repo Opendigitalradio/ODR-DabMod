@@ -33,9 +33,9 @@ namespace EdiDecoder {
 
 using namespace std;
 
-bool frame_timestamp_t::valid() const
+bool frame_timestamp_t::is_valid() const
 {
-    return tsta != 0xFFFFFF;
+    return tsta != 0xFFFFFF and seconds != 0;
 }
 
 string frame_timestamp_t::to_string() const
@@ -43,7 +43,7 @@ string frame_timestamp_t::to_string() const
     const time_t seconds_in_unix_epoch = to_unix_epoch();
 
     stringstream ss;
-    if (valid()) {
+    if (is_valid()) {
         ss << "Timestamp: ";
     }
     else {

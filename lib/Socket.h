@@ -2,7 +2,7 @@
    Copyright (C) 2003, 2004, 2005, 2006, 2007, 2008, 2009 Her Majesty the
    Queen in Right of Canada (Communications Research Center Canada)
 
-   Copyright (C) 2022
+   Copyright (C) 2024
    Matthias P. Braendli, matthias.braendli@mpb.li
 
     http://www.opendigitalradio.org
@@ -31,7 +31,7 @@
 #include "ThreadsafeQueue.h"
 #include <cstdlib>
 #include <atomic>
-#include <iostream>
+#include <string>
 #include <list>
 #include <memory>
 #include <thread>
@@ -118,7 +118,6 @@ class UDPSocket
         void send(const std::vector<uint8_t>& data, InetAddress destination);
         void send(const std::string& data, InetAddress destination);
         UDPPacket receive(size_t max_size);
-        void joinGroup(const char* groupname, const char* if_addr = nullptr);
         void setMulticastSource(const char* source_addr);
         void setMulticastTTL(int ttl);
 
@@ -130,9 +129,14 @@ class UDPSocket
         SOCKET getNativeSocket() const;
         int getPort() const;
 
+    private:
+        void join_group(const char* groupname, const char* if_addr = nullptr);
+        void post_init();
+
     protected:
         SOCKET m_sock = INVALID_SOCKET;
         int m_port = 0;
+        std::string m_multicast_source = "";
 };
 
 /* UDP packet receiver supporting receiving from several ports at once */
