@@ -321,11 +321,11 @@ double Lime::get_bandwidth(void) const
 SDRDevice::run_statistics_t Lime::get_run_statistics(void) const
 {
     run_statistics_t rs;
-    rs["underruns"] = underflows;
-    rs["overruns"] = overflows;
-    rs["dropped_packets"] = dropped_packets;
-    rs["frames"] = num_frames_modulated;
-    rs["fifo_fill"] = m_last_fifo_fill_percent * 100;
+    rs["underruns"].v = underflows;
+    rs["overruns"].v = overflows;
+    rs["dropped_packets"].v = dropped_packets;
+    rs["frames"].v = num_frames_modulated;
+    rs["fifo_fill"].v = m_last_fifo_fill_percent * 100;
     return rs;
 }
 

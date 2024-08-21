@@ -242,7 +242,7 @@ double BladeRF::get_bandwidth(void) const
 SDRDevice::run_statistics_t BladeRF::get_run_statistics(void) const
 {
     run_statistics_t rs;
-    rs["frames"] = num_frames_modulated;
+    rs["frames"].v = num_frames_modulated;
     return rs;
 }
 
