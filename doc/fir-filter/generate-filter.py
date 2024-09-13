@@ -56,7 +56,7 @@ cutoff = 810e3
 transition_width = 250e3
 
 # Generate filter taps and print them out
-taps = digital.filter.firdes_low_pass(gain, sampling_freq, cutoff, transition_width) # hamming window
+taps = digital.filter.firdes.low_pass(gain, sampling_freq, cutoff, transition_width) # hamming window
 
 print(len(taps))
 for t in taps:
