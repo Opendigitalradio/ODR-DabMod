@@ -195,7 +195,7 @@ void UDPSocket::reinit(int port, const std::string& name)
     freeaddrinfo(result);
 
     if (rp == nullptr) {
-        throw runtime_error("Could not bind");
+        throw runtime_error(string{"Could not bind to port "} + to_string(port));
     }
 }
 
