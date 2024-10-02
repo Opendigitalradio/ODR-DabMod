@@ -133,7 +133,7 @@ class ModulatorData : public RemoteControllable {
             if (parameter == "num_modulator_restarts") {
                 ss << num_modulator_restarts;
             }
-            if (parameter == "running_since") {
+            else if (parameter == "running_since") {
                 ss << running_since;
             }
             else if (parameter == "most_recent_edi_decoded") {
