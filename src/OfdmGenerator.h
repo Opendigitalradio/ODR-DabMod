@@ -39,8 +39,6 @@
 #include <complex>
 #include <atomic>
 
-typedef std::complex<float> complexf;
-
 class OfdmGenerator : public ModCodec, public RemoteControllable
 {
     public:

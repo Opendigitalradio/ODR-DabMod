@@ -40,12 +40,8 @@
 #include "EtiReader.h"
 #include "Flowgraph.h"
 #include "FormatConverter.h"
-#include "GainControl.h"
 #include "OutputMemory.h"
 #include "RemoteControl.h"
-#include "Log.h"
-#include "TII.h"
-
 
 class DabModulator : public ModInput, public ModMetadata, public RemoteControllable
 {

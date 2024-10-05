@@ -27,12 +27,9 @@
 #include "NullSymbol.h"
 #include "PcDebug.h"
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <complex>
-#include <string.h>
-
-typedef std::complex<float> complexf;
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
 
 NullSymbol::NullSymbol(size_t nbCarriers) :
     ModInput(),

@@ -22,13 +22,9 @@
 #include "DifferentialModulator.h"
 #include "PcDebug.h"
 
-#include <stdio.h>
+#include <cstdio>
 #include <stdexcept>
-#include <complex>
-#include <string.h>
-
-typedef std::complex<float> complexf;
-
+#include <cstring>
 
 DifferentialModulator::DifferentialModulator(size_t carriers) :
     ModMux(),

@@ -31,10 +31,8 @@
 #endif
 
 #include <memory>
-#include <complex>
 #include <string>
 #include <iostream>
-#include <iomanip>
 #include <cstdlib>
 #include <stdexcept>
 #include <cstdio>
@@ -51,7 +49,6 @@
 #include "Utils.h"
 #include "Log.h"
 #include "DabModulator.h"
-#include "InputMemory.h"
 #include "OutputFile.h"
 #include "FormatConverter.h"
 #include "FrameMultiplexer.h"
@@ -82,8 +79,6 @@ static const float normalise_factor = 50000.0f;
 static const float normalise_factor_file_fix = 81000.0f;
 static const float normalise_factor_file_var = 46000.0f;
 static const float normalise_factor_file_max = 46000.0f;
-
-typedef std::complex<float> complexf;
 
 using namespace std;
 

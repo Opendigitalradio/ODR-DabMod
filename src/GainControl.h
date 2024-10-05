@@ -35,16 +35,12 @@
 #include "RemoteControl.h"
 
 #include <sys/types.h>
-#include <complex>
 #include <string>
 #include <mutex>
 
 #ifdef __SSE__
 #   include <xmmintrin.h>
 #endif
-
-
-typedef std::complex<float> complexf;
 
 enum class GainMode { GAIN_FIX = 0, GAIN_MAX = 1, GAIN_VAR = 2 };
 

@@ -29,10 +29,8 @@
 #include <cstring>
 #include <cassert>
 #include <stdexcept>
-#include <complex>
 #include <mutex>
 
-typedef std::complex<float> complexf;
 
 GuardIntervalInserter::GuardIntervalInserter(
         size_t nbSymbols,

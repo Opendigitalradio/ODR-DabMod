@@ -22,13 +22,10 @@
 #include "FrequencyInterleaver.h"
 #include "PcDebug.h"
 
-#include <stdio.h>
 #include <stdexcept>
 #include <string>
-#include <stdlib.h>
-#include <complex>
-
-typedef std::complex<float> complexf;
+#include <cstdio>
+#include <cstdlib>
 
 
 FrequencyInterleaver::FrequencyInterleaver(size_t mode) :

@@ -33,7 +33,6 @@
 #  include <iostream>
 #endif
 
-
 PAPRStats::PAPRStats(size_t num_blocks_to_accumulate) :
     m_num_blocks_to_accumulate(num_blocks_to_accumulate)
 {

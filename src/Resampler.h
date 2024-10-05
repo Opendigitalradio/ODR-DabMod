@@ -37,9 +37,6 @@
 #define FFT_TYPE fftwf_complex
 #define FFT_PLAN fftwf_plan
 
-#include <complex>
-typedef std::complex<float> complexf;
-
 
 class Resampler : public ModCodec
 {

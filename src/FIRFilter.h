@@ -33,20 +33,13 @@
 
 #include "RemoteControl.h"
 #include "ModPlugin.h"
-#include "PcDebug.h"
 
 #include <sys/types.h>
-#include <complex>
-#include <thread>
 #include <vector>
-#include <time.h>
 #include <cstdio>
 #include <string>
-#include <memory>
 
 #define FIRFILTER_PIPELINE_DELAY 1
-
-typedef std::complex<float> complexf;
 
 class FIRFilter : public PipelinedModCodec, public RemoteControllable
 {

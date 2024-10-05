@@ -23,7 +23,6 @@
 #include <cstdio>
 #include <cstring>
 #include <stdexcept>
-#include <complex>
 #include <cmath>
 #ifdef __SSE__
 #   include <xmmintrin.h>
@@ -31,9 +30,6 @@
 
 #include "QpskSymbolMapper.h"
 #include "PcDebug.h"
-
-
-typedef std::complex<float> complexf;
 
 QpskSymbolMapper::QpskSymbolMapper(size_t carriers) :
     ModCodec(),

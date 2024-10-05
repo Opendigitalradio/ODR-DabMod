@@ -27,11 +27,8 @@
 #include "TII.h"
 #include "PcDebug.h"
 
-#include <stdio.h>
-#include <stdexcept>
-#include <string.h>
-
-typedef std::complex<float> complexf;
+#include <cstdio>
+#include <cstring>
 
 /* TII pattern for TM I, II, IV */
 const int pattern_tm1_2_4[][8] = { // {{{

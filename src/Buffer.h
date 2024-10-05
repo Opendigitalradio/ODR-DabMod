@@ -33,6 +33,8 @@
 
 #include <vector>
 #include <memory>
+#include <complex>
+typedef std::complex<float> complexf;
 
 /* Buffer is a container for a byte array, which is memory-aligned
  * to 32 bytes for SSE performance.
