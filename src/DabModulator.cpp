@@ -142,14 +142,14 @@ int DabModulator::process(Buffer* dataOut)
         auto cifMux = make_shared<FrameMultiplexer>(m_etiSource);
         auto cifPart = make_shared<BlockPartitioner>(mode);
 
-        auto cifMap = make_shared<QpskSymbolMapper>(m_nbCarriers);
-        auto cifRef = make_shared<PhaseReference>(mode);
-        auto cifFreq = make_shared<FrequencyInterleaver>(mode);
-        auto cifDiff = make_shared<DifferentialModulator>(m_nbCarriers);
+        auto cifMap = make_shared<QpskSymbolMapper>(m_nbCarriers, m_settings.fixedPoint);
+        auto cifRef = make_shared<PhaseReference>(mode, m_settings.fixedPoint);
+        auto cifFreq = make_shared<FrequencyInterleaver>(mode, m_settings.fixedPoint);
+        auto cifDiff = make_shared<DifferentialModulator>(m_nbCarriers, m_settings.fixedPoint);
 
-        auto cifNull = make_shared<NullSymbol>(m_nbCarriers);
-        auto cifSig = make_shared<SignalMultiplexer>(
-                (1 + m_nbSymbols) * m_nbCarriers * sizeof(complexf));
+        auto cifNull = make_shared<NullSymbol>(m_nbCarriers,
+                m_settings.fixedPoint ? sizeof(complexfix) : sizeof(complexf));
+        auto cifSig = make_shared<SignalMultiplexer>();
 
         // TODO this needs a review
         bool useCicEq = false;
@@ -182,44 +182,66 @@ int DabModulator::process(Buffer* dataOut)
                     m_settings.dabMode,
                     m_settings.tiiConfig);
             rcs.enrol(tii.get());
-            tiiRef = make_shared<PhaseReference>(mode);
+            tiiRef = make_shared<PhaseReference>(mode, m_settings.fixedPoint);
         }
         catch (const TIIError& e) {
             etiLog.level(error) << "Could not initialise TII: " << e.what();
         }
 
-        auto cifOfdm = make_shared<OfdmGenerator>(
-                (1 + m_nbSymbols),
-                m_nbCarriers,
-                m_spacing,
-                m_settings.enableCfr,
-                m_settings.cfrClip,
-                m_settings.cfrErrorClip);
+        shared_ptr<ModPlugin> cifOfdm;
 
-        rcs.enrol(cifOfdm.get());
+        if (m_settings.fixedPoint) {
+            cifOfdm = make_shared<OfdmGeneratorFixed>(
+                    (1 + m_nbSymbols),
+                    m_nbCarriers,
+                    m_spacing,
+                    m_settings.enableCfr,
+                    m_settings.cfrClip,
+                    m_settings.cfrErrorClip);
+        }
+        else {
+            auto ofdm = make_shared<OfdmGeneratorCF32>(
+                    (1 + m_nbSymbols),
+                    m_nbCarriers,
+                    m_spacing,
+                    m_settings.enableCfr,
+                    m_settings.cfrClip,
+                    m_settings.cfrErrorClip);
 
-        auto cifGain = make_shared<GainControl>(
-                m_spacing,
-                m_settings.gainMode,
-                m_settings.digitalgain,
-                m_settings.normalise,
-                m_settings.gainmodeVariance);
+            rcs.enrol(ofdm.get());
+            cifOfdm = ofdm;
+        }
 
-        rcs.enrol(cifGain.get());
+        shared_ptr<GainControl> cifGain;
+
+        if (not m_settings.fixedPoint) {
+            cifGain = make_shared<GainControl>(
+                    m_spacing,
+                    m_settings.gainMode,
+                    m_settings.digitalgain,
+                    m_settings.normalise,
+                    m_settings.gainmodeVariance);
+
+            rcs.enrol(cifGain.get());
+        }
 
         auto cifGuard = make_shared<GuardIntervalInserter>(
                 m_nbSymbols, m_spacing, m_nullSize, m_symSize,
-                m_settings.ofdmWindowOverlap);
+                m_settings.ofdmWindowOverlap, m_settings.fixedPoint);
         rcs.enrol(cifGuard.get());
 
         shared_ptr<FIRFilter> cifFilter;
         if (not m_settings.filterTapsFilename.empty()) {
+            if (m_settings.fixedPoint) throw std::runtime_error("fixed point doesn't support fir filter");
+
             cifFilter = make_shared<FIRFilter>(m_settings.filterTapsFilename);
             rcs.enrol(cifFilter.get());
         }
 
         shared_ptr<MemlessPoly> cifPoly;
         if (not m_settings.polyCoefFilename.empty()) {
+            if (m_settings.fixedPoint) throw std::runtime_error("fixed point doesn't support predistortion");
+
             cifPoly = make_shared<MemlessPoly>(m_settings.polyCoefFilename,
                                                m_settings.polyNumThreads);
             rcs.enrol(cifPoly.get());
@@ -227,6 +249,8 @@ int DabModulator::process(Buffer* dataOut)
 
         shared_ptr<Resampler> cifRes;
         if (m_settings.outputRate != 2048000) {
+            if (m_settings.fixedPoint) throw std::runtime_error("fixed point doesn't support resampler");
+
             cifRes = make_shared<Resampler>(
                     2048000,
                     m_settings.outputRate,
@@ -234,6 +258,8 @@ int DabModulator::process(Buffer* dataOut)
         }
 
         if (not m_format.empty()) {
+            if (m_settings.fixedPoint) throw std::runtime_error("fixed point doesn't support format converter");
+
             m_formatConverter = make_shared<FormatConverter>(m_format);
         }
 

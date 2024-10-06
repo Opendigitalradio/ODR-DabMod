@@ -27,17 +27,19 @@
 #include "OfdmGenerator.h"
 #include "PcDebug.h"
 
-#define FFT_TYPE fftwf_complex
-
-#include <string.h>
 #include <stdexcept>
 #include <assert.h>
 #include <string>
 #include <numeric>
+#include <vector>
+#include <cstring>
+#include <complex>
 
 static const size_t MAX_CLIP_STATS = 10;
 
-OfdmGenerator::OfdmGenerator(size_t nbSymbols,
+using FFTW_TYPE = fftwf_complex;
+
+OfdmGeneratorCF32::OfdmGeneratorCF32(size_t nbSymbols,
                              size_t nbCarriers,
                              size_t spacing,
                              bool& enableCfr,
@@ -102,29 +104,29 @@ OfdmGenerator::OfdmGenerator(size_t nbSymbols,
     PDEBUG("  myZeroSize: %u\n", myZeroSize);
 
     const int N = mySpacing; // The size of the FFT
-    myFftIn = (FFT_TYPE*)fftwf_malloc(sizeof(FFT_TYPE) * N);
-    myFftOut = (FFT_TYPE*)fftwf_malloc(sizeof(FFT_TYPE) * N);
+    myFftIn = (FFTW_TYPE*)fftwf_malloc(sizeof(FFTW_TYPE) * N);
+    myFftOut = (FFTW_TYPE*)fftwf_malloc(sizeof(FFTW_TYPE) * N);
     fftwf_set_timelimit(2);
     myFftPlan = fftwf_plan_dft_1d(N,
             myFftIn, myFftOut,
             FFTW_BACKWARD, FFTW_MEASURE);
 
-    myCfrPostClip = (FFT_TYPE*)fftwf_malloc(sizeof(FFT_TYPE) * N);
-    myCfrPostFft = (FFT_TYPE*)fftwf_malloc(sizeof(FFT_TYPE) * N);
+    myCfrPostClip = (FFTW_TYPE*)fftwf_malloc(sizeof(FFTW_TYPE) * N);
+    myCfrPostFft = (FFTW_TYPE*)fftwf_malloc(sizeof(FFTW_TYPE) * N);
     myCfrFft = fftwf_plan_dft_1d(N,
             myCfrPostClip, myCfrPostFft,
             FFTW_FORWARD, FFTW_MEASURE);
 
-    if (sizeof(complexf) != sizeof(FFT_TYPE)) {
+    if (sizeof(complexf) != sizeof(FFTW_TYPE)) {
         printf("sizeof(complexf) %zu\n", sizeof(complexf));
-        printf("sizeof(FFT_TYPE) %zu\n", sizeof(FFT_TYPE));
+        printf("sizeof(FFT_TYPE) %zu\n", sizeof(FFTW_TYPE));
         throw std::runtime_error(
                 "OfdmGenerator::process complexf size is not FFT_TYPE size!");
     }
 }
 
 
-OfdmGenerator::~OfdmGenerator()
+OfdmGeneratorCF32::~OfdmGeneratorCF32()
 {
     PDEBUG("OfdmGenerator::~OfdmGenerator() @ %p\n", this);
 
@@ -153,15 +155,15 @@ OfdmGenerator::~OfdmGenerator()
     }
 }
 
-int OfdmGenerator::process(Buffer* const dataIn, Buffer* dataOut)
+int OfdmGeneratorCF32::process(Buffer* const dataIn, Buffer* dataOut)
 {
     PDEBUG("OfdmGenerator::process(dataIn: %p, dataOut: %p)\n",
             dataIn, dataOut);
 
     dataOut->setLength(myNbSymbols * mySpacing * sizeof(complexf));
 
-    FFT_TYPE* in = reinterpret_cast<FFT_TYPE*>(dataIn->getData());
-    FFT_TYPE* out = reinterpret_cast<FFT_TYPE*>(dataOut->getData());
+    FFTW_TYPE* in = reinterpret_cast<FFTW_TYPE*>(dataIn->getData());
+    FFTW_TYPE* out = reinterpret_cast<FFTW_TYPE*>(dataOut->getData());
 
     size_t sizeIn = dataIn->getLength() / sizeof(complexf);
     size_t sizeOut = dataOut->getLength() / sizeof(complexf);
@@ -212,17 +214,17 @@ int OfdmGenerator::process(Buffer* const dataIn, Buffer* dataOut)
          * PosSrc=0 PosDst=1 PosSize=768
          * NegSrc=768 NegDst=1280 NegSize=768
          */
-        memset(&myFftIn[myZeroDst], 0, myZeroSize * sizeof(FFT_TYPE));
+        memset(&myFftIn[myZeroDst], 0, myZeroSize * sizeof(FFTW_TYPE));
         memcpy(&myFftIn[myPosDst], &in[myPosSrc],
-                myPosSize * sizeof(FFT_TYPE));
+                myPosSize * sizeof(FFTW_TYPE));
         memcpy(&myFftIn[myNegDst], &in[myNegSrc],
-                myNegSize * sizeof(FFT_TYPE));
+                myNegSize * sizeof(FFTW_TYPE));
 
 
         if (myCfr) {
             reference.resize(mySpacing);
             memcpy(reinterpret_cast<fftwf_complex*>(reference.data()),
-                    myFftIn, mySpacing * sizeof(FFT_TYPE));
+                    myFftIn, mySpacing * sizeof(FFTW_TYPE));
         }
 
         fftwf_execute(myFftPlan); // IFFT from myFftIn to myFftOut
@@ -235,7 +237,7 @@ int OfdmGenerator::process(Buffer* const dataIn, Buffer* dataOut)
             if (myMERCalcIndex == i) {
                 before_cfr.resize(mySpacing);
                 memcpy(reinterpret_cast<fftwf_complex*>(before_cfr.data()),
-                        myFftOut, mySpacing * sizeof(FFT_TYPE));
+                        myFftOut, mySpacing * sizeof(FFTW_TYPE));
             }
 
             /* cfr_one_iteration runs the myFftPlan again at the end, and
@@ -277,7 +279,7 @@ int OfdmGenerator::process(Buffer* const dataIn, Buffer* dataOut)
             num_error_clip += stat.errclip_count;
         }
 
-        memcpy(out, myFftOut, mySpacing * sizeof(FFT_TYPE));
+        memcpy(out, myFftOut, mySpacing * sizeof(FFTW_TYPE));
 
         in += myNbCarriers;
         out += mySpacing;
@@ -308,14 +310,14 @@ int OfdmGenerator::process(Buffer* const dataIn, Buffer* dataOut)
     return sizeOut;
 }
 
-OfdmGenerator::cfr_iter_stat_t OfdmGenerator::cfr_one_iteration(
+OfdmGeneratorCF32::cfr_iter_stat_t OfdmGeneratorCF32::cfr_one_iteration(
         complexf *symbol, const complexf *reference)
 {
     // use std::norm instead of std::abs to avoid calculating the
     // square roots
     const float clip_squared = myCfrClip * myCfrClip;
 
-    OfdmGenerator::cfr_iter_stat_t ret;
+    OfdmGeneratorCF32::cfr_iter_stat_t ret;
 
     // Clip
     for (size_t i = 0; i < mySpacing; i++) {
@@ -331,7 +333,7 @@ OfdmGenerator::cfr_iter_stat_t OfdmGenerator::cfr_one_iteration(
     }
 
     // Take FFT of our clipped signal
-    memcpy(myCfrPostClip, symbol, mySpacing * sizeof(FFT_TYPE));
+    memcpy(myCfrPostClip, symbol, mySpacing * sizeof(FFTW_TYPE));
     fftwf_execute(myCfrFft); // FFT from myCfrPostClip to myCfrPostFft
 
     // Calculate the error in frequency domain by subtracting our reference
@@ -374,7 +376,7 @@ OfdmGenerator::cfr_iter_stat_t OfdmGenerator::cfr_one_iteration(
 }
 
 
-void OfdmGenerator::set_parameter(const std::string& parameter,
+void OfdmGeneratorCF32::set_parameter(const std::string& parameter,
                                   const std::string& value)
 {
     using namespace std;
@@ -404,7 +406,7 @@ void OfdmGenerator::set_parameter(const std::string& parameter,
     }
 }
 
-const std::string OfdmGenerator::get_parameter(const std::string& parameter) const
+const std::string OfdmGeneratorCF32::get_parameter(const std::string& parameter) const
 {
     using namespace std;
     stringstream ss;
@@ -458,9 +460,127 @@ const std::string OfdmGenerator::get_parameter(const std::string& parameter) con
     return ss.str();
 }
 
-const json::map_t OfdmGenerator::get_all_values() const
+const json::map_t OfdmGeneratorCF32::get_all_values() const
 {
     json::map_t map;
     // TODO needs rework of the values
     return map;
+}
+
+OfdmGeneratorFixed::OfdmGeneratorFixed(size_t nbSymbols,
+                             size_t nbCarriers,
+                             size_t spacing,
+                             bool& enableCfr,
+                             float& cfrClip,
+                             float& cfrErrorClip,
+                             bool inverse) :
+    ModCodec(),
+    myNbSymbols(nbSymbols),
+    myNbCarriers(nbCarriers),
+    mySpacing(spacing)
+{
+    PDEBUG("OfdmGenerator::OfdmGenerator(%zu, %zu, %zu, %s) @ %p\n",
+            nbSymbols, nbCarriers, spacing, inverse ? "true" : "false", this);
+
+    etiLog.level(info) << "Using KISS FFT by Mark Borgerding for fixed-point transform";
+
+    if (nbCarriers > spacing) {
+        throw std::runtime_error(
+                "OfdmGenerator::OfdmGenerator nbCarriers > spacing!");
+    }
+
+    if (inverse) {
+        myPosDst = (nbCarriers & 1 ? 0 : 1);
+        myPosSrc = 0;
+        myPosSize = (nbCarriers + 1) / 2;
+        myNegDst = spacing - (nbCarriers / 2);
+        myNegSrc = (nbCarriers + 1) / 2;
+        myNegSize = nbCarriers / 2;
+    }
+    else {
+        myPosDst = (nbCarriers & 1 ? 0 : 1);
+        myPosSrc = nbCarriers / 2;
+        myPosSize = (nbCarriers + 1) / 2;
+        myNegDst = spacing - (nbCarriers / 2);
+        myNegSrc = 0;
+        myNegSize = nbCarriers / 2;
+    }
+    myZeroDst = myPosDst + myPosSize;
+    myZeroSize = myNegDst - myZeroDst;
+
+    PDEBUG("  myPosDst: %u\n", myPosDst);
+    PDEBUG("  myPosSrc: %u\n", myPosSrc);
+    PDEBUG("  myPosSize: %u\n", myPosSize);
+    PDEBUG("  myNegDst: %u\n", myNegDst);
+    PDEBUG("  myNegSrc: %u\n", myNegSrc);
+    PDEBUG("  myNegSize: %u\n", myNegSize);
+    PDEBUG("  myZeroDst: %u\n", myZeroDst);
+    PDEBUG("  myZeroSize: %u\n", myZeroSize);
+
+    const int N = mySpacing; // The size of the FFT
+
+    const size_t nbytes = N * sizeof(kiss_fft_cpx);
+    myFftIn = (kiss_fft_cpx*)KISS_FFT_MALLOC(nbytes);
+    myFftOut = (kiss_fft_cpx*)KISS_FFT_MALLOC(nbytes);
+    memset(myFftIn, 0, nbytes);
+
+    myKissCfg = kiss_fft_alloc(N, inverse, nullptr, nullptr);
+}
+
+OfdmGeneratorFixed::~OfdmGeneratorFixed()
+{
+    if (myKissCfg) KISS_FFT_FREE(myKissCfg);
+    if (myFftIn) KISS_FFT_FREE(myFftIn);
+    if (myFftOut) KISS_FFT_FREE(myFftOut);
+}
+
+int OfdmGeneratorFixed::process(Buffer* const dataIn, Buffer* dataOut)
+{
+    dataOut->setLength(myNbSymbols * mySpacing * sizeof(kiss_fft_cpx));
+
+    kiss_fft_cpx* in = reinterpret_cast<kiss_fft_cpx*>(dataIn->getData());
+    kiss_fft_cpx* out = reinterpret_cast<kiss_fft_cpx*>(dataOut->getData());
+
+    size_t sizeIn = dataIn->getLength() / sizeof(kiss_fft_cpx);
+    size_t sizeOut = dataOut->getLength() / sizeof(kiss_fft_cpx);
+
+    if (sizeIn != myNbSymbols * myNbCarriers) {
+        PDEBUG("Nb symbols: %zu\n", myNbSymbols);
+        PDEBUG("Nb carriers: %zu\n", myNbCarriers);
+        PDEBUG("Spacing: %zu\n", mySpacing);
+        PDEBUG("\n%zu != %zu\n", sizeIn, myNbSymbols * myNbCarriers);
+        throw std::runtime_error(
+                "OfdmGenerator::process input size not valid!");
+    }
+    if (sizeOut != myNbSymbols * mySpacing) {
+        PDEBUG("Nb symbols: %zu\n", myNbSymbols);
+        PDEBUG("Nb carriers: %zu\n", myNbCarriers);
+        PDEBUG("Spacing: %zu\n", mySpacing);
+        PDEBUG("\n%zu != %zu\n", sizeIn, myNbSymbols * mySpacing);
+        throw std::runtime_error(
+                "OfdmGenerator::process output size not valid!");
+    }
+
+    for (size_t i = 0; i < myNbSymbols; ++i) {
+        myFftIn[0].r = 0;
+        myFftIn[0].i = 0;
+
+        /* For TM I this is:
+         * ZeroDst=769 ZeroSize=511
+         * PosSrc=0 PosDst=1 PosSize=768
+         * NegSrc=768 NegDst=1280 NegSize=768
+         */
+        memset(&myFftIn[myZeroDst], 0, myZeroSize * sizeof(kiss_fft_cpx));
+        memcpy(&myFftIn[myPosDst], &in[myPosSrc], myPosSize * sizeof(kiss_fft_cpx));
+        memcpy(&myFftIn[myNegDst], &in[myNegSrc], myNegSize * sizeof(kiss_fft_cpx));
+
+        kiss_fft(myKissCfg, myFftIn, myFftOut);
+
+        memcpy(out, myFftOut, mySpacing * sizeof(kiss_fft_cpx));
+
+        in += myNbCarriers;
+        out += mySpacing;
+    }
+
+    return sizeOut;
 }

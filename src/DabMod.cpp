@@ -249,7 +249,15 @@ static shared_ptr<ModOutput> prepare_output(mod_settings_t& s)
 {
     shared_ptr<ModOutput> output;
 
-    if (s.useFileOutput) {
+    if (s.fixedPoint) {
+        if (s.useFileOutput) {
+            output = make_shared<OutputFile>(s.outputName, s.fileOutputShowMetadata);
+        }
+        else {
+            throw runtime_error("Fixed point only works with file output");
+        }
+    }
+    else if (s.useFileOutput) {
         if (s.fileOutputFormat == "complexf") {
             output = make_shared<OutputFile>(s.outputName, s.fileOutputShowMetadata);
         }
@@ -413,7 +421,7 @@ int launch_modulator(int argc, char* argv[])
     ModulatorData m;
     rcs.enrol(&m);
 
-    {
+    if (not mod_settings.fixedPoint) {
         // This is mostly useful on ARM systems where FFTW planning takes some time. If we do it here
         // it will be done before the modulator starts up
         etiLog.level(debug) << "Running FFTW planning...";

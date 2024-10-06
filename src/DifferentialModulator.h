@@ -35,7 +35,7 @@
 class DifferentialModulator : public ModMux
 {
 public:
-    DifferentialModulator(size_t carriers);
+    DifferentialModulator(size_t carriers, bool fixedPoint);
     virtual ~DifferentialModulator();
     DifferentialModulator(const DifferentialModulator&);
     DifferentialModulator& operator=(const DifferentialModulator&);
@@ -45,6 +45,7 @@ public:
     const char* name() { return "DifferentialModulator"; }
 
 protected:
-    size_t d_carriers;
+    size_t m_carriers;
+    size_t m_fixedPoint;
 };
 

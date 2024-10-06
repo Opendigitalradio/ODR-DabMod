@@ -39,14 +39,14 @@
 class NullSymbol : public ModInput
 {
 public:
-    NullSymbol(size_t nbCarriers);
+    NullSymbol(size_t nunCarriers, size_t typeSize);
     virtual ~NullSymbol();
 
     int process(Buffer* dataOut);
     const char* name() { return "NullSymbol"; }
 
 private:
-    size_t myNbCarriers;
-
+    size_t m_numCarriers;
+    size_t m_typeSize;
 };
 

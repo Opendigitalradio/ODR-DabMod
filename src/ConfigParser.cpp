@@ -154,6 +154,8 @@ static void parse_configfile(
             mod_settings.showProcessTime);
 
     // modulator parameters:
+    mod_settings.fixedPoint = pt.GetInteger("modulator.fixed_point", mod_settings.fixedPoint);
+
     const string gainMode_setting = pt.Get("modulator.gainmode", "var");
     mod_settings.gainMode = parse_gainmode(gainMode_setting);
     mod_settings.gainmodeVariance = pt.GetReal("modulator.normalise_variance",

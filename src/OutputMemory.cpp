@@ -39,7 +39,7 @@ OutputMemory::OutputMemory(Buffer* dataOut)
 {
     PDEBUG("OutputMemory::OutputMemory(%p) @ %p\n", dataOut, this);
 
-    setOutput(dataOut);
+    myDataOut = dataOut;
 
 #if OUTPUT_MEM_HISTOGRAM
     myMax = 0.0f;
@@ -64,12 +64,6 @@ OutputMemory::~OutputMemory()
     }
 #endif
     PDEBUG("OutputMemory::~OutputMemory() @ %p\n", this);
-}
-
-
-void OutputMemory::setOutput(Buffer* dataOut)
-{
-    myDataOut = dataOut;
 }
 
 

@@ -51,6 +51,8 @@ struct mod_settings_t {
     bool useLimeOutput = false;
     bool useBladeRFOutput = false;
 
+    bool fixedPoint = false;
+
     size_t outputRate = 2048000;
     size_t clockRate = 0;
     unsigned dabMode = 1;

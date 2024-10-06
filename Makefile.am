@@ -35,10 +35,11 @@ endif
 
 bin_PROGRAMS = odr-dabmod
 
-odr_dabmod_CFLAGS   = -Wall -Isrc -Ilib \
-					  $(GITVERSION_FLAGS)
-odr_dabmod_CXXFLAGS = -Wall -Isrc -Ilib \
-					  $(GITVERSION_FLAGS) $(BOOST_CPPFLAGS)
+KISS_FLAGS=-DFIXED_POINT=32
+odr_dabmod_CFLAGS   = -Wall -Isrc -Ilib -Ikiss \
+					  $(GITVERSION_FLAGS) $(KISS_FLAGS)
+odr_dabmod_CXXFLAGS = -Wall -Isrc -Ilib -Ikiss \
+					  $(GITVERSION_FLAGS) $(BOOST_CPPFLAGS) $(KISS_FLAGS)
 odr_dabmod_LDADD    =  $(BOOST_LDFLAGS) $(BOOST_THREAD_LIB) $(UHD_LIBS) $(LIMESDR_LIBS) $(ADDITIONAL_UHD_LIBS)
 odr_dabmod_SOURCES  = src/DabMod.cpp \
 					  src/PcDebug.h \
@@ -175,7 +176,17 @@ odr_dabmod_SOURCES  = src/DabMod.cpp \
 					  src/PAPRStats.cpp \
 					  src/PAPRStats.h \
 					  src/TII.cpp \
-					  src/TII.h
+					  src/TII.h \
+					  kiss/kfc.h \
+					  kiss/kfc.c \
+					  kiss/kiss_fft.c \
+					  kiss/kiss_fft.h \
+					  kiss/kiss_fftnd.c \
+					  kiss/kiss_fftnd.h \
+					  kiss/kiss_fftndr.c \
+					  kiss/kiss_fftndr.h \
+					  kiss/kiss_fftr.c \
+					  kiss/kiss_fftr.h
 
 
 man_MANS = man/odr-dabmod.1

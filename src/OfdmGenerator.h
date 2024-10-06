@@ -33,25 +33,26 @@
 #include "ModPlugin.h"
 #include "RemoteControl.h"
 #include "PAPRStats.h"
-#include "fftw3.h"
+#include "kiss_fft.h"
+
+#include <fftw3.h>
 #include <cstddef>
-#include <vector>
-#include <complex>
 #include <atomic>
 
-class OfdmGenerator : public ModCodec, public RemoteControllable
+// Complex Float uses FFTW
+class OfdmGeneratorCF32 : public ModCodec, public RemoteControllable
 {
     public:
-        OfdmGenerator(size_t nbSymbols,
+        OfdmGeneratorCF32(size_t nbSymbols,
                       size_t nbCarriers,
                       size_t spacing,
                       bool& enableCfr,
                       float& cfrClip,
                       float& cfrErrorClip,
                       bool inverse = true);
-        virtual ~OfdmGenerator();
-        OfdmGenerator(const OfdmGenerator&) = delete;
-        OfdmGenerator& operator=(const OfdmGenerator&) = delete;
+        virtual ~OfdmGeneratorCF32();
+        OfdmGeneratorCF32(const OfdmGeneratorCF32&) = delete;
+        OfdmGeneratorCF32& operator=(const OfdmGeneratorCF32&) = delete;
 
         int process(Buffer* const dataIn, Buffer* dataOut) override;
         const char* name() override { return "OfdmGenerator"; }
@@ -105,4 +106,37 @@ class OfdmGenerator : public ModCodec, public RemoteControllable
         std::deque<double> myMERs;
 };
 
+// Fixed point implementation uses KISS FFT with -DFIXED_POINT=32
+class OfdmGeneratorFixed : public ModCodec
+{
+    public:
+        OfdmGeneratorFixed(size_t nbSymbols,
+                      size_t nbCarriers,
+                      size_t spacing,
+                      bool& enableCfr,
+                      float& cfrClip,
+                      float& cfrErrorClip,
+                      bool inverse = true);
+        virtual ~OfdmGeneratorFixed();
+        OfdmGeneratorFixed(const OfdmGeneratorFixed&) = delete;
+        OfdmGeneratorFixed& operator=(const OfdmGeneratorFixed&) = delete;
 
+        int process(Buffer* const dataIn, Buffer* dataOut) override;
+        const char* name() override { return "OfdmGenerator"; }
+
+    private:
+        kiss_fft_cfg myKissCfg = nullptr;
+        kiss_fft_cpx *myFftIn, *myFftOut;
+
+        const size_t myNbSymbols;
+        const size_t myNbCarriers;
+        const size_t mySpacing;
+        unsigned myPosSrc;
+        unsigned myPosDst;
+        unsigned myPosSize;
+        unsigned myNegSrc;
+        unsigned myNegDst;
+        unsigned myNegSize;
+        unsigned myZeroDst;
+        unsigned myZeroSize;
+};

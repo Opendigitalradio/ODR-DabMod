@@ -31,12 +31,13 @@
 class QpskSymbolMapper : public ModCodec
 {
 public:
-    QpskSymbolMapper(size_t carriers);
+    QpskSymbolMapper(size_t carriers, bool fixedPoint);
 
     int process(Buffer* const dataIn, Buffer* dataOut);
     const char* name() { return "QpskSymbolMapper"; }
 
 protected:
-    size_t d_carriers;
+    bool m_fixedPoint;
+    size_t m_carriers;
 };
 

@@ -26,9 +26,10 @@
 #include <stdexcept>
 #include <cstring>
 
-DifferentialModulator::DifferentialModulator(size_t carriers) :
+DifferentialModulator::DifferentialModulator(size_t carriers, bool fixedPoint) :
     ModMux(),
-    d_carriers(carriers)
+    m_carriers(carriers),
+    m_fixedPoint(fixedPoint)
 {
     PDEBUG("DifferentialModulator::DifferentialModulator(%zu)\n", carriers);
 
@@ -38,9 +39,41 @@ DifferentialModulator::DifferentialModulator(size_t carriers) :
 DifferentialModulator::~DifferentialModulator()
 {
     PDEBUG("DifferentialModulator::~DifferentialModulator()\n");
-
 }
 
+
+template<typename T>
+void do_process(size_t carriers, std::vector<Buffer*> dataIn, Buffer* dataOut)
+{
+    size_t phaseSize = dataIn[0]->getLength() / sizeof(T);
+    size_t dataSize = dataIn[1]->getLength() / sizeof(T);
+    dataOut->setLength((phaseSize + dataSize) * sizeof(T));
+
+    const T* phase = reinterpret_cast<const T*>(dataIn[0]->getData());
+    const T* in = reinterpret_cast<const T*>(dataIn[1]->getData());
+    T* out = reinterpret_cast<T*>(dataOut->getData());
+
+    if (phaseSize != carriers) {
+        throw std::runtime_error(
+                "DifferentialModulator::process input phase size not valid!");
+    }
+    if (dataSize % carriers != 0) {
+        throw std::runtime_error(
+                "DifferentialModulator::process input data size not valid!");
+    }
+
+    memcpy(dataOut->getData(), phase, phaseSize * sizeof(T));
+    for (size_t i = 0; i < dataSize; i += carriers) {
+        for (size_t j = 0; j < carriers; j += 4) {
+            out[carriers + j] = out[j] * in[j];
+            out[carriers + j + 1] = out[j + 1] * in[j + 1];
+            out[carriers + j + 2] = out[j + 2] * in[j + 2];
+            out[carriers + j + 3] = out[j + 3] * in[j + 3];
+        }
+        in += carriers;
+        out += carriers;
+    }
+}
 
 // dataIn[0] -> phase reference
 // dataIn[1] -> data symbols
@@ -63,33 +96,11 @@ int DifferentialModulator::process(std::vector<Buffer*> dataIn, Buffer* dataOut)
                 "DifferentialModulator::process nb of input streams not 2!");
     }
 
-    size_t phaseSize = dataIn[0]->getLength() / sizeof(complexf);
-    size_t dataSize = dataIn[1]->getLength() / sizeof(complexf);
-    dataOut->setLength((phaseSize + dataSize) * sizeof(complexf));
-
-    const complexf* phase = reinterpret_cast<const complexf*>(dataIn[0]->getData());
-    const complexf* in = reinterpret_cast<const complexf*>(dataIn[1]->getData());
-    complexf* out = reinterpret_cast<complexf*>(dataOut->getData());
-
-    if (phaseSize != d_carriers) {
-        throw std::runtime_error(
-                "DifferentialModulator::process input phase size not valid!");
+    if (m_fixedPoint) {
+        do_process<complexfix>(m_carriers, dataIn, dataOut);
     }
-    if (dataSize % d_carriers != 0) {
-        throw std::runtime_error(
-                "DifferentialModulator::process input data size not valid!");
-    }
-
-    memcpy(dataOut->getData(), phase, phaseSize * sizeof(complexf));
-    for (size_t i = 0; i < dataSize; i += d_carriers) {
-        for (size_t j = 0; j < d_carriers; j += 4) {
-            out[d_carriers + j] = out[j] * in[j];
-            out[d_carriers + j + 1] = out[j + 1] * in[j + 1];
-            out[d_carriers + j + 2] = out[j + 2] * in[j + 2];
-            out[d_carriers + j + 3] = out[j + 3] * in[j + 3];
-        }
-        in += d_carriers;
-        out += d_carriers;
+    else {
+        do_process<complexf>(m_carriers, dataIn, dataOut);
     }
 
     return dataOut->getLength();

@@ -26,9 +26,9 @@
  */
 
 #include <ctime>
+#include <cstring>
 #include <sstream>
 #include "Utils.h"
-#include "GainControl.h"
 #if defined(HAVE_PRCTL)
 #  include <sys/prctl.h>
 #endif

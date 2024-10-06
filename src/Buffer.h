@@ -34,7 +34,10 @@
 #include <vector>
 #include <memory>
 #include <complex>
+#include "fpm/fixed.hpp"
+
 typedef std::complex<float> complexf;
+typedef std::complex<fpm::fixed_16_16> complexfix;
 
 /* Buffer is a container for a byte array, which is memory-aligned
  * to 32 bytes for SSE performance.

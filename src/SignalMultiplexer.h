@@ -36,7 +36,7 @@
 class SignalMultiplexer : public ModMux
 {
 public:
-    SignalMultiplexer(size_t frameSize);
+    SignalMultiplexer();
     virtual ~SignalMultiplexer();
     SignalMultiplexer(const SignalMultiplexer&);
     SignalMultiplexer& operator=(const SignalMultiplexer&);
@@ -44,8 +44,5 @@ public:
 
     int process(std::vector<Buffer*> dataIn, Buffer* dataOut);
     const char* name() { return "SignalMultiplexer"; }
-
-protected:
-    size_t d_frameSize;
 };
 

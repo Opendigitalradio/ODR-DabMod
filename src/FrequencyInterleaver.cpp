@@ -28,8 +28,9 @@
 #include <cstdlib>
 
 
-FrequencyInterleaver::FrequencyInterleaver(size_t mode) :
-    ModCodec()
+FrequencyInterleaver::FrequencyInterleaver(size_t mode, bool fixedPoint) :
+    ModCodec(),
+    m_fixedPoint(fixedPoint)
 {
     PDEBUG("FrequencyInterleaver::FrequencyInterleaver(%zu) @ %p\n",
             mode, this);
@@ -39,45 +40,43 @@ FrequencyInterleaver::FrequencyInterleaver(size_t mode) :
     size_t beta;
     switch (mode) {
     case 1:
-        d_carriers = 1536;
+        m_carriers = 1536;
         num = 2048;
         beta = 511;
         break;
     case 2:
-        d_carriers = 384;
+        m_carriers = 384;
         num = 512;
         beta = 127;
         break;
     case 3:
-        d_carriers = 192;
+        m_carriers = 192;
         num = 256;
         beta = 63;
         break;
     case 0:
     case 4:
-        d_carriers = 768;
+        m_carriers = 768;
         num = 1024;
         beta = 255;
         break;
     default:
         PDEBUG("Carriers: %zu\n", (d_carriers >> 1) << 1);
-        throw std::runtime_error("FrequencyInterleaver::FrequencyInterleaver "
-                "nb of carriers invalid!");
-        break;
+        throw std::runtime_error("FrequencyInterleaver: invalid dab mode");
     }
 
-    const int ret = posix_memalign((void**)(&d_indexes), 16, d_carriers * sizeof(size_t));
+    const int ret = posix_memalign((void**)(&m_indices), 16, m_carriers * sizeof(size_t));
     if (ret != 0) {
         throw std::runtime_error("memory allocation failed: " + std::to_string(ret));
     }
 
-    size_t* index = d_indexes;
+    size_t *index = m_indices;
     size_t perm = 0;
     PDEBUG("i: %4u, R: %4u\n", 0, 0);
     for (size_t j = 1; j < num; ++j) {
         perm = (alpha * perm + beta) & (num - 1);
-        if (perm >= ((num - d_carriers) / 2)
-                && perm <= (num - (num - d_carriers) / 2)
+        if (perm >= ((num - m_carriers) / 2)
+                && perm <= (num - (num - m_carriers) / 2)
                 && perm != (num / 2)) {
             PDEBUG("i: %4zu, R: %4zu, d: %4zu, n: %4zu, k: %5zi, index: %zu\n",
                     j, perm, perm, index - d_indexes, perm - num / 2,
@@ -85,8 +84,9 @@ FrequencyInterleaver::FrequencyInterleaver(size_t mode) :
                     ?  perm - (1 + (num / 2))
                     : perm + (d_carriers - (num / 2)));
             *(index++) = perm > num / 2 ?
-                perm - (1 + (num / 2)) : perm + (d_carriers - (num / 2));
-        } else {
+                perm - (1 + (num / 2)) : perm + (m_carriers - (num / 2));
+        }
+        else {
             PDEBUG("i: %4zu, R: %4zu\n", j, perm);
         }
     }
@@ -97,9 +97,33 @@ FrequencyInterleaver::~FrequencyInterleaver()
 {
     PDEBUG("FrequencyInterleaver::~FrequencyInterleaver() @ %p\n", this);
 
-    free(d_indexes);
+    free(m_indices);
 }
 
+template<typename T>
+void do_process(Buffer* const dataIn, Buffer* dataOut,
+        size_t carriers, const size_t * const indices)
+{
+    const T* in = reinterpret_cast<const T*>(dataIn->getData());
+    T* out = reinterpret_cast<T*>(dataOut->getData());
+    size_t sizeIn = dataIn->getLength() / sizeof(T);
+
+    if (sizeIn % carriers != 0) {
+        throw std::runtime_error(
+                "FrequencyInterleaver::process input size not valid!");
+    }
+
+    for (size_t i = 0; i < sizeIn;) {
+//      memset(out, 0, d_carriers * sizeof(T));
+        for (size_t j = 0; j < carriers; i += 4, j += 4) {
+            out[indices[j]] = in[i];
+            out[indices[j + 1]] = in[i + 1];
+            out[indices[j + 2]] = in[i + 2];
+            out[indices[j + 3]] = in[i + 3];
+        }
+        out += carriers;
+    }
+}
 
 int FrequencyInterleaver::process(Buffer* const dataIn, Buffer* dataOut)
 {
@@ -109,24 +133,11 @@ int FrequencyInterleaver::process(Buffer* const dataIn, Buffer* dataOut)
 
     dataOut->setLength(dataIn->getLength());
 
-    const complexf* in = reinterpret_cast<const complexf*>(dataIn->getData());
-    complexf* out = reinterpret_cast<complexf*>(dataOut->getData());
-    size_t sizeIn = dataIn->getLength() / sizeof(complexf);
-
-    if (sizeIn % d_carriers != 0) {
-        throw std::runtime_error(
-                "FrequencyInterleaver::process input size not valid!");
+    if (m_fixedPoint) {
+        do_process<complexfix>(dataIn, dataOut, m_carriers, m_indices);
     }
-
-    for (size_t i = 0; i < sizeIn;) {
-//        memset(out, 0, d_carriers * sizeof(complexf));
-        for (size_t j = 0; j < d_carriers; i += 4, j += 4) {
-            out[d_indexes[j]] = in[i];
-            out[d_indexes[j + 1]] = in[i + 1];
-            out[d_indexes[j + 2]] = in[i + 2];
-            out[d_indexes[j + 3]] = in[i + 3];
-        }
-        out += d_carriers;
+    else {
+        do_process<complexf>(dataIn, dataOut, m_carriers, m_indices);
     }
 
     return 1;

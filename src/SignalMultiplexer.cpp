@@ -28,9 +28,8 @@
 #include <string.h>
 
 
-SignalMultiplexer::SignalMultiplexer(size_t framesize) :
-    ModMux(),
-    d_frameSize(framesize)
+SignalMultiplexer::SignalMultiplexer() :
+    ModMux()
 {
     PDEBUG("SignalMultiplexer::SignalMultiplexer(%zu) @ %p\n", framesize, this);
 

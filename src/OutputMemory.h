@@ -61,8 +61,6 @@ public:
 
     meta_vec_t get_latest_metadata(void);
 
-    void setOutput(Buffer* dataOut);
-
 protected:
     Buffer* myDataOut;
     meta_vec_t myMetadata;

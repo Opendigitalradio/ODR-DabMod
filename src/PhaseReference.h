@@ -32,25 +32,33 @@
 
 #include "ModPlugin.h"
 
-#include <cstddef>
-#include <complex>
 #include <vector>
+#include <cstddef>
+
+template <typename T>
+struct PhaseRefGen {
+    std::vector<T> dataIn;
+    void fillData(unsigned int dabmode, size_t carriers);
+
+    private:
+    T convert(uint8_t data);
+};
+
 
 class PhaseReference : public ModInput
 {
     public:
-        PhaseReference(unsigned int dabmode);
+        PhaseReference(unsigned int dabmode, bool fixedPoint);
 
         int process(Buffer* dataOut) override;
         const char* name() override { return "PhaseReference"; }
 
     protected:
         unsigned int d_dabmode;
+        bool d_fixedPoint;
         size_t d_carriers;
-        size_t d_num;
-        const static uint8_t d_h[4][32];
-        std::vector<std::complex<float> > d_dataIn;
 
-        void fillData();
+        PhaseRefGen<complexf> d_phaseRefCF32;
+        PhaseRefGen<complexfix> d_phaseRefFixed;
 };
 
