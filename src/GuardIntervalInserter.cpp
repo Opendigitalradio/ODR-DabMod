@@ -112,8 +112,6 @@ int do_process(const GuardIntervalInserter::Params& p, Buffer* const dataIn, Buf
     PDEBUG("GuardIntervalInserter do_process(dataIn: %p, dataOut: %p)\n",
             dataIn, dataOut);
 
-    std::lock_guard<std::mutex> lock(p.windowMutex);
-
     // Every symbol overlaps over a length of windowOverlap with
     // the previous symbol, and with the next symbol. First symbol
     // receives no prefix window, because we don't remember the
@@ -141,7 +139,7 @@ int do_process(const GuardIntervalInserter::Params& p, Buffer* const dataIn, Buf
     // TODO remember the end of the last TF so that we can do some
     //      windowing too.
 
-
+    std::lock_guard<std::mutex> lock(p.windowMutex);
     if (p.windowOverlap) { if constexpr (std::is_same_v<complexf, T>) {
         {
             // Handle Null symbol separately because it is longer

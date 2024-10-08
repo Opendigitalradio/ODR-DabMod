@@ -33,10 +33,8 @@
 #endif
 
 #include "ModPlugin.h"
-#include <complex>
 #include <atomic>
 #include <string>
-#include <cstdint>
 
 class FormatConverter : public ModCodec
 {
@@ -45,6 +43,7 @@ class FormatConverter : public ModCodec
 
         // Allowed formats: s8, u8 and s16
         FormatConverter(const std::string& format);
+        virtual ~FormatConverter();
 
         int process(Buffer* const dataIn, Buffer* dataOut);
         const char* name();

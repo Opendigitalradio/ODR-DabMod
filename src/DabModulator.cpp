@@ -258,8 +258,8 @@ int DabModulator::process(Buffer* dataOut)
         }
 
         if (not m_format.empty()) {
-            if (m_settings.fixedPoint) throw std::runtime_error("fixed point doesn't support format converter");
-
+            // This handles both complexf and fixedpoint:
+            // Convert from complexfix to interleaved int16_t I/Q
             m_formatConverter = make_shared<FormatConverter>(m_format);
         }
 

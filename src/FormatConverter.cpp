@@ -39,6 +39,14 @@ FormatConverter::FormatConverter(const std::string& format) :
     m_format(format)
 { }
 
+FormatConverter::~FormatConverter()
+{
+    etiLog.level(debug) << "FormatConverter: "
+        << m_num_clipped_samples.load() <<
+        " clipped samples";
+}
+
+
 /* Expect the input samples to be in the correct range for the required format */
 int FormatConverter::process(Buffer* const dataIn, Buffer* dataOut)
 {
@@ -47,71 +55,101 @@ int FormatConverter::process(Buffer* const dataIn, Buffer* dataOut)
 
     size_t num_clipped_samples = 0;
 
-    size_t sizeIn = dataIn->getLength() / sizeof(float);
-    float* in = reinterpret_cast<float*>(dataIn->getData());
+    bool source_is_complexf = m_format != "fixedpoint";
 
-    if (m_format == "s16") {
+    if (source_is_complexf) {
+        size_t sizeIn = dataIn->getLength() / sizeof(float);
+        float* in = reinterpret_cast<float*>(dataIn->getData());
+
+        if (m_format == "s16") {
+            dataOut->setLength(sizeIn * sizeof(int16_t));
+            int16_t* out = reinterpret_cast<int16_t*>(dataOut->getData());
+
+            for (size_t i = 0; i < sizeIn; i++) {
+                if (in[i] < INT16_MIN) {
+                    out[i] = INT16_MIN;
+                    num_clipped_samples++;
+                }
+                else if (in[i] > INT16_MAX) {
+                    out[i] = INT16_MAX;
+                    num_clipped_samples++;
+                }
+                else {
+                    out[i] = in[i];
+                }
+            }
+        }
+        else if (m_format == "u8") {
+            dataOut->setLength(sizeIn * sizeof(int8_t));
+            uint8_t* out = reinterpret_cast<uint8_t*>(dataOut->getData());
+
+            for (size_t i = 0; i < sizeIn; i++) {
+                const auto samp = in[i] + 128.0f;
+                if (samp < 0) {
+                    out[i] = 0;
+                    num_clipped_samples++;
+                }
+                else if (samp > UINT8_MAX) {
+                    out[i] = UINT8_MAX;
+                    num_clipped_samples++;
+                }
+                else {
+                    out[i] = samp;
+                }
+
+            }
+        }
+        else if (m_format == "s8") {
+            dataOut->setLength(sizeIn * sizeof(int8_t));
+            int8_t* out = reinterpret_cast<int8_t*>(dataOut->getData());
+
+            for (size_t i = 0; i < sizeIn; i++) {
+                if (in[i] < INT8_MIN) {
+                    out[i] = INT8_MIN;
+                    num_clipped_samples++;
+                }
+                else if (in[i] > INT8_MAX) {
+                    out[i] = INT8_MAX;
+                    num_clipped_samples++;
+                }
+                else {
+                    out[i] = in[i];
+                }
+            }
+        }
+        else {
+            throw std::runtime_error("FormatConverter: Invalid format " + m_format);
+        }
+
+    }
+    else {
+        // Output is always sc16, because that's what UHD accepts
+
+        using fixed_t = complexfix::value_type;
+        size_t sizeIn = dataIn->getLength() / sizeof(fixed_t);
+        fixed_t* in = reinterpret_cast<fixed_t*>(dataIn->getData());
+
         dataOut->setLength(sizeIn * sizeof(int16_t));
         int16_t* out = reinterpret_cast<int16_t*>(dataOut->getData());
 
         for (size_t i = 0; i < sizeIn; i++) {
-            if (in[i] < INT16_MIN) {
+            const auto v = (in[i] * 2).raw_value();
+
+            if (v < INT16_MIN) {
                 out[i] = INT16_MIN;
                 num_clipped_samples++;
             }
-            else if (in[i] > INT16_MAX) {
+            else if (v > INT16_MAX) {
                 out[i] = INT16_MAX;
                 num_clipped_samples++;
             }
             else {
-                out[i] = in[i];
+                out[i] = (int16_t)v;
             }
         }
-    }
-    else if (m_format == "u8") {
-        dataOut->setLength(sizeIn * sizeof(int8_t));
-        uint8_t* out = reinterpret_cast<uint8_t*>(dataOut->getData());
-
-        for (size_t i = 0; i < sizeIn; i++) {
-            const auto samp = in[i] + 128.0f;
-            if (samp < 0) {
-                out[i] = 0;
-                num_clipped_samples++;
-            }
-            else if (samp > UINT8_MAX) {
-                out[i] = UINT8_MAX;
-                num_clipped_samples++;
-            }
-            else {
-                out[i] = samp;
-            }
-
-        }
-    }
-    else if (m_format == "s8") {
-        dataOut->setLength(sizeIn * sizeof(int8_t));
-        int8_t* out = reinterpret_cast<int8_t*>(dataOut->getData());
-
-        for (size_t i = 0; i < sizeIn; i++) {
-            if (in[i] < INT8_MIN) {
-                out[i] = INT8_MIN;
-                num_clipped_samples++;
-            }
-            else if (in[i] > INT8_MAX) {
-                out[i] = INT8_MAX;
-                num_clipped_samples++;
-            }
-            else {
-                out[i] = in[i];
-            }
-        }
-    }
-    else {
-        throw std::runtime_error("FormatConverter: Invalid format " + m_format);
     }
 
     m_num_clipped_samples.store(num_clipped_samples);
-
     return dataOut->getLength();
 }
 
@@ -129,7 +167,10 @@ size_t FormatConverter::get_num_clipped_samples() const
 size_t FormatConverter::get_format_size(const std::string& format)
 {
     // Returns 2*sizeof(SAMPLE_TYPE) because we have I + Q
-    if (format == "s16") {
+    if (format == "fixedpoint") {
+        return 4;
+    }
+    else if (format == "s16") {
         return 4;
     }
     else if (format == "u8") {

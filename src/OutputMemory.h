@@ -62,8 +62,8 @@ public:
     meta_vec_t get_latest_metadata(void);
 
 protected:
-    Buffer* myDataOut;
-    meta_vec_t myMetadata;
+    Buffer* m_dataOut;
+    meta_vec_t m_metadata;
 
 #if OUTPUT_MEM_HISTOGRAM
     // keep track of max value

@@ -38,9 +38,7 @@ DESCRIPTION:
 #include <string>
 #include <vector>
 #include <complex>
-#include <variant>
 #include <optional>
-#include <unordered_map>
 
 #include "TimestampDecoder.h"
 
@@ -58,6 +56,8 @@ struct SDRDeviceConfig {
     std::string subDevice; // For UHD
     std::string tx_antenna;
     std::string rx_antenna;
+
+    bool fixedPoint = false;
 
     long masterClockRate = 32768000;
     unsigned sampleRate = 2048000;
