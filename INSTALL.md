@@ -1,33 +1,18 @@
-You have 3 ways to install odr-dabmod on your host:
+You have 3 ways to install odr-dabmux on your host:
 
-# Using binary debian packages
-If your host is running a debian-based OS on amd64, arm64 or arm/v7, then you can install this tool using the standard debian packaging system:
-1. Update the debian apt repository list:
-   ```
-   # Replace bullseye (debian-11) with bookworm (debian-12) if applicable
+# Using your linux distribution packaging system
+`odr-dabmod` is available on the official repositories of several debian-based distributions, such as Debian 
+(from Debian 12), Ubuntu (from 24.10), Opensuse and Arch.
 
-   curl -fsSL http://debian.opendigitalradio.org/opendigitalradio-bullseye.sources > /etc/apt/sources.list.d/opendigitalradio-bullseye.sources
-
-   curl -fsSL http://debian.opendigitalradio.org/opendigitalradio.asc | gpg --dearmor > /etc/apt/trusted.gpg.d/opendigitalradio.gpg
-   ```
-1. Refresh the debian packages list:
-   ```
-   apt update
-   ```
-1. Install the package:
-   ```
-   sudo apt install --yes odr-dabmod
-   ```
+If you are using Debian 12 (Bookworm), you will need to 
+[add the backports repository](https://backports.debian.org/Instructions/)
 
 **Notice**: this package does not include the web-based GUI and Digital Predistortion Computation engine
 
-# Using the dab-scripts
-You can compile this tool as well as the other main components of the mmbTools set with an installation script:
-1. Clone the dab-scripts repository:
-   ```
-   git clone https://github.com/opendigitalradio/dab-scripts.git
-   ```
-1. Follow the [instructions](https://github.com/Opendigitalradio/dab-scripts/tree/master/install)
+# Using installation scripts
+If your linux distribution is debian-based, you can install odr-dabmod
+as well as the other main components of the mmbTools set with the 
+[Opendigitalradio dab-scripts](https://github.com/opendigitalradio/dab-scripts.git)
 
 # Compiling manually
 Unlike the 2 previous options, this one allows you to compile odr-dabmod with the features you really need.
