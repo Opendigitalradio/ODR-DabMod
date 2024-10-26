@@ -599,7 +599,7 @@ OfdmGeneratorDEXTER::OfdmGeneratorDEXTER(size_t nbSymbols,
     PDEBUG("OfdmGeneratorDEXTER::OfdmGeneratorDEXTER(%zu, %zu, %zu, %s) @ %p\n",
             nbSymbols, nbCarriers, spacing, inverse ? "true" : "false", this);
 
-    etiLog.level(info) << "Using DEXTER FFT Aceelerator for fixed-point transform";
+    etiLog.level(info) << "Using DEXTER FFT Accelerator for fixed-point transform";
 
     if (nbCarriers > spacing) {
         throw std::runtime_error("OfdmGenerator nbCarriers > spacing!");
@@ -758,7 +758,7 @@ int OfdmGeneratorDEXTER::process(Buffer* const dataIn, Buffer* dataOut)
             throw std::runtime_error("OfdmGenerator::process error refilling IIO buffer!");
         }
 
-        memcpy(out, fft_out, mySpacing * sizeof(kiss_fft_cpx));
+        memcpy(out, fft_out, mySpacing * sizeof(complexfix));
 
         in += myNbCarriers;
         out += mySpacing;

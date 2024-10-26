@@ -424,7 +424,8 @@ int launch_modulator(int argc, char* argv[])
     ModulatorData m;
     rcs.enrol(&m);
 
-    if (not mod_settings.fixedPoint) {
+    // Neither KISS FFT used for fixedpoint nor the FFT Accelerator used for DEXTER need planning.
+    if (not (mod_settings.fixedPoint or mod_settings.useDexterOutput)) {
         // This is mostly useful on ARM systems where FFTW planning takes some time. If we do it here
         // it will be done before the modulator starts up
         etiLog.level(debug) << "Running FFTW planning...";
