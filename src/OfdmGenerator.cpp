@@ -2,7 +2,7 @@
    Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010, 2011 Her Majesty
    the Queen in Right of Canada (Communications Research Center Canada)
 
-   Copyright (C) 2023
+   Copyright (C) 2024
    Matthias P. Braendli, matthias.braendli@mpb.li
 
     http://opendigitalradio.org
@@ -64,8 +64,7 @@ OfdmGeneratorCF32::OfdmGeneratorCF32(size_t nbSymbols,
             nbSymbols, nbCarriers, spacing, inverse ? "true" : "false", this);
 
     if (nbCarriers > spacing) {
-        throw std::runtime_error(
-                "OfdmGenerator::OfdmGenerator nbCarriers > spacing!");
+        throw std::runtime_error("OfdmGenerator nbCarriers > spacing!");
     }
 
     /* register the parameters that can be remote controlled */
@@ -162,8 +161,8 @@ int OfdmGeneratorCF32::process(Buffer* const dataIn, Buffer* dataOut)
 
     dataOut->setLength(myNbSymbols * mySpacing * sizeof(complexf));
 
-    FFTW_TYPE* in = reinterpret_cast<FFTW_TYPE*>(dataIn->getData());
-    FFTW_TYPE* out = reinterpret_cast<FFTW_TYPE*>(dataOut->getData());
+    FFTW_TYPE *in = reinterpret_cast<FFTW_TYPE*>(dataIn->getData());
+    FFTW_TYPE *out = reinterpret_cast<FFTW_TYPE*>(dataOut->getData());
 
     size_t sizeIn = dataIn->getLength() / sizeof(complexf);
     size_t sizeOut = dataOut->getLength() / sizeof(complexf);
@@ -205,7 +204,7 @@ int OfdmGeneratorCF32::process(Buffer* const dataIn, Buffer* dataOut)
         myPaprAfterCFR.clear();
     }
 
-    for (size_t i = 0; i < myNbSymbols; ++i) {
+    for (size_t i = 0; i < myNbSymbols; i++) {
         myFftIn[0][0] = 0;
         myFftIn[0][1] = 0;
 
@@ -485,8 +484,7 @@ OfdmGeneratorFixed::OfdmGeneratorFixed(size_t nbSymbols,
     etiLog.level(info) << "Using KISS FFT by Mark Borgerding for fixed-point transform";
 
     if (nbCarriers > spacing) {
-        throw std::runtime_error(
-                "OfdmGenerator::OfdmGenerator nbCarriers > spacing!");
+        throw std::runtime_error("OfdmGenerator nbCarriers > spacing!");
     }
 
     if (inverse) {
@@ -538,8 +536,8 @@ int OfdmGeneratorFixed::process(Buffer* const dataIn, Buffer* dataOut)
 {
     dataOut->setLength(myNbSymbols * mySpacing * sizeof(kiss_fft_cpx));
 
-    kiss_fft_cpx* in = reinterpret_cast<kiss_fft_cpx*>(dataIn->getData());
-    kiss_fft_cpx* out = reinterpret_cast<kiss_fft_cpx*>(dataOut->getData());
+    kiss_fft_cpx *in = reinterpret_cast<kiss_fft_cpx*>(dataIn->getData());
+    kiss_fft_cpx *out = reinterpret_cast<kiss_fft_cpx*>(dataOut->getData());
 
     size_t sizeIn = dataIn->getLength() / sizeof(kiss_fft_cpx);
     size_t sizeOut = dataOut->getLength() / sizeof(kiss_fft_cpx);
@@ -561,7 +559,7 @@ int OfdmGeneratorFixed::process(Buffer* const dataIn, Buffer* dataOut)
                 "OfdmGenerator::process output size not valid!");
     }
 
-    for (size_t i = 0; i < myNbSymbols; ++i) {
+    for (size_t i = 0; i < myNbSymbols; i++) {
         myFftIn[0].r = 0;
         myFftIn[0].i = 0;
 
@@ -584,3 +582,189 @@ int OfdmGeneratorFixed::process(Buffer* const dataIn, Buffer* dataOut)
 
     return sizeOut;
 }
+
+#ifdef HAVE_DEXTER
+OfdmGeneratorDEXTER::OfdmGeneratorDEXTER(size_t nbSymbols,
+                             size_t nbCarriers,
+                             size_t spacing,
+                             bool& enableCfr,
+                             float& cfrClip,
+                             float& cfrErrorClip,
+                             bool inverse) :
+    ModCodec(),
+    myNbSymbols(nbSymbols),
+    myNbCarriers(nbCarriers),
+    mySpacing(spacing)
+{
+    PDEBUG("OfdmGeneratorDEXTER::OfdmGeneratorDEXTER(%zu, %zu, %zu, %s) @ %p\n",
+            nbSymbols, nbCarriers, spacing, inverse ? "true" : "false", this);
+
+    etiLog.level(info) << "Using DEXTER FFT Aceelerator for fixed-point transform";
+
+    if (nbCarriers > spacing) {
+        throw std::runtime_error("OfdmGenerator nbCarriers > spacing!");
+    }
+
+    if (inverse) {
+        myPosDst = (nbCarriers & 1 ? 0 : 1);
+        myPosSrc = 0;
+        myPosSize = (nbCarriers + 1) / 2;
+        myNegDst = spacing - (nbCarriers / 2);
+        myNegSrc = (nbCarriers + 1) / 2;
+        myNegSize = nbCarriers / 2;
+    }
+    else {
+        myPosDst = (nbCarriers & 1 ? 0 : 1);
+        myPosSrc = nbCarriers / 2;
+        myPosSize = (nbCarriers + 1) / 2;
+        myNegDst = spacing - (nbCarriers / 2);
+        myNegSrc = 0;
+        myNegSize = nbCarriers / 2;
+    }
+    myZeroDst = myPosDst + myPosSize;
+    myZeroSize = myNegDst - myZeroDst;
+
+    PDEBUG("  myPosDst: %u\n", myPosDst);
+    PDEBUG("  myPosSrc: %u\n", myPosSrc);
+    PDEBUG("  myPosSize: %u\n", myPosSize);
+    PDEBUG("  myNegDst: %u\n", myNegDst);
+    PDEBUG("  myNegSrc: %u\n", myNegSrc);
+    PDEBUG("  myNegSize: %u\n", myNegSize);
+    PDEBUG("  myZeroDst: %u\n", myZeroDst);
+    PDEBUG("  myZeroSize: %u\n", myZeroSize);
+
+    const int N = mySpacing; // The size of the FFT
+    const size_t nbytes = N * sizeof(complexfix);
+
+#define IIO_ENSURE(expr, err) { \
+    if (!(expr)) { \
+        etiLog.log(error, "%s (%s:%d)\n", err, __FILE__, __LINE__); \
+        throw std::runtime_error("Failed to set FFT for OfdmGeneratorDEXTER"); \
+    } \
+}
+    IIO_ENSURE((m_ctx = iio_create_default_context()), "No context");
+    IIO_ENSURE(m_dev_in = iio_context_find_device(m_ctx, "fft-accelerator-in"), "no dev");
+    IIO_ENSURE(m_dev_out = iio_context_find_device(m_ctx, "fft-accelerator-out"), "no dev");
+    IIO_ENSURE(m_channel_in = iio_device_find_channel(m_dev_in, "voltage0", true), "no channel");
+    IIO_ENSURE(m_channel_out = iio_device_find_channel(m_dev_out, "voltage0", false), "no channel");
+
+    iio_channel_enable(m_channel_in);
+    iio_channel_enable(m_channel_out);
+
+    m_buf_in = iio_device_create_buffer(m_dev_in, nbytes, false);
+    if (!m_buf_in) {
+        throw std::runtime_error("OfdmGeneratorDEXTER could not create in buffer");
+    }
+
+    m_buf_out = iio_device_create_buffer(m_dev_out, nbytes, false);
+    if (!m_buf_out) {
+        throw std::runtime_error("OfdmGeneratorDEXTER could not create out buffer");
+    }
+}
+
+OfdmGeneratorDEXTER::~OfdmGeneratorDEXTER()
+{
+    if (m_buf_in) {
+        iio_buffer_destroy(m_buf_in);
+        m_buf_in = nullptr;
+    }
+
+    if (m_buf_out) {
+        iio_buffer_destroy(m_buf_out);
+        m_buf_out = nullptr;
+    }
+
+    if (m_channel_in) {
+        iio_channel_disable(m_channel_in);
+        m_channel_in = nullptr;
+    }
+
+    if (m_channel_out) {
+        iio_channel_disable(m_channel_out);
+        m_channel_out = nullptr;
+    }
+
+    if (m_ctx) {
+        iio_context_destroy(m_ctx);
+        m_ctx = nullptr;
+    }
+}
+
+int OfdmGeneratorDEXTER::process(Buffer* const dataIn, Buffer* dataOut)
+{
+    dataOut->setLength(myNbSymbols * mySpacing * sizeof(complexfix));
+
+    complexfix *in = reinterpret_cast<complexfix*>(dataIn->getData());
+    complexfix *out = reinterpret_cast<complexfix*>(dataOut->getData());
+
+    size_t sizeIn = dataIn->getLength() / sizeof(complexfix);
+    size_t sizeOut = dataOut->getLength() / sizeof(complexfix);
+
+    if (sizeIn != myNbSymbols * myNbCarriers) {
+        PDEBUG("Nb symbols: %zu\n", myNbSymbols);
+        PDEBUG("Nb carriers: %zu\n", myNbCarriers);
+        PDEBUG("Spacing: %zu\n", mySpacing);
+        PDEBUG("\n%zu != %zu\n", sizeIn, myNbSymbols * myNbCarriers);
+        throw std::runtime_error(
+                "OfdmGenerator::process input size not valid!");
+    }
+    if (sizeOut != myNbSymbols * mySpacing) {
+        PDEBUG("Nb symbols: %zu\n", myNbSymbols);
+        PDEBUG("Nb carriers: %zu\n", myNbCarriers);
+        PDEBUG("Spacing: %zu\n", mySpacing);
+        PDEBUG("\n%zu != %zu\n", sizeIn, myNbSymbols * mySpacing);
+        throw std::runtime_error("OfdmGenerator::process output size not valid!");
+    }
+
+    ptrdiff_t iio_buf_size = (uint8_t*)iio_buffer_end(m_buf_in) - (uint8_t*)iio_buffer_start(m_buf_in);
+    if (iio_buf_size != (ssize_t)(mySpacing * sizeof(complexfix))) {
+        throw std::runtime_error("OfdmGenerator::process incorrect iio buffer size!");
+    }
+
+    ptrdiff_t p_inc = iio_buffer_step(m_buf_out);
+    if (p_inc != 1) {
+        throw std::runtime_error("OfdmGenerator::process Wrong p_inc");
+    }
+
+    const uint8_t *fft_out = (const uint8_t*)iio_buffer_first(m_buf_out, m_channel_out);
+    const uint8_t *fft_out_end = (const uint8_t*)iio_buffer_end(m_buf_out);
+    if (((fft_out_end - fft_out) != (ssize_t)(mySpacing * sizeof(complexfix))) != 0) {
+        throw std::runtime_error("OfdmGenerator::process fft_out length invalid!");
+    }
+
+    complexfix *fft_in = reinterpret_cast<complexfix*>(iio_buffer_start(m_buf_in));
+
+    fft_in[0] = static_cast<complexfix::value_type>(0);
+    for (size_t i = 0; i < myZeroSize; i++) {
+        fft_in[myZeroDst + i] = static_cast<complexfix::value_type>(0);
+    }
+
+    for (size_t i = 0; i < myNbSymbols; i++) {
+        /* For TM I this is:
+         * ZeroDst=769 ZeroSize=511
+         * PosSrc=0 PosDst=1 PosSize=768
+         * NegSrc=768 NegDst=1280 NegSize=768
+         */
+        memcpy(&fft_in[myPosDst], &in[myPosSrc], myPosSize * sizeof(complexfix));
+        memcpy(&fft_in[myNegDst], &in[myNegSrc], myNegSize * sizeof(complexfix));
+
+        ssize_t nbytes_tx = iio_buffer_push(m_buf_in);
+        if (nbytes_tx < 0) {
+            throw std::runtime_error("OfdmGenerator::process error pushing IIO buffer!");
+        }
+
+        ssize_t nbytes_rx = iio_buffer_refill(m_buf_out);
+        if (nbytes_rx < 0) {
+            throw std::runtime_error("OfdmGenerator::process error refilling IIO buffer!");
+        }
+
+        memcpy(out, fft_out, mySpacing * sizeof(kiss_fft_cpx));
+
+        in += myNbCarriers;
+        out += mySpacing;
+    }
+
+    return sizeOut;
+}
+
+#endif // HAVE_DEXTER

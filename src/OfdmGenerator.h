@@ -2,7 +2,7 @@
    Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010, 2011 Her Majesty
    the Queen in Right of Canada (Communications Research Center Canada)
 
-   Copyright (C) 2023
+   Copyright (C) 2024
    Matthias P. Braendli, matthias.braendli@mpb.li
 
     http://opendigitalradio.org
@@ -140,3 +140,49 @@ class OfdmGeneratorFixed : public ModCodec
         unsigned myZeroDst;
         unsigned myZeroSize;
 };
+
+#ifdef HAVE_DEXTER
+#include "iio.h"
+// The PrecisionWave DEXTER device contains an FFT accelerator in FPGA
+class OfdmGeneratorDEXTER : public ModCodec
+{
+    public:
+        OfdmGeneratorDEXTER(size_t nbSymbols,
+                      size_t nbCarriers,
+                      size_t spacing,
+                      bool& enableCfr,
+                      float& cfrClip,
+                      float& cfrErrorClip,
+                      bool inverse = true);
+        virtual ~OfdmGeneratorDEXTER();
+        OfdmGeneratorDEXTER(const OfdmGeneratorDEXTER&) = delete;
+        OfdmGeneratorDEXTER& operator=(const OfdmGeneratorDEXTER&) = delete;
+
+        int process(Buffer* const dataIn, Buffer* dataOut) override;
+        const char* name() override { return "OfdmGenerator"; }
+
+    private:
+        struct iio_context *m_ctx = nullptr;
+
+        // "in" and "out" are from the point of view of the FFT Accelerator block
+        struct iio_device *m_dev_in = nullptr;
+        struct iio_channel *m_channel_in = nullptr;
+        struct iio_buffer *m_buf_in = nullptr;
+
+        struct iio_device *m_dev_out = nullptr;
+        struct iio_channel *m_channel_out = nullptr;
+        struct iio_buffer *m_buf_out = nullptr;
+
+        const size_t myNbSymbols;
+        const size_t myNbCarriers;
+        const size_t mySpacing;
+        unsigned myPosSrc;
+        unsigned myPosDst;
+        unsigned myPosSize;
+        unsigned myNegSrc;
+        unsigned myNegDst;
+        unsigned myNegSize;
+        unsigned myZeroDst;
+        unsigned myZeroSize;
+};
+#endif // HAVE_DEXTER

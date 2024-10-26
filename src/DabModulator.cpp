@@ -190,7 +190,16 @@ int DabModulator::process(Buffer* dataOut)
 
         shared_ptr<ModPlugin> cifOfdm;
 
-        if (m_settings.fixedPoint) {
+        if (m_settings.useDexterOutput) {
+            cifOfdm = make_shared<OfdmGeneratorDEXTER>(
+                    (1 + m_nbSymbols),
+                    m_nbCarriers,
+                    m_spacing,
+                    m_settings.enableCfr,
+                    m_settings.cfrClip,
+                    m_settings.cfrErrorClip);
+        }
+        else if (m_settings.fixedPoint) {
             cifOfdm = make_shared<OfdmGeneratorFixed>(
                     (1 + m_nbSymbols),
                     m_nbCarriers,
