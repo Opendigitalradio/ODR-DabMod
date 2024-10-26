@@ -1,10 +1,10 @@
-You have 3 ways to install odr-dabmux on your host:
+You have 3 ways to install odr-dabmod on your host:
 
 # Using your linux distribution packaging system
-`odr-dabmod` is available on the official repositories of several debian-based distributions, such as Debian 
+`odr-dabmod` is available on the official repositories of several debian-based distributions, such as Debian
 (from Debian 12), Ubuntu (from 24.10), Opensuse and Arch.
 
-If you are using Debian 12 (Bookworm), you will need to 
+If you are using Debian 12 (Bookworm), you will need to
 [add the backports repository](https://backports.debian.org/Instructions/)
 
 **Notice**: this package does not include the web-based GUI and Digital Predistortion Computation engine
