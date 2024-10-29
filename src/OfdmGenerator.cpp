@@ -747,8 +747,6 @@ int OfdmGeneratorDEXTER::process(Buffer* const dataIn, Buffer* dataOut)
             throw std::runtime_error("OfdmGenerator::process error refilling IIO buffer!");
         }
 
-        fprintf(stderr, "IIO refill %zd\n", nbytes_rx);
-
         ptrdiff_t p_inc = iio_buffer_step(m_buf_out);
         if (p_inc != 1) {
             throw std::runtime_error("OfdmGenerator::process Wrong p_inc");
