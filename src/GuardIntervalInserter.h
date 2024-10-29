@@ -30,6 +30,7 @@
 #   include <config.h>
 #endif
 
+#include "ConfigParser.h"
 #include "ModPlugin.h"
 #include "RemoteControl.h"
 #include <stdint.h>
@@ -51,7 +52,7 @@ class GuardIntervalInserter : public ModCodec, public RemoteControllable
                 size_t nullSize,
                 size_t symSize,
                 size_t& windowOverlap,
-                bool fixedPoint);
+                FFTEngine fftEngine);
 
         virtual ~GuardIntervalInserter() {}
 
@@ -84,7 +85,7 @@ class GuardIntervalInserter : public ModCodec, public RemoteControllable
     protected:
         void update_window(size_t new_window_overlap);
 
-        bool m_fixedPoint;
+        FFTEngine m_fftEngine;
 
         Params m_params;
 

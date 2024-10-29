@@ -633,8 +633,8 @@ OfdmGeneratorDEXTER::OfdmGeneratorDEXTER(size_t nbSymbols,
     PDEBUG("  myZeroDst: %u\n", myZeroDst);
     PDEBUG("  myZeroSize: %u\n", myZeroSize);
 
-    const size_t nbytes = mySpacing * sizeof(complexfix);
-    fprintf(stderr, "sizeof(complexfix)=%zu\n", sizeof(complexfix));
+    const size_t nbytes_in = mySpacing * sizeof(complexfix);
+    const size_t nbytes_out = mySpacing * 2 * sizeof(int32_t);
 
 #define IIO_ENSURE(expr, err) { \
     if (!(expr)) { \
@@ -651,12 +651,12 @@ OfdmGeneratorDEXTER::OfdmGeneratorDEXTER(size_t nbSymbols,
     iio_channel_enable(m_channel_in);
     iio_channel_enable(m_channel_out);
 
-    m_buf_in = iio_device_create_buffer(m_dev_in, nbytes, false);
+    m_buf_in = iio_device_create_buffer(m_dev_in, nbytes_in, false);
     if (!m_buf_in) {
         throw std::runtime_error("OfdmGeneratorDEXTER could not create in buffer");
     }
 
-    m_buf_out = iio_device_create_buffer(m_dev_out, nbytes, false);
+    m_buf_out = iio_device_create_buffer(m_dev_out, nbytes_out, false);
     if (!m_buf_out) {
         throw std::runtime_error("OfdmGeneratorDEXTER could not create out buffer");
     }
@@ -692,13 +692,13 @@ OfdmGeneratorDEXTER::~OfdmGeneratorDEXTER()
 
 int OfdmGeneratorDEXTER::process(Buffer* const dataIn, Buffer* dataOut)
 {
-    dataOut->setLength(myNbSymbols * mySpacing * sizeof(complexfix));
+    dataOut->setLength(myNbSymbols * mySpacing * sizeof(complexfix_wide));
 
     complexfix *in = reinterpret_cast<complexfix*>(dataIn->getData());
-    complexfix *out = reinterpret_cast<complexfix*>(dataOut->getData());
+    complexfix_wide *out = reinterpret_cast<complexfix_wide*>(dataOut->getData());
 
     size_t sizeIn = dataIn->getLength() / sizeof(complexfix);
-    size_t sizeOut = dataOut->getLength() / sizeof(complexfix);
+    size_t sizeOut = dataOut->getLength() / sizeof(complexfix_wide);
 
     if (sizeIn != myNbSymbols * myNbCarriers) {
         PDEBUG("Nb symbols: %zu\n", myNbSymbols);
@@ -754,15 +754,19 @@ int OfdmGeneratorDEXTER::process(Buffer* const dataIn, Buffer* dataOut)
             throw std::runtime_error("OfdmGenerator::process Wrong p_inc");
         }
 
+        // The FFT Accelerator takes 16-bit I + 16-bit Q, and outputs 32-bit I and 32-bit Q.
+        // The formatconvert will take care of this
         const uint8_t *fft_out = (const uint8_t*)iio_buffer_first(m_buf_out, m_channel_out);
         const uint8_t *fft_out_end = (const uint8_t*)iio_buffer_end(m_buf_out);
-        if ((fft_out_end - fft_out) != (ssize_t)(mySpacing * sizeof(complexfix))) {
+        constexpr size_t sizeof_out_iq = sizeof(complexfix_wide);
+        if ((fft_out_end - fft_out) != (ssize_t)(mySpacing * sizeof_out_iq)) {
             fprintf(stderr, "FFT_OUT: %p %p %zu %zu\n",
-                    fft_out, fft_out_end, (fft_out_end - fft_out), mySpacing * sizeof(complexfix));
+                    fft_out, fft_out_end, (fft_out_end - fft_out),
+                    mySpacing * sizeof_out_iq);
             throw std::runtime_error("OfdmGenerator::process fft_out length invalid!");
         }
 
-        memcpy(out, fft_out, mySpacing * sizeof(complexfix));
+        memcpy(out, fft_out, mySpacing * sizeof_out_iq);
 
         in += myNbCarriers;
         out += mySpacing;

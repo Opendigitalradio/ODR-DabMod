@@ -65,6 +65,27 @@ static GainMode parse_gainmode(const std::string &gainMode_setting)
     throw std::runtime_error("Configuration error");
 }
 
+static FFTEngine parse_fft_engine(const std::string &fft_engine_setting)
+{
+    string fft_engine_minuscule(fft_engine_setting);
+    std::transform(fft_engine_minuscule.begin(), fft_engine_minuscule.end(),
+            fft_engine_minuscule.begin(), ::tolower);
+
+    if (fft_engine_minuscule == "fftw") {
+        return FFTEngine::FFTW;
+    }
+    else if (fft_engine_minuscule == "kiss") {
+        return FFTEngine::KISS;
+    }
+    else if (fft_engine_minuscule == "dexter") {
+        return FFTEngine::DEXTER;
+    }
+
+    cerr << "Modulator fft_engine setting '" << fft_engine_setting <<
+        "' not recognised." << endl;
+    throw std::runtime_error("Configuration error");
+}
+
 static void parse_configfile(
         const std::string& configuration_file,
         mod_settings_t& mod_settings)
@@ -154,7 +175,8 @@ static void parse_configfile(
             mod_settings.showProcessTime);
 
     // modulator parameters:
-    mod_settings.fixedPoint = pt.GetInteger("modulator.fixed_point", mod_settings.fixedPoint);
+    const string fft_engine_setting = pt.Get("modulator.fft_engine", "fftw");
+    mod_settings.fftEngine = parse_fft_engine(fft_engine_setting);
 
     const string gainMode_setting = pt.Get("modulator.gainmode", "var");
     mod_settings.gainMode = parse_gainmode(gainMode_setting);

@@ -36,6 +36,12 @@
 #include "TII.h"
 #include "output/SDRDevice.h"
 
+enum class FFTEngine {
+    FFTW, // floating point in software
+    KISS, // fixed-point in software
+    DEXTER // fixed-point in FPGA
+};
+
 struct mod_settings_t {
     std::string startupCheck;
 
@@ -51,7 +57,7 @@ struct mod_settings_t {
     bool useLimeOutput = false;
     bool useBladeRFOutput = false;
 
-    bool fixedPoint = false;
+    FFTEngine fftEngine = FFTEngine::FFTW;
 
     size_t outputRate = 2048000;
     size_t clockRate = 0;

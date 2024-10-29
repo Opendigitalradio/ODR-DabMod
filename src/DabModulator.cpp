@@ -142,13 +142,14 @@ int DabModulator::process(Buffer* dataOut)
         auto cifMux = make_shared<FrameMultiplexer>(m_etiSource);
         auto cifPart = make_shared<BlockPartitioner>(mode);
 
-        auto cifMap = make_shared<QpskSymbolMapper>(m_nbCarriers, m_settings.fixedPoint);
-        auto cifRef = make_shared<PhaseReference>(mode, m_settings.fixedPoint);
-        auto cifFreq = make_shared<FrequencyInterleaver>(mode, m_settings.fixedPoint);
-        auto cifDiff = make_shared<DifferentialModulator>(m_nbCarriers, m_settings.fixedPoint);
+        const bool fixedPoint = m_settings.fftEngine != FFTEngine::FFTW;
+        auto cifMap = make_shared<QpskSymbolMapper>(m_nbCarriers, fixedPoint);
+        auto cifRef = make_shared<PhaseReference>(mode, fixedPoint);
+        auto cifFreq = make_shared<FrequencyInterleaver>(mode, fixedPoint);
+        auto cifDiff = make_shared<DifferentialModulator>(m_nbCarriers, fixedPoint);
 
         auto cifNull = make_shared<NullSymbol>(m_nbCarriers,
-                m_settings.fixedPoint ? sizeof(complexfix) : sizeof(complexf));
+                fixedPoint ? sizeof(complexfix) : sizeof(complexf));
         auto cifSig = make_shared<SignalMultiplexer>();
 
         // TODO this needs a review
@@ -178,7 +179,7 @@ int DabModulator::process(Buffer* dataOut)
         shared_ptr<TII> tii;
         shared_ptr<PhaseReference> tiiRef;
         try {
-            if (m_settings.fixedPoint) {
+            if (fixedPoint) {
                 etiLog.level(warn) << "TII does not yet support fixed point";
             }
             else {
@@ -186,7 +187,7 @@ int DabModulator::process(Buffer* dataOut)
                         m_settings.dabMode,
                         m_settings.tiiConfig);
                 rcs.enrol(tii.get());
-                tiiRef = make_shared<PhaseReference>(mode, m_settings.fixedPoint);
+                tiiRef = make_shared<PhaseReference>(mode, fixedPoint);
             }
         }
         catch (const TIIError& e) {
@@ -195,40 +196,43 @@ int DabModulator::process(Buffer* dataOut)
 
         shared_ptr<ModPlugin> cifOfdm;
 
-        if (m_settings.useDexterOutput) {
-            cifOfdm = make_shared<OfdmGeneratorDEXTER>(
-                    (1 + m_nbSymbols),
-                    m_nbCarriers,
-                    m_spacing,
-                    m_settings.enableCfr,
-                    m_settings.cfrClip,
-                    m_settings.cfrErrorClip);
-        }
-        else if (m_settings.fixedPoint) {
-            cifOfdm = make_shared<OfdmGeneratorFixed>(
-                    (1 + m_nbSymbols),
-                    m_nbCarriers,
-                    m_spacing,
-                    m_settings.enableCfr,
-                    m_settings.cfrClip,
-                    m_settings.cfrErrorClip);
-        }
-        else {
-            auto ofdm = make_shared<OfdmGeneratorCF32>(
-                    (1 + m_nbSymbols),
-                    m_nbCarriers,
-                    m_spacing,
-                    m_settings.enableCfr,
-                    m_settings.cfrClip,
-                    m_settings.cfrErrorClip);
-
-            rcs.enrol(ofdm.get());
-            cifOfdm = ofdm;
+        switch (m_settings.fftEngine) {
+            case FFTEngine::FFTW:
+                {
+                    auto ofdm = make_shared<OfdmGeneratorCF32>(
+                            (1 + m_nbSymbols),
+                            m_nbCarriers,
+                            m_spacing,
+                            m_settings.enableCfr,
+                            m_settings.cfrClip,
+                            m_settings.cfrErrorClip);
+                    rcs.enrol(ofdm.get());
+                    cifOfdm = ofdm;
+                }
+                break;
+            case FFTEngine::KISS:
+                cifOfdm = make_shared<OfdmGeneratorFixed>(
+                        (1 + m_nbSymbols),
+                        m_nbCarriers,
+                        m_spacing,
+                        m_settings.enableCfr,
+                        m_settings.cfrClip,
+                        m_settings.cfrErrorClip);
+                break;
+            case FFTEngine::DEXTER:
+                cifOfdm = make_shared<OfdmGeneratorDEXTER>(
+                        (1 + m_nbSymbols),
+                        m_nbCarriers,
+                        m_spacing,
+                        m_settings.enableCfr,
+                        m_settings.cfrClip,
+                        m_settings.cfrErrorClip);
+                break;
         }
 
         shared_ptr<GainControl> cifGain;
 
-        if (not m_settings.fixedPoint) {
+        if (not fixedPoint) {
             cifGain = make_shared<GainControl>(
                     m_spacing,
                     m_settings.gainMode,
@@ -241,12 +245,12 @@ int DabModulator::process(Buffer* dataOut)
 
         auto cifGuard = make_shared<GuardIntervalInserter>(
                 m_nbSymbols, m_spacing, m_nullSize, m_symSize,
-                m_settings.ofdmWindowOverlap, m_settings.fixedPoint);
+                m_settings.ofdmWindowOverlap, m_settings.fftEngine);
         rcs.enrol(cifGuard.get());
 
         shared_ptr<FIRFilter> cifFilter;
         if (not m_settings.filterTapsFilename.empty()) {
-            if (m_settings.fixedPoint) throw std::runtime_error("fixed point doesn't support fir filter");
+            if (fixedPoint) throw std::runtime_error("fixed point doesn't support fir filter");
 
             cifFilter = make_shared<FIRFilter>(m_settings.filterTapsFilename);
             rcs.enrol(cifFilter.get());
@@ -254,7 +258,7 @@ int DabModulator::process(Buffer* dataOut)
 
         shared_ptr<MemlessPoly> cifPoly;
         if (not m_settings.polyCoefFilename.empty()) {
-            if (m_settings.fixedPoint) throw std::runtime_error("fixed point doesn't support predistortion");
+            if (fixedPoint) throw std::runtime_error("fixed point doesn't support predistortion");
 
             cifPoly = make_shared<MemlessPoly>(m_settings.polyCoefFilename,
                                                m_settings.polyNumThreads);
@@ -263,7 +267,7 @@ int DabModulator::process(Buffer* dataOut)
 
         shared_ptr<Resampler> cifRes;
         if (m_settings.outputRate != 2048000) {
-            if (m_settings.fixedPoint) throw std::runtime_error("fixed point doesn't support resampler");
+            if (fixedPoint) throw std::runtime_error("fixed point doesn't support resampler");
 
             cifRes = make_shared<Resampler>(
                     2048000,
@@ -271,11 +275,13 @@ int DabModulator::process(Buffer* dataOut)
                     m_spacing);
         }
 
-        if (not m_format.empty()) {
-            // This handles both complexf and fixedpoint:
-            // Convert from complexfix to interleaved int16_t I/Q
-            m_formatConverter = make_shared<FormatConverter>(m_format);
+        if (m_settings.fftEngine == FFTEngine::FFTW and not m_format.empty()) {
+            m_formatConverter = make_shared<FormatConverter>(false, m_format);
         }
+        else if (m_settings.fftEngine == FFTEngine::DEXTER) {
+            m_formatConverter = make_shared<FormatConverter>(true, m_format);
+        }
+        // KISS is already in s16
 
         m_output = make_shared<OutputMemory>(dataOut);
 

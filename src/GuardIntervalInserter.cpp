@@ -49,10 +49,10 @@ GuardIntervalInserter::GuardIntervalInserter(
         size_t nullSize,
         size_t symSize,
         size_t& windowOverlap,
-        bool fixedPoint) :
+        FFTEngine fftEngine) :
     ModCodec(),
     RemoteControllable("guardinterval"),
-    m_fixedPoint(fixedPoint),
+    m_fftEngine(fftEngine),
     m_params(nbSymbols, spacing, nullSize, symSize, windowOverlap)
 {
     if (nullSize == 0) {
@@ -277,15 +277,18 @@ int do_process(const GuardIntervalInserter::Params& p, Buffer* const dataIn, Buf
 
 int GuardIntervalInserter::process(Buffer* const dataIn, Buffer* dataOut)
 {
-    if (m_fixedPoint) {
-        if (m_params.windowOverlap) {
-            throw std::runtime_error("fixed point and ofdm windowing not supported");
-        }
-        return do_process<complexfix>(m_params, dataIn, dataOut);
+    switch (m_fftEngine) {
+        case FFTEngine::FFTW:
+            return do_process<complexf>(m_params, dataIn, dataOut);
+        case FFTEngine::KISS:
+            if (m_params.windowOverlap) {
+                throw std::runtime_error("fixed point and ofdm windowing not supported");
+            }
+            return do_process<complexfix>(m_params, dataIn, dataOut);
+        case FFTEngine::DEXTER:
+            return do_process<complexfix_wide>(m_params, dataIn, dataOut);
     }
-    else {
-        return do_process<complexf>(m_params, dataIn, dataOut);
-    }
+    throw std::logic_error("Unhandled fftEngine variant");
 }
 
 void GuardIntervalInserter::set_parameter(

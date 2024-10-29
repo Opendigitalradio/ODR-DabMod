@@ -252,7 +252,7 @@ static shared_ptr<ModOutput> prepare_output(mod_settings_t& s)
     shared_ptr<ModOutput> output;
 
     if (s.useFileOutput) {
-        if (s.fixedPoint) {
+        if (s.fftEngine != FFTEngine::FFTW) {
             // Intentionally ignore fileOutputFormat, it is always sc16
             output = make_shared<OutputFile>(s.outputName, s.fileOutputShowMetadata);
         }
@@ -292,7 +292,7 @@ static shared_ptr<ModOutput> prepare_output(mod_settings_t& s)
     else if (s.useUHDOutput) {
         s.normalise = 1.0f / normalise_factor;
         s.sdr_device_config.sampleRate = s.outputRate;
-        s.sdr_device_config.fixedPoint = s.fixedPoint;
+        s.sdr_device_config.fixedPoint = (s.fftEngine != FFTEngine::FFTW);
         auto uhddevice = make_shared<Output::UHD>(s.sdr_device_config);
         output = make_shared<Output::SDR>(s.sdr_device_config, uhddevice);
         rcs.enrol((Output::SDR*)output.get());
@@ -303,7 +303,7 @@ static shared_ptr<ModOutput> prepare_output(mod_settings_t& s)
         /* We normalise the same way as for the UHD output */
         s.normalise = 1.0f / normalise_factor;
         s.sdr_device_config.sampleRate = s.outputRate;
-        if (s.fixedPoint) throw runtime_error("soapy fixed_point unsupported");
+        if (s.fftEngine != FFTEngine::FFTW) throw runtime_error("soapy fixed_point unsupported");
         auto soapydevice = make_shared<Output::Soapy>(s.sdr_device_config);
         output = make_shared<Output::SDR>(s.sdr_device_config, soapydevice);
         rcs.enrol((Output::SDR*)output.get());
@@ -323,7 +323,7 @@ static shared_ptr<ModOutput> prepare_output(mod_settings_t& s)
     else if (s.useLimeOutput) {
         /* We normalise the same way as for the UHD output */
         s.normalise = 1.0f / normalise_factor;
-        if (s.fixedPoint) throw runtime_error("limesdr fixed_point unsupported");
+        if (s.fftEngine != FFTEngine::FFTW) throw runtime_error("limesdr fixed_point unsupported");
         s.sdr_device_config.sampleRate = s.outputRate;
         auto limedevice = make_shared<Output::Lime>(s.sdr_device_config);
         output = make_shared<Output::SDR>(s.sdr_device_config, limedevice);
@@ -334,7 +334,7 @@ static shared_ptr<ModOutput> prepare_output(mod_settings_t& s)
     else if (s.useBladeRFOutput) {
         /* We normalise specifically for the BladeRF output : range [-2048; 2047] */
         s.normalise = 2047.0f / normalise_factor;
-        if (s.fixedPoint) throw runtime_error("bladerf fixed_point unsupported");
+        if (s.fftEngine != FFTEngine::FFTW) throw runtime_error("bladerf fixed_point unsupported");
         s.sdr_device_config.sampleRate = s.outputRate;
         auto bladerfdevice = make_shared<Output::BladeRF>(s.sdr_device_config);
         output = make_shared<Output::SDR>(s.sdr_device_config, bladerfdevice);
@@ -424,7 +424,7 @@ int launch_modulator(int argc, char* argv[])
     rcs.enrol(&m);
 
     // Neither KISS FFT used for fixedpoint nor the FFT Accelerator used for DEXTER need planning.
-    if (not (mod_settings.fixedPoint or mod_settings.useDexterOutput)) {
+    if (mod_settings.fftEngine == FFTEngine::FFTW) {
         // This is mostly useful on ARM systems where FFTW planning takes some time. If we do it here
         // it will be done before the modulator starts up
         etiLog.level(debug) << "Running FFTW planning...";
@@ -446,9 +446,13 @@ int launch_modulator(int argc, char* argv[])
     }
 
     std::string output_format;
-    if (mod_settings.fixedPoint) {
+    if (mod_settings.fftEngine == FFTEngine::KISS) {
         output_format = ""; //fixed point is native sc16, no converter needed
     }
+    else if (mod_settings.fftEngine == FFTEngine::DEXTER) {
+        output_format = "s16"; // FPGA FFT Engine outputs s32
+    }
+    // else FFTW, i.e. floating point
     else if (mod_settings.useFileOutput and
             (mod_settings.fileOutputFormat == "s8" or
              mod_settings.fileOutputFormat == "u8" or

@@ -41,8 +41,10 @@ class FormatConverter : public ModCodec
     public:
         static size_t get_format_size(const std::string& format);
 
-        // Allowed formats: s8, u8 and s16
-        FormatConverter(const std::string& format);
+        // floating-point input allows output formats: s8, u8 and s16
+        // complexfix_wide input allows output formats: s16
+        // complexfix input is already in s16, and needs no converter
+        FormatConverter(bool input_is_complexfix_wide, const std::string& format_out);
         virtual ~FormatConverter();
 
         int process(Buffer* const dataIn, Buffer* dataOut);
@@ -51,7 +53,8 @@ class FormatConverter : public ModCodec
         size_t get_num_clipped_samples() const;
 
     private:
-        std::string m_format;
+        bool m_input_complexfix_wide;
+        std::string m_format_out;
 
         std::atomic<size_t> m_num_clipped_samples = 0;
 };
