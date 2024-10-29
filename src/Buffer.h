@@ -37,7 +37,9 @@
 #include "fpm/fixed.hpp"
 
 typedef std::complex<float> complexf;
-typedef std::complex<fpm::fixed_16_16> complexfix;
+
+using fixed_16 = fpm::fixed<std::int16_t, std::int32_t, 6>;
+typedef std::complex<fixed_16> complexfix;
 
 /* Buffer is a container for a byte array, which is memory-aligned
  * to 32 bytes for SSE performance.

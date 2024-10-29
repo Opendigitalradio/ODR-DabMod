@@ -137,8 +137,8 @@ complexf PhaseRefGen<complexf>::convert(uint8_t data) {
 
 template <>
 complexfix PhaseRefGen<complexfix>::convert(uint8_t data) {
-    constexpr auto one = fpm::fixed_16_16{1};
-    constexpr auto zero = fpm::fixed_16_16{0};
+    constexpr auto one = fixed_16{1};
+    constexpr auto zero = fixed_16{0};
 
     const complexfix value[] = {
         complexfix(one, zero),

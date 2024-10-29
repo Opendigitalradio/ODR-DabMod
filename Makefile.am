@@ -35,7 +35,7 @@ endif
 
 bin_PROGRAMS = odr-dabmod
 
-KISS_FLAGS=-DFIXED_POINT=32
+KISS_FLAGS=-DFIXED_POINT=16
 odr_dabmod_CFLAGS   = -Wall -Isrc -Ilib -Ikiss \
 					  $(GITVERSION_FLAGS) $(KISS_FLAGS)
 odr_dabmod_CXXFLAGS = -Wall -Isrc -Ilib -Ikiss \

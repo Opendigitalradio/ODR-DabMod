@@ -633,8 +633,8 @@ OfdmGeneratorDEXTER::OfdmGeneratorDEXTER(size_t nbSymbols,
     PDEBUG("  myZeroDst: %u\n", myZeroDst);
     PDEBUG("  myZeroSize: %u\n", myZeroSize);
 
-    const int N = mySpacing; // The size of the FFT
-    const size_t nbytes = N * sizeof(complexfix);
+    const size_t nbytes = mySpacing * sizeof(complexfix);
+    fprintf(stderr, "sizeof(complexfix)=%zu\n", sizeof(complexfix));
 
 #define IIO_ENSURE(expr, err) { \
     if (!(expr)) { \
@@ -721,17 +721,6 @@ int OfdmGeneratorDEXTER::process(Buffer* const dataIn, Buffer* dataOut)
         throw std::runtime_error("OfdmGenerator::process incorrect iio buffer size!");
     }
 
-    ptrdiff_t p_inc = iio_buffer_step(m_buf_out);
-    if (p_inc != 1) {
-        throw std::runtime_error("OfdmGenerator::process Wrong p_inc");
-    }
-
-    const uint8_t *fft_out = (const uint8_t*)iio_buffer_first(m_buf_out, m_channel_out);
-    const uint8_t *fft_out_end = (const uint8_t*)iio_buffer_end(m_buf_out);
-    if (((fft_out_end - fft_out) != (ssize_t)(mySpacing * sizeof(complexfix))) != 0) {
-        throw std::runtime_error("OfdmGenerator::process fft_out length invalid!");
-    }
-
     complexfix *fft_in = reinterpret_cast<complexfix*>(iio_buffer_start(m_buf_in));
 
     fft_in[0] = static_cast<complexfix::value_type>(0);
@@ -756,6 +745,21 @@ int OfdmGeneratorDEXTER::process(Buffer* const dataIn, Buffer* dataOut)
         ssize_t nbytes_rx = iio_buffer_refill(m_buf_out);
         if (nbytes_rx < 0) {
             throw std::runtime_error("OfdmGenerator::process error refilling IIO buffer!");
+        }
+
+        fprintf(stderr, "IIO refill %zd\n", nbytes_rx);
+
+        ptrdiff_t p_inc = iio_buffer_step(m_buf_out);
+        if (p_inc != 1) {
+            throw std::runtime_error("OfdmGenerator::process Wrong p_inc");
+        }
+
+        const uint8_t *fft_out = (const uint8_t*)iio_buffer_first(m_buf_out, m_channel_out);
+        const uint8_t *fft_out_end = (const uint8_t*)iio_buffer_end(m_buf_out);
+        if ((fft_out_end - fft_out) != (ssize_t)(mySpacing * sizeof(complexfix))) {
+            fprintf(stderr, "FFT_OUT: %p %p %zu %zu\n",
+                    fft_out, fft_out_end, (fft_out_end - fft_out), mySpacing * sizeof(complexfix));
+            throw std::runtime_error("OfdmGenerator::process fft_out length invalid!");
         }
 
         memcpy(out, fft_out, mySpacing * sizeof(complexfix));

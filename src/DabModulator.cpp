@@ -178,11 +178,16 @@ int DabModulator::process(Buffer* dataOut)
         shared_ptr<TII> tii;
         shared_ptr<PhaseReference> tiiRef;
         try {
-            tii = make_shared<TII>(
-                    m_settings.dabMode,
-                    m_settings.tiiConfig);
-            rcs.enrol(tii.get());
-            tiiRef = make_shared<PhaseReference>(mode, m_settings.fixedPoint);
+            if (m_settings.fixedPoint) {
+                etiLog.level(warn) << "TII does not yet support fixed point";
+            }
+            else {
+                tii = make_shared<TII>(
+                        m_settings.dabMode,
+                        m_settings.tiiConfig);
+                rcs.enrol(tii.get());
+                tiiRef = make_shared<PhaseReference>(mode, m_settings.fixedPoint);
+            }
         }
         catch (const TIIError& e) {
             etiLog.level(error) << "Could not initialise TII: " << e.what();

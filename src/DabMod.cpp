@@ -313,7 +313,6 @@ static shared_ptr<ModOutput> prepare_output(mod_settings_t& s)
     else if (s.useDexterOutput) {
         /* We normalise specifically range [-32768; 32767] */
         s.normalise = 32767.0f / normalise_factor;
-        if (s.fixedPoint) throw runtime_error("dexter fixed_point unsupported");
         s.sdr_device_config.sampleRate = s.outputRate;
         auto dexterdevice = make_shared<Output::Dexter>(s.sdr_device_config);
         output = make_shared<Output::SDR>(s.sdr_device_config, dexterdevice);
@@ -448,7 +447,7 @@ int launch_modulator(int argc, char* argv[])
 
     std::string output_format;
     if (mod_settings.fixedPoint) {
-        output_format = "fixedpoint";
+        output_format = ""; //fixed point is native sc16, no converter needed
     }
     else if (mod_settings.useFileOutput and
             (mod_settings.fileOutputFormat == "s8" or
