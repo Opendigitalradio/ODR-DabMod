@@ -38,7 +38,7 @@
 
 typedef std::complex<float> complexf;
 
-using fixed_16 = fpm::fixed<std::int16_t, std::int32_t, 6>;
+using fixed_16 = fpm::fixed<std::int16_t, std::int32_t, 14>;
 typedef std::complex<fixed_16> complexfix;
 typedef std::complex<fpm::fixed_16_16> complexfix_wide;
 
