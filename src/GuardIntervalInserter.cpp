@@ -140,118 +140,123 @@ int do_process(const GuardIntervalInserter::Params& p, Buffer* const dataIn, Buf
     //      windowing too.
 
     std::lock_guard<std::mutex> lock(p.windowMutex);
-    if (p.windowOverlap) { if constexpr (std::is_same_v<complexf, T>) {
-        {
-            // Handle Null symbol separately because it is longer
-            const size_t prefixlength = p.nullSize - p.spacing;
+    if (p.windowOverlap) {
+        if constexpr (std::is_same_v<complexf, T>) {
+            {
+                // Handle Null symbol separately because it is longer
+                const size_t prefixlength = p.nullSize - p.spacing;
 
-            // end = spacing
-            memcpy(out, &in[p.spacing - prefixlength],
-                    prefixlength * sizeof(T));
+                // end = spacing
+                memcpy(out, &in[p.spacing - prefixlength],
+                        prefixlength * sizeof(T));
 
-            memcpy(&out[prefixlength], in, (p.spacing - p.windowOverlap) * sizeof(T));
+                memcpy(&out[prefixlength], in, (p.spacing - p.windowOverlap) * sizeof(T));
 
-            // The remaining part of the symbol must have half of the window applied,
-            // sloping down from 1 to 0.5
-            for (size_t i = 0; i < p.windowOverlap; i++) {
-                const size_t out_ix = prefixlength + p.spacing - p.windowOverlap + i;
-                const size_t in_ix = p.spacing - p.windowOverlap + i;
-                out[out_ix] = in[in_ix] * p.window[2*p.windowOverlap - (i+1)];
-            }
-
-            // Suffix is taken from the beginning of the symbol, and sees the other
-            // half of the window applied.
-            for (size_t i = 0; i < p.windowOverlap; i++) {
-                const size_t out_ix = prefixlength + p.spacing + i;
-                out[out_ix] = in[i] * p.window[p.windowOverlap - (i+1)];
-            }
-
-            in += p.spacing;
-            out += p.nullSize;
-            // out is now pointing to the proper end of symbol. There are
-            // windowOverlap samples ahead that were already written.
-        }
-
-        // Data symbols
-        for (size_t sym_ix = 0; sym_ix < p.nbSymbols; sym_ix++) {
-            /* _ix variables are indices into in[], _ox variables are
-             * indices for out[] */
-            const ssize_t start_rise_ox = -p.windowOverlap;
-            const size_t start_rise_ix = 2 * p.spacing - p.symSize - p.windowOverlap;
-            /*
-            const size_t start_real_symbol_ox = 0;
-            const size_t start_real_symbol_ix = 2 * p.spacing - p.symSize;
-            */
-            const ssize_t end_rise_ox = p.windowOverlap;
-            const size_t end_rise_ix = 2 * p.spacing - p.symSize + p.windowOverlap;
-            const ssize_t end_cyclic_prefix_ox = p.symSize - p.spacing;
-            /* end_cyclic_prefix_ix = end of symbol
-            const size_t begin_fall_ox = p.symSize - p.windowOverlap;
-            const size_t begin_fall_ix = p.spacing - p.windowOverlap;
-            const size_t end_real_symbol_ox = p.symSize;
-             end_real_symbol_ix = end of symbol
-            const size_t end_fall_ox = p.symSize + p.windowOverlap;
-            const size_t end_fall_ix = p.spacing + p.windowOverlap;
-            */
-
-            ssize_t ox = start_rise_ox;
-            size_t ix = start_rise_ix;
-
-            for (size_t i = 0; ix < end_rise_ix; i++) {
-                out[ox] += in[ix] * p.window.at(i);
-                ix++;
-                ox++;
-            }
-            assert(ox == end_rise_ox);
-
-            const size_t remaining_prefix_length = end_cyclic_prefix_ox - end_rise_ox;
-            memcpy( &out[ox], &in[ix],
-                    remaining_prefix_length * sizeof(T));
-            ox += remaining_prefix_length;
-            assert(ox == end_cyclic_prefix_ox);
-            ix = 0;
-
-            const bool last_symbol = (sym_ix + 1 >= p.nbSymbols);
-            if (last_symbol) {
-                // No windowing at all at end
-                memcpy(&out[ox], &in[ix], p.spacing * sizeof(T));
-                ox += p.spacing;
-            }
-            else {
-                // Copy the middle part of the symbol, p.windowOverlap samples
-                // short of the end.
-                memcpy( &out[ox],
-                        &in[ix],
-                        (p.spacing - p.windowOverlap) * sizeof(T));
-                ox += p.spacing - p.windowOverlap;
-                ix += p.spacing - p.windowOverlap;
-                assert(ox == (ssize_t)(p.symSize - p.windowOverlap));
-
-                // Apply window from 1 to 0.5 for the end of the symbol
-                for (size_t i = 0; ox < (ssize_t)p.symSize; i++) {
-                    out[ox] = in[ix] * p.window[2*p.windowOverlap - (i+1)];
-                    ox++;
-                    ix++;
+                // The remaining part of the symbol must have half of the window applied,
+                // sloping down from 1 to 0.5
+                for (size_t i = 0; i < p.windowOverlap; i++) {
+                    const size_t out_ix = prefixlength + p.spacing - p.windowOverlap + i;
+                    const size_t in_ix = p.spacing - p.windowOverlap + i;
+                    out[out_ix] = in[in_ix] * p.window[2*p.windowOverlap - (i+1)];
                 }
-                assert(ix == p.spacing);
 
+                // Suffix is taken from the beginning of the symbol, and sees the other
+                // half of the window applied.
+                for (size_t i = 0; i < p.windowOverlap; i++) {
+                    const size_t out_ix = prefixlength + p.spacing + i;
+                    out[out_ix] = in[i] * p.window[p.windowOverlap - (i+1)];
+                }
+
+                in += p.spacing;
+                out += p.nullSize;
+                // out is now pointing to the proper end of symbol. There are
+                // windowOverlap samples ahead that were already written.
+            }
+
+            // Data symbols
+            for (size_t sym_ix = 0; sym_ix < p.nbSymbols; sym_ix++) {
+                /* _ix variables are indices into in[], _ox variables are
+                 * indices for out[] */
+                const ssize_t start_rise_ox = -p.windowOverlap;
+                const size_t start_rise_ix = 2 * p.spacing - p.symSize - p.windowOverlap;
+                /*
+                   const size_t start_real_symbol_ox = 0;
+                   const size_t start_real_symbol_ix = 2 * p.spacing - p.symSize;
+                   */
+                const ssize_t end_rise_ox = p.windowOverlap;
+                const size_t end_rise_ix = 2 * p.spacing - p.symSize + p.windowOverlap;
+                const ssize_t end_cyclic_prefix_ox = p.symSize - p.spacing;
+                /* end_cyclic_prefix_ix = end of symbol
+                   const size_t begin_fall_ox = p.symSize - p.windowOverlap;
+                   const size_t begin_fall_ix = p.spacing - p.windowOverlap;
+                   const size_t end_real_symbol_ox = p.symSize;
+                   end_real_symbol_ix = end of symbol
+                   const size_t end_fall_ox = p.symSize + p.windowOverlap;
+                   const size_t end_fall_ix = p.spacing + p.windowOverlap;
+                   */
+
+                ssize_t ox = start_rise_ox;
+                size_t ix = start_rise_ix;
+
+                for (size_t i = 0; ix < end_rise_ix; i++) {
+                    out[ox] += in[ix] * p.window.at(i);
+                    ix++;
+                    ox++;
+                }
+                assert(ox == end_rise_ox);
+
+                const size_t remaining_prefix_length = end_cyclic_prefix_ox - end_rise_ox;
+                memcpy( &out[ox], &in[ix],
+                        remaining_prefix_length * sizeof(T));
+                ox += remaining_prefix_length;
+                assert(ox == end_cyclic_prefix_ox);
                 ix = 0;
-                // Cyclic suffix, with window from 0.5 to 0
-                for (size_t i = 0; ox < (ssize_t)(p.symSize + p.windowOverlap); i++) {
-                    out[ox] = in[ix] * p.window[p.windowOverlap - (i+1)];
-                    ox++;
-                    ix++;
+
+                const bool last_symbol = (sym_ix + 1 >= p.nbSymbols);
+                if (last_symbol) {
+                    // No windowing at all at end
+                    memcpy(&out[ox], &in[ix], p.spacing * sizeof(T));
+                    ox += p.spacing;
+                }
+                else {
+                    // Copy the middle part of the symbol, p.windowOverlap samples
+                    // short of the end.
+                    memcpy( &out[ox],
+                            &in[ix],
+                            (p.spacing - p.windowOverlap) * sizeof(T));
+                    ox += p.spacing - p.windowOverlap;
+                    ix += p.spacing - p.windowOverlap;
+                    assert(ox == (ssize_t)(p.symSize - p.windowOverlap));
+
+                    // Apply window from 1 to 0.5 for the end of the symbol
+                    for (size_t i = 0; ox < (ssize_t)p.symSize; i++) {
+                        out[ox] = in[ix] * p.window[2*p.windowOverlap - (i+1)];
+                        ox++;
+                        ix++;
+                    }
+                    assert(ix == p.spacing);
+
+                    ix = 0;
+                    // Cyclic suffix, with window from 0.5 to 0
+                    for (size_t i = 0; ox < (ssize_t)(p.symSize + p.windowOverlap); i++) {
+                        out[ox] = in[ix] * p.window[p.windowOverlap - (i+1)];
+                        ox++;
+                        ix++;
+                    }
+
+                    assert(ix == p.windowOverlap);
                 }
 
-                assert(ix == p.windowOverlap);
+                out += p.symSize;
+                in += p.spacing;
+                // out is now pointing to the proper end of symbol. There are
+                // windowOverlap samples ahead that were already written.
             }
-
-            out += p.symSize;
-            in += p.spacing;
-            // out is now pointing to the proper end of symbol. There are
-            // windowOverlap samples ahead that were already written.
         }
-    } }
+        else {
+            throw std::runtime_error("fixed-point doesn't support window overlap");
+        }
+    }
     else {
         // Handle Null symbol separately because it is longer
         // end - (nullSize - spacing) = 2 * spacing - nullSize
@@ -272,7 +277,8 @@ int do_process(const GuardIntervalInserter::Params& p, Buffer* const dataIn, Buf
         }
     }
 
-    return sizeIn;
+    const auto sizeOut = dataOut->getLength();
+    return sizeOut;
 }
 
 int GuardIntervalInserter::process(Buffer* const dataIn, Buffer* dataOut)

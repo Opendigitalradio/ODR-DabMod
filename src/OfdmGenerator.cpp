@@ -219,7 +219,6 @@ int OfdmGeneratorCF32::process(Buffer* const dataIn, Buffer* dataOut)
         memcpy(&myFftIn[myNegDst], &in[myNegSrc],
                 myNegSize * sizeof(FFTW_TYPE));
 
-
         if (myCfr) {
             reference.resize(mySpacing);
             memcpy(reinterpret_cast<fftwf_complex*>(reference.data()),
@@ -228,7 +227,6 @@ int OfdmGeneratorCF32::process(Buffer* const dataIn, Buffer* dataOut)
 
         fftwf_execute(myFftPlan); // IFFT from myFftIn to myFftOut
 
-        
         if (myCfr) {
             complexf *symbol = reinterpret_cast<complexf*>(myFftOut);
             myPaprBeforeCFR.process_block(symbol, mySpacing);
@@ -634,7 +632,7 @@ OfdmGeneratorDEXTER::OfdmGeneratorDEXTER(size_t nbSymbols,
     PDEBUG("  myZeroSize: %u\n", myZeroSize);
 
     const size_t nbytes_in = mySpacing * sizeof(complexfix);
-    const size_t nbytes_out = mySpacing * 2 * sizeof(int32_t);
+    const size_t nbytes_out = mySpacing * sizeof(complexfix_wide);
 
 #define IIO_ENSURE(expr, err) { \
     if (!(expr)) { \
@@ -721,14 +719,14 @@ int OfdmGeneratorDEXTER::process(Buffer* const dataIn, Buffer* dataOut)
         throw std::runtime_error("OfdmGenerator::process incorrect iio buffer size!");
     }
 
-    complexfix *fft_in = reinterpret_cast<complexfix*>(iio_buffer_start(m_buf_in));
-
-    fft_in[0] = static_cast<complexfix::value_type>(0);
-    for (size_t i = 0; i < myZeroSize; i++) {
-        fft_in[myZeroDst + i] = static_cast<complexfix::value_type>(0);
-    }
-
     for (size_t i = 0; i < myNbSymbols; i++) {
+        complexfix *fft_in = reinterpret_cast<complexfix*>(iio_buffer_start(m_buf_in));
+
+        fft_in[0] = static_cast<complexfix::value_type>(0);
+        for (size_t i = 0; i < myZeroSize; i++) {
+            fft_in[myZeroDst + i] = static_cast<complexfix::value_type>(0);
+        }
+
         /* For TM I this is:
          * ZeroDst=769 ZeroSize=511
          * PosSrc=0 PosDst=1 PosSize=768

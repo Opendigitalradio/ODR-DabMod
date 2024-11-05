@@ -220,6 +220,7 @@ int DabModulator::process(Buffer* dataOut)
                         m_settings.cfrErrorClip);
                 break;
             case FFTEngine::DEXTER:
+#if defined(HAVE_DEXTER)
                 cifOfdm = make_shared<OfdmGeneratorDEXTER>(
                         (1 + m_nbSymbols),
                         m_nbCarriers,
@@ -227,6 +228,9 @@ int DabModulator::process(Buffer* dataOut)
                         m_settings.enableCfr,
                         m_settings.cfrClip,
                         m_settings.cfrErrorClip);
+#else
+                throw std::runtime_error("Cannot use DEXTER fft engine without --enable-dexter");
+#endif
                 break;
         }
 

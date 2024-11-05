@@ -43,7 +43,7 @@ DifferentialModulator::~DifferentialModulator()
 
 
 template<typename T>
-void do_process(size_t carriers, std::vector<Buffer*> dataIn, Buffer* dataOut)
+void do_process(size_t carriers, const std::vector<Buffer*>& dataIn, Buffer* dataOut)
 {
     size_t phaseSize = dataIn[0]->getLength() / sizeof(T);
     size_t dataSize = dataIn[1]->getLength() / sizeof(T);

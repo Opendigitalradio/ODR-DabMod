@@ -61,7 +61,7 @@ FrequencyInterleaver::FrequencyInterleaver(size_t mode, bool fixedPoint) :
         beta = 255;
         break;
     default:
-        PDEBUG("Carriers: %zu\n", (d_carriers >> 1) << 1);
+        PDEBUG("Carriers: %zu\n", (m_carriers >> 1) << 1);
         throw std::runtime_error("FrequencyInterleaver: invalid dab mode");
     }
 
@@ -79,10 +79,10 @@ FrequencyInterleaver::FrequencyInterleaver(size_t mode, bool fixedPoint) :
                 && perm <= (num - (num - m_carriers) / 2)
                 && perm != (num / 2)) {
             PDEBUG("i: %4zu, R: %4zu, d: %4zu, n: %4zu, k: %5zi, index: %zu\n",
-                    j, perm, perm, index - d_indexes, perm - num / 2,
+                    j, perm, perm, index - m_indices, perm - num / 2,
                     perm > num / 2
                     ?  perm - (1 + (num / 2))
-                    : perm + (d_carriers - (num / 2)));
+                    : perm + (m_carriers - (num / 2)));
             *(index++) = perm > num / 2 ?
                 perm - (1 + (num / 2)) : perm + (m_carriers - (num / 2));
         }
@@ -114,7 +114,7 @@ void do_process(Buffer* const dataIn, Buffer* dataOut,
     }
 
     for (size_t i = 0; i < sizeIn;) {
-//      memset(out, 0, d_carriers * sizeof(T));
+//      memset(out, 0, m_carriers * sizeof(T));
         for (size_t j = 0; j < carriers; i += 4, j += 4) {
             out[indices[j]] = in[i];
             out[indices[j + 1]] = in[i + 1];

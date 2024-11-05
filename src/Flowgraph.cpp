@@ -27,12 +27,10 @@
 #include "Flowgraph.h"
 #include "PcDebug.h"
 #include "Log.h"
-#include <string>
 #include <memory>
 #include <algorithm>
 #include <sstream>
 #include <sys/types.h>
-#include <stdexcept>
 #include <assert.h>
 #include <sys/time.h>
 
@@ -254,15 +252,15 @@ Flowgraph::~Flowgraph()
         char node_time_sz[1024] = {};
 
         for (const auto &node : nodes) {
-            snprintf(node_time_sz, 1023, "  %30s: %10lu us (%2.2f %%)\n",
+            snprintf(node_time_sz, 1023, "  %30s: %10lld us (%2.2f %%)\n",
                     node->plugin()->name(),
-                    node->processTime(),
+                    (long long)node->processTime(),
                     node->processTime() * 100.0 / myProcessTime);
             ss << node_time_sz;
         }
 
-        snprintf(node_time_sz, 1023, "  %30s: %10lu us (100.00 %%)\n", "total",
-                myProcessTime);
+        snprintf(node_time_sz, 1023, "  %30s: %10lld us (100.00 %%)\n", "total",
+                (long long)myProcessTime);
         ss << node_time_sz;
 
         etiLog.level(debug) << ss.str();

@@ -176,10 +176,10 @@ int PhaseReference::process(Buffer* dataOut)
     PDEBUG("PhaseReference::process(dataOut: %p)\n", dataOut);
 
     if (d_fixedPoint) {
-        dataOut->setData(&d_phaseRefFixed.dataIn[0], d_carriers * sizeof(complexfix));
+        dataOut->setData(d_phaseRefFixed.dataIn.data(), d_carriers * sizeof(complexfix));
     }
     else {
-        dataOut->setData(&d_phaseRefCF32.dataIn[0], d_carriers * sizeof(complexf));
+        dataOut->setData(d_phaseRefCF32.dataIn.data(), d_carriers * sizeof(complexf));
     }
 
     return 1;
