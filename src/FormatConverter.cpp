@@ -65,16 +65,17 @@ int FormatConverter::process(Buffer* const dataIn, Buffer* dataOut)
             int16_t* out = reinterpret_cast<int16_t*>(dataOut->getData());
 
             for (size_t i = 0; i < sizeIn; i++) {
-                if (in[i] < INT16_MIN) {
+                const int32_t val = in[i] >> 7;
+                if (val < INT16_MIN) {
                     out[i] = INT16_MIN;
                     num_clipped_samples++;
                 }
-                else if (in[i] > INT16_MAX) {
+                else if (val > INT16_MAX) {
                     out[i] = INT16_MAX;
                     num_clipped_samples++;
                 }
                 else {
-                    out[i] = in[i];
+                    out[i] = val;
                 }
             }
         }
