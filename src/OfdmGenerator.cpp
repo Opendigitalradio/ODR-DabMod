@@ -722,16 +722,17 @@ int OfdmGeneratorDEXTER::process(Buffer* const dataIn, Buffer* dataOut)
     for (size_t i = 0; i < myNbSymbols; i++) {
         complexfix *fft_in = reinterpret_cast<complexfix*>(iio_buffer_start(m_buf_in));
 
-        fft_in[0] = static_cast<complexfix::value_type>(0);
-        for (size_t i = 0; i < myZeroSize; i++) {
-            fft_in[myZeroDst + i] = static_cast<complexfix::value_type>(0);
-        }
-
         /* For TM I this is:
          * ZeroDst=769 ZeroSize=511
          * PosSrc=0 PosDst=1 PosSize=768
          * NegSrc=768 NegDst=1280 NegSize=768
          */
+
+        fft_in[0] = static_cast<complexfix::value_type>(0);
+        for (size_t i = 0; i < myZeroSize; i++) {
+            fft_in[myZeroDst + i] = static_cast<complexfix::value_type>(0);
+        }
+
         memcpy(&fft_in[myPosDst], &in[myPosSrc], myPosSize * sizeof(complexfix));
         memcpy(&fft_in[myNegDst], &in[myNegSrc], myNegSize * sizeof(complexfix));
 
@@ -740,33 +741,63 @@ int OfdmGeneratorDEXTER::process(Buffer* const dataIn, Buffer* dataOut)
             throw std::runtime_error("OfdmGenerator::process error pushing IIO buffer!");
         }
 
-        ssize_t nbytes_rx = iio_buffer_refill(m_buf_out);
-        if (nbytes_rx < 0) {
-            throw std::runtime_error("OfdmGenerator::process error refilling IIO buffer!");
-        }
-
-        ptrdiff_t p_inc = iio_buffer_step(m_buf_out);
-        if (p_inc != 1) {
-            throw std::runtime_error("OfdmGenerator::process Wrong p_inc");
-        }
-
-        // The FFT Accelerator takes 16-bit I + 16-bit Q, and outputs 32-bit I and 32-bit Q.
-        // The formatconvert will take care of this
-        const uint8_t *fft_out = (const uint8_t*)iio_buffer_first(m_buf_out, m_channel_out);
-        const uint8_t *fft_out_end = (const uint8_t*)iio_buffer_end(m_buf_out);
-        constexpr size_t sizeof_out_iq = sizeof(complexfix_wide);
-        if ((fft_out_end - fft_out) != (ssize_t)(mySpacing * sizeof_out_iq)) {
-            fprintf(stderr, "FFT_OUT: %p %p %zu %zu\n",
-                    fft_out, fft_out_end, (fft_out_end - fft_out),
-                    mySpacing * sizeof_out_iq);
-            throw std::runtime_error("OfdmGenerator::process fft_out length invalid!");
-        }
-
-        memcpy(out, fft_out, mySpacing * sizeof_out_iq);
-
         in += myNbCarriers;
-        out += mySpacing;
+
+        // Keep one buffer in flight while we're doing shuffling data around here,
+        // this improves performance.
+        // I believe that, by default, IIO allocates four buffers in total.
+        if (i > 0) {
+            ssize_t nbytes_rx = iio_buffer_refill(m_buf_out);
+            if (nbytes_rx < 0) {
+                throw std::runtime_error("OfdmGenerator::process error refilling IIO buffer!");
+            }
+
+            ptrdiff_t p_inc = iio_buffer_step(m_buf_out);
+            if (p_inc != 1) {
+                throw std::runtime_error("OfdmGenerator::process Wrong p_inc");
+            }
+
+            // The FFT Accelerator takes 16-bit I + 16-bit Q, and outputs 32-bit I and 32-bit Q.
+            // The formatconvert will take care of this
+            const uint8_t *fft_out = (const uint8_t*)iio_buffer_first(m_buf_out, m_channel_out);
+            const uint8_t *fft_out_end = (const uint8_t*)iio_buffer_end(m_buf_out);
+            constexpr size_t sizeof_out_iq = sizeof(complexfix_wide);
+            if ((fft_out_end - fft_out) != (ssize_t)(mySpacing * sizeof_out_iq)) {
+                fprintf(stderr, "FFT_OUT: %p %p %zu %zu\n",
+                        fft_out, fft_out_end, (fft_out_end - fft_out),
+                        mySpacing * sizeof_out_iq);
+                throw std::runtime_error("OfdmGenerator::process fft_out length invalid!");
+            }
+
+            memcpy(out, fft_out, mySpacing * sizeof_out_iq);
+
+            out += mySpacing;
+        }
     }
+
+    ssize_t nbytes_rx = iio_buffer_refill(m_buf_out);
+    if (nbytes_rx < 0) {
+        throw std::runtime_error("OfdmGenerator::process error refilling IIO buffer!");
+    }
+
+    ptrdiff_t p_inc = iio_buffer_step(m_buf_out);
+    if (p_inc != 1) {
+        throw std::runtime_error("OfdmGenerator::process Wrong p_inc");
+    }
+
+    // The FFT Accelerator takes 16-bit I + 16-bit Q, and outputs 32-bit I and 32-bit Q.
+    // The formatconvert will take care of this
+    const uint8_t *fft_out = (const uint8_t*)iio_buffer_first(m_buf_out, m_channel_out);
+    const uint8_t *fft_out_end = (const uint8_t*)iio_buffer_end(m_buf_out);
+    constexpr size_t sizeof_out_iq = sizeof(complexfix_wide);
+    if ((fft_out_end - fft_out) != (ssize_t)(mySpacing * sizeof_out_iq)) {
+        fprintf(stderr, "FFT_OUT: %p %p %zu %zu\n",
+                fft_out, fft_out_end, (fft_out_end - fft_out),
+                mySpacing * sizeof_out_iq);
+        throw std::runtime_error("OfdmGenerator::process fft_out length invalid!");
+    }
+
+    memcpy(out, fft_out, mySpacing * sizeof_out_iq);
 
     return sizeOut;
 }
