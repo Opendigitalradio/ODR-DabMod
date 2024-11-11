@@ -599,6 +599,27 @@ OfdmGeneratorDEXTER::OfdmGeneratorDEXTER(size_t nbSymbols,
 
     etiLog.level(info) << "Using DEXTER FFT Accelerator for fixed-point transform";
 
+    // I tried to get this to work in code using libgpiod, but life is too short to waste time on that.
+    // It works through gpioset, so we just call it
+    // The GPIO is connected to the config AXI bus of the xfft block.
+    // 15..0 is the config data; 31 is tvalid
+    if (inverse) {
+        if (system("gpioset gpiochip0 0=0 31=0") != 0)
+            throw std::runtime_error("Failed to call gpioset #1");
+        if (system("gpioset gpiochip0 0=0 31=1") != 0)
+            throw std::runtime_error("Failed to call gpioset #2");
+        if (system("gpioset gpiochip0 0=0 31=0") != 0)
+            throw std::runtime_error("Failed to call gpioset #3");
+    }
+    else {
+        if (system("gpioset gpiochip0 0=1 31=0") != 0)
+            throw std::runtime_error("Failed to call gpioset #1");
+        if (system("gpioset gpiochip0 0=1 31=1") != 0)
+            throw std::runtime_error("Failed to call gpioset #2");
+        if (system("gpioset gpiochip0 0=1 31=0") != 0)
+            throw std::runtime_error("Failed to call gpioset #3");
+    }
+
     if (nbCarriers > spacing) {
         throw std::runtime_error("OfdmGenerator nbCarriers > spacing!");
     }
