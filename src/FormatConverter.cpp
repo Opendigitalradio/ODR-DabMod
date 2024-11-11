@@ -28,11 +28,15 @@
 
 #include "FormatConverter.h"
 #include "PcDebug.h"
+#include "Log.h"
 
-#include <sys/types.h>
-#include <string.h>
 #include <stdexcept>
+#include <cstring>
 #include <assert.h>
+#include <sys/types.h>
+#if defined(__ARM_NEON)
+#include <arm_neon.h>
+#endif
 
 FormatConverter::FormatConverter(bool input_is_complexfix_wide, const std::string& format_out) :
     ModCodec(),
@@ -42,9 +46,16 @@ FormatConverter::FormatConverter(bool input_is_complexfix_wide, const std::strin
 
 FormatConverter::~FormatConverter()
 {
-    etiLog.level(debug) << "FormatConverter: "
-        << m_num_clipped_samples.load() <<
-        " clipped samples";
+    if (
+#if defined(__ARM_NEON)
+    not m_input_complexfix_wide
+#else
+    true
+#endif
+    ) {
+        etiLog.level(debug) << "FormatConverter: " <<
+            m_num_clipped_samples.load() << " clipped";
+    }
 }
 
 
@@ -56,16 +67,29 @@ int FormatConverter::process(Buffer* const dataIn, Buffer* dataOut)
 
     size_t num_clipped_samples = 0;
 
-
     if (m_input_complexfix_wide) {
         size_t sizeIn = dataIn->getLength() / sizeof(int32_t);
-        int32_t* in = reinterpret_cast<int32_t*>(dataIn->getData());
         if (m_format_out == "s16") {
             dataOut->setLength(sizeIn * sizeof(int16_t));
+            const int32_t *in = reinterpret_cast<int32_t*>(dataIn->getData());
             int16_t* out = reinterpret_cast<int16_t*>(dataOut->getData());
 
+            constexpr int shift = 7;
+
+#if defined(__ARM_NEON)
+            if (sizeIn % 4 != 0) {
+                throw std::logic_error("Unexpected length not multiple of 4");
+            }
+
+            for (size_t i = 0; i < sizeIn; i += 4) {
+                int32x4_t input_vec = vld1q_s32(&in[i]);
+                // Apply shift right, saturate on conversion to int16_t
+                int16x4_t output_vec = vqshrn_n_s32(input_vec, shift);
+                vst1_s16(&out[i], output_vec);
+            }
+#else
             for (size_t i = 0; i < sizeIn; i++) {
-                const int32_t val = in[i] >> 7;
+                const int32_t val = in[i] >> shift;
                 if (val < INT16_MIN) {
                     out[i] = INT16_MIN;
                     num_clipped_samples++;
@@ -78,6 +102,7 @@ int FormatConverter::process(Buffer* const dataIn, Buffer* dataOut)
                     out[i] = val;
                 }
             }
+#endif
         }
         else {
             throw std::runtime_error("FormatConverter: Invalid fix format " + m_format_out);
@@ -85,7 +110,7 @@ int FormatConverter::process(Buffer* const dataIn, Buffer* dataOut)
     }
     else {
         size_t sizeIn = dataIn->getLength() / sizeof(float);
-        float* in = reinterpret_cast<float*>(dataIn->getData());
+        const float* in = reinterpret_cast<float*>(dataIn->getData());
 
         if (m_format_out == "s16") {
             dataOut->setLength(sizeIn * sizeof(int16_t));

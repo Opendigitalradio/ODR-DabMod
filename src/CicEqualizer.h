@@ -29,9 +29,6 @@
 
 #include <vector>
 #include <sys/types.h>
-#ifdef __SSE__
-#   include <xmmintrin.h>
-#endif
 
 class CicEqualizer : public ModCodec
 {
