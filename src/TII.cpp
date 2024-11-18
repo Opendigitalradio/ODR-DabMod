@@ -2,7 +2,7 @@
    Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010, 2011 Her Majesty
    the Queen in Right of Canada (Communications Research Center Canada)
 
-   Copyright (C) 2023
+   Copyright (C) 2024
    Matthias P. Braendli, matthias.braendli@mpb.li
 
     http://opendigitalradio.org
@@ -103,11 +103,12 @@ const int pattern_tm1_2_4[][8] = { // {{{
     {1,1,1,0,1,0,0,0},
     {1,1,1,1,0,0,0,0} }; // }}}
 
-TII::TII(unsigned int dabmode, tii_config_t& tii_config) :
+TII::TII(unsigned int dabmode, tii_config_t& tii_config, bool fixedPoint) :
     ModCodec(),
     RemoteControllable("tii"),
     m_dabmode(dabmode),
-    m_conf(tii_config)
+    m_conf(tii_config),
+    m_fixedPoint(fixedPoint)
 {
     PDEBUG("TII::TII(%u) @ %p\n", dabmode, this);
 
@@ -168,56 +169,72 @@ const char* TII::name()
     return m_name.c_str();
 }
 
+template<typename T>
+void do_process(size_t carriers, bool old_variant, const std::vector<bool>& Acp, Buffer* dataIn, Buffer* dataOut)
+{
+    const T* in = reinterpret_cast<const T*>(dataIn->getData());
+    T* out = reinterpret_cast<T*>(dataOut->getData());
+
+    /* Normalise the TII carrier power according to ETSI TR 101 496-3
+     * Clause 5.4.2.2 Paragraph 7:
+     *
+     * > The ratio of carriers in a TII symbol to a normal DAB symbol
+     * > is 1:48 for all Modes, so that the signal power in a TII symbol is
+     * > 16 dB below the signal power of the other symbols.
+     *
+     * This is because we only enable 32 out of 1536 carriers, not because
+     * every carrier is lower power.
+     */
+    for (size_t i = 0; i < Acp.size(); i++) {
+        /* See header file for an explanation of the old variant.
+         *
+         * A_{c,p}(k) and A_{c,p}(k-1) are never both simultaneously true,
+         * so instead of doing the sum inside z_{m,0,k}, we could do
+         *
+         * if (m_Acp[i]) out[i] = in[i];
+         * if (m_Acp[i-1]) out[i] = in[i-1]
+         *
+         * (Considering only the new variant)
+         *
+         * To avoid messing with indices, we substitute j = i-1
+         *
+         * if (m_Acp[i]) out[i] = in[i];
+         * if (m_Acp[j]) out[j+1] = in[j]
+         *
+         * and fuse the two conditionals together:
+         */
+        if (Acp[i]) {
+            out[i] = in[i];
+            out[i+1] = (old_variant ? in[i+1] : in[i]);
+        }
+    }
+}
 
 int TII::process(Buffer* dataIn, Buffer* dataOut)
 {
+    const size_t sizeof_samples = m_fixedPoint ? sizeof(complexfix) : sizeof(complexf);
+
     PDEBUG("TII::process(dataOut: %p)\n",
             dataOut);
     if (    (dataIn == NULL) or
-            (dataIn->getLength() != m_carriers * sizeof(complexf))) {
+            (dataIn->getLength() != m_carriers * sizeof_samples)) {
         throw TIIError("TII::process input size not valid!");
     }
 
-    dataOut->setLength(m_carriers * sizeof(complexf));
-    memset(dataOut->getData(), 0,  dataOut->getLength());
+    dataOut->setLength(m_carriers * sizeof_samples);
+    memset(dataOut->getData(), 0, dataOut->getLength());
 
     if (m_conf.enable and m_insert) {
         std::lock_guard<std::mutex> lock(m_enabled_carriers_mutex);
-        complexf* in = reinterpret_cast<complexf*>(dataIn->getData());
-        complexf* out = reinterpret_cast<complexf*>(dataOut->getData());
-
-        /* Normalise the TII carrier power according to ETSI TR 101 496-3
-         * Clause 5.4.2.2 Paragraph 7:
-         *
-         * > The ratio of carriers in a TII symbol to a normal DAB symbol
-         * > is 1:48 for all Modes, so that the signal power in a TII symbol is
-         * > 16 dB below the signal power of the other symbols.
-         *
-         * This is because we only enable 32 out of 1536 carriers, not because
-         * every carrier is lower power.
-         */
-        for (size_t i = 0; i < m_Acp.size(); i++) {
-            /* See header file for an explanation of the old variant.
-             *
-             * A_{c,p}(k) and A_{c,p}(k-1) are never both simultaneously true,
-             * so instead of doing the sum inside z_{m,0,k}, we could do
-             *
-             * if (m_Acp[i]) out[i] = in[i];
-             * if (m_Acp[i-1]) out[i] = in[i-1]
-             *
-             * (Considering only the new variant)
-             *
-             * To avoid messing with indices, we substitute j = i-1
-             *
-             * if (m_Acp[i]) out[i] = in[i];
-             * if (m_Acp[j]) out[j+1] = in[j]
-             *
-             * and fuse the two conditionals together:
-             */
-            if (m_Acp[i]) {
-                out[i] = in[i];
-                out[i+1] = (m_conf.old_variant ? in[i+1] : in[i]);
-            }
+        if (m_fixedPoint) {
+            do_process<complexfix>(
+                    m_carriers, m_conf.old_variant, m_Acp,
+                    dataIn, dataOut);
+        }
+        else {
+            do_process<complexf>(
+                    m_carriers, m_conf.old_variant, m_Acp,
+                    dataIn, dataOut);
         }
     }
 

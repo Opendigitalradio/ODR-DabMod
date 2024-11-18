@@ -3,7 +3,7 @@
    Her Majesty the Queen in Right of Canada (Communications Research
    Center Canada)
 
-   Copyright (C) 2023
+   Copyright (C) 2024
    Matthias P. Braendli, matthias.braendli@mpb.li
 
     http://opendigitalradio.org
@@ -54,7 +54,6 @@
 #include "SignalMultiplexer.h"
 #include "TII.h"
 #include "TimeInterleaver.h"
-#include "TimestampDecoder.h"
 
 using namespace std;
 
@@ -179,16 +178,12 @@ int DabModulator::process(Buffer* dataOut)
         shared_ptr<TII> tii;
         shared_ptr<PhaseReference> tiiRef;
         try {
-            if (fixedPoint) {
-                etiLog.level(warn) << "TII does not yet support fixed point";
-            }
-            else {
-                tii = make_shared<TII>(
-                        m_settings.dabMode,
-                        m_settings.tiiConfig);
-                rcs.enrol(tii.get());
-                tiiRef = make_shared<PhaseReference>(mode, fixedPoint);
-            }
+            tii = make_shared<TII>(
+                    m_settings.dabMode,
+                    m_settings.tiiConfig,
+                    fixedPoint);
+            rcs.enrol(tii.get());
+            tiiRef = make_shared<PhaseReference>(mode, fixedPoint);
         }
         catch (const TIIError& e) {
             etiLog.level(error) << "Could not initialise TII: " << e.what();
