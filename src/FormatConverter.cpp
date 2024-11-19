@@ -74,7 +74,7 @@ int FormatConverter::process(Buffer* const dataIn, Buffer* dataOut)
             const int32_t *in = reinterpret_cast<int32_t*>(dataIn->getData());
             int16_t* out = reinterpret_cast<int16_t*>(dataOut->getData());
 
-            constexpr int shift = 7;
+            constexpr int shift = 6;
 
 #if defined(__ARM_NEON)
             if (sizeIn % 4 != 0) {
