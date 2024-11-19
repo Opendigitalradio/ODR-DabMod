@@ -467,9 +467,6 @@ const json::map_t OfdmGeneratorCF32::get_all_values() const
 OfdmGeneratorFixed::OfdmGeneratorFixed(size_t nbSymbols,
                              size_t nbCarriers,
                              size_t spacing,
-                             bool& enableCfr,
-                             float& cfrClip,
-                             float& cfrErrorClip,
                              bool inverse) :
     ModCodec(),
     myNbSymbols(nbSymbols),
@@ -693,9 +690,6 @@ void set_fft_accelerator_config(bool inverse)
 OfdmGeneratorDEXTER::OfdmGeneratorDEXTER(size_t nbSymbols,
                              size_t nbCarriers,
                              size_t spacing,
-                             bool& enableCfr,
-                             float& cfrClip,
-                             float& cfrErrorClip,
                              bool inverse) :
     ModCodec(),
     myNbSymbols(nbSymbols),

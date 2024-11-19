@@ -113,9 +113,6 @@ class OfdmGeneratorFixed : public ModCodec
         OfdmGeneratorFixed(size_t nbSymbols,
                       size_t nbCarriers,
                       size_t spacing,
-                      bool& enableCfr,
-                      float& cfrClip,
-                      float& cfrErrorClip,
                       bool inverse = true);
         virtual ~OfdmGeneratorFixed();
         OfdmGeneratorFixed(const OfdmGeneratorFixed&) = delete;
@@ -150,9 +147,6 @@ class OfdmGeneratorDEXTER : public ModCodec
         OfdmGeneratorDEXTER(size_t nbSymbols,
                       size_t nbCarriers,
                       size_t spacing,
-                      bool& enableCfr,
-                      float& cfrClip,
-                      float& cfrErrorClip,
                       bool inverse = true);
         virtual ~OfdmGeneratorDEXTER();
         OfdmGeneratorDEXTER(const OfdmGeneratorDEXTER&) = delete;

@@ -209,20 +209,14 @@ int DabModulator::process(Buffer* dataOut)
                 cifOfdm = make_shared<OfdmGeneratorFixed>(
                         (1 + m_nbSymbols),
                         m_nbCarriers,
-                        m_spacing,
-                        m_settings.enableCfr,
-                        m_settings.cfrClip,
-                        m_settings.cfrErrorClip);
+                        m_spacing);
                 break;
             case FFTEngine::DEXTER:
 #if defined(HAVE_DEXTER)
                 cifOfdm = make_shared<OfdmGeneratorDEXTER>(
                         (1 + m_nbSymbols),
                         m_nbCarriers,
-                        m_spacing,
-                        m_settings.enableCfr,
-                        m_settings.cfrClip,
-                        m_settings.cfrErrorClip);
+                        m_spacing);
 #else
                 throw std::runtime_error("Cannot use DEXTER fft engine without --enable-dexter");
 #endif
