@@ -35,9 +35,13 @@
 #include "PAPRStats.h"
 #include "kiss_fft.h"
 
-#include <fftw3.h>
 #include <cstddef>
 #include <atomic>
+#include <fftw3.h>
+
+#ifdef HAVE_DEXTER
+#   include <iio.h>
+#endif
 
 // Complex Float uses FFTW
 class OfdmGeneratorCF32 : public ModCodec, public RemoteControllable
@@ -139,15 +143,14 @@ class OfdmGeneratorFixed : public ModCodec
 };
 
 #ifdef HAVE_DEXTER
-#include "iio.h"
 // The PrecisionWave DEXTER device contains an FFT accelerator in FPGA
+// It only does inverse FFTs
 class OfdmGeneratorDEXTER : public ModCodec
 {
     public:
         OfdmGeneratorDEXTER(size_t nbSymbols,
                       size_t nbCarriers,
-                      size_t spacing,
-                      bool inverse = true);
+                      size_t spacing);
         virtual ~OfdmGeneratorDEXTER();
         OfdmGeneratorDEXTER(const OfdmGeneratorDEXTER&) = delete;
         OfdmGeneratorDEXTER& operator=(const OfdmGeneratorDEXTER&) = delete;

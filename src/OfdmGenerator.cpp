@@ -579,150 +579,30 @@ int OfdmGeneratorFixed::process(Buffer* const dataIn, Buffer* dataOut)
 }
 
 #ifdef HAVE_DEXTER
-#include <gpiod.h>
-
-#define CHIP_PATH "/dev/gpiochip0"
-#define LINE_FWD_INV 0
-#define LINE_CONFIG_TDATA_VALID 31
-
-// GPIO mapping on write:
-// bit 31 config_tdata_tvalid
-// bit 30 resets the latches in the xfft_wrapper
-// bits 15..0 are 1:1 xfft `config_tdata`
-// `GPIO[0] = FWD_INV` according to Vivado
-
-static struct gpiod_line_request *
-request_output_lines(const char *chip_path, const unsigned int *offsets,
-             enum gpiod_line_value *values, unsigned int num_lines,
-             const char *consumer)
-{
-    struct gpiod_request_config *rconfig = NULL;
-    struct gpiod_line_request *request = NULL;
-    struct gpiod_line_settings *settings;
-    struct gpiod_line_config *lconfig;
-    struct gpiod_chip *chip;
-    unsigned int i;
-    int ret;
-
-    chip = gpiod_chip_open(chip_path);
-    if (!chip)
-        return NULL;
-
-    settings = gpiod_line_settings_new();
-    if (!settings)
-        goto close_chip;
-
-    gpiod_line_settings_set_direction(settings,
-                      GPIOD_LINE_DIRECTION_OUTPUT);
-
-    lconfig = gpiod_line_config_new();
-    if (!lconfig)
-        goto free_settings;
-
-    for (i = 0; i < num_lines; i++) {
-        ret = gpiod_line_config_add_line_settings(lconfig, &offsets[i],
-                              1, settings);
-        if (ret)
-            goto free_line_config;
-    }
-    gpiod_line_config_set_output_values(lconfig, values, num_lines);
-
-    if (consumer) {
-        rconfig = gpiod_request_config_new();
-        if (!rconfig)
-            goto free_line_config;
-
-        gpiod_request_config_set_consumer(rconfig, consumer);
-    }
-
-    request = gpiod_chip_request_lines(chip, rconfig, lconfig);
-
-    gpiod_request_config_free(rconfig);
-
-free_line_config:
-    gpiod_line_config_free(lconfig);
-
-free_settings:
-    gpiod_line_settings_free(settings);
-
-close_chip:
-    gpiod_chip_close(chip);
-
-    return request;
-}
-
-// The GPIO is connected to the config AXI bus of the xfft block.
-// 15..0 is the config data; 31 is tvalid
-void set_fft_accelerator_config(bool inverse)
-{
-    constexpr size_t NUM_LINES = 2;
-    unsigned int line_offsets[NUM_LINES];
-    enum gpiod_line_value values[NUM_LINES];
-
-    line_offsets[0] = LINE_CONFIG_TDATA_VALID;
-    values[0] = GPIOD_LINE_VALUE_INACTIVE;
-
-    line_offsets[1] = LINE_FWD_INV;
-    values[1] = inverse ? GPIOD_LINE_VALUE_INACTIVE : GPIOD_LINE_VALUE_ACTIVE;
-
-    struct gpiod_line_request *request;
-
-    request = request_output_lines(CHIP_PATH, line_offsets, values, NUM_LINES, "fft-config");
-    if (!request) {
-        fprintf(stderr, "failed to request line: %s\n", strerror(errno));
-        throw std::runtime_error("Request GPIO lines error");
-    }
-
-    usleep(100000);
-
-    values[0] = GPIOD_LINE_VALUE_ACTIVE;
-    gpiod_line_request_set_values(request, values);
-
-    usleep(100000);
-
-    values[0] = GPIOD_LINE_VALUE_INACTIVE;
-    gpiod_line_request_set_values(request, values);
-
-    gpiod_line_request_release(request);
-}
-
-
 OfdmGeneratorDEXTER::OfdmGeneratorDEXTER(size_t nbSymbols,
                              size_t nbCarriers,
-                             size_t spacing,
-                             bool inverse) :
+                             size_t spacing) :
     ModCodec(),
     myNbSymbols(nbSymbols),
     myNbCarriers(nbCarriers),
     mySpacing(spacing)
 {
-    PDEBUG("OfdmGeneratorDEXTER::OfdmGeneratorDEXTER(%zu, %zu, %zu, %s) @ %p\n",
-            nbSymbols, nbCarriers, spacing, inverse ? "true" : "false", this);
+    PDEBUG("OfdmGeneratorDEXTER::OfdmGeneratorDEXTER(%zu, %zu, %zu) @ %p\n",
+            nbSymbols, nbCarriers, spacing, this);
 
     etiLog.level(info) << "Using DEXTER FFT Accelerator for fixed-point transform";
-
-    set_fft_accelerator_config(inverse);
 
     if (nbCarriers > spacing) {
         throw std::runtime_error("OfdmGenerator nbCarriers > spacing!");
     }
 
-    if (inverse) {
-        myPosDst = (nbCarriers & 1 ? 0 : 1);
-        myPosSrc = 0;
-        myPosSize = (nbCarriers + 1) / 2;
-        myNegDst = spacing - (nbCarriers / 2);
-        myNegSrc = (nbCarriers + 1) / 2;
-        myNegSize = nbCarriers / 2;
-    }
-    else {
-        myPosDst = (nbCarriers & 1 ? 0 : 1);
-        myPosSrc = nbCarriers / 2;
-        myPosSize = (nbCarriers + 1) / 2;
-        myNegDst = spacing - (nbCarriers / 2);
-        myNegSrc = 0;
-        myNegSize = nbCarriers / 2;
-    }
+    myPosDst = (nbCarriers & 1 ? 0 : 1);
+    myPosSrc = 0;
+    myPosSize = (nbCarriers + 1) / 2;
+    myNegDst = spacing - (nbCarriers / 2);
+    myNegSrc = (nbCarriers + 1) / 2;
+    myNegSize = nbCarriers / 2;
+
     myZeroDst = myPosDst + myPosSize;
     myZeroSize = myNegDst - myZeroDst;
 

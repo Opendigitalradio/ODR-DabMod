@@ -113,17 +113,13 @@ AS_IF([test "x$enable_dexter" = "xyes"],
          [AC_CHECK_LIB([iio], [iio_create_scan_context], [IIO_LIBS="-liio"],
                        [AC_MSG_ERROR([libiio is required])])])
 
-AS_IF([test "x$enable_dexter" = "xyes"],
-         [AC_CHECK_LIB([gpiod], [gpiod_chip_open], [GPIOD_LIBS="-lgpiod"],
-                       [AC_MSG_ERROR([libgpiod is required])])])
-
 AS_IF([test "x$enable_bladerf" = "xyes"],
          [AC_CHECK_LIB([bladeRF], [bladerf_open], [BLADERF_LIBS="-lbladeRF"],
                        [AC_MSG_ERROR([BladeRF library is required])])])
 
 AC_SUBST([CFLAGS], ["$CFLAGS $EXTRA $FFTW_CFLAGS $SOAPYSDR_CFLAGS $PTHREAD_CFLAGS"])
 AC_SUBST([CXXFLAGS], ["$CXXFLAGS $EXTRA $FFTW_CFLAGS $SOAPYSDR_CFLAGS $PTHREAD_CFLAGS"])
-AC_SUBST([LIBS], ["$FFTW_LIBS $SOAPYSDR_LIBS $PTHREAD_LIBS $ZMQ_LIBS $LIMESDR_LIBS $GPIOD_LIBS $IIO_LIBS $BLADERF_LIBS"])
+AC_SUBST([LIBS], ["$FFTW_LIBS $SOAPYSDR_LIBS $PTHREAD_LIBS $ZMQ_LIBS $LIMESDR_LIBS $IIO_LIBS $BLADERF_LIBS"])
 
 # Checks for UHD.
 AS_IF([test "x$enable_output_uhd" = "xyes"],
