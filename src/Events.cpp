@@ -3,7 +3,7 @@
    Her Majesty the Queen in Right of Canada (Communications Research
    Center Canada)
 
-   Copyright (C) 2023
+   Copyright (C) 2024
    Matthias P. Braendli, matthias.braendli@mpb.li
 
     http://www.opendigitalradio.org
@@ -22,15 +22,12 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-#include <list>
 #include <string>
-#include <iostream>
-#include <sstream>
-#include <iomanip>
 #include <string>
-#include <algorithm>
 
 #include "Events.h"
+
+#if defined(HAVE_ZEROMQ)
 
 EventSender events;
 
@@ -95,3 +92,4 @@ std::string LogToEventSender::get_name() const
 {
     return "EventSender";
 }
+#endif // defined(HAVE_ZEROMQ)

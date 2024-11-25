@@ -375,7 +375,9 @@ int launch_modulator(int argc, char* argv[])
     mod_settings_t mod_settings;
     parse_args(argc, argv, mod_settings);
 
+#if defined(HAVE_ZEROMQ)
     etiLog.register_backend(make_shared<LogToEventSender>());
+#endif // defined(HAVE_ZEROMQ)
 
     etiLog.level(info) << "Configuration parsed. Starting up version " <<
 #if defined(GITVERSION)

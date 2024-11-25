@@ -38,8 +38,6 @@
 #include "Utils.h"
 #include "Log.h"
 #include "Events.h"
-#include "DabModulator.h"
-#include "output/SDR.h"
 
 
 using namespace std;
@@ -124,7 +122,11 @@ static void parse_configfile(
     // log parameters:
     const string events_endpoint = pt.Get("log.events_endpoint", "");
     if (not events_endpoint.empty()) {
+#if defined(HAVE_ZEROMQ)
         events.bind(events_endpoint);
+#else
+        throw std::runtime_error("Cannot configure events sender when compiled without zeromq");
+#endif
     }
 
     if (pt.GetInteger("log.syslog", 0) == 1) {

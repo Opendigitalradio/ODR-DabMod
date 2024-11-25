@@ -3,12 +3,10 @@
    Her Majesty the Queen in Right of Canada (Communications Research
    Center Canada)
 
-   Copyright (C) 2023
+   Copyright (C) 2024
    Matthias P. Braendli, matthias.braendli@mpb.li
 
     http://www.opendigitalradio.org
-
-   This module adds remote-control capability to some of the dabmux/dabmod modules.
  */
 /*
    This program is free software: you can redistribute it and/or modify
@@ -33,18 +31,9 @@
 
 #if defined(HAVE_ZEROMQ)
 #  include "zmq.hpp"
-#endif
-
-#include <list>
-#include <unordered_map>
-#include <variant>
-#include <map>
-#include <memory>
-#include <string>
-#include <stdexcept>
-
-#include "Log.h"
-#include "Json.h"
+#  include <string>
+#  include "Log.h"
+#  include "Json.h"
 
 class EventSender {
     public:
@@ -75,3 +64,4 @@ class LogToEventSender: public LogBackend {
  * It is constructed in Events.cpp */
 extern EventSender events;
 
+#endif // defined(HAVE_ZEROMQ)
