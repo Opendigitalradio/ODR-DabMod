@@ -98,16 +98,16 @@ class Dexter : public Output::SDRDevice
 
         SDRDeviceConfig& m_conf;
 
-        struct iio_context* m_ctx = nullptr;
-        struct iio_device* m_dexter_dsp_tx = nullptr;
+        struct iio_context *m_ctx = nullptr;
+        struct iio_device *m_dexter_dsp_tx = nullptr;
 
-        struct iio_device* m_ad9957 = nullptr;
-        struct iio_device* m_ad9957_tx0 = nullptr;
-        struct iio_channel* m_tx_channel = nullptr;
+        struct iio_device *m_ad9957 = nullptr;
+        struct iio_device *m_ad9957_tx0 = nullptr;
+        struct iio_channel *m_tx_channel = nullptr;
         struct iio_buffer *m_buffer = nullptr;
 
         /* Underflows are counted in a separate thread */
-        struct iio_context* m_underflow_ctx = nullptr;
+        struct iio_context *m_underflow_ctx = nullptr;
         std::atomic<bool> m_running = ATOMIC_VAR_INIT(false);
         std::thread m_underflow_read_thread;
         void underflow_read_process();

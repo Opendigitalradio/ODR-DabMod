@@ -31,11 +31,8 @@
 #endif
 
 #include <cstddef>
-#include <vector>
 #include <deque>
 #include <complex>
-
-typedef std::complex<float> complexf;
 
 /* Helper class to calculate Peak-to-average-power ratio.
  * Definition of PAPR:
@@ -53,6 +50,8 @@ typedef std::complex<float> complexf;
  */
 class PAPRStats
 {
+    typedef std::complex<float> complexf;
+
     public:
         PAPRStats(size_t num_blocks_to_accumulate);
 

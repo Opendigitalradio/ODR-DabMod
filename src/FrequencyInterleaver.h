@@ -25,16 +25,14 @@
 #   include <config.h>
 #endif
 
-
 #include "ModPlugin.h"
 
 #include <sys/types.h>
 
-
 class FrequencyInterleaver : public ModCodec
 {
 public:
-    FrequencyInterleaver(size_t mode);
+    FrequencyInterleaver(size_t mode, bool fixedPoint);
     virtual ~FrequencyInterleaver();
     FrequencyInterleaver(const FrequencyInterleaver&) = delete;
     FrequencyInterleaver& operator=(const FrequencyInterleaver&) = delete;
@@ -43,7 +41,8 @@ public:
     const char* name() override { return "FrequencyInterleaver"; }
 
 protected:
-    size_t d_carriers;
-    size_t* d_indexes;
+    bool m_fixedPoint;
+    size_t m_carriers;
+    size_t *m_indices;
 };
 

@@ -25,17 +25,11 @@
  */
 
 #include "FrameMultiplexer.h"
-#include "PcDebug.h"
 
-#include <stdio.h>
 #include <string>
-#include <stdexcept>
-#include <complex>
-#include <memory>
-#include <assert.h>
-#include <string.h>
-
-typedef std::complex<float> complexf;
+#include <cstdio>
+#include <cassert>
+#include <cstring>
 
 FrameMultiplexer::FrameMultiplexer(
         const EtiSource& etiSource) :

@@ -2,7 +2,7 @@
    Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010, 2011 Her Majesty
    the Queen in Right of Canada (Communications Research Center Canada)
 
-   Copyright (C) 2023
+   Copyright (C) 2024
    Matthias P. Braendli, matthias.braendli@mpb.li
 
     http://opendigitalradio.org
@@ -33,27 +33,30 @@
 #include "ModPlugin.h"
 #include "RemoteControl.h"
 #include "PAPRStats.h"
-#include "fftw3.h"
+#include "kiss_fft.h"
+
 #include <cstddef>
-#include <vector>
-#include <complex>
 #include <atomic>
+#include <fftw3.h>
 
-typedef std::complex<float> complexf;
+#ifdef HAVE_DEXTER
+#   include <iio.h>
+#endif
 
-class OfdmGenerator : public ModCodec, public RemoteControllable
+// Complex Float uses FFTW
+class OfdmGeneratorCF32 : public ModCodec, public RemoteControllable
 {
     public:
-        OfdmGenerator(size_t nbSymbols,
+        OfdmGeneratorCF32(size_t nbSymbols,
                       size_t nbCarriers,
                       size_t spacing,
                       bool& enableCfr,
                       float& cfrClip,
                       float& cfrErrorClip,
                       bool inverse = true);
-        virtual ~OfdmGenerator();
-        OfdmGenerator(const OfdmGenerator&) = delete;
-        OfdmGenerator& operator=(const OfdmGenerator&) = delete;
+        virtual ~OfdmGeneratorCF32();
+        OfdmGeneratorCF32(const OfdmGeneratorCF32&) = delete;
+        OfdmGeneratorCF32& operator=(const OfdmGeneratorCF32&) = delete;
 
         int process(Buffer* const dataIn, Buffer* dataOut) override;
         const char* name() override { return "OfdmGenerator"; }
@@ -107,4 +110,76 @@ class OfdmGenerator : public ModCodec, public RemoteControllable
         std::deque<double> myMERs;
 };
 
+// Fixed point implementation uses KISS FFT with -DFIXED_POINT=32
+class OfdmGeneratorFixed : public ModCodec
+{
+    public:
+        OfdmGeneratorFixed(size_t nbSymbols,
+                      size_t nbCarriers,
+                      size_t spacing,
+                      bool inverse = true);
+        virtual ~OfdmGeneratorFixed();
+        OfdmGeneratorFixed(const OfdmGeneratorFixed&) = delete;
+        OfdmGeneratorFixed& operator=(const OfdmGeneratorFixed&) = delete;
 
+        int process(Buffer* const dataIn, Buffer* dataOut) override;
+        const char* name() override { return "OfdmGenerator"; }
+
+    private:
+        kiss_fft_cfg myKissCfg = nullptr;
+        kiss_fft_cpx *myFftIn, *myFftOut;
+
+        const size_t myNbSymbols;
+        const size_t myNbCarriers;
+        const size_t mySpacing;
+        unsigned myPosSrc;
+        unsigned myPosDst;
+        unsigned myPosSize;
+        unsigned myNegSrc;
+        unsigned myNegDst;
+        unsigned myNegSize;
+        unsigned myZeroDst;
+        unsigned myZeroSize;
+};
+
+#ifdef HAVE_DEXTER
+// The PrecisionWave DEXTER device contains an FFT accelerator in FPGA
+// It only does inverse FFTs
+class OfdmGeneratorDEXTER : public ModCodec
+{
+    public:
+        OfdmGeneratorDEXTER(size_t nbSymbols,
+                      size_t nbCarriers,
+                      size_t spacing);
+        virtual ~OfdmGeneratorDEXTER();
+        OfdmGeneratorDEXTER(const OfdmGeneratorDEXTER&) = delete;
+        OfdmGeneratorDEXTER& operator=(const OfdmGeneratorDEXTER&) = delete;
+
+        int process(Buffer* const dataIn, Buffer* dataOut) override;
+        const char* name() override { return "OfdmGenerator"; }
+
+    private:
+        struct iio_context *m_ctx = nullptr;
+
+        // "in" and "out" are from the point of view of the FFT Accelerator block
+        struct iio_device *m_dev_in = nullptr;
+        struct iio_channel *m_channel_in = nullptr;
+        struct iio_buffer *m_buf_in = nullptr;
+
+        struct iio_device *m_dev_out = nullptr;
+        struct iio_channel *m_channel_out = nullptr;
+        struct iio_buffer *m_buf_out = nullptr;
+
+        const size_t myNbSymbols;
+        const size_t myNbCarriers;
+        const size_t mySpacing;
+        unsigned myPosSrc;
+        unsigned myPosDst;
+        unsigned myPosSize;
+        unsigned myNegSrc;
+        unsigned myNegDst;
+        unsigned myNegSize;
+        unsigned myZeroDst;
+        unsigned myZeroSize;
+};
+#endif // HAVE_DEXTER

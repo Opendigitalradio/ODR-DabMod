@@ -26,20 +26,14 @@
 
 #include "OutputMemory.h"
 #include "PcDebug.h"
-#include "Log.h"
-#include "TimestampDecoder.h"
-
-#include <stdexcept>
-#include <string.h>
-#include <math.h>
-
+#include <cmath>
 
 OutputMemory::OutputMemory(Buffer* dataOut)
     : ModOutput()
 {
     PDEBUG("OutputMemory::OutputMemory(%p) @ %p\n", dataOut, this);
 
-    setOutput(dataOut);
+    m_dataOut = dataOut;
 
 #if OUTPUT_MEM_HISTOGRAM
     myMax = 0.0f;
@@ -48,7 +42,6 @@ OutputMemory::OutputMemory(Buffer* dataOut)
     }
 #endif
 }
-
 
 OutputMemory::~OutputMemory()
 {
@@ -66,19 +59,12 @@ OutputMemory::~OutputMemory()
     PDEBUG("OutputMemory::~OutputMemory() @ %p\n", this);
 }
 
-
-void OutputMemory::setOutput(Buffer* dataOut)
-{
-    myDataOut = dataOut;
-}
-
-
 int OutputMemory::process(Buffer* dataIn)
 {
     PDEBUG("OutputMemory::process(dataIn: %p)\n",
             dataIn);
 
-    *myDataOut = *dataIn;
+    *m_dataOut = *dataIn;
 
 #if OUTPUT_MEM_HISTOGRAM
     const float* in = (const float*)dataIn->getData();
@@ -93,17 +79,17 @@ int OutputMemory::process(Buffer* dataIn)
     }
 #endif
 
-    return myDataOut->getLength();
+    return m_dataOut->getLength();
 }
 
 meta_vec_t OutputMemory::process_metadata(const meta_vec_t& metadataIn)
 {
-    myMetadata = metadataIn;
+    m_metadata = metadataIn;
     return {};
 }
 
 meta_vec_t OutputMemory::get_latest_metadata()
 {
-    return myMetadata;
+    return m_metadata;
 }
 

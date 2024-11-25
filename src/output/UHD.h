@@ -45,12 +45,9 @@ DESCRIPTION:
 #include <atomic>
 #include <thread>
 
-#include "Log.h"
 #include "output/SDR.h"
 #include "output/USRPTime.h"
 #include "TimestampDecoder.h"
-#include "RemoteControl.h"
-#include "ThreadsafeQueue.h"
 
 #include <stdio.h>
 #include <sys/types.h>

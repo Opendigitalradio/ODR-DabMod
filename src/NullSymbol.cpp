@@ -27,18 +27,16 @@
 #include "NullSymbol.h"
 #include "PcDebug.h"
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <complex>
-#include <string.h>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
 
-typedef std::complex<float> complexf;
-
-NullSymbol::NullSymbol(size_t nbCarriers) :
+NullSymbol::NullSymbol(size_t numCarriers, size_t typeSize) :
     ModInput(),
-    myNbCarriers(nbCarriers)
+    m_numCarriers(numCarriers),
+    m_typeSize(typeSize)
 {
-    PDEBUG("NullSymbol::NullSymbol(%zu) @ %p\n", nbCarriers, this);
+    PDEBUG("NullSymbol::NullSymbol(%zu) @ %p\n", numCarriers, this);
 }
 
 
@@ -52,7 +50,7 @@ int NullSymbol::process(Buffer* dataOut)
 {
     PDEBUG("NullSymbol::process(dataOut: %p)\n", dataOut);
 
-    dataOut->setLength(myNbCarriers * 2 * sizeof(float));
+    dataOut->setLength(m_numCarriers * m_typeSize);
     memset(dataOut->getData(), 0, dataOut->getLength());
 
     return dataOut->getLength();

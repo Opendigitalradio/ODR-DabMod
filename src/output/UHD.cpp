@@ -31,10 +31,7 @@
 //#define MDEBUG(fmt, args...) fprintf(LOG, fmt , ## args)
 #define MDEBUG(fmt, args...)
 
-#include "PcDebug.h"
 #include "Log.h"
-#include "RemoteControl.h"
-#include "Utils.h"
 
 #include <thread>
 #include <iomanip>
@@ -52,14 +49,12 @@
 # include <uhd/utils/thread_priority.hpp>
 #endif
 
-
-#include <cmath>
 #include <iostream>
-#include <assert.h>
+#include <cmath>
+#include <cassert>
 #include <stdexcept>
-#include <stdio.h>
+#include <cstdio>
 #include <time.h>
-#include <errno.h>
 #include <unistd.h>
 #include <pthread.h>
 
@@ -235,7 +230,8 @@ UHD::UHD(SDRDeviceConfig& config) :
     m_usrp->set_rx_gain(m_conf.rxgain);
     etiLog.log(debug, "OutputUHD:Actual RX Gain: %f", m_usrp->get_rx_gain());
 
-    const uhd::stream_args_t stream_args("fc32"); //complex floats
+    const uhd::stream_args_t stream_args(
+            m_conf.fixedPoint ? "sc16" : "fc32");
     m_rx_stream = m_usrp->get_rx_stream(stream_args);
     m_tx_stream = m_usrp->get_tx_stream(stream_args);
 
@@ -319,8 +315,9 @@ double UHD::get_bandwidth(void) const
 void UHD::transmit_frame(struct FrameData&& frame)
 {
     const double tx_timeout = 20.0;
-    const size_t sizeIn = frame.buf.size() / sizeof(complexf);
-    const complexf* in_data = reinterpret_cast<const complexf*>(&frame.buf[0]);
+
+    const size_t sample_size = m_conf.fixedPoint ? (2 * sizeof(int16_t)) : sizeof(complexf);
+    const size_t sizeIn = frame.buf.size() / sample_size;
 
     uhd::tx_metadata_t md_tx;
 
@@ -353,9 +350,9 @@ void UHD::transmit_frame(struct FrameData&& frame)
                 samps_to_send <= usrp_max_num_samps );
         m_require_timestamp_refresh = false;
 
-        //send a single packet
+        // send a single packet
         size_t num_tx_samps = m_tx_stream->send(
-                &in_data[num_acc_samps],
+                frame.buf.data() + sample_size * num_acc_samps,
                 samps_to_send, md_tx, tx_timeout);
         etiLog.log(trace, "UHD,sent %zu of %zu", num_tx_samps, samps_to_send);
 

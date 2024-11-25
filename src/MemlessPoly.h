@@ -32,13 +32,10 @@
 
 #include "RemoteControl.h"
 #include "ModPlugin.h"
-#include "PcDebug.h"
 #include "ThreadsafeQueue.h"
 
 #include <sys/types.h>
 #include <array>
-#include <complex>
-#include <memory>
 #include <string>
 #include <thread>
 #include <vector>
@@ -46,8 +43,6 @@
 #include <cstdio>
 
 #define MEMLESSPOLY_PIPELINE_DELAY 1
-
-typedef std::complex<float> complexf;
 
 enum class dpd_type_t {
     odd_only_poly,

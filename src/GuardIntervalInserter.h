@@ -30,6 +30,7 @@
 #   include <config.h>
 #endif
 
+#include "ConfigParser.h"
 #include "ModPlugin.h"
 #include "RemoteControl.h"
 #include <stdint.h>
@@ -50,7 +51,8 @@ class GuardIntervalInserter : public ModCodec, public RemoteControllable
                 size_t spacing,
                 size_t nullSize,
                 size_t symSize,
-                size_t& windowOverlap);
+                size_t& windowOverlap,
+                FFTEngine fftEngine);
 
         virtual ~GuardIntervalInserter() {}
 
@@ -62,16 +64,30 @@ class GuardIntervalInserter : public ModCodec, public RemoteControllable
         virtual const std::string get_parameter(const std::string& parameter) const override;
         virtual const json::map_t get_all_values() const override;
 
+        struct Params {
+            Params(
+                size_t nbSymbols,
+                size_t spacing,
+                size_t nullSize,
+                size_t symSize,
+                size_t& windowOverlap);
+
+            size_t nbSymbols;
+            size_t spacing;
+            size_t nullSize;
+            size_t symSize;
+            size_t& windowOverlap;
+
+            mutable std::mutex windowMutex;
+            std::vector<float> window;
+        };
+
     protected:
         void update_window(size_t new_window_overlap);
 
-        size_t d_nbSymbols;
-        size_t d_spacing;
-        size_t d_nullSize;
-        size_t d_symSize;
+        FFTEngine m_fftEngine;
 
-        mutable std::mutex d_windowMutex;
-        size_t& d_windowOverlap;
-        std::vector<float> d_window;
+        Params m_params;
+
 };
 

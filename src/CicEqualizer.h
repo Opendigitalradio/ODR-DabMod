@@ -25,18 +25,10 @@
 #   include <config.h>
 #endif
 
-
 #include "ModPlugin.h"
 
 #include <vector>
 #include <sys/types.h>
-#include <complex>
-#ifdef __SSE__
-#   include <xmmintrin.h>
-#endif
-
-
-typedef std::complex<float> complexf;
 
 class CicEqualizer : public ModCodec
 {

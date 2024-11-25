@@ -34,15 +34,11 @@ DESCRIPTION:
 #   include <config.h>
 #endif
 
-#include <chrono>
 #include "ModPlugin.h"
-#include "EtiReader.h"
 #include "output/SDRDevice.h"
 #include "output/Feedback.h"
 
 namespace Output {
-
-using complexf = std::complex<float>;
 
 class SDR : public ModOutput, public ModMetadata, public RemoteControllable {
     public:

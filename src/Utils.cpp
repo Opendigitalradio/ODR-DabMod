@@ -66,6 +66,9 @@ static void printHeader()
 #if defined(__SSE__)
         "SSE " <<
 #endif
+#if defined(__ARM_NEON)
+        "NEON " <<
+#endif
         "\n";
 }
 

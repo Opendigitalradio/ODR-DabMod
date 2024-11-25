@@ -22,25 +22,20 @@
 #include "SignalMultiplexer.h"
 #include "PcDebug.h"
 
-#include <stdio.h>
-#include <stdexcept>
+#include <cstdio>
 #include <assert.h>
-#include <string.h>
 
 
-SignalMultiplexer::SignalMultiplexer(size_t framesize) :
-    ModMux(),
-    d_frameSize(framesize)
+SignalMultiplexer::SignalMultiplexer() :
+    ModMux()
 {
-    PDEBUG("SignalMultiplexer::SignalMultiplexer(%zu) @ %p\n", framesize, this);
-
+    PDEBUG("SignalMultiplexer::SignalMultiplexer() @ %p\n", this);
 }
 
 
 SignalMultiplexer::~SignalMultiplexer()
 {
     PDEBUG("SignalMultiplexer::~SignalMultiplexer() @ %p\n", this);
-
 }
 
 
