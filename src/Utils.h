@@ -37,7 +37,6 @@
 #include <cstdio>
 #include <ctime>
 #include <cstdlib>
-#include <cstdint>
 #include <unistd.h>
 #include "ConfigParser.h"
 

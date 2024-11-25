@@ -25,14 +25,17 @@
    along with ODR-DabMod.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <ctime>
-#include <sstream>
 #include "Utils.h"
-#include "GainControl.h"
+
+#include <ctime>
+#include <cstring>
+#include <sstream>
+#include <iomanip>
+#include <pthread.h>
 #if defined(HAVE_PRCTL)
 #  include <sys/prctl.h>
 #endif
-#include <pthread.h>
+
 
 static void printHeader()
 {
