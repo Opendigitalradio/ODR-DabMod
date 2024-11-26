@@ -81,11 +81,16 @@ void printUsage(const char* progName)
     fprintf(out, "Usage with command line options:\n");
     fprintf(out, "\t%s"
             " input"
-            " (-f filename -F format | -u uhddevice -F frequency)"
-            " [-o offset]"
+            " (-f filename -F format"
+#if defined(HAVE_OUTPUT_UHD)
+            " | -u uhddevice -F frequency"
+#endif  // defined(HAVE_OUTPUT_UHD)
+            ") [-o offset]"
             "\n\t"
+#if defined(HAVE_OUTPUT_UHD)
             " [-G txgain]"
             " [-T filter_taps_file]"
+#endif  // defined(HAVE_OUTPUT_UHD)
             " [-a gain]"
             " [-c clockrate]"
             "\n\t"
@@ -105,11 +110,13 @@ void printUsage(const char* progName)
     fprintf(out, "                  Specifying this option has two implications: It enables synchronous transmission,\n"
                  "                  requiring an external REFCLK and PPS signal and frames that do not contain a valid timestamp\n"
                  "                  get muted.\n\n");
+#if defined(HAVE_OUTPUT_UHD)
     fprintf(out, "-u device:     Use UHD output with given device string. (use "" for default device)\n");
     fprintf(out, "-F frequency:  Set the transmit frequency when using UHD output. (mandatory option when using UHD)\n");
     fprintf(out, "-G txgain:     Set the transmit gain for the UHD driver (default: 0)\n");
     fprintf(out, "-T taps_file:  Enable filtering before the output, using the specified file containing the filter taps.\n");
     fprintf(out, "               Use 'default' as taps_file to use the internal taps.\n");
+#endif  // defined(HAVE_OUTPUT_UHD)
     fprintf(out, "-a gain:       Apply digital amplitude gain.\n");
     fprintf(out, "-c rate:       Set the DAC clock rate and enable Cic Equalisation.\n");
     fprintf(out, "-g gainmode:   Set computation gain mode: fix, max or var\n");
