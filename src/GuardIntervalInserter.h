@@ -2,7 +2,7 @@
    Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010, 2011 Her Majesty
    the Queen in Right of Canada (Communications Research Center Canada)
 
-   Copyright (C) 2023
+   Copyright (C) 2024
    Matthias P. Braendli, matthias.braendli@mpb.li
 
     http://opendigitalradio.org
@@ -33,7 +33,6 @@
 #include "ConfigParser.h"
 #include "ModPlugin.h"
 #include "RemoteControl.h"
-#include <stdint.h>
 #include <vector>
 
 /* The GuardIntervalInserter prepends the cyclic prefix to all
@@ -79,7 +78,9 @@ class GuardIntervalInserter : public ModCodec, public RemoteControllable
             size_t& windowOverlap;
 
             mutable std::mutex windowMutex;
-            std::vector<float> window;
+            std::vector<float> windowFloat;
+            std::vector<complexfix::value_type> windowFix;
+            std::vector<complexfix_wide::value_type> windowFixWide;
         };
 
     protected:

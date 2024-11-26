@@ -2,7 +2,7 @@
    Copyright (C) 2005, 2206, 2007, 2008, 2009, 2010, 2011 Her Majesty
    the Queen in Right of Canada (Communications Research Center Canada)
 
-   Copyright (C) 2023
+   Copyright (C) 2024
    Matthias P. Braendli, matthias.braendli@mpb.li
 
     http://opendigitalradio.org
@@ -100,9 +100,15 @@ void GuardIntervalInserter::update_window(size_t new_window_overlap)
     m_params.windowOverlap = new_window_overlap;
 
     // m_params.window only contains the rising window edge.
-    m_params.window.resize(2*m_params.windowOverlap);
+    m_params.windowFloat.resize(2*m_params.windowOverlap);
+    m_params.windowFix.resize(2*m_params.windowOverlap);
+    m_params.windowFixWide.resize(2*m_params.windowOverlap);
     for (size_t i = 0; i < 2*m_params.windowOverlap; i++) {
-        m_params.window[i] = (float)(0.5 * (1.0 - cos(M_PI * i / (2*m_params.windowOverlap - 1))));
+        const float value = (float)(0.5 * (1.0 - cos(M_PI * i / (2*m_params.windowOverlap - 1))));
+
+        m_params.windowFloat[i] = value;
+        m_params.windowFix[i] = complexfix::value_type((double)value);
+        m_params.windowFixWide[i] = complexfix_wide::value_type((double)value);
     }
 }
 
@@ -141,120 +147,155 @@ int do_process(const GuardIntervalInserter::Params& p, Buffer* const dataIn, Buf
 
     std::lock_guard<std::mutex> lock(p.windowMutex);
     if (p.windowOverlap) {
-        if constexpr (std::is_same_v<complexf, T>) {
-            {
-                // Handle Null symbol separately because it is longer
-                const size_t prefixlength = p.nullSize - p.spacing;
+        {
+            // Handle Null symbol separately because it is longer
+            const size_t prefixlength = p.nullSize - p.spacing;
 
-                // end = spacing
-                memcpy(out, &in[p.spacing - prefixlength],
-                        prefixlength * sizeof(T));
+            // end = spacing
+            memcpy(out, &in[p.spacing - prefixlength],
+                    prefixlength * sizeof(T));
 
-                memcpy(&out[prefixlength], in, (p.spacing - p.windowOverlap) * sizeof(T));
+            memcpy(&out[prefixlength], in, (p.spacing - p.windowOverlap) * sizeof(T));
 
-                // The remaining part of the symbol must have half of the window applied,
-                // sloping down from 1 to 0.5
-                for (size_t i = 0; i < p.windowOverlap; i++) {
-                    const size_t out_ix = prefixlength + p.spacing - p.windowOverlap + i;
-                    const size_t in_ix = p.spacing - p.windowOverlap + i;
-                    out[out_ix] = in[in_ix] * p.window[2*p.windowOverlap - (i+1)];
+            // The remaining part of the symbol must have half of the window applied,
+            // sloping down from 1 to 0.5
+            for (size_t i = 0; i < p.windowOverlap; i++) {
+                const size_t out_ix = prefixlength + p.spacing - p.windowOverlap + i;
+                const size_t in_ix = p.spacing - p.windowOverlap + i;
+                if constexpr (std::is_same_v<complexf, T>) {
+                    out[out_ix] = in[in_ix] * p.windowFloat[2*p.windowOverlap - (i+1)];
                 }
-
-                // Suffix is taken from the beginning of the symbol, and sees the other
-                // half of the window applied.
-                for (size_t i = 0; i < p.windowOverlap; i++) {
-                    const size_t out_ix = prefixlength + p.spacing + i;
-                    out[out_ix] = in[i] * p.window[p.windowOverlap - (i+1)];
+                if constexpr (std::is_same_v<complexfix, T>) {
+                    out[out_ix] = in[in_ix] * p.windowFix[2*p.windowOverlap - (i+1)];
                 }
-
-                in += p.spacing;
-                out += p.nullSize;
-                // out is now pointing to the proper end of symbol. There are
-                // windowOverlap samples ahead that were already written.
+                if constexpr (std::is_same_v<complexfix_wide, T>) {
+                    out[out_ix] = in[in_ix] * p.windowFixWide[2*p.windowOverlap - (i+1)];
+                }
             }
 
-            // Data symbols
-            for (size_t sym_ix = 0; sym_ix < p.nbSymbols; sym_ix++) {
-                /* _ix variables are indices into in[], _ox variables are
-                 * indices for out[] */
-                const ssize_t start_rise_ox = -p.windowOverlap;
-                const size_t start_rise_ix = 2 * p.spacing - p.symSize - p.windowOverlap;
-                /*
-                   const size_t start_real_symbol_ox = 0;
-                   const size_t start_real_symbol_ix = 2 * p.spacing - p.symSize;
-                   */
-                const ssize_t end_rise_ox = p.windowOverlap;
-                const size_t end_rise_ix = 2 * p.spacing - p.symSize + p.windowOverlap;
-                const ssize_t end_cyclic_prefix_ox = p.symSize - p.spacing;
-                /* end_cyclic_prefix_ix = end of symbol
-                   const size_t begin_fall_ox = p.symSize - p.windowOverlap;
-                   const size_t begin_fall_ix = p.spacing - p.windowOverlap;
-                   const size_t end_real_symbol_ox = p.symSize;
-                   end_real_symbol_ix = end of symbol
-                   const size_t end_fall_ox = p.symSize + p.windowOverlap;
-                   const size_t end_fall_ix = p.spacing + p.windowOverlap;
-                   */
-
-                ssize_t ox = start_rise_ox;
-                size_t ix = start_rise_ix;
-
-                for (size_t i = 0; ix < end_rise_ix; i++) {
-                    out[ox] += in[ix] * p.window.at(i);
-                    ix++;
-                    ox++;
+            // Suffix is taken from the beginning of the symbol, and sees the other
+            // half of the window applied.
+            for (size_t i = 0; i < p.windowOverlap; i++) {
+                const size_t out_ix = prefixlength + p.spacing + i;
+                if constexpr (std::is_same_v<complexf, T>) {
+                    out[out_ix] = in[i] * p.windowFloat[p.windowOverlap - (i+1)];
                 }
-                assert(ox == end_rise_ox);
-
-                const size_t remaining_prefix_length = end_cyclic_prefix_ox - end_rise_ox;
-                memcpy( &out[ox], &in[ix],
-                        remaining_prefix_length * sizeof(T));
-                ox += remaining_prefix_length;
-                assert(ox == end_cyclic_prefix_ox);
-                ix = 0;
-
-                const bool last_symbol = (sym_ix + 1 >= p.nbSymbols);
-                if (last_symbol) {
-                    // No windowing at all at end
-                    memcpy(&out[ox], &in[ix], p.spacing * sizeof(T));
-                    ox += p.spacing;
+                if constexpr (std::is_same_v<complexfix, T>) {
+                    out[out_ix] = in[i] * p.windowFix[p.windowOverlap - (i+1)];
                 }
-                else {
-                    // Copy the middle part of the symbol, p.windowOverlap samples
-                    // short of the end.
-                    memcpy( &out[ox],
-                            &in[ix],
-                            (p.spacing - p.windowOverlap) * sizeof(T));
-                    ox += p.spacing - p.windowOverlap;
-                    ix += p.spacing - p.windowOverlap;
-                    assert(ox == (ssize_t)(p.symSize - p.windowOverlap));
-
-                    // Apply window from 1 to 0.5 for the end of the symbol
-                    for (size_t i = 0; ox < (ssize_t)p.symSize; i++) {
-                        out[ox] = in[ix] * p.window[2*p.windowOverlap - (i+1)];
-                        ox++;
-                        ix++;
-                    }
-                    assert(ix == p.spacing);
-
-                    ix = 0;
-                    // Cyclic suffix, with window from 0.5 to 0
-                    for (size_t i = 0; ox < (ssize_t)(p.symSize + p.windowOverlap); i++) {
-                        out[ox] = in[ix] * p.window[p.windowOverlap - (i+1)];
-                        ox++;
-                        ix++;
-                    }
-
-                    assert(ix == p.windowOverlap);
+                if constexpr (std::is_same_v<complexfix_wide, T>) {
+                    out[out_ix] = in[i] * p.windowFixWide[p.windowOverlap - (i+1)];
                 }
-
-                out += p.symSize;
-                in += p.spacing;
-                // out is now pointing to the proper end of symbol. There are
-                // windowOverlap samples ahead that were already written.
             }
+
+            in += p.spacing;
+            out += p.nullSize;
+            // out is now pointing to the proper end of symbol. There are
+            // windowOverlap samples ahead that were already written.
         }
-        else {
-            throw std::runtime_error("fixed-point doesn't support window overlap");
+
+        // Data symbols
+        for (size_t sym_ix = 0; sym_ix < p.nbSymbols; sym_ix++) {
+            /* _ix variables are indices into in[], _ox variables are
+             * indices for out[] */
+            const ssize_t start_rise_ox = -p.windowOverlap;
+            const size_t start_rise_ix = 2 * p.spacing - p.symSize - p.windowOverlap;
+            /*
+               const size_t start_real_symbol_ox = 0;
+               const size_t start_real_symbol_ix = 2 * p.spacing - p.symSize;
+               */
+            const ssize_t end_rise_ox = p.windowOverlap;
+            const size_t end_rise_ix = 2 * p.spacing - p.symSize + p.windowOverlap;
+            const ssize_t end_cyclic_prefix_ox = p.symSize - p.spacing;
+            /* end_cyclic_prefix_ix = end of symbol
+               const size_t begin_fall_ox = p.symSize - p.windowOverlap;
+               const size_t begin_fall_ix = p.spacing - p.windowOverlap;
+               const size_t end_real_symbol_ox = p.symSize;
+               end_real_symbol_ix = end of symbol
+               const size_t end_fall_ox = p.symSize + p.windowOverlap;
+               const size_t end_fall_ix = p.spacing + p.windowOverlap;
+               */
+
+            ssize_t ox = start_rise_ox;
+            size_t ix = start_rise_ix;
+
+            for (size_t i = 0; ix < end_rise_ix; i++) {
+                if constexpr (std::is_same_v<complexf, T>) {
+                    out[ox] += in[ix] * p.windowFloat.at(i);
+                }
+                if constexpr (std::is_same_v<complexfix, T>) {
+                    out[ox] += in[ix] * p.windowFix.at(i);
+                }
+                if constexpr (std::is_same_v<complexfix_wide, T>) {
+                    out[ox] += in[ix] * p.windowFixWide.at(i);
+                }
+                ix++;
+                ox++;
+            }
+            assert(ox == end_rise_ox);
+
+            const size_t remaining_prefix_length = end_cyclic_prefix_ox - end_rise_ox;
+            memcpy( &out[ox], &in[ix],
+                    remaining_prefix_length * sizeof(T));
+            ox += remaining_prefix_length;
+            assert(ox == end_cyclic_prefix_ox);
+            ix = 0;
+
+            const bool last_symbol = (sym_ix + 1 >= p.nbSymbols);
+            if (last_symbol) {
+                // No windowing at all at end
+                memcpy(&out[ox], &in[ix], p.spacing * sizeof(T));
+                ox += p.spacing;
+            }
+            else {
+                // Copy the middle part of the symbol, p.windowOverlap samples
+                // short of the end.
+                memcpy( &out[ox],
+                        &in[ix],
+                        (p.spacing - p.windowOverlap) * sizeof(T));
+                ox += p.spacing - p.windowOverlap;
+                ix += p.spacing - p.windowOverlap;
+                assert(ox == (ssize_t)(p.symSize - p.windowOverlap));
+
+                // Apply window from 1 to 0.5 for the end of the symbol
+                for (size_t i = 0; ox < (ssize_t)p.symSize; i++) {
+                    if constexpr (std::is_same_v<complexf, T>) {
+                        out[ox] = in[ix] * p.windowFloat[2*p.windowOverlap - (i+1)];
+                    }
+                    if constexpr (std::is_same_v<complexfix, T>) {
+                        out[ox] = in[ix] * p.windowFix[2*p.windowOverlap - (i+1)];
+                    }
+                    if constexpr (std::is_same_v<complexfix_wide, T>) {
+                        out[ox] = in[ix] * p.windowFixWide[2*p.windowOverlap - (i+1)];
+                    }
+                    ox++;
+                    ix++;
+                }
+                assert(ix == p.spacing);
+
+                ix = 0;
+                // Cyclic suffix, with window from 0.5 to 0
+                for (size_t i = 0; ox < (ssize_t)(p.symSize + p.windowOverlap); i++) {
+                    if constexpr (std::is_same_v<complexf, T>) {
+                        out[ox] = in[ix] * p.windowFloat[p.windowOverlap - (i+1)];
+                    }
+                    if constexpr (std::is_same_v<complexfix, T>) {
+                        out[ox] = in[ix] * p.windowFix[p.windowOverlap - (i+1)];
+                    }
+                    if constexpr (std::is_same_v<complexfix_wide, T>) {
+                        out[ox] = in[ix] * p.windowFixWide[p.windowOverlap - (i+1)];
+                    }
+                    ox++;
+                    ix++;
+                }
+
+                assert(ix == p.windowOverlap);
+            }
+
+            out += p.symSize;
+            in += p.spacing;
+            // out is now pointing to the proper end of symbol. There are
+            // windowOverlap samples ahead that were already written.
         }
     }
     else {
@@ -287,9 +328,6 @@ int GuardIntervalInserter::process(Buffer* const dataIn, Buffer* dataOut)
         case FFTEngine::FFTW:
             return do_process<complexf>(m_params, dataIn, dataOut);
         case FFTEngine::KISS:
-            if (m_params.windowOverlap) {
-                throw std::runtime_error("fixed point and ofdm windowing not supported");
-            }
             return do_process<complexfix>(m_params, dataIn, dataOut);
         case FFTEngine::DEXTER:
             return do_process<complexfix_wide>(m_params, dataIn, dataOut);
