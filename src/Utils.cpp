@@ -89,8 +89,8 @@ void printUsage(const char* progName)
             "\n\t"
 #if defined(HAVE_OUTPUT_UHD)
             " [-G txgain]"
-            " [-T filter_taps_file]"
 #endif  // defined(HAVE_OUTPUT_UHD)
+            " [-T filter_taps_file]"
             " [-a gain]"
             " [-c clockrate]"
             "\n\t"
@@ -114,9 +114,9 @@ void printUsage(const char* progName)
     fprintf(out, "-u device:     Use UHD output with given device string. (use "" for default device)\n");
     fprintf(out, "-F frequency:  Set the transmit frequency when using UHD output. (mandatory option when using UHD)\n");
     fprintf(out, "-G txgain:     Set the transmit gain for the UHD driver (default: 0)\n");
+#endif  // defined(HAVE_OUTPUT_UHD)
     fprintf(out, "-T taps_file:  Enable filtering before the output, using the specified file containing the filter taps.\n");
     fprintf(out, "               Use 'default' as taps_file to use the internal taps.\n");
-#endif  // defined(HAVE_OUTPUT_UHD)
     fprintf(out, "-a gain:       Apply digital amplitude gain.\n");
     fprintf(out, "-c rate:       Set the DAC clock rate and enable Cic Equalisation.\n");
     fprintf(out, "-g gainmode:   Set computation gain mode: fix, max or var\n");
