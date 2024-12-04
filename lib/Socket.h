@@ -31,9 +31,11 @@
 #include "ThreadsafeQueue.h"
 #include <cstdlib>
 #include <atomic>
-#include <string>
+#include <chrono>
 #include <list>
 #include <memory>
+#include <optional>
+#include <string>
 #include <thread>
 #include <vector>
 
@@ -236,6 +238,8 @@ class TCPClient {
         TCPSocket m_sock;
         std::string m_hostname;
         int m_port;
+
+        std::optional<std::chrono::steady_clock::time_point> m_last_received_packet_ts;
 };
 
 /* Helper class for TCPDataDispatcher, contains a queue of pending data and
@@ -329,10 +333,18 @@ class TCPSendClient {
     public:
         TCPSendClient(const std::string& hostname, int port);
         ~TCPSendClient();
+        TCPSendClient(const TCPSendClient&) = delete;
+        TCPSendClient& operator=(const TCPSendClient&) = delete;
 
-        /* Throws a runtime_error on error
-         */
-        void sendall(const std::vector<uint8_t>& buffer);
+
+        struct ErrorStats {
+            std::string last_error = "";
+            size_t num_reconnects = 0;
+            bool has_seen_new_errors = false;
+        };
+
+        /* Throws a runtime_error when the process thread isn't running */
+        ErrorStats sendall(const std::vector<uint8_t>& buffer);
 
     private:
         void process();
@@ -349,6 +361,11 @@ class TCPSendClient {
         std::string m_exception_data;
         std::thread m_sender_thread;
         TCPSocket m_listener_socket;
+
+        std::atomic<size_t> m_num_reconnects = ATOMIC_VAR_INIT(0);
+        size_t m_num_reconnects_prev = 0;
+        std::mutex m_error_mutex;
+        std::string m_last_error = "";
 };
 
 }
