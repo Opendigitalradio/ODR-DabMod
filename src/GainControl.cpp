@@ -35,7 +35,7 @@
 
 #ifdef __SSE__
 #  include <xmmintrin.h>
-union __u128 {
+union u128_union_t {
     __m128 m;
     float f[4];
 };
@@ -122,7 +122,7 @@ int GainControl::internal_process(Buffer* const dataIn, Buffer* dataOut)
     __m128* out       = reinterpret_cast<__m128*>(dataOut->getData());
     size_t  sizeIn    = dataIn->getLength() / sizeof(__m128);
     size_t  sizeOut   = dataOut->getLength() / sizeof(__m128);
-    __u128  gain128;
+    u128_union_t  gain128;
 
 
     if ((sizeIn % m_frameSize) != 0) {
@@ -200,10 +200,10 @@ __m128 GainControl::computeGainFix(const __m128* in, size_t sizeIn)
 
 __m128 GainControl::computeGainMax(const __m128* in, size_t sizeIn)
 {
-    __u128 gain128;
-    __u128 min128;
-    __u128 max128;
-    __u128 tmp128;
+    u128_union_t gain128;
+    u128_union_t min128;
+    u128_union_t max128;
+    u128_union_t tmp128;
     static const __m128 factor128 = _mm_set1_ps(0x7fff);
 
     ////////////////////////////////////////////////////////////////////////
@@ -250,10 +250,10 @@ __m128 GainControl::computeGainMax(const __m128* in, size_t sizeIn)
 
 __m128 GainControl::computeGainVar(const __m128* in, size_t sizeIn)
 {
-    __u128 gain128;
-    __u128 mean128;
-    __u128 var128;
-    __u128 tmp128;
+    u128_union_t gain128;
+    u128_union_t mean128;
+    u128_union_t var128;
+    u128_union_t tmp128;
     static const __m128 factor128 = _mm_set1_ps(0x7fff);
 
     mean128.m = _mm_setzero_ps();
@@ -297,8 +297,8 @@ __m128 GainControl::computeGainVar(const __m128* in, size_t sizeIn)
         var128.m = _mm_add_ps(var128.m, q128);
 
         /*
-        __u128 udiff128;  udiff128.m = diff128;
-        __u128 udelta128; udelta128.m = delta128;
+        u128_union_t udiff128;  udiff128.m = diff128;
+        u128_union_t udelta128; udelta128.m = delta128;
         for (int off=0; off<4; off+=2) {
             printf("S %zu, %.2f+%.2fj\t",
                     sample,
