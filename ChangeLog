@@ -1,8 +1,8 @@
 This file contains information about the changes done to
 ODR-DabMod in this repository
 
-2023-11-21: Matthias P. Braendli <matthias@mpb.li>
-	(upcoming release):
+2025-02-26: Matthias P. Braendli <matthias@mpb.li>
+	(v2.7.0):
 		Add support for the PrecisionWave DEXTER Modulator.
 		Improve timestamp decoding and handling.
 		Fix TII carrier levels.
