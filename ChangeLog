@@ -2,7 +2,7 @@ This file contains information about the changes done to
 ODR-DabMod in this repository
 
 2025-02-26: Matthias P. Braendli <matthias@mpb.li>
-	(v2.7.0):
+	(v3.0.0):
 		Add support for the PrecisionWave DEXTER Modulator.
 		Improve timestamp decoding and handling.
 		Fix TII carrier levels.
@@ -11,6 +11,7 @@ ODR-DabMod in this repository
 		Remove EasyDABv3 support.
 		Remove ZeroMQ input.
 		Require C++17.
+		v2.7.0 retracted.
 
 2022-04-20: Matthias P. Braendli <matthias@mpb.li>
 	(v2.6.0):
