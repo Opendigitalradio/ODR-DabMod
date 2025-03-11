@@ -24,6 +24,7 @@
 
 #include "Socket.h"
 
+#include <numeric>
 #include <stdexcept>
 #include <cstdio>
 #include <cstring>
@@ -1063,6 +1064,17 @@ void TCPConnection::process()
 #endif
 }
 
+TCPConnection::stats_t TCPConnection::get_stats() const
+{
+    TCPConnection::stats_t s;
+    const vector<size_t> buffer_sizes = queue.map<size_t>(
+            [](const vector<uint8_t>& vec) { return vec.size(); }
+            );
+
+    s.buffer_fullness = std::accumulate(buffer_sizes.cbegin(), buffer_sizes.cend(), 0);
+    s.remote_address = m_sock.get_remote_address();
+    return s;
+}
 
 TCPDataDispatcher::TCPDataDispatcher(size_t max_queue_size, size_t buffers_to_preroll) :
     m_max_queue_size(max_queue_size),
@@ -1134,6 +1146,16 @@ void TCPDataDispatcher::process()
         m_exception_data = string("TCPDataDispatcher error: ") + e.what();
         m_running = false;
     }
+}
+
+
+std::vector<TCPConnection::stats_t> TCPDataDispatcher::get_stats() const
+{
+    std::vector<TCPConnection::stats_t> s;
+    for (const auto& conn : m_connections) {
+        s.push_back(conn.get_stats());
+    }
+    return s;
 }
 
 TCPReceiveServer::TCPReceiveServer(size_t blocksize) :

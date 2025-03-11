@@ -213,6 +213,8 @@ class TCPSocket {
 
         SOCKET get_sockfd() const { return m_sock; }
 
+        InetAddress get_remote_address() const { return m_remote_address; }
+
     private:
         explicit TCPSocket(int sockfd);
         explicit TCPSocket(int sockfd, InetAddress remote_address);
@@ -254,6 +256,12 @@ class TCPConnection
 
         ThreadsafeQueue<std::vector<uint8_t> > queue;
 
+        struct stats_t {
+            size_t buffer_fullness = 0;
+            InetAddress remote_address;
+        };
+        stats_t get_stats() const;
+
     private:
         std::atomic<bool> m_running;
         std::thread m_sender_thread;
@@ -275,6 +283,8 @@ class TCPDataDispatcher
 
         void start(int port, const std::string& address);
         void write(const std::vector<uint8_t>& data);
+
+        std::vector<TCPConnection::stats_t> get_stats() const;
 
     private:
         void process();
