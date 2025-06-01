@@ -1,25 +1,21 @@
+# To do
+
 This TODO file lists ideas and features for future developments.
 
 Unless written, no activity has been started on the topics.
 
-
-Smaller things
---------------
+## Smaller things
 
 Remove GuardIntervalInserter implementation for window==0, as it was shown both are equivalent.
 
+## Resampler improvements
 
-Resampler improvements
-----------------------
- * Assess quality of window currently used.
- * Evaluate usefulness of other windows.
- * Distribute energy of Fs bin equally to both negative and positive
-   frequencies in the back buffer.
+- Assess quality of window currently used.
+- Evaluate usefulness of other windows.
+- Distribute energy of Fs bin equally to both negative and positive frequencies in the back buffer.
 
+## Review CicEq
 
-Review CicEq
-------------
 The CIC Equaliser was used for the USRP1 to compensate for spectrum flatness.
 It is not documented, and its effect poorly explained. Review if still needed,
 and document appropriately.
-

@@ -1,5 +1,5 @@
-OVERVIEW
-========
+# OVERVIEW
+
 ODR-DabMod is a *DAB (Digital Audio Broadcasting)* modulator compliant
 to ETSI EN 300 401. It is the continuation of the work started by
 the Communications Research Center Canada, and is now pursued in the
@@ -9,8 +9,7 @@ ODR-DabMod is part of the ODR-mmbTools tool-set. More information about the
 ODR-mmbTools is available in the *guide*, available on the
 [Opendigitalradio mmbTools page](http://www.opendigitalradio.org/mmbtools).
 
-Features
---------
+## Features
 
 - Reads ETI and EDI, outputs compliant COFDM I/Q
 - Supports native DAB sample rate and can also resample to other rates
@@ -38,6 +37,7 @@ Features
 - ZeroMQ PUB and REP output, useful for sending IQ to GNURadio flowgraphs.
 
 Development has stalled on the following topics:
+
 - Experimental prototype about digital predistortion for PA linearisation.
   - See `python/dpd/README.md`
 - A web GUI for control and supervision of modulator and predistortion engine. See `python/gui/README.md`
@@ -53,18 +53,18 @@ ODR-DabMod.
 The `python/` directory contains a web-based graphical control interface and
 the digital predistortion project.
 
-INSTALL
-=======
-See the `INSTALL.md` file for installation instructions.
+## Install
 
-LICENCE
-=======
+[Check the installation instructions.](INSTALL.md)
+
+## License
+
 See the files `LICENCE` and `COPYING`
 
-CONTACT
-=======
+## Contact
+
 Matthias P. Braendli *matthias [at] mpb [dot] li*
 
 With thanks to other contributors listed in AUTHORS
 
-http://opendigitalradio.org/
+<http://opendigitalradio.org/>
