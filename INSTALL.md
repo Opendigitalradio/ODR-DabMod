@@ -26,7 +26,7 @@ sudo apt-get install --yes libfftw3-dev
 
 # optional packages
 ## ZeroMQ http://www.zeromq.org
-sudo apt-get install --yes libzmq3-dev libzmq5
+sudo apt-get install --yes libzmq3-dev
 
 ## UHD for USRP
 sudo apt-get install --yes libuhd-dev
