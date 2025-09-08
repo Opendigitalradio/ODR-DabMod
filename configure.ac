@@ -34,8 +34,6 @@ AC_PROG_CC
 AM_PROG_CC_C_O
 AC_PROG_INSTALL
 
-AX_CXX_COMPILE_STDCXX(17,noext,mandatory)
-
 EXTRA=""
 AC_ARG_ENABLE([prof],
         [AS_HELP_STRING([--enable-prof], [Enable profiling])],
