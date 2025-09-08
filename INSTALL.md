@@ -57,7 +57,7 @@ sudo apt-get install --yes libbladerf-dev
 
    ```sh
    cd ODR-DabMod
-   ./bootstrap
+   ./bootstrap.sh
    ./configure
    ```
 
