@@ -1,6 +1,6 @@
 # Installation
 
-You have 3 ways to install odr-dabmod on your host:
+You have 2 ways to install odr-dabmod on your host:
 
 ## Installing binary packages on some linux distributions
 
@@ -8,15 +8,9 @@ You have 3 ways to install odr-dabmod on your host:
 
 **Notice**: this package does not include the web-based GUI and Digital Predistortion Computation engine
 
-## Using installation scripts
-
-If your linux distribution is debian-based, you can install odr-dabmod
-as well as the other main components of the mmbTools set with the
-[Opendigitalradio dab-scripts](https://github.com/opendigitalradio/dab-scripts.git)
-
 ## Compiling manually
 
-Unlike the 2 previous options, this one allows you to compile odr-dabmod with the features you really need.
+Unlike the previous option, this one allows you to compile odr-dabmod with the features you really need.
 
 ### Dependencies
 
