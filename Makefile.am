@@ -38,7 +38,7 @@ bin_PROGRAMS = odr-dabmod
 KISS_FLAGS=-DFIXED_POINT=16
 odr_dabmod_CFLAGS   = -Wall -Isrc -Ilib -Ikiss \
 					  $(GITVERSION_FLAGS) $(KISS_FLAGS)
-odr_dabmod_CXXFLAGS = -Wall -Isrc -Ilib -Ikiss \
+odr_dabmod_CXXFLAGS = -std=c++23 -Wall -Isrc -Ilib -Ikiss \
 					  $(GITVERSION_FLAGS) $(BOOST_CPPFLAGS) $(KISS_FLAGS)
 odr_dabmod_LDADD    =  $(BOOST_LDFLAGS) $(BOOST_THREAD_LIB) $(UHD_LIBS) $(LIMESDR_LIBS) $(ADDITIONAL_UHD_LIBS)
 odr_dabmod_SOURCES  = src/DabMod.cpp \
