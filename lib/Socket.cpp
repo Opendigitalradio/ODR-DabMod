@@ -1152,6 +1152,7 @@ void TCPDataDispatcher::process()
 std::vector<TCPConnection::stats_t> TCPDataDispatcher::get_stats() const
 {
     std::vector<TCPConnection::stats_t> s;
+    auto lock = unique_lock<mutex>(m_mutex);
     for (const auto& conn : m_connections) {
         s.push_back(conn.get_stats());
     }

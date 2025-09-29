@@ -298,7 +298,7 @@ class TCPDataDispatcher
         std::thread m_listener_thread;
         TCPSocket m_listener_socket;
 
-        std::mutex m_mutex;
+        mutable std::mutex m_mutex;
         std::deque<std::vector<uint8_t> > m_preroll_queue;
         std::list<TCPConnection> m_connections;
 };
