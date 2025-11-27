@@ -2,16 +2,13 @@
    Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010 Her Majesty the
    Queen in Right of Canada (Communications Research Center Canada)
 
-   Copyright (C) 2018
+   Copyright (C) 2025
    Evariste F5OEO, evaristec@gmail.com
 
-   Copyright (C) 2019
-   Matthias P. Braendli, matthias.braendli@mpb.li
-
-    http://opendigitalradio.org
+   http://opendigitalradio.org
 
 DESCRIPTION:
-  It is an output driver using the LimeSDR library.
+  It is an output driver using the TezukaFirmware for PlutoSDR.
 */
 
 /*
@@ -42,12 +39,13 @@ DESCRIPTION:
 #include <atomic>
 #include <string>
 #include <memory>
+#include <vector>
 
 #include "output/SDR.h"
 #include "ModPlugin.h"
 #include "EtiReader.h"
 #include "RemoteControl.h"
-#include <iio.h>
+#include <iio.h> 
 
 namespace Output
 {
@@ -60,6 +58,7 @@ class PlutoTezuka : public Output::SDRDevice
     PlutoTezuka &operator=(const PlutoTezuka &other) = delete;
     ~PlutoTezuka();
     
+    // --- SDRDevice Overrides ---
     virtual void tune(double lo_offset, double frequency) override;
     virtual double get_tx_freq(void) const override;
     virtual void set_txgain(double txgain) override;
@@ -78,7 +77,6 @@ class PlutoTezuka : public Output::SDRDevice
         frame_timestamp &ts,
         double timeout_secs) override;
 
-    // Return true if GPS and reference clock inputs are ok
     virtual bool is_clk_source_ok(void) override;
     virtual const char *device_name(void) const override;
 
@@ -86,8 +84,17 @@ class PlutoTezuka : public Output::SDRDevice
 
   private:
     SDRDeviceConfig &m_conf;
-    void *m_device = nullptr; //Fixme
-    size_t m_channel = 0; // Should be set by config
+    
+    // **NEW IIO PRIVATE MEMBERS**
+    // These pointers manage the state of the PlutoSDR connection via libiio.
+    struct iio_context *m_ctx = nullptr;      // IIO Context
+    struct iio_device *m_phy_dev = nullptr;   // PHY Device (ad9361-phy) for attributes
+    struct iio_device *m_tx_dev = nullptr;    // TX DMA Device (cf-ad9361-dds-core-lpc) for streaming
+    struct iio_channel *m_tx0_i = nullptr;    // TX I Channel
+    struct iio_channel *m_tx0_q = nullptr;    // TX Q Channel
+    struct iio_buffer  *m_tx_buf = nullptr;   // TX Buffer
+
+    size_t m_channel = 0; 
     
     bool m_tx_stream_active = false;
     size_t m_interpolate = 1;
@@ -103,4 +110,4 @@ class PlutoTezuka : public Output::SDRDevice
 
 } // namespace Output
 
-#endif 
+#endif
