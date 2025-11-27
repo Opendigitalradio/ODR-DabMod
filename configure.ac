@@ -55,6 +55,9 @@ AC_ARG_ENABLE([native],
 AC_ARG_ENABLE([dexter],
         [AS_HELP_STRING([--enable-dexter], [Build for PrecisionWave Dexter board])],
         [], [enable_dexter=no])
+AC_ARG_ENABLE([plutotezuka],
+        [AS_HELP_STRING([--enable-plutotezuka], [Build for Pluto with Tezukafirmware])],
+        [], [enable_plutotezuka=no])
 AC_ARG_ENABLE([limesdr],
         [AS_HELP_STRING([--enable-limesdr], [Build for LimeSDR board])],
         [], [enable_limesdr=no])
@@ -113,6 +116,11 @@ AS_IF([test "x$enable_dexter" = "xyes"],
          [AC_CHECK_LIB([iio], [iio_create_scan_context], [IIO_LIBS="-liio"],
                        [AC_MSG_ERROR([libiio is required])])])
 
+AS_IF([test "x$enable_plutotezuka" = "xyes"],
+         [AC_CHECK_LIB([iio], [iio_create_scan_context], [IIO_LIBS="-liio"],
+                       [AC_MSG_ERROR([libiio is required])])])
+
+
 AS_IF([test "x$enable_bladerf" = "xyes"],
          [AC_CHECK_LIB([bladeRF], [bladerf_open], [BLADERF_LIBS="-lbladeRF"],
                        [AC_MSG_ERROR([BladeRF library is required])])])
@@ -143,6 +151,10 @@ AS_IF([test "x$enable_limesdr" = "xyes"],
 
 AS_IF([test "x$enable_dexter" = "xyes"],
       [AC_DEFINE(HAVE_DEXTER, [1], [Define if Dexter output is enabled])])
+
+AS_IF([test "x$enable_plutotezuka" = "xyes"],
+      [AC_DEFINE(HAVE_PLUTOTEZUKA, [1], [Define if Plutotezuka output is enabled])])
+
 
 AS_IF([test "x$enable_bladerf" = "xyes"],
       [AC_DEFINE(HAVE_BLADERF, [1], [Define if BladeRF output is enabled]) ])
@@ -214,7 +226,7 @@ echo "***********************************************"
 echo
 enabled=""
 disabled=""
-for feat in prof trace output_uhd zeromq soapysdr limesdr bladerf dexter
+for feat in prof trace output_uhd zeromq soapysdr limesdr bladerf dexter plutotezuka
 do
     eval var=\$enable_$feat
     AS_IF([test "x$var" = "xyes"],
