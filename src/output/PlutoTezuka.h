@@ -36,16 +36,19 @@ DESCRIPTION:
 
 #ifdef HAVE_PLUTOTEZUKA
 
-#include <atomic>
+#include "iio.h"
+
 #include <string>
 #include <memory>
-#include <vector>
+#include <ctime>
+#include <mutex>
+#include <thread>
+#include <variant>
 
 #include "output/SDR.h"
 #include "ModPlugin.h"
 #include "EtiReader.h"
 #include "RemoteControl.h"
-#include <iio.h> 
 
 namespace Output
 {

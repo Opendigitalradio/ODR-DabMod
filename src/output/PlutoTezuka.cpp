@@ -11,15 +11,12 @@ DESCRIPTION:
 
 #include "output/PlutoTezuka.h"
 
-#ifdef HAVE_PLUTO_TEZUKA
+#ifdef HAVE_PLUTOTEZUKA
 
 #include <chrono>
 #include <limits>
 #include <cstdio>
 #include <iomanip>
-#include <cstring>
-#include <stdexcept>
-#include <iio.h>
 
 #include "Log.h"
 #include "Utils.h"
