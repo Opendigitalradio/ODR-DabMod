@@ -72,6 +72,7 @@ void conv_s16_from_float(unsigned n, const float *a, short *b)
 }
 #endif
 
+
 // --- Class Implementation ---
 
 PlutoTezuka::PlutoTezuka(SDRDeviceConfig &config) : SDRDevice(), m_conf(config)
@@ -96,6 +97,8 @@ PlutoTezuka::PlutoTezuka(SDRDeviceConfig &config) : SDRDevice(), m_conf(config)
         throw runtime_error("PlutoTezuka: AD9361 PHY device not found");
     }
 
+    iio_channel_attr_write_bool(iio_device_find_channel(m_phy_dev, "altvoltage1", true), "powerdown", true);
+
     // 3. Find the TX DMA device (for buffer streaming)
     m_tx_dev = iio_context_find_device(m_ctx, "cf-ad9361-dds-core-lpc");
     if (!m_tx_dev) {
@@ -104,12 +107,34 @@ PlutoTezuka::PlutoTezuka(SDRDeviceConfig &config) : SDRDevice(), m_conf(config)
     }
 
     // 4. Set Sample Rate 
-    // FIX 1: Changed m_conf.sample_rate to m_conf.sampleRate
     long long rate = (long long)m_conf.sampleRate;
-    struct iio_channel *tx_rate_ch = iio_device_find_channel(m_phy_dev, "altvoltage1", true);
-    if (tx_rate_ch && iio_channel_attr_write_longlong(tx_rate_ch, "sampling_frequency", rate) < 0) {
-        etiLog.level(warn) << "PlutoTezuka: Failed to set TX sampling rate";
+        
+    long long Dummyrate = 4000000LL ; // A Valid rate for ad9361 Rate > 2.083M 
+
+    struct iio_channel *tx_rate_ch=iio_device_find_channel(m_phy_dev, "voltage0", true);
+    if (!tx_rate_ch) 
+    {
+        etiLog.level(warn) << "PlutoTezuka: Failed to get TX chrate" ;    
     }
+    
+    if (  iio_channel_attr_write_longlong(tx_rate_ch, "sampling_frequency", rate*4) < 0) {
+        etiLog.level(warn) << "PlutoTezuka: Failed to set TX sampling rate " << rate*4;
+    }
+
+    fmc_load_lpf_filter(4,1.0,true);
+
+
+    if (iio_channel_attr_write_longlong(tx_rate_ch, "sampling_frequency", rate) < 0) {
+        etiLog.level(warn) << "PlutoTezuka: Failed to set TX sampling rate " << rate;
+    }
+    else
+        etiLog.level(warn) << "PlutoTezuka: Success to set TX sampling rate " << rate;
+    
+
+    tune(m_conf.lo_offset, m_conf.frequency);
+    set_txgain(m_conf.txgain);
+    iio_channel_attr_write_bool(iio_device_find_channel(m_phy_dev, "altvoltage1", true), "powerdown", false);
+
 
     // 5. Setup Channels for Buffer
     m_tx0_i = iio_device_find_channel(m_tx_dev, "voltage0", true);
@@ -335,6 +360,93 @@ void PlutoTezuka::transmit_frame(struct FrameData&& frame)
     }
 
     num_frames_modulated++;
+}
+
+void PlutoTezuka::build_lpf_filter(double *filter, double bw, int ntaps ) {
+	double a;
+	double B = bw;// filter bandwidth
+	double t = -( ntaps - 1) / 2;// First tap
+	// Create the filter
+	for (int i = 0; i < ntaps; i++) {
+		if (t == 0)
+			a = 2.0 * B;
+		else
+		    a = 2.0 * B * sin(M_PI * t * B)/ (M_PI * t * B);
+		filter[i] = (double)a;
+		t = t + 1.0;
+	}
+}
+
+
+void PlutoTezuka::fmc_load_lpf_filter(int ratio, float digitalgain,bool db6boost)
+{
+
+
+	#include "doc/fir-filter/lpf.h"
+
+    double firrx[128];
+    double firtx[128];
+	double max=1;
+    fprintf(stderr,"Build filter with %d ratio (up/down)sample\n",ratio);
+
+	int NbTaps= FIR_TAPS_COUNT;
+		
+        
+            
+            build_lpf_filter(firtx,(0.5)/(double)(ratio),NbTaps);
+            build_lpf_filter(firrx,(0.5)/(double)(ratio),NbTaps);
+			
+			
+			float gain=log2(2*ratio)*digitalgain;
+			//max=set_filter_gain(firtx,1,NbTaps);
+			//float gain=1/max;
+			firrx[NbTaps]=0.0;
+    		firtx[NbTaps]=0.0;
+			fprintf(stderr, "Max FIR =%f\n", max);
+			fmc_load_tx_filter(fir_taps,fir_taps, NbTaps+1, ratio, true,gain,db6boost);
+
+}
+
+
+
+void PlutoTezuka::fmc_load_tx_filter(const double *firrx,const double *firtx, int taps, int ratio, bool enable,float gain,bool db6boost)
+{
+	
+	if (!enable)
+		return; //No FIR, NEITHER upsample*/
+
+	int buffsize = 8192;
+	char *buf = (char *)malloc(buffsize);
+	int clen = 0;
+	clen += snprintf(buf + clen, buffsize - clen, "RX 3 GAIN 0 DEC %d\n", ratio); //The filter provides a fixed +6dB gain to maximize dynamic range, so the programmable gain is typically set to -6dB to produce a net gain of 0dB
+	if(db6boost)
+	{
+		fprintf(stderr,"FIR boost\n");
+		clen += snprintf(buf + clen, buffsize - clen, "TX 3 GAIN 0 INT %d\n", ratio); //-6db seems better
+	}	
+	else
+	{
+		fprintf(stderr,"FIR normal (no boost)\n");
+		clen += snprintf(buf + clen, buffsize - clen, "TX 3 GAIN -6 INT %d\n", ratio); //-6db seems better
+	}	
+	short coefrx=0;
+	for (int i = 0; i < taps; i++)
+	{
+		if(i==taps/2) coefrx=0x7FFF; else coefrx=0;
+		
+		clen += snprintf(buf + clen, buffsize - clen, "%d,%d\n", (short)(0x7FFF * firtx[i]*gain),coefrx); //Fixme ! 1FFF instead of 0x3FFF seems better but should have to be inspect
+	}	
+	clen += snprintf(buf + clen, buffsize - clen, "\n");
+
+	
+	
+	iio_device_attr_write_raw(m_phy_dev, "filter_fir_config", buf, clen);
+	struct iio_channel *tx_rate_ch=iio_device_find_channel(m_phy_dev, "voltage0", true);
+	iio_channel_attr_write_bool(tx_rate_ch,"filter_fir_en", true);
+    //BUG FROM IIO : We need also to set RX_FIR else sampling rate could not be applied
+    tx_rate_ch=iio_device_find_channel(m_phy_dev, "voltage0", false);
+	iio_channel_attr_write_bool(tx_rate_ch,"filter_fir_en", true);
+	free(buf);
 }
 
 } // namespace Output

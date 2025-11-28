@@ -375,6 +375,7 @@ static void parse_configfile(
 #if defined(HAVE_PLUTOTEZUKA)
     else if (output_selected == "plutotezuka") {
         auto& outputplutotezuka_conf = mod_settings.sdr_device_config;
+        outputplutotezuka_conf.device = pt.Get("plutotezukaoutput.device", "local:");
         outputplutotezuka_conf.txgain = pt.GetReal("plutotezukaoutput.txgain", 0.0);
         outputplutotezuka_conf.lo_offset = pt.GetReal("plutotezukaoutput.lo_offset", 0.0);
         outputplutotezuka_conf.frequency = pt.GetReal("plutotezukaoutput.frequency", 0);

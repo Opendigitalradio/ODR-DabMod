@@ -105,6 +105,9 @@ class PlutoTezuka : public Output::SDRDevice
     std::vector<short> m_i16samples; 
     std::atomic<float> m_last_fifo_fill_percent = ATOMIC_VAR_INIT(0);
 
+    void fmc_load_tx_filter(const double *firrx,const double *firtx, int taps, int ratio, bool enable,float gain,bool db6boost);
+    void fmc_load_lpf_filter(int ratio, float digitalgain,bool db6boost);
+    void build_lpf_filter(double *filter,double bw, int ntaps );
     size_t underflows = 0;
     size_t overflows = 0;
     size_t dropped_packets = 0;
