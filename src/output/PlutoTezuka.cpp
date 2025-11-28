@@ -133,7 +133,7 @@ PlutoTezuka::PlutoTezuka(SDRDeviceConfig &config) : SDRDevice(), m_conf(config)
         throw runtime_error("PlutoTezuka: Could not create IIO buffer");
     }
 
-    etiLog.level(info) << "PlutoTezuka: Device initialized successfully. 🚀";
+    etiLog.level(info) << "PlutoTezuka: Device initialized successfully.";
 }
 
 PlutoTezuka::~PlutoTezuka()

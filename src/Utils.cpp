@@ -199,6 +199,11 @@ void printModSettings(const mod_settings_t& mod_settings)
         ss << " PrecisionWave DEXTER\n";
     }
 #endif
+#if defined(HAVE_PLUTOTEZUKA)
+    else if (mod_settings.usePlutoTezukaOutput) {
+        ss << " Pluto with Tezuka Firmware\n";
+    }
+#endif
 #if defined(HAVE_LIMESDR)
     else if (mod_settings.useLimeOutput) {
         ss << " LimeSDR\n"

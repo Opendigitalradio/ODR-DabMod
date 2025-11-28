@@ -56,6 +56,7 @@
 #include "output/UHD.h"
 #include "output/Soapy.h"
 #include "output/Dexter.h"
+#include "output/PlutoTezuka.h"
 #include "output/Lime.h"
 #include "output/BladeRF.h"
 #include "OutputZeroMQ.h"
@@ -319,6 +320,16 @@ static shared_ptr<ModOutput> prepare_output(mod_settings_t& s)
         rcs.enrol((Output::SDR*)output.get());
     }
 #endif
+#if defined(HAVE_PLUTOTEZUKA)
+    else if (s.usePlutoTezukaOutput) {
+        /* We normalise specifically range [-32768; 32767] */
+        s.normalise = 32767.0f / normalise_factor;
+        s.sdr_device_config.sampleRate = s.outputRate;
+        auto plutotezukadevice = make_shared<Output::PlutoTezuka>(s.sdr_device_config);
+        output = make_shared<Output::SDR>(s.sdr_device_config, plutotezukadevice);
+        rcs.enrol((Output::SDR*)output.get());
+    }
+#endif
 #if defined(HAVE_LIMESDR)
     else if (s.useLimeOutput) {
         /* We normalise the same way as for the UHD output */
@@ -396,6 +407,7 @@ int launch_modulator(int argc, char* argv[])
              mod_settings.useZeroMQOutput or
              mod_settings.useSoapyOutput or
              mod_settings.useDexterOutput or
+             mod_settings.usePlutoTezukaOutput or
              mod_settings.useLimeOutput or
              mod_settings.useBladeRFOutput)) {
         throw std::runtime_error("Configuration error: Output not specified");

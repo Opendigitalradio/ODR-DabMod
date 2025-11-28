@@ -54,6 +54,7 @@ struct mod_settings_t {
     bool useUHDOutput = false;
     bool useSoapyOutput = false;
     bool useDexterOutput = false;
+    bool usePlutoTezukaOutput = false;
     bool useLimeOutput = false;
     bool useBladeRFOutput = false;
 

@@ -372,6 +372,32 @@ static void parse_configfile(
     }
 #endif // defined(HAVE_DEXTER)
 
+#if defined(HAVE_PLUTOTEZUKA)
+    else if (output_selected == "plutotezuka") {
+        auto& outputplutotezuka_conf = mod_settings.sdr_device_config;
+        outputplutotezuka_conf.txgain = pt.GetReal("plutotezukaoutput.txgain", 0.0);
+        outputplutotezuka_conf.lo_offset = pt.GetReal("plutotezukaoutput.lo_offset", 0.0);
+        outputplutotezuka_conf.frequency = pt.GetReal("plutotezukaoutput.frequency", 0);
+        std::string chan = pt.Get("plutotezukaoutput.channel", "");
+        outputplutotezuka_conf.dabMode = mod_settings.dabMode;
+        outputplutotezuka_conf.maxGPSHoldoverTime = pt.GetInteger("plutotezukaoutput.max_gps_holdover_time", 0);
+
+        if (outputplutotezuka_conf.frequency == 0 && chan == "") {
+            std::cerr << "       plutotezuka output enabled, but neither frequency nor channel defined.\n";
+            throw std::runtime_error("Configuration error");
+        }
+        else if (outputplutotezuka_conf.frequency == 0) {
+            outputplutotezuka_conf.frequency = parse_channel(chan);
+        }
+        else if (outputplutotezuka_conf.frequency != 0 && chan != "") {
+            std::cerr << "       plutotezuka output: cannot define both frequency and channel.\n";
+            throw std::runtime_error("Configuration error");
+        }
+
+        mod_settings.usePlutoTezukaOutput = true;
+    }
+#endif // defined(HAVE_PLUTOTEZUKA)
+
 #if defined(HAVE_LIMESDR)
     else if (output_selected == "limesdr") {
         auto& outputlime_conf = mod_settings.sdr_device_config;
