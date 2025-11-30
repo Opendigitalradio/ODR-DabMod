@@ -329,25 +329,10 @@ void PlutoTezuka::transmit_frame(struct FrameData&& frame)
 
     // 1. Convert Float samples to Signed Short (S16)
     m_i16samples.resize(numSamples * 2);
-    short *buffi16 = &m_i16samples[0];
-    
+    short *buffi16 =(short *) iio_buffer_start(m_tx_buf);
+        
     conv_s16_from_float(numSamples * 2, (const float *)buf, buffi16);
     
-    // 2. Copy data into the IIO mapped buffer
-    void *start = iio_buffer_start(m_tx_buf);
-    size_t input_size_bytes = numSamples * 2 * sizeof(short);
-    
-    //size_t buffer_size_bytes = iio_buffer_get_size(m_tx_buf);
-    size_t buffer_size_bytes = FRAME_LENGTH* sizeof(short) * 2;
-
-    
-    if (input_size_bytes > buffer_size_bytes) {
-        etiLog.level(error) << "PlutoTezuka: Input data exceeds IIO buffer size (" << buffer_size_bytes << " bytes). Truncating.";
-        input_size_bytes = buffer_size_bytes;
-    }
-    
-    std::memcpy(start, buffi16, input_size_bytes);
-
     // 3. Push the buffer to hardware
     ssize_t num_sent = iio_buffer_push(m_tx_buf);
 
