@@ -149,6 +149,7 @@ PlutoTezuka::PlutoTezuka(SDRDeviceConfig &config) : SDRDevice(), m_conf(config)
     iio_channel_enable(m_tx0_q);
 
     // 6. Create Buffer
+    iio_device_set_kernel_buffers_count(m_tx_dev, 16);
     m_tx_buf = iio_device_create_buffer(m_tx_dev, FRAME_LENGTH, false); // False for non-cyclic
     if (!m_tx_buf) {
         iio_context_destroy(m_ctx);
@@ -254,6 +255,16 @@ double PlutoTezuka::get_bandwidth(void) const
 SDRDevice::run_statistics_t PlutoTezuka::get_run_statistics(void) const
 {
     run_statistics_t rs;
+     uint32_t val = 0;
+     if(m_tx_dev)
+     {
+        int ret = iio_device_reg_read(m_tx_dev, 0x80000088, &val);
+        if (val & 1)
+        {
+            etiLog.level(error) << "@";
+            iio_device_reg_write(m_tx_dev, 0x80000088, val); // Clear bits
+        }
+     }    
     rs["underruns"].v = underflows;
     rs["overruns"].v = overflows;
     rs["dropped_packets"].v = dropped_packets;
@@ -264,7 +275,8 @@ SDRDevice::run_statistics_t PlutoTezuka::get_run_statistics(void) const
 
 double PlutoTezuka::get_real_secs(void) const
 {
-    return 0.0;
+    double CalculatedTime=num_frames_modulated*0.096;
+    return CalculatedTime;
 }
 
 void PlutoTezuka::set_rxgain(double rxgain)
@@ -326,7 +338,7 @@ void PlutoTezuka::transmit_frame(struct FrameData&& frame)
 
     const complexf *buf = reinterpret_cast<const complexf *>(frame.buf.data());
     const size_t numSamples = frame.buf.size() / sizeof(complexf);
-
+    
     // 1. Convert Float samples to Signed Short (S16)
     m_i16samples.resize(numSamples * 2);
     short *buffi16 =(short *) iio_buffer_start(m_tx_buf);
@@ -334,16 +346,31 @@ void PlutoTezuka::transmit_frame(struct FrameData&& frame)
     conv_s16_from_float(numSamples * 2, (const float *)buf, buffi16);
     
     // 3. Push the buffer to hardware
+    auto start = std::chrono::high_resolution_clock::now();
     ssize_t num_sent = iio_buffer_push(m_tx_buf);
+    uint32_t val = 0;
+     if(m_tx_dev)
+     {
+        int ret = iio_device_reg_read(m_tx_dev, 0x80000088, &val);
+        if (val & 1)
+        {
+            etiLog.level(error) << "@";
+            iio_device_reg_write(m_tx_dev, 0x80000088, val); // Clear bits
+        }
+     }   
+    auto end = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
 
-    if (num_sent < 0)
+    // Print the result
+    
+    if (num_sent < 2*sizeof(short)*FRAME_LENGTH)
     {
         char err_msg[IIO_ERROR_BUFFER_SIZE];
         iio_strerror((int)num_sent, err_msg, IIO_ERROR_BUFFER_SIZE);
         etiLog.level(error) << "Error sending PlutoTezuka stream: " << err_msg;
         underflows++;
     }
-
+    std::cout << "Frame "<<num_frames_modulated<<" duration " << duration.count()/1000 << " ms" << std::endl;
     num_frames_modulated++;
 }
 
