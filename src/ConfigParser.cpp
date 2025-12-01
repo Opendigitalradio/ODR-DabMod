@@ -102,7 +102,7 @@ static void parse_configfile(
     mod_settings.startupCheck = pt.Get("general.startupcheck", "");
 
     // remote controller interfaces:
-    if (pt.GetInteger("remotecontrol.telnet", 0) == 1) {
+    if (pt.GetBoolean("remotecontrol.telnet", false)) {
         try {
             int telnetport = pt.GetInteger("remotecontrol.telnetport", 0);
             auto telnetrc = make_shared<RemoteControllerTelnet>(telnetport);
@@ -115,7 +115,7 @@ static void parse_configfile(
         }
     }
 #if defined(HAVE_ZEROMQ)
-    if (pt.GetInteger("remotecontrol.zmqctrl", 0) == 1) {
+    if (pt.GetBoolean("remotecontrol.zmqctrl", false)) {
         try {
             std::string zmqCtrlEndpoint = pt.Get("remotecontrol.zmqctrlendpoint", "");
             auto zmqrc = make_shared<RemoteControllerZmq>(zmqCtrlEndpoint);
@@ -130,7 +130,7 @@ static void parse_configfile(
 #endif
 
     // input params:
-    if (pt.GetInteger("input.loop", 0) == 1) {
+    if (pt.GetBoolean("input.loop", false)) {
         mod_settings.loop = true;
     }
 
@@ -150,11 +150,11 @@ static void parse_configfile(
 #endif
     }
 
-    if (pt.GetInteger("log.syslog", 0) == 1) {
+    if (pt.GetBoolean("log.syslog", false)) {
         etiLog.register_backend(make_shared<LogToSyslog>());
     }
 
-    if (pt.GetInteger("log.filelog", 0) == 1) {
+    if (pt.GetBoolean("log.filelog", false)) {
         std::string logfilename;
         try {
             logfilename = pt.Get("log.filename", "");
@@ -173,7 +173,7 @@ static void parse_configfile(
         etiLog.register_backend(make_shared<LogTracer>(trace_filename));
     }
 
-    mod_settings.showProcessTime = pt.GetInteger("log.show_process_time",
+    mod_settings.showProcessTime = pt.GetBoolean("log.show_process_time",
             mod_settings.showProcessTime);
 
     // modulator parameters:
@@ -195,13 +195,13 @@ static void parse_configfile(
             mod_settings.ofdmWindowOverlap);
 
     // FIR Filter parameters:
-    if (pt.GetInteger("firfilter.enabled", 0) == 1) {
+    if (pt.GetBoolean("firfilter.enabled", false)) {
         mod_settings.filterTapsFilename =
             pt.Get("firfilter.filtertapsfile", "default");
     }
 
     // Poly coefficients:
-    if (pt.GetInteger("poly.enabled", 0) == 1) {
+    if (pt.GetBoolean("poly.enabled", false)) {
         mod_settings.polyCoefFilename =
             pt.Get("poly.polycoeffile", "dpd/poly.coef");
 
@@ -210,7 +210,7 @@ static void parse_configfile(
     }
 
     // Crest factor reduction
-    if (pt.GetInteger("cfr.enabled", 0) == 1) {
+    if (pt.GetBoolean("cfr.enabled", false)) {
         mod_settings.enableCfr = true;
         mod_settings.cfrClip = pt.GetReal("cfr.clip", 0.0);
         mod_settings.cfrErrorClip = pt.GetReal("cfr.error_clip", 0.0);
@@ -231,8 +231,9 @@ static void parse_configfile(
             std::cerr << "       Configuration does not specify file name for file output\n";
             throw std::runtime_error("Configuration error");
         }
-        mod_settings.fileOutputShowMetadata =
-                (pt.GetInteger("fileoutput.show_metadata", 0) > 0);
+        mod_settings.fileOutputShowMetadata = pt.GetBoolean(
+                "fileoutput.show_metadata", false);
+
         mod_settings.useFileOutput = true;
 
         mod_settings.fileOutputFormat = pt.Get("fileoutput.format",
@@ -446,8 +447,8 @@ static void parse_configfile(
 
 
 #if defined(HAVE_OUTPUT_UHD) || defined(HAVE_DEXTER)
-    mod_settings.sdr_device_config.enableSync = (pt.GetInteger("delaymanagement.synchronous", 0) == 1);
-    mod_settings.sdr_device_config.muteNoTimestamps = (pt.GetInteger("delaymanagement.mutenotimestamps", 0) == 1);
+    mod_settings.sdr_device_config.enableSync = pt.GetBoolean("delaymanagement.synchronous", false);
+    mod_settings.sdr_device_config.muteNoTimestamps = pt.GetBoolean("delaymanagement.mutenotimestamps", false);
     if (mod_settings.sdr_device_config.enableSync) {
         std::string delay_mgmt = pt.Get("delaymanagement.management", "");
         std::string fixedoffset = pt.Get("delaymanagement.fixedoffset", "");
@@ -468,9 +469,8 @@ static void parse_configfile(
     }
 #endif
 
-
     /* Read TII parameters from config file */
-    mod_settings.tiiConfig.enable = pt.GetInteger("tii.enable", 0);
+    mod_settings.tiiConfig.enable = pt.GetBoolean("tii.enable", false);
     mod_settings.tiiConfig.comb = pt.GetInteger("tii.comb", 0);
     mod_settings.tiiConfig.pattern = pt.GetInteger("tii.pattern", 0);
     mod_settings.tiiConfig.old_variant = pt.GetInteger("tii.old_variant", 0);
