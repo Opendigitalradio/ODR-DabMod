@@ -136,6 +136,27 @@ static void parse_configfile(
 
     mod_settings.inputTransport = pt.Get("input.transport", "file");
 
+    bool defaultBackpressureInput = false;
+    if (mod_settings.inputTransport == "edi" or
+        mod_settings.inputTransport == "tcp") {
+        defaultBackpressureInput = false;
+    }
+    else if (mod_settings.inputTransport == "file") {
+        defaultBackpressureInput = true;
+    }
+    else {
+        throw std::runtime_error("invalid input transport " +
+                mod_settings.inputTransport + " selected!");
+    }
+
+    // With unsynchronised sources (e.g. file input), the mod should
+    // throttle the input. For network inputs however, it's better to
+    // allow queue overflows, otherwise during startup, a slow output
+    // device will also block the entire mod and input.
+    mod_settings.sdr_device_config.blockingQueue =
+        pt.GetBoolean("input.backpressure_input", defaultBackpressureInput);
+
+
     mod_settings.edi_max_delay_ms = pt.GetReal("input.edi_max_delay", 0.0);
 
     mod_settings.inputName = pt.Get("input.source", "/dev/stdin");
@@ -241,7 +262,7 @@ static void parse_configfile(
     }
 #if defined(HAVE_OUTPUT_UHD)
     else if (output_selected == "uhd") {
-        Output::SDRDeviceConfig sdr_device_config;
+        auto& sdr_device_config = mod_settings.sdr_device_config;
 
         string device = pt.Get("uhdoutput.device", "");
         const auto usrpType = pt.Get("uhdoutput.type", "");
@@ -310,7 +331,6 @@ static void parse_configfile(
 
         sdr_device_config.dpdFeedbackServerPort = pt.GetInteger("uhdoutput.dpd_port", 0);
 
-        mod_settings.sdr_device_config = sdr_device_config;
         mod_settings.useUHDOutput = true;
     }
 #endif // defined(HAVE_OUTPUT_UHD)

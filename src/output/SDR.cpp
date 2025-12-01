@@ -188,10 +188,15 @@ meta_vec_t SDR::process_metadata(const meta_vec_t& metadataIn)
 
 
             const auto max_size = m_config.enableSync ? FRAMES_MAX_SIZE_SYNC : FRAMES_MAX_SIZE_UNSYNC;
-            auto r = m_queue.push_overflow(std::move(frame), max_size);
-            etiLog.log(trace, "SDR,push %d %zu", r.overflowed, r.new_size);
-
-            num_queue_overflows += r.overflowed ? 1 : 0;
+            if (m_config.blockingQueue) {
+                const auto new_size = m_queue.push_wait_if_full(std::move(frame), max_size);
+                etiLog.log(trace, "SDR,push 0 %zu", new_size);
+            }
+            else {
+                const auto r = m_queue.push_overflow(std::move(frame), max_size);
+                etiLog.log(trace, "SDR,push %d %zu", r.overflowed, r.new_size);
+                num_queue_overflows += r.overflowed ? 1 : 0;
+            }
         }
     }
     else {

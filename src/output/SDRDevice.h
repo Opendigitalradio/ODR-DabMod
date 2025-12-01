@@ -58,7 +58,7 @@ struct SDRDeviceConfig {
     std::string rx_antenna;
 
     bool fixedPoint = false;
-
+    bool blockingQueue = false;
     long masterClockRate = 32768000;
     unsigned sampleRate = 2048000;
     double frequency = 0.0;
