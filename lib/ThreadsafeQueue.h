@@ -31,7 +31,7 @@
 #include <functional>
 #include <mutex>
 #include <condition_variable>
-#include <queue>
+#include <deque>
 #include <utility>
 #include <cassert>
 
