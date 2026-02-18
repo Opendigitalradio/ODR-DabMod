@@ -514,33 +514,33 @@ const json::map_t SDR::get_all_values() const
 {
     json::map_t stat = m_device->get_run_statistics();
 
-    stat["txgain"].v = m_config.txgain;
-    stat["rxgain"].v = m_config.rxgain;
-    stat["freq"].v = m_config.frequency;
-    stat["muting"].v = m_config.muting;
-    stat["temp"].v = std::nullopt;
+    stat["txgain"] = m_config.txgain;
+    stat["rxgain"] = m_config.rxgain;
+    stat["freq"] = m_config.frequency;
+    stat["muting"] = m_config.muting;
+    stat["temp"] = std::nullopt;
 
     const auto maybe_freq = convert_frequency_to_channel(m_config.frequency);
 
     if (maybe_freq.has_value()) {
-        stat["channel"].v = *maybe_freq;
+        stat["channel"] = *maybe_freq;
     }
     else {
-        stat["channel"].v = std::nullopt;
+        stat["channel"] = std::nullopt;
     }
 
     if (m_device) {
         const std::optional<double> temp = m_device->get_temperature();
         if (temp) {
-            stat["temp"].v = *temp;
+            stat["temp"] = *temp;
         }
     }
-    stat["queued_frames_ms"].v = m_queue.size() *
+    stat["queued_frames_ms"] = m_queue.size() *
             (size_t)chrono::duration_cast<chrono::milliseconds>(transmission_frame_duration(m_config.dabMode))
             .count();
 
-    stat["synchronous"].v = m_config.enableSync;
-    stat["max_gps_holdover_time"].v = (size_t)m_config.maxGPSHoldoverTime;
+    stat["synchronous"] = m_config.enableSync;
+    stat["max_gps_holdover_time"] = (size_t)m_config.maxGPSHoldoverTime;
 
     return stat;
 }

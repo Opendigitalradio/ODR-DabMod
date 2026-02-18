@@ -71,13 +71,35 @@ void InetAddress::resolveUdpDestination(const std::string& destination, int port
 string InetAddress::to_string() const
 {
     char received_from_str[64] = {};
-    sockaddr *addr = reinterpret_cast<sockaddr*>(&addr);
-    const char* ret = inet_ntop(AF_INET, addr, received_from_str, 63);
 
-    if (ret == nullptr) {
-        throw invalid_argument(string("Error converting InetAddress") + strerror(errno));
+    if (addr.ss_family == AF_INET) {
+        const sockaddr_in *s = reinterpret_cast<const sockaddr_in*>(&addr);
+        const char *ret = inet_ntop(AF_INET, &s->sin_addr, received_from_str, 63);
+
+        if (ret == nullptr) {
+            throw invalid_argument(string("Error converting AF_INET InetAddress") + strerror(errno));
+        }
+
+        auto port = ntohs(s->sin_port);
+
+        return string(ret) + ":" + std::to_string(port);
     }
-    return ret;
+    else if (addr.ss_family == AF_INET6) {
+        const sockaddr_in6 *s = reinterpret_cast<const sockaddr_in6*>(&addr);
+        const char *ret = inet_ntop(AF_INET6, &s->sin6_addr, received_from_str, 63);
+
+        if (ret == nullptr) {
+            throw invalid_argument(string("Error converting AF_INET6 InetAddress") + strerror(errno));
+        }
+
+        auto port = ntohs(s->sin6_port);
+
+        return string(ret) + ":" + std::to_string(port);
+    }
+    else {
+        fprintf(stderr, "Unknown AF %u\n", addr.ss_family);
+        return "";
+    }
 }
 
 UDPPacket::UDPPacket() { }
@@ -1085,11 +1107,11 @@ TCPDataDispatcher::TCPDataDispatcher(size_t max_queue_size, size_t buffers_to_pr
 TCPDataDispatcher::~TCPDataDispatcher()
 {
     m_running = false;
-    m_connections.clear();
-    m_listener_socket.close();
     if (m_listener_thread.joinable()) {
         m_listener_thread.join();
     }
+    m_listener_socket.close();
+    m_connections.clear();
 }
 
 void TCPDataDispatcher::start(int port, const string& address)

@@ -586,18 +586,18 @@ const string GainControl::get_parameter(const string& parameter) const
 const json::map_t GainControl::get_all_values() const
 {
     json::map_t map;
-    map["digital"].v = m_digGain;
+    map["digital"] = m_digGain;
     switch (m_gainmode) {
         case GainMode::GAIN_FIX:
-            map["mode"].v = "fix";
+            map["mode"] = "fix";
             break;
         case GainMode::GAIN_MAX:
-            map["mode"].v = "max";
+            map["mode"] = "max";
             break;
         case GainMode::GAIN_VAR:
-            map["mode"].v = "var";
+            map["mode"] = "var";
             break;
     }
-    map["var"].v = m_var_variance_rc;
+    map["var"] = m_var_variance_rc;
     return map;
 }

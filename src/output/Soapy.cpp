@@ -184,10 +184,10 @@ double Soapy::get_bandwidth(void) const
 SDRDevice::run_statistics_t Soapy::get_run_statistics(void) const
 {
     run_statistics_t rs;
-    rs["underruns"].v = underflows;
-    rs["overruns"].v = overflows;
-    rs["timeouts"].v = timeouts;
-    rs["frames"].v = num_frames_modulated;
+    rs["underruns"] = underflows;
+    rs["overruns"] = overflows;
+    rs["timeouts"] = timeouts;
+    rs["frames"] = num_frames_modulated;
     return rs;
 }
 

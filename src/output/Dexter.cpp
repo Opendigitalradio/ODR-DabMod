@@ -435,26 +435,26 @@ SDRDevice::run_statistics_t Dexter::get_run_statistics(void) const
     run_statistics_t rs;
     {
         std::unique_lock<std::mutex> lock(m_attr_thread_mutex);
-        rs["underruns"].v = underflows;
+        rs["underruns"] = underflows;
     }
-    rs["latepackets"].v = num_late;
-    rs["frames"].v = num_frames_modulated;
+    rs["latepackets"] = num_late;
+    rs["frames"] = num_frames_modulated;
 
-    rs["in_holdover_since"].v = 0;
-    rs["remaining_holdover_s"].v = m_conf.maxGPSHoldoverTime;
+    rs["in_holdover_since"] = 0;
+    rs["remaining_holdover_s"] = m_conf.maxGPSHoldoverTime;
     switch (m_clock_state) {
         case DexterClockState::Startup:
-            rs["clock_state"].v = "startup"; break;
+            rs["clock_state"] = "startup"; break;
         case DexterClockState::Normal:
-            rs["clock_state"].v = "normal"; break;
+            rs["clock_state"] = "normal"; break;
         case DexterClockState::Holdover:
-            rs["clock_state"].v = "holdover";
-            rs["in_holdover_since"].v = m_holdover_since_t;
+            rs["clock_state"] = "holdover";
+            rs["in_holdover_since"] = m_holdover_since_t;
             {
                 using namespace std::chrono;
                 const auto max_holdover_duration = seconds(m_conf.maxGPSHoldoverTime);
                 const duration<double> remaining = max_holdover_duration - (steady_clock::now() - m_holdover_since);
-                rs["remaining_holdover_s"].v = (ssize_t)duration_cast<seconds>(remaining).count();
+                rs["remaining_holdover_s"] = (ssize_t)duration_cast<seconds>(remaining).count();
             }
             break;
     }

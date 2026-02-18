@@ -304,19 +304,19 @@ const std::string TimestampDecoder::get_parameter(
 const json::map_t TimestampDecoder::get_all_values() const
 {
     json::map_t map;
-    map["offset"].v = timestamp_offset;
+    map["offset"] = timestamp_offset;
     if (full_timestamp_received) {
-        map["timestamp"].v = time_secs + ((double)time_pps / 16384000.0);
+        map["timestamp"] = time_secs + ((double)time_pps / 16384000.0);
     }
     else {
-        map["timestamp"].v = std::nullopt;
+        map["timestamp"] = std::nullopt;
     }
 
     if (full_timestamp_received) {
-        map["timestamp0"].v = time_secs_of_frame0 + ((double)time_pps_of_frame0 / 16384000.0);
+        map["timestamp0"] = time_secs_of_frame0 + ((double)time_pps_of_frame0 / 16384000.0);
     }
     else {
-        map["timestamp0"].v = std::nullopt;
+        map["timestamp0"] = std::nullopt;
     }
     return map;
 }

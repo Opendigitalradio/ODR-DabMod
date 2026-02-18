@@ -194,39 +194,39 @@ class ModulatorData : public RemoteControllable {
         virtual const json::map_t get_all_values() const
         {
             json::map_t map;
-            map["num_modulator_restarts"].v = num_modulator_restarts;
-            map["running_since"].v = running_since;
-            map["most_recent_edi_decoded"].v = most_recent_edi_decoded;
+            map["num_modulator_restarts"] = num_modulator_restarts;
+            map["running_since"] = running_since;
+            map["most_recent_edi_decoded"] = most_recent_edi_decoded;
 
             if (ediInput) {
-                map["edi_source"].v = ediInput->ediTransport.getTcpUri();
-                map["num_services"].v = ediInput->ediReader.getSubchannels().size();
+                map["edi_source"] = ediInput->ediTransport.getTcpUri();
+                map["num_services"] = ediInput->ediReader.getSubchannels().size();
 
                 const auto ens = ediInput->ediReader.getEnsembleInfo();
                 if (ens) {
-                    map["ensemble_label"].v = FICDecoder::ConvertLabelToUTF8(ens->label, nullptr);
-                    map["ensemble_eid"].v = ens->eid;
+                    map["ensemble_label"] = FICDecoder::ConvertLabelToUTF8(ens->label, nullptr);
+                    map["ensemble_eid"] = ens->eid;
                 }
                 else {
-                    map["ensemble_label"].v = nullopt;
-                    map["ensemble_eid"].v = nullopt;
+                    map["ensemble_label"] = nullopt;
+                    map["ensemble_eid"] = nullopt;
                 }
 
                 std::vector<json::value_t> services;
 
                 for (const auto& s : ediInput->ediReader.getServiceInfo()) {
                     auto service_map = make_shared<json::map_t>();
-                    (*service_map)["sad"].v = s.second.subchannel.start;
-                    (*service_map)["sid"].v = s.second.sid;
-                    (*service_map)["label"].v = FICDecoder::ConvertLabelToUTF8(s.second.label, nullptr);
-                    (*service_map)["bitrate"].v = s.second.subchannel.bitrate;
-                    (*service_map)["protection_level"].v = s.second.subchannel.pl;
+                    (*service_map)["sad"] = s.second.subchannel.start;
+                    (*service_map)["sid"] = s.second.sid;
+                    (*service_map)["label"] = FICDecoder::ConvertLabelToUTF8(s.second.label, nullptr);
+                    (*service_map)["bitrate"] = s.second.subchannel.bitrate;
+                    (*service_map)["protection_level"] = s.second.subchannel.pl;
                     json::value_t v;
-                    v.v = service_map;
+                    v = service_map;
                     services.push_back(v);
                 }
 
-                map["ensemble_services"].v = services;
+                map["ensemble_services"] = services;
 
             }
             return map;

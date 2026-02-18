@@ -83,7 +83,7 @@ void LogToEventSender::log(log_level_t level, const std::string& message)
 
     if (not event_name.empty()) {
         json::map_t detail;
-        detail["message"].v = message;
+        detail["message"] = message;
         events.send(event_name, detail);
     }
 }
