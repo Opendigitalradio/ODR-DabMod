@@ -72,6 +72,7 @@ class FECDecoder {
         int decode(vector<uint8_t> &data, vector<int> &eras_pos) {
             assert(data.size() == N);
             const size_t no_eras = eras_pos.size();
+            assert(no_eras <= nroots);
 
             eras_pos.resize(nroots);
             int num_err = decode_rs_char(m_rs_handler, data.data(),
@@ -267,10 +268,6 @@ AFBuilder::decode_attempt_result_t AFBuilder::canAttemptToDecode()
         return AFBuilder::decode_attempt_result_t::no;
     }
 
-    if (_fragments.size() == _Fcount) {
-        return AFBuilder::decode_attempt_result_t::yes;
-    }
-
     /* Check that all fragments are consistent */
     const Fragment& first = _fragments.begin()->second;
     if (not std::all_of(_fragments.begin(), _fragments.end(),
@@ -282,12 +279,16 @@ AFBuilder::decode_attempt_result_t AFBuilder::canAttemptToDecode()
         throw runtime_error("Inconsistent PFT fragments");
     }
 
+    if (_fragments.size() == _Fcount) {
+        return AFBuilder::decode_attempt_result_t::yes;
+    }
+
     // Calculate the minimum number of fragments necessary to apply FEC.
     // This can't be done with the last fragment that may have a
     // smaller size
     // ETSI TS 102 821 V1.4.1 ch 7.4.4
     auto frag_it = _fragments.begin();
-    if (frag_it->second.Fcount() == _Fcount - 1) {
+    if (frag_it->second.isLast()) {
         frag_it++;
 
         if (frag_it == _fragments.end()) {
@@ -297,8 +298,7 @@ AFBuilder::decode_attempt_result_t AFBuilder::canAttemptToDecode()
 
     const Fragment& frag = frag_it->second;
 
-    if ( frag.FEC() )
-    {
+    if (frag.FEC()) {
         const uint16_t _Plen = frag.Plen();
 
         /* max number of RS chunks that may have been sent */
@@ -327,7 +327,7 @@ std::vector<uint8_t> AFBuilder::extractAF()
 
     if (canAttemptToDecode() != AFBuilder::decode_attempt_result_t::no) {
         auto frag_it = _fragments.begin();
-        if (frag_it->second.Fcount() == _Fcount - 1) {
+        if (frag_it->second.isLast()) {
             frag_it++;
 
             if (frag_it == _fragments.end()) {
@@ -340,14 +340,12 @@ std::vector<uint8_t> AFBuilder::extractAF()
         const auto RSz = ref_frag.RSz();
         const auto Plen = ref_frag.Plen();
 
-        if ( ref_frag.FEC() )
-        {
+        if (ref_frag.FEC()) {
             const uint32_t cmax = (_Fcount*Plen) / (RSk+48);
 
             // Keep track of erasures (missing fragments) for
             // every chunk
             map<int, vector<int> > erasures;
-
 
             // Assemble fragments into a RS block, immediately
             // deinterleaving it.
@@ -394,6 +392,24 @@ std::vector<uint8_t> AFBuilder::extractAF()
 
             // The RS block is a concatenation of chunks of RSk bytes + 48 parity
             // followed by RSz padding
+
+            // We are not allowed to give more than 48 erasures to FECdecoder::decode()
+            if (std::any_of(erasures.begin(), erasures.end(),
+                        [](const auto& eras) { return eras.second.size() > 48; })) {
+#if 0
+                for (const auto& erasure : erasures) {
+                    stringstream ss;
+                    ss << "Erasures i=" << erasure.first << " (" << erasure.second.size() << ") ";
+
+                    for (const auto &index : erasure.second) {
+                        ss << index << " ";
+                    }
+                    ss << "\n";
+                    cerr << ss.str();
+                }
+#endif
+                return {};
+            }
 
             FECDecoder fec;
             for (size_t i = 0; i < cmax; i++) {

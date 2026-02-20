@@ -47,15 +47,32 @@ class Fragment
         size_t loadData(const std::vector<uint8_t> &buf);
 
         bool isValid() const { return _valid; }
+        bool isLast() const { return _Findex + 1 == _Fcount; }
+
+        // Counter incremented for each AF Packet.
         pseq_t Pseq() const { return _Pseq; }
+
+        // Index of fragment that forms part of a single AF packet.
+        // First fragment has value 0.
         findex_t Findex() const { return _Findex; }
+
+        // Number of fragments produced by the AF packet. Never 0
         findex_t Fcount() const { return _Fcount; }
+
         bool FEC() const { return _FEC; }
+
+        // Length in bytes of payload of this fragment
         uint16_t Plen() const { return _Plen; }
+
+        // Length of Reed-Solomon data word
         uint8_t RSk() const { return _RSk; }
+
+        // Number of padding bytes in the last fragment
         uint8_t RSz() const { return _RSz; }
-        const std::vector<uint8_t>& payload() const
-            { return _payload; }
+
+        const std::vector<uint8_t>& payload() const {
+            return _payload;
+        }
 
         bool checkConsistency(const Fragment& other) const;
 
