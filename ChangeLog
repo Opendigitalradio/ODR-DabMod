@@ -1,6 +1,11 @@
 This file contains information about the changes done to
 ODR-DabMod in this repository
 
+2026-02-23: Matthias P. Braendli <matthias@mpb.li>
+	(v3.2.0):
+		Add backpressure_input setting.
+		Fix EDI PFT decoding bug in some situations with lost fragments.
+
 2025-09-08: Matthias P. Braendli <matthias@mpb.li>
 	(v3.0.1):
 		Fix compilation on debian gcc-15.
