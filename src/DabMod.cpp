@@ -322,9 +322,9 @@ static shared_ptr<ModOutput> prepare_output(mod_settings_t& s)
 #endif
 #if defined(HAVE_PLUTOTEZUKA)
     else if (s.usePlutoTezukaOutput) {
-        /* We normalise specifically range [-32768; 32767] */
-        s.normalise = 32767.0f / normalise_factor;
+        s.normalise = 1.0f / normalise_factor;
         s.sdr_device_config.sampleRate = s.outputRate;
+        s.sdr_device_config.fixedPoint = (s.fftEngine != FFTEngine::FFTW);
         auto plutotezukadevice = make_shared<Output::PlutoTezuka>(s.sdr_device_config);
         output = make_shared<Output::SDR>(s.sdr_device_config, plutotezukadevice);
         rcs.enrol((Output::SDR*)output.get());

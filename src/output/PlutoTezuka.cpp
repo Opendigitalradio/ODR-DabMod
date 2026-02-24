@@ -13,10 +13,7 @@ DESCRIPTION:
 
 #ifdef HAVE_PLUTOTEZUKA
 
-#include <chrono>
-#include <limits>
 #include <cstdio>
-#include <iomanip>
 
 #include "Log.h"
 #include "Utils.h"
@@ -65,9 +62,9 @@ void conv_s16_from_float(unsigned n, const float *a, short *b)
     for (i = 0; i < n; i++)
     {
         float val = a[i];
-        if (val > 1.0f) val = 1.0f;
+        if (val > 1.0f) { etiLog.level(info) << "val overflow " << val; val = 1.0f;  }
         if (val < -1.0f) val = -1.0f;
-        b[i] = (short)(val * 4096.0f);
+        b[i] = (short)(val * 2048.0f );
     }
 }
 #endif
@@ -336,41 +333,23 @@ void PlutoTezuka::transmit_frame(struct FrameData&& frame)
     if (not m_tx_dev || not m_tx_buf)
         throw runtime_error("PlutoTezuka device not set up or buffer missing");
 
-    const complexf *buf = reinterpret_cast<const complexf *>(frame.buf.data());
-    const size_t numSamples = frame.buf.size() / sizeof(complexf);
-    
-    // 1. Convert Float samples to Signed Short (S16)
-    m_i16samples.resize(numSamples * 2);
-    short *buffi16 =(short *) iio_buffer_start(m_tx_buf);
-        
-    conv_s16_from_float(numSamples * 2, (const float *)buf, buffi16);
-    
-    // 3. Push the buffer to hardware
-    auto start = std::chrono::high_resolution_clock::now();
-    ssize_t num_sent = iio_buffer_push(m_tx_buf);
-    uint32_t val = 0;
-     if(m_tx_dev)
-     {
-        int ret = iio_device_reg_read(m_tx_dev, 0x80000088, &val);
-        if (val & 1)
-        {
-            etiLog.level(error) << "@";
-            iio_device_reg_write(m_tx_dev, 0x80000088, val); // Clear bits
-        }
-     }   
-    auto end = std::chrono::high_resolution_clock::now();
-    auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
+    short *buffi16 = (short *) iio_buffer_start(m_tx_buf);
+    const size_t sample_size = m_conf.fixedPoint ? (2 * sizeof(int16_t)) : sizeof(complexf);
+    const size_t num_samples = frame.buf.size() / sample_size;
 
-    // Print the result
-    
-    if (num_sent < 2*sizeof(short)*FRAME_LENGTH)
-    {
+    if (m_conf.fixedPoint) {
+        memcpy(buffi16, frame.buf.data(), num_samples * 2 * sizeof(int16_t));
+    } else {
+        conv_s16_from_float(num_samples * 2, (const float *)frame.buf.data(), buffi16);
+    }
+
+    ssize_t num_sent = iio_buffer_push(m_tx_buf);
+    if (num_sent < (ssize_t)(2 * sizeof(short) * FRAME_LENGTH)) {
         char err_msg[IIO_ERROR_BUFFER_SIZE];
         iio_strerror((int)num_sent, err_msg, IIO_ERROR_BUFFER_SIZE);
-        etiLog.level(error) << "Error sending PlutoTezuka stream: " << err_msg;
+        etiLog.level(error) << "PlutoTezuka: TX push error: " << err_msg;
         underflows++;
     }
-    std::cout << "Frame "<<num_frames_modulated<<" duration " << duration.count()/1000 << " ms" << std::endl;
     num_frames_modulated++;
 }
 
@@ -415,7 +394,8 @@ void PlutoTezuka::fmc_load_lpf_filter(int ratio, float digitalgain,bool db6boost
 			firrx[NbTaps]=0.0;
     		firtx[NbTaps]=0.0;
 			fprintf(stderr, "Max FIR =%f\n", max);
-			fmc_load_tx_filter(fir_taps,fir_taps, NbTaps+1, ratio, true,gain,db6boost);
+			fmc_load_tx_filter(fir_taps,fir_taps, NbTaps+1, ratio, true,1.0,db6boost);
+            //fmc_load_tx_filter(firrx,firtx, NbTaps+1, ratio, true,gain,db6boost);
 
 }
 
@@ -442,11 +422,14 @@ void PlutoTezuka::fmc_load_tx_filter(const double *firrx,const double *firtx, in
 		clen += snprintf(buf + clen, buffsize - clen, "TX 3 GAIN -6 INT %d\n", ratio); //-6db seems better
 	}	
 	short coefrx=0;
+    short coeftx=0;
 	for (int i = 0; i < taps; i++)
 	{
+        coeftx= (short)(0x7FFF * firtx[i]*gain);
 		if(i==taps/2) coefrx=0x7FFF; else coefrx=0;
-		
-		clen += snprintf(buf + clen, buffsize - clen, "%d,%d\n", (short)(0x7FFF * firtx[i]*gain),coefrx); //Fixme ! 1FFF instead of 0x3FFF seems better but should have to be inspect
+		if(i==0) coeftx=0;
+        if(i==taps-1) coeftx=0;
+		clen += snprintf(buf + clen, buffsize - clen, "%d,%d\n", coeftx,coefrx); //Fixme ! 1FFF instead of 0x3FFF seems better but should have to be inspect
 	}	
 	clen += snprintf(buf + clen, buffsize - clen, "\n");
 
