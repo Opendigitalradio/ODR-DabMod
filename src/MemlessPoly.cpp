@@ -470,7 +470,7 @@ const string MemlessPoly::get_parameter(const string& parameter) const
 const json::map_t MemlessPoly::get_all_values() const
 {
     json::map_t map;
-    map["ncoefs"].v = m_coefs_am.size();
+    map["ncoefs"].v = (uint64_t)m_coefs_am.size();
     map["coefs"].v = serialise_coefficients();
     map["coeffile"].v = m_coefs_file;
     return map;

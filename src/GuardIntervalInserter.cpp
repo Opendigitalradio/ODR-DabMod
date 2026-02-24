@@ -374,6 +374,6 @@ const std::string GuardIntervalInserter::get_parameter(const std::string& parame
 const json::map_t GuardIntervalInserter::get_all_values() const
 {
     json::map_t map;
-    map["windowlen"].v = m_params.windowOverlap;
+    map["windowlen"].v = (uint64_t)m_params.windowOverlap;
     return map;
 }

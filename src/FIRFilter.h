@@ -37,6 +37,7 @@
 #include <sys/types.h>
 #include <vector>
 #include <cstdio>
+#include <mutex>
 #include <string>
 
 #define FIRFILTER_PIPELINE_DELAY 1

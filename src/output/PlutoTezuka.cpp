@@ -262,11 +262,11 @@ SDRDevice::run_statistics_t PlutoTezuka::get_run_statistics(void) const
             iio_device_reg_write(m_tx_dev, 0x80000088, val); // Clear bits
         }
      }    
-    rs["underruns"].v = underflows;
-    rs["overruns"].v = overflows;
-    rs["dropped_packets"].v = dropped_packets;
-    rs["frames"].v = num_frames_modulated;
-    rs["fifo_fill"].v = m_last_fifo_fill_percent * 100;
+    rs["underruns"].v = (uint64_t)underflows;
+    rs["overruns"].v = (uint64_t)overflows;
+    rs["dropped_packets"].v = (uint64_t)dropped_packets;
+    rs["frames"].v = (uint64_t)num_frames_modulated;
+    rs["fifo_fill"].v = (double)(m_last_fifo_fill_percent * 100);
     return rs;
 }
 

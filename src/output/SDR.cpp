@@ -535,12 +535,12 @@ const json::map_t SDR::get_all_values() const
             stat["temp"].v = *temp;
         }
     }
-    stat["queued_frames_ms"].v = m_queue.size() *
+    stat["queued_frames_ms"].v = (uint64_t)(m_queue.size() *
             (size_t)chrono::duration_cast<chrono::milliseconds>(transmission_frame_duration(m_config.dabMode))
-            .count();
+            .count());
 
     stat["synchronous"].v = m_config.enableSync;
-    stat["max_gps_holdover_time"].v = (size_t)m_config.maxGPSHoldoverTime;
+    stat["max_gps_holdover_time"].v = (uint64_t)m_config.maxGPSHoldoverTime;
 
     return stat;
 }

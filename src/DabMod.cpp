@@ -195,13 +195,13 @@ class ModulatorData : public RemoteControllable {
         virtual const json::map_t get_all_values() const
         {
             json::map_t map;
-            map["num_modulator_restarts"].v = num_modulator_restarts;
-            map["running_since"].v = running_since;
-            map["most_recent_edi_decoded"].v = most_recent_edi_decoded;
+            map["num_modulator_restarts"].v = (uint64_t)num_modulator_restarts;
+            map["running_since"].v = (int64_t)running_since;
+            map["most_recent_edi_decoded"].v = (int64_t)most_recent_edi_decoded;
 
             if (ediInput) {
                 map["edi_source"].v = ediInput->ediTransport.getTcpUri();
-                map["num_services"].v = ediInput->ediReader.getSubchannels().size();
+                map["num_services"].v = (uint64_t)ediInput->ediReader.getSubchannels().size();
 
                 const auto ens = ediInput->ediReader.getEnsembleInfo();
                 if (ens) {
@@ -217,7 +217,7 @@ class ModulatorData : public RemoteControllable {
 
                 for (const auto& s : ediInput->ediReader.getServiceInfo()) {
                     auto service_map = make_shared<json::map_t>();
-                    (*service_map)["sad"].v = s.second.subchannel.start;
+                    (*service_map)["sad"].v = (uint64_t)s.second.subchannel.start;
                     (*service_map)["sid"].v = s.second.sid;
                     (*service_map)["label"].v = FICDecoder::ConvertLabelToUTF8(s.second.label, nullptr);
                     (*service_map)["bitrate"].v = s.second.subchannel.bitrate;
