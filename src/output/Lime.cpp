@@ -55,7 +55,7 @@ static constexpr size_t FRAMES_MAX_SIZE = 2;
 static constexpr size_t FRAME_LENGTH = 196608; // at native sample rate!
 
 #ifdef __ARM_NEON__
-void conv_s16_from_float(unsigned n, const float *a, short *b)
+static void conv_s16_from_float(unsigned n, const float *a, short *b)
 {
     unsigned i;
 
@@ -78,7 +78,7 @@ void conv_s16_from_float(unsigned n, const float *a, short *b)
     }
 }
 #else
-void conv_s16_from_float(unsigned n, const float *a, short *b)
+static void conv_s16_from_float(unsigned n, const float *a, short *b)
 {
     unsigned i;
 

@@ -34,7 +34,7 @@ static constexpr size_t IIO_ERROR_BUFFER_SIZE = 196608; // Buffer size for iio_s
 // --- Conversion Function (from provided original snippet) ---
 
 #ifdef __ARM_NEON__
-void conv_s16_from_float(unsigned n, const float *a, short *b)
+static void conv_s16_from_float(unsigned n, const float *a, short *b)
 {
     unsigned i;
     const float32x4_t plusone4 = vdupq_n_f32(1.0f);
@@ -56,7 +56,7 @@ void conv_s16_from_float(unsigned n, const float *a, short *b)
     }
 }
 #else
-void conv_s16_from_float(unsigned n, const float *a, short *b)
+static void conv_s16_from_float(unsigned n, const float *a, short *b)
 {
     unsigned i;
     for (i = 0; i < n; i++)
