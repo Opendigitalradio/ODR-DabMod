@@ -2,7 +2,7 @@
    Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010, 2011 Her Majesty
    the Queen in Right of Canada (Communications Research Center Canada)
 
-   Copyright (C) 2019
+   Copyright (C) 2026
    Matthias P. Braendli, matthias.braendli@mpb.li
 
     http://opendigitalradio.org
@@ -35,7 +35,6 @@
 #include <sys/types.h>
 #include <string.h>
 #include <arpa/inet.h>
-#include <regex>
 
 using namespace std;
 
@@ -536,9 +535,11 @@ EdiTransport::EdiTransport(EdiDecoder::ETIDecoder& decoder) :
     m_decoder(decoder) { }
 
 
-void EdiTransport::Open(const std::string& uri)
+void EdiTransport::Open(const std::string& uri, bool verbose)
 {
     etiLog.level(info) << "Opening EDI :" << uri;
+
+    m_decoder.set_verbose(verbose);
 
     const string proto = uri.substr(0, 6);
     if (proto == "udp://") {

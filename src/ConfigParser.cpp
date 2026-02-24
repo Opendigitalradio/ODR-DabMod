@@ -158,6 +158,7 @@ static void parse_configfile(
 
 
     mod_settings.edi_max_delay_ms = pt.GetReal("input.edi_max_delay", 0.0);
+    mod_settings.edi_verbose = pt.GetBoolean("input.edi_verbose", false);
 
     mod_settings.inputName = pt.Get("input.source", "/dev/stdin");
 

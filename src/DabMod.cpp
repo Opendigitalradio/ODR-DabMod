@@ -484,7 +484,7 @@ int launch_modulator(int argc, char* argv[])
     if (mod_settings.inputTransport == "edi") {
         ediInput = make_shared<EdiInput>(mod_settings.tist_offset_s, mod_settings.edi_max_delay_ms);
 
-        ediInput->ediTransport.Open(mod_settings.inputName);
+        ediInput->ediTransport.Open(mod_settings.inputName, mod_settings.edi_verbose);
         if (not ediInput->ediTransport.isEnabled()) {
             throw runtime_error("inputTransport is edi, but ediTransport is not enabled");
         }

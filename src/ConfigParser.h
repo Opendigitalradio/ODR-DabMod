@@ -74,6 +74,7 @@ struct mod_settings_t {
     std::string inputName = "";
     std::string inputTransport = "file";
     float edi_max_delay_ms = 0.0f;
+    bool edi_verbose = false;
 
     tii_config_t tiiConfig;
 

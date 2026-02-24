@@ -2,7 +2,7 @@
    Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010, 2011 Her Majesty
    the Queen in Right of Canada (Communications Research Center Canada)
 
-   Copyright (C) 2020
+   Copyright (C) 2026
    Matthias P. Braendli, matthias.braendli@mpb.li
 
     http://opendigitalradio.org
@@ -32,7 +32,6 @@
 
 
 #include "Eti.h"
-#include "Log.h"
 #include "FicSource.h"
 #include "FigParser.h"
 #include "Socket.h"
@@ -218,7 +217,7 @@ class EdiTransport {
         EdiTransport(EdiDecoder::ETIDecoder& decoder);
 
         /* Can be called once when using TCP, or several times when using UDP */
-        void Open(const std::string& uri);
+        void Open(const std::string& uri, bool verbose);
 
         bool isEnabled(void) const { return m_enabled; }
         std::string getTcpUri(void) const { return m_tcp_uri; }
