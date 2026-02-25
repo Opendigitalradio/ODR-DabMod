@@ -40,7 +40,7 @@ static void conv_s16_from_float(unsigned n, const float *a, short *b)
     const float32x4_t plusone4 = vdupq_n_f32(1.0f);
     const float32x4_t minusone4 = vdupq_n_f32(-1.0f);
     const float32x4_t half4 = vdupq_n_f32(0.5f);
-    const float32x4_t scale4 = vdupq_n_f32(4096.0f);
+    const float32x4_t scale4 = vdupq_n_f32(16384.0f);
     const uint32x4_t mask4 = vdupq_n_u32(0x80000000);
 
     for (i = 0; i < n / 4; i++)
@@ -64,7 +64,8 @@ static void conv_s16_from_float(unsigned n, const float *a, short *b)
         float val = a[i];
         if (val > 1.0f) { etiLog.level(info) << "val overflow " << val; val = 1.0f;  }
         if (val < -1.0f) val = -1.0f;
-        b[i] = (short)(val * 2048.0f );
+        b[i] = (short)(val * 32000.0f ); //Should be 2048 because 12 bits, but FIR induce loss
+        //if (b[i] > 4096) { etiLog.level(info) << "val overflow " << b[i];  }
     }
 }
 #endif
@@ -75,7 +76,11 @@ static void conv_s16_from_float(unsigned n, const float *a, short *b)
 PlutoTezuka::PlutoTezuka(SDRDeviceConfig &config) : SDRDevice(), m_conf(config)
 {
     etiLog.level(info) << "PlutoTezuka: Creating the device with URI: " << m_conf.device;
-
+    #ifdef __ARM_NEON__
+        etiLog.level(info) << "PlutoTezuka: Using NEON support ";
+    #else
+        etiLog.level(info) << "PlutoTezuka: NOT Using NEON support ";
+    #endif
     // 1. Create Context
     if (m_conf.device == "default" || m_conf.device.empty()) {
         m_ctx = iio_create_default_context();
@@ -114,8 +119,8 @@ PlutoTezuka::PlutoTezuka(SDRDeviceConfig &config) : SDRDevice(), m_conf(config)
         etiLog.level(warn) << "PlutoTezuka: Failed to get TX chrate" ;    
     }
     
-    if (  iio_channel_attr_write_longlong(tx_rate_ch, "sampling_frequency", rate*4) < 0) {
-        etiLog.level(warn) << "PlutoTezuka: Failed to set TX sampling rate " << rate*4;
+    if (  iio_channel_attr_write_longlong(tx_rate_ch, "sampling_frequency", Dummyrate) < 0) {
+        etiLog.level(warn) << "PlutoTezuka: Failed to set TX sampling rate " << Dummyrate;
     }
 
     fmc_load_lpf_filter(4,1.0,true);
@@ -127,6 +132,7 @@ PlutoTezuka::PlutoTezuka(SDRDeviceConfig &config) : SDRDevice(), m_conf(config)
     else
         etiLog.level(warn) << "PlutoTezuka: Success to set TX sampling rate " << rate;
     
+    set_bandwidth(rate*2);   
 
     tune(m_conf.lo_offset, m_conf.frequency);
     set_txgain(m_conf.txgain);
@@ -146,7 +152,7 @@ PlutoTezuka::PlutoTezuka(SDRDeviceConfig &config) : SDRDevice(), m_conf(config)
     iio_channel_enable(m_tx0_q);
 
     // 6. Create Buffer
-    iio_device_set_kernel_buffers_count(m_tx_dev, 16);
+    iio_device_set_kernel_buffers_count(m_tx_dev, 32);
     m_tx_buf = iio_device_create_buffer(m_tx_dev, FRAME_LENGTH, false); // False for non-cyclic
     if (!m_tx_buf) {
         iio_context_destroy(m_ctx);
@@ -154,6 +160,11 @@ PlutoTezuka::PlutoTezuka(SDRDeviceConfig &config) : SDRDevice(), m_conf(config)
     }
 
     etiLog.level(info) << "PlutoTezuka: Device initialized successfully.";
+    if (m_conf.fixedPoint) 
+        etiLog.level(info) << "PlutoTezuka: Using fixed point format.";
+    else
+        etiLog.level(info) << "PlutoTezuka: Using floating point format.";
+    
 }
 
 PlutoTezuka::~PlutoTezuka()
@@ -162,6 +173,7 @@ PlutoTezuka::~PlutoTezuka()
         iio_buffer_destroy(m_tx_buf);
     }
     if (m_ctx) {
+        iio_channel_attr_write_bool(iio_device_find_channel(m_phy_dev, "altvoltage1", true), "powerdown", true);
         iio_context_destroy(m_ctx);
     }
 }
@@ -252,16 +264,7 @@ double PlutoTezuka::get_bandwidth(void) const
 SDRDevice::run_statistics_t PlutoTezuka::get_run_statistics(void) const
 {
     run_statistics_t rs;
-     uint32_t val = 0;
-     if(m_tx_dev)
-     {
-        int ret = iio_device_reg_read(m_tx_dev, 0x80000088, &val);
-        if (val & 1)
-        {
-            etiLog.level(error) << "@";
-            iio_device_reg_write(m_tx_dev, 0x80000088, val); // Clear bits
-        }
-     }    
+     
     rs["underruns"].v = (uint64_t)underflows;
     rs["overruns"].v = (uint64_t)overflows;
     rs["dropped_packets"].v = (uint64_t)dropped_packets;
@@ -343,29 +346,21 @@ void PlutoTezuka::transmit_frame(struct FrameData&& frame)
         conv_s16_from_float(num_samples * 2, (const float *)frame.buf.data(), buffi16);
     }
 
-    ssize_t num_sent = iio_buffer_push(m_tx_buf);
-    if (num_sent < (ssize_t)(2 * sizeof(short) * FRAME_LENGTH)) {
-        char err_msg[IIO_ERROR_BUFFER_SIZE];
-        iio_strerror((int)num_sent, err_msg, IIO_ERROR_BUFFER_SIZE);
-        etiLog.level(error) << "PlutoTezuka: TX push error: " << err_msg;
-        underflows++;
-    }
+    iio_buffer_push(m_tx_buf);
+    uint32_t val = 0;
+     if(m_tx_dev)
+     {
+        iio_device_reg_read(m_tx_dev, 0x80000088, &val);
+        if (val & 1)
+        {
+            etiLog.level(error) << "@";
+            underflows++;
+            iio_device_reg_write(m_tx_dev, 0x80000088, val); // Clear bits
+        }
+        iio_device_reg_read(m_phy_dev, 0x0000005E, &val);    
+        if(val&2)  etiLog.level(error) << "digital fir overflow";    
+     }    
     num_frames_modulated++;
-}
-
-void PlutoTezuka::build_lpf_filter(double *filter, double bw, int ntaps ) {
-	double a;
-	double B = bw;// filter bandwidth
-	double t = -( ntaps - 1) / 2;// First tap
-	// Create the filter
-	for (int i = 0; i < ntaps; i++) {
-		if (t == 0)
-			a = 2.0 * B;
-		else
-		    a = 2.0 * B * sin(M_PI * t * B)/ (M_PI * t * B);
-		filter[i] = (double)a;
-		t = t + 1.0;
-	}
 }
 
 
@@ -373,29 +368,12 @@ void PlutoTezuka::fmc_load_lpf_filter(int ratio, float digitalgain,bool db6boost
 {
 
 
-	#include "doc/fir-filter/lpf.h"
+	#include "lpf.h"
 
-    double firrx[128];
-    double firtx[128];
-	double max=1;
     fprintf(stderr,"Build filter with %d ratio (up/down)sample\n",ratio);
+    
+    fmc_load_tx_filter(fir_taps,fir_taps, FIR_TAPS_COUNT+1, ratio, true,digitalgain,db6boost);
 
-	int NbTaps= FIR_TAPS_COUNT;
-		
-        
-            
-            build_lpf_filter(firtx,(0.5)/(double)(ratio),NbTaps);
-            build_lpf_filter(firrx,(0.5)/(double)(ratio),NbTaps);
-			
-			
-			float gain=log2(2*ratio)*digitalgain;
-			//max=set_filter_gain(firtx,1,NbTaps);
-			//float gain=1/max;
-			firrx[NbTaps]=0.0;
-    		firtx[NbTaps]=0.0;
-			fprintf(stderr, "Max FIR =%f\n", max);
-			fmc_load_tx_filter(fir_taps,fir_taps, NbTaps+1, ratio, true,1.0,db6boost);
-            //fmc_load_tx_filter(firrx,firtx, NbTaps+1, ratio, true,gain,db6boost);
 
 }
 
@@ -425,11 +403,11 @@ void PlutoTezuka::fmc_load_tx_filter(const double *firrx,const double *firtx, in
     short coeftx=0;
 	for (int i = 0; i < taps; i++)
 	{
-        coeftx= (short)(0x7FFF * firtx[i]*gain);
+        coeftx= (short)(0x7FFF * firtx[i]*(double)gain);
 		if(i==taps/2) coefrx=0x7FFF; else coefrx=0;
-		if(i==0) coeftx=0;
+		//if(i==0) coeftx=0;
         if(i==taps-1) coeftx=0;
-		clen += snprintf(buf + clen, buffsize - clen, "%d,%d\n", coeftx,coefrx); //Fixme ! 1FFF instead of 0x3FFF seems better but should have to be inspect
+		clen += snprintf(buf + clen, buffsize - clen, "%d,%d\n", coeftx,coefrx); 
 	}	
 	clen += snprintf(buf + clen, buffsize - clen, "\n");
 
