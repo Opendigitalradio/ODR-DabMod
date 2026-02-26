@@ -29,7 +29,10 @@ design = pm_remez.remez(
 
 # Normalize so that the maximum coefficient is 1.0
 taps = np.array(design.impulse_response)
-taps = taps / np.max(np.abs(taps))
+
+dc_gain = np.sum(taps)
+taps = taps * (decimation / dc_gain)
+
 num_taps = len(taps)
 
 # --- C++ Style Output Generation ---
@@ -41,7 +44,6 @@ print(f"//   Decimation: {decimation}")
 print(f"//   Transition bandwidth: {transition_bandwidth}")
 print(f"//   Passband end: {passband_end:.6f}")
 print(f"//   Stopband start: {stopband_start:.6f}")
-print(f"//   Filter Gain: {gain:.1f}")
 print(f"//   Stopband attenuation: {20 * np.log10(design.weighted_error / stopband_weight):.2f} dB")
 print(f"//   Passband ripple: {20 * np.log10(1 + design.weighted_error):.4f} dB\n")
 
