@@ -347,6 +347,31 @@ UDPPacket UDPSocket::receive(size_t max_size)
     return packet;
 }
 
+UDPPacket UDPSocket::receive(size_t max_size, int timeout_ms)
+{
+    constexpr size_t N_FDS = 1;
+    struct pollfd fds[N_FDS];
+
+    fds[0].fd = getNativeSocket();
+    fds[0].events = POLLIN;
+
+    int retval = poll(fds, N_FDS, timeout_ms);
+
+    if (retval == -1 and errno == EINTR) {
+        throw Interrupted();
+    }
+    else if (retval == -1) {
+        std::string errstr(strerror(errno));
+        throw std::runtime_error("UDP receive with poll() error: " + errstr);
+    }
+    else if (retval > 0) {
+        return receive(max_size);
+    }
+    else {
+        throw Timeout();
+    }
+}
+
 void UDPSocket::send(UDPPacket& packet)
 {
     const int ret = sendto(m_sock, packet.buffer.data(), packet.buffer.size(), 0,

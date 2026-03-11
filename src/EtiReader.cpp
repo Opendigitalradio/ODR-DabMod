@@ -28,6 +28,7 @@
 #include "Log.h"
 #include "PcDebug.h"
 #include "TimestampDecoder.h"
+#include "Utils.h"
 #include "edi/common.hpp"
 
 #include <stdexcept>
@@ -528,14 +529,21 @@ void EdiReader::assemble(EdiDecoder::ReceivedTagPacket&& tagpacket)
 }
 
 EdiTransport::EdiTransport(EdiDecoder::ETIDecoder& decoder) :
-    m_enabled(false),
     m_port(0),
     m_bindto("0.0.0.0"),
     m_mcastaddr("0.0.0.0"),
-    m_decoder(decoder) { }
+    m_decoder(decoder)
+{
+}
 
+EdiTransport::~EdiTransport() {
+    if (m_udp_receive_thread.joinable()) {
+        m_udp_running.store(false);
+        m_udp_receive_thread.join();
+    }
+}
 
-void EdiTransport::Open(const std::string& uri, bool verbose)
+void EdiTransport::open(const std::string& uri, bool verbose)
 {
     etiLog.level(info) << "Opening EDI :" << uri;
 
@@ -568,9 +576,11 @@ void EdiTransport::Open(const std::string& uri, bool verbose)
         etiLog.level(info) << "EDI UDP input: host:" << m_bindto <<
             ", source:" << m_mcastaddr << ", port:" << m_port;
 
-        m_udp_rx.add_receive_port(m_port, m_bindto, m_mcastaddr);
+        m_udp_sock.init_receive_multicast(m_port, m_bindto, m_mcastaddr);
+        m_uri = uri;
+        m_udp_receive_thread = std::thread(&EdiTransport::udp_receive_thread, this);
+        m_udp_running = true;
         m_proto = Proto::UDP;
-        m_enabled = true;
     }
     else if (proto == "tcp://") {
         if (m_proto != Proto::Unspecified) {
@@ -587,13 +597,35 @@ void EdiTransport::Open(const std::string& uri, bool verbose)
 
         etiLog.level(info) << "EDI TCP connect to " << hostname << ":" << m_port;
 
-        m_tcp_uri = uri;
+        m_uri = uri;
         m_tcpclient.connect(hostname, m_port);
         m_proto = Proto::TCP;
-        m_enabled = true;
     }
     else {
         throw std::invalid_argument("ETI protocol '" + proto + "' unknown");
+    }
+}
+
+void EdiTransport::udp_receive_thread()
+{
+    set_realtime_prio(1);
+
+    constexpr int TIMEOUT_MS = 100;
+    while (m_udp_running.load()) {
+        try {
+            auto p = m_udp_sock.receive(1024, TIMEOUT_MS);
+            // about 10 fragments every 24ms, i.e. 1000 fragments are roughly 2.4s
+            m_udp_packet_queue.push_overflow(std::move(p), 1000);
+        }
+        catch (const Socket::UDPSocket::Interrupted&) {
+            m_udp_running.store(false);
+        }
+        catch (const Socket::UDPSocket::Timeout&) {
+        }
+        catch (const std::runtime_error& e) {
+            etiLog.level(warn) << "EDI " << m_uri << " error: " << e.what();
+            m_udp_running.store(false);
+        }
     }
 }
 
@@ -607,40 +639,19 @@ bool EdiTransport::rxPacket()
             }
         case Proto::UDP:
             {
-                Socket::InetAddress received_from;
-                try {
-                    auto received_packets = m_udp_rx.receive(100);
-                    for (auto rp : received_packets) {
-                        received_from = rp.received_from;
-
-                        EdiDecoder::Packet p;
-                        p.buf = std::move(rp.packetdata);
-                        p.received_on_port = rp.port_received_on;
-                        m_decoder.push_packet(p);
-                    }
+                Socket::UDPPacket rp;
+                m_udp_packet_queue.try_pop(rp);
+                if (rp.buffer.size() > 0) {
+                    EdiDecoder::Packet p;
+                    p.buf = std::move(rp.buffer);
+                    p.received_on_port = m_port;
+                    m_decoder.push_packet(p);
                     return true;
                 }
-                catch (const Socket::UDPReceiver::Timeout&) {
+                else {
+                    this_thread::sleep_for(chrono::milliseconds(5));
                     return false;
                 }
-                catch (const Socket::UDPReceiver::Interrupted&) {
-                    return false;
-                }
-                catch (const invalid_argument& e) {
-                    try {
-                        fprintf(stderr, "Invalid argument receiving EDI from %s: %s\n",
-                                received_from.to_string().c_str(), e.what());
-                    }
-                    catch (const invalid_argument& ee) {
-                        fprintf(stderr, "Invalid argument receiving EDI %s\n", e.what());
-                        fprintf(stderr, "Invalid argument converting source address %s\n", ee.what());
-                    }
-                }
-                catch (const runtime_error& e) {
-                    fprintf(stderr, "Runtime error UDP Receive: %s\n", e.what());
-                }
-
-                return false;
             }
         case Proto::TCP:
             {

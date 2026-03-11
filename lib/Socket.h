@@ -120,6 +120,10 @@ class UDPSocket
         void send(const std::vector<uint8_t>& data, InetAddress destination);
         void send(const std::string& data, InetAddress destination);
         UDPPacket receive(size_t max_size);
+
+        class Interrupted {};
+        class Timeout {};
+        UDPPacket receive(size_t max_size, int timeout_ms);
         void setMulticastSource(const char* source_addr);
         void setMulticastTTL(int ttl);
 

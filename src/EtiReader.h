@@ -37,6 +37,7 @@
 #include "Socket.h"
 #include "SubchannelSource.h"
 #include "TimestampDecoder.h"
+#include "ThreadsafeQueue.h"
 #include "lib/edi/ETIDecoder.hpp"
 
 #include <vector>
@@ -215,12 +216,14 @@ private:
 class EdiTransport {
     public:
         EdiTransport(EdiDecoder::ETIDecoder& decoder);
+        EdiTransport(const EdiTransport&) = delete;
+        EdiTransport& operator=(const EdiTransport&) = delete;
+        ~EdiTransport();
 
         /* Can be called once when using TCP, or several times when using UDP */
-        void Open(const std::string& uri, bool verbose);
+        void open(const std::string& uri, bool verbose);
 
-        bool isEnabled(void) const { return m_enabled; }
-        std::string getTcpUri(void) const { return m_tcp_uri; }
+        std::string get_uri(void) const { return m_uri; }
 
         /* Receive a packet and give it to the decoder. Returns
          * true if a packet was received, false in case of socket
@@ -229,15 +232,22 @@ class EdiTransport {
         bool rxPacket(void);
 
     private:
-        std::string m_tcp_uri;
-        bool m_enabled;
+        void udp_receive_thread();
+
+        std::string m_uri;
+
         int m_port;
         std::string m_bindto;
         std::string m_mcastaddr;
 
         enum class Proto { Unspecified, UDP, TCP };
         Proto m_proto = Proto::Unspecified;
-        Socket::UDPReceiver m_udp_rx;
+
+        std::atomic<bool> m_udp_running;
+        Socket::UDPSocket m_udp_sock;
+        std::thread m_udp_receive_thread;
+        ThreadsafeQueue<Socket::UDPPacket> m_udp_packet_queue;
+
         std::vector<uint8_t> m_tcpbuffer;
         Socket::TCPClient m_tcpclient;
         EdiDecoder::ETIDecoder& m_decoder;

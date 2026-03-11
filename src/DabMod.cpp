@@ -166,7 +166,7 @@ class ModulatorData : public RemoteControllable {
             }
             else if (parameter == "edi_source") {
                 if (ediInput) {
-                    ss << ediInput->ediTransport.getTcpUri();
+                    ss << ediInput->ediTransport.get_uri();
                 }
                 else {
                     throw ParameterError("Not available yet");
@@ -199,7 +199,7 @@ class ModulatorData : public RemoteControllable {
             map["most_recent_edi_decoded"] = most_recent_edi_decoded;
 
             if (ediInput) {
-                map["edi_source"] = ediInput->ediTransport.getTcpUri();
+                map["edi_source"] = ediInput->ediTransport.get_uri();
                 map["num_services"] = ediInput->ediReader.getSubchannels().size();
 
                 const auto ens = ediInput->ediReader.getEnsembleInfo();
@@ -484,10 +484,7 @@ int launch_modulator(int argc, char* argv[])
     if (mod_settings.inputTransport == "edi") {
         ediInput = make_shared<EdiInput>(mod_settings.tist_offset_s, mod_settings.edi_max_delay_ms);
 
-        ediInput->ediTransport.Open(mod_settings.inputName, mod_settings.edi_verbose);
-        if (not ediInput->ediTransport.isEnabled()) {
-            throw runtime_error("inputTransport is edi, but ediTransport is not enabled");
-        }
+        ediInput->ediTransport.open(mod_settings.inputName, mod_settings.edi_verbose);
     }
     else if (mod_settings.inputTransport == "file") {
         auto inputFileReader = make_shared<InputFileReader>();
