@@ -421,6 +421,13 @@ void UDPSocket::join_group(const char* groupname, const char* if_addr)
             == SOCKET_ERROR) {
         throw runtime_error(string("Can't join multicast group: ") + strerror(errno));
     }
+
+    // This tells the kernel to filter multicast packets for us
+    int val = 0;
+    if (setsockopt(m_sock, IPPROTO_IP, IP_MULTICAST_ALL, &val, sizeof(val))
+            == SOCKET_ERROR) {
+        throw runtime_error(string("Can't join multicast group: ") + strerror(errno));
+    }
 }
 
 void UDPSocket::setMulticastSource(const char* source_addr)
