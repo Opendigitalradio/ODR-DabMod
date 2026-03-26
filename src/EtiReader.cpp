@@ -615,7 +615,10 @@ void EdiTransport::udp_receive_thread()
         try {
             auto p = m_udp_sock.receive(1024, TIMEOUT_MS);
             // about 10 fragments every 24ms, i.e. 1000 fragments are roughly 2.4s
-            m_udp_packet_queue.push_overflow(std::move(p), 1000);
+            const auto res = m_udp_packet_queue.push_overflow(std::move(p), 1000);
+            if (res.overflowed) {
+                etiLog.level(warn) << "EDI input queue overflow: " << res.new_size;
+            }
         }
         catch (const Socket::UDPSocket::Interrupted&) {
             m_udp_running.store(false);
@@ -649,7 +652,6 @@ bool EdiTransport::rxPacket()
                     return true;
                 }
                 else {
-                    this_thread::sleep_for(chrono::milliseconds(5));
                     return false;
                 }
             }

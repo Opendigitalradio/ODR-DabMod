@@ -649,6 +649,9 @@ static run_modulator_state_t run_modulator(const mod_settings_t& mod_settings, M
                         if (packet_received) {
                             last_frame_received = chrono::steady_clock::now();
                         }
+                        else {
+                            this_thread::sleep_for(chrono::milliseconds(1));
+                        }
                     }
                     catch (const std::runtime_error& e) {
                         etiLog.level(warn) << "EDI input: " << e.what();
@@ -667,46 +670,52 @@ static run_modulator_state_t run_modulator(const mod_settings_t& mod_settings, M
                 ts = m.ediInput->ediReader.getTimestamp();
             }
 
-            // timestamp is good if we run unsynchronised, or if margin is sufficient
-            bool ts_good = not mod_settings.sdr_device_config.enableSync or
-                (ts.timestamp_valid and ts.offset_to_system_time() > 0.2);
-
-            if (!ts_good) {
-                etiLog.level(warn) << "Modulator skipping frame " << fct <<
-                    " TS " << (ts.timestamp_valid ? "valid" : "invalid") <<
-                    " offset " << (ts.timestamp_valid ? ts.offset_to_system_time() : 0);
-            }
-            else {
-                bool modulate = true;
-                if (last_eti_fct == -1) {
-                    if (fp != 0) {
-                        // Do not start the flowgraph before we get to FP 0
-                        // to ensure all blocks are properly aligned.
-                        modulate = false;
-                    }
-                    else {
-                        last_eti_fct = fct;
-                    }
+            bool modulate = true;
+            if (last_eti_fct == -1) {
+                if (fp != 0) {
+                    // Do not start the flowgraph before we get to FP 0
+                    // to ensure all blocks are properly aligned.
+                    modulate = false;
                 }
                 else {
-                    const unsigned expected_fct = (last_eti_fct + 1) % 250;
-                    if (fct == expected_fct) {
-                        last_eti_fct = fct;
-                    }
-                    else {
-                        etiLog.level(warn) << "ETI FCT discontinuity, expected " <<
-                            expected_fct << " received " << fct;
-                        if (m.ediInput) {
-                            m.ediInput->ediReader.clearFrame();
-                        }
-                        return run_modulator_state_t::again;
-                    }
+                    last_eti_fct = fct;
                 }
+            }
+            else {
+                const unsigned expected_fct = (last_eti_fct + 1) % 250;
+                if (fct == expected_fct) {
+                    last_eti_fct = fct;
+                }
+                else {
+                    etiLog.level(warn) << "ETI FCT discontinuity, expected " <<
+                        expected_fct << " received " << fct;
+                    if (m.ediInput) {
+                        m.ediInput->ediReader.clearFrame();
+                    }
+                    return run_modulator_state_t::again;
+                }
+            }
 
-                if (modulate) {
-                    m.framecount++;
-                    m.flowgraph->run();
+            // Timestamp is good if we run unsynchronised, or if margin is sufficient
+            if (mod_settings.sdr_device_config.enableSync) {
+                const auto offs_to_sys = ts.offset_to_system_time();
+                if (not ts.timestamp_valid) {
+                    etiLog.level(warn) << "Modulator skipping frame " << fct << " with invalid TS";
+                    modulate = false;
                 }
+                else if (offs_to_sys < 0.2) {
+                    etiLog.level(warn) << "Modulator skipping frame " << fct <<
+                        " with short offset " << offs_to_sys;
+                    modulate = false;
+                }
+                else {
+                    etiLog.level(warn) << "Modulator frame " << fct << " offset " << offs_to_sys;
+                }
+            }
+
+            if (modulate) {
+                m.framecount++;
+                m.flowgraph->run();
             }
 
             if (m.ediInput) {
