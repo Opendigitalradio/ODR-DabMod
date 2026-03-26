@@ -57,6 +57,7 @@ struct mod_settings_t {
     bool useLimeOutput = false;
     bool useBladeRFOutput = false;
 
+    bool diffModNeon = false;
     FFTEngine fftEngine = FFTEngine::FFTW;
 
     size_t outputRate = 2048000;

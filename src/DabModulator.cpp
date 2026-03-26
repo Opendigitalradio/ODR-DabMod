@@ -3,7 +3,7 @@
    Her Majesty the Queen in Right of Canada (Communications Research
    Center Canada)
 
-   Copyright (C) 2024
+   Copyright (C) 2026
    Matthias P. Braendli, matthias.braendli@mpb.li
 
     http://opendigitalradio.org
@@ -145,7 +145,7 @@ int DabModulator::process(Buffer* dataOut)
         auto cifMap = make_shared<QpskSymbolMapper>(m_nbCarriers, fixedPoint);
         auto cifRef = make_shared<PhaseReference>(mode, fixedPoint);
         auto cifFreq = make_shared<FrequencyInterleaver>(mode, fixedPoint);
-        auto cifDiff = make_shared<DifferentialModulator>(m_nbCarriers, fixedPoint);
+        auto cifDiff = make_shared<DifferentialModulator>(m_nbCarriers, fixedPoint, m_settings.diffModNeon);
 
         auto cifNull = make_shared<NullSymbol>(m_nbCarriers,
                 fixedPoint ? sizeof(complexfix) : sizeof(complexf));

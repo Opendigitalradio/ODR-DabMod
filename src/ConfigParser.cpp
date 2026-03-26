@@ -202,15 +202,17 @@ static void parse_configfile(
     const string fft_engine_setting = pt.Get("modulator.fft_engine", "fftw");
     mod_settings.fftEngine = parse_fft_engine(fft_engine_setting);
 
+    mod_settings.diffModNeon = pt.GetBoolean("modulator.neon", false);
+
     const string gainMode_setting = pt.Get("modulator.gainmode", "var");
     mod_settings.gainMode = parse_gainmode(gainMode_setting);
     mod_settings.gainmodeVariance = pt.GetReal("modulator.normalise_variance",
-            mod_settings.gainmodeVariance);
+            (double)mod_settings.gainmodeVariance);
 
     mod_settings.dabMode = pt.GetInteger("modulator.mode", mod_settings.dabMode);
     mod_settings.clockRate = pt.GetInteger("modulator.dac_clk_rate", (size_t)0);
     mod_settings.digitalgain = pt.GetReal("modulator.digital_gain",
-            mod_settings.digitalgain);
+            (double)mod_settings.digitalgain);
 
     mod_settings.outputRate = pt.GetInteger("modulator.rate", mod_settings.outputRate);
     mod_settings.ofdmWindowOverlap = pt.GetInteger("modulator.ofdmwindowing",
@@ -547,7 +549,7 @@ void parse_args(int argc, char **argv, mod_settings_t& mod_settings)
             }
 #if defined(HAVE_OUTPUT_UHD)
             else if (mod_settings.useUHDOutput) {
-                mod_settings.sdr_device_config.frequency = strtof(optarg, NULL);
+                mod_settings.sdr_device_config.frequency = strtod(optarg, NULL);
             }
 #endif
             else {

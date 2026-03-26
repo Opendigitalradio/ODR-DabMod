@@ -1,6 +1,11 @@
 /*
    Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010, 2011 Her Majesty
    the Queen in Right of Canada (Communications Research Center Canada)
+
+   Copyright (C) 2026
+   Matthias P. Braendli, matthias.braendli@mpb.li
+
+    http://opendigitalradio.org
  */
 /*
    This file is part of ODR-DabMod.
@@ -35,7 +40,7 @@
 class DifferentialModulator : public ModMux
 {
 public:
-    DifferentialModulator(size_t carriers, bool fixedPoint);
+    DifferentialModulator(size_t carriers, bool fixedPoint, bool withNeon);
     virtual ~DifferentialModulator();
     DifferentialModulator(const DifferentialModulator&);
     DifferentialModulator& operator=(const DifferentialModulator&);
@@ -47,5 +52,6 @@ public:
 protected:
     size_t m_carriers;
     size_t m_fixedPoint;
+    bool m_withNeon;
 };
 
