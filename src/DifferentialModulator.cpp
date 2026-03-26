@@ -203,7 +203,7 @@ int DifferentialModulator::process(std::vector<Buffer*> dataIn, Buffer* dataOut)
             do_process_complexfix_neon(m_carriers, dataIn, dataOut);
         }
         else {
-            do_process<complexfix>(m_carriers, dataIn, &compare);
+            do_process<complexfix>(m_carriers, dataIn, dataOut);
         }
 #else
         do_process<complexfix>(m_carriers, dataIn, dataOut);
