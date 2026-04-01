@@ -31,7 +31,7 @@
 #   include "config.h"
 #endif
 
-#include <sys/types.h>
+#include <cstdint>
 #include <string>
 #include <memory>
 

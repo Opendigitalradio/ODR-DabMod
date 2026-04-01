@@ -32,12 +32,12 @@
 
 
 #include "ModPlugin.h"
+#include "RemoteControl.h"
 #include <vector>
+#include <cstdint>
 
-#include <sys/types.h>
 
-
-class DifferentialModulator : public ModMux
+class DifferentialModulator : public ModMux, public RemoteControllable
 {
 public:
     DifferentialModulator(size_t carriers, bool fixedPoint, bool withNeon);
@@ -46,8 +46,13 @@ public:
     DifferentialModulator& operator=(const DifferentialModulator&);
 
 
-    int process(std::vector<Buffer*> dataIn, Buffer* dataOut);
-    const char* name() { return "DifferentialModulator"; }
+    int process(std::vector<Buffer*> dataIn, Buffer* dataOut) override;
+    const char* name() override { return "DifferentialModulator"; }
+
+    /******* REMOTE CONTROL ********/
+    virtual void set_parameter(const std::string& parameter, const std::string& value) override;
+    virtual const std::string get_parameter(const std::string& parameter) const override;
+    virtual const json::map_t get_all_values() const override;
 
 protected:
     size_t m_carriers;

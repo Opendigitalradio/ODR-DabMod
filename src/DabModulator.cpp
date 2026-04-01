@@ -146,6 +146,7 @@ int DabModulator::process(Buffer* dataOut)
         auto cifRef = make_shared<PhaseReference>(mode, fixedPoint);
         auto cifFreq = make_shared<FrequencyInterleaver>(mode, fixedPoint);
         auto cifDiff = make_shared<DifferentialModulator>(m_nbCarriers, fixedPoint, m_settings.diffModNeon);
+        rcs.enrol(cifDiff.get());
 
         auto cifNull = make_shared<NullSymbol>(m_nbCarriers,
                 fixedPoint ? sizeof(complexfix) : sizeof(complexf));

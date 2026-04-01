@@ -38,6 +38,7 @@
 
 DifferentialModulator::DifferentialModulator(size_t carriers, bool fixedPoint, bool withNeon) :
     ModMux(),
+    RemoteControllable("diffmod"),
     m_carriers(carriers),
     m_fixedPoint(fixedPoint),
     m_withNeon(withNeon)
@@ -52,6 +53,7 @@ DifferentialModulator::DifferentialModulator(size_t carriers, bool fixedPoint, b
     if (withNeon) {
         throw std::runtime_error("Not compiled with NEON acceleration");
     }
+    RC_ADD_PARAMETER(neon, "Enable NEON acceleration");
 #endif
 }
 
@@ -214,4 +216,40 @@ int DifferentialModulator::process(std::vector<Buffer*> dataIn, Buffer* dataOut)
     }
 
     return dataOut->getLength();
+}
+
+void DifferentialModulator::set_parameter(const std::string& parameter, const std::string& value)
+{
+    std::stringstream ss(value);
+    ss.exceptions(std::stringstream::failbit | std::stringstream::badbit);
+    if (parameter == "neon") {
+        ss >> m_withNeon;
+    }
+    else {
+        std::stringstream ss;
+        ss << "Parameter '" << parameter <<
+            "' is not exported by controllable " << get_rc_name();
+        throw ParameterError(ss.str());
+    }
+}
+
+const std::string DifferentialModulator::get_parameter(const std::string& parameter) const
+{
+    std::stringstream ss;
+    if (parameter == "neon") {
+        ss << m_withNeon;
+    }
+    else {
+        ss << "Parameter '" << parameter <<
+            "' is not exported by controllable " << get_rc_name();
+        throw ParameterError(ss.str());
+    }
+    return ss.str();
+}
+
+const json::map_t DifferentialModulator::get_all_values() const
+{
+    json::map_t map;
+    map["neon"] = m_withNeon;
+    return map;
 }
