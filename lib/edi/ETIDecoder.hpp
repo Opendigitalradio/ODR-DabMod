@@ -120,7 +120,7 @@ class ETIDecoder {
         /* Push a complete packet into the decoder. Useful for UDP and other
          * datagram-oriented protocols.
          */
-        void push_packet(Packet &pack);
+        void push_packet(Packet &&pack);
 
         /* Set the maximum delay in number of AF Packets before we
          * abandon decoding a given pseq.

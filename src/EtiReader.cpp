@@ -648,7 +648,7 @@ bool EdiTransport::rxPacket()
                     EdiDecoder::Packet p;
                     p.buf = std::move(rp.buffer);
                     p.received_on_port = m_port;
-                    m_decoder.push_packet(p);
+                    m_decoder.push_packet(std::move(p));
                     return true;
                 }
                 else {

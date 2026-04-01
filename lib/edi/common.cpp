@@ -183,7 +183,7 @@ void TagDispatcher::push_bytes(const vector<uint8_t> &buf)
         }
         else if (m_input_data[0] == 'P' and m_input_data[1] == 'F') {
             PFT::Fragment fragment;
-            const size_t fragment_bytes = fragment.loadData(m_input_data);
+            const size_t fragment_bytes = fragment.loadData(std::move(m_input_data));
 
             if (fragment_bytes == 0) {
                 // We need to refill our buffer
@@ -191,8 +191,8 @@ void TagDispatcher::push_bytes(const vector<uint8_t> &buf)
             }
 
             vector<uint8_t> remaining_data;
-            copy(m_input_data.begin() + fragment_bytes,
-                    m_input_data.end(),
+            copy(fragment.fragment_data().begin() + fragment_bytes,
+                    fragment.fragment_data().end(),
                     back_inserter(remaining_data));
             m_input_data = remaining_data;
 
@@ -227,7 +227,7 @@ void TagDispatcher::push_bytes(const vector<uint8_t> &buf)
     }
 }
 
-void TagDispatcher::push_packet(const Packet &packet)
+void TagDispatcher::push_packet(Packet&& packet)
 {
     auto& buf = packet.buf;
 
@@ -246,7 +246,7 @@ void TagDispatcher::push_packet(const Packet &packet)
     }
     else if (buf[0] == 'P' and buf[1] == 'F') {
         PFT::Fragment fragment;
-        fragment.loadData(buf, packet.received_on_port);
+        fragment.loadData(std::move(buf), packet.received_on_port);
 
         if (fragment.isValid()) {
             m_pft.pushPFTFrag(fragment);

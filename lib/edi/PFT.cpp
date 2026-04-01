@@ -1,6 +1,6 @@
 /* ------------------------------------------------------------------
  * Copyright (C) 2017 AVT GmbH - Fabien Vercasson
- * Copyright (C) 2021 Matthias P. Braendli
+ * Copyright (C) 2026 Matthias P. Braendli
  *                    matthias.braendli@mpb.li
  *
  * http://opendigitalradio.org
@@ -109,12 +109,12 @@ class FECDecoder {
 
 };
 
-size_t Fragment::loadData(const std::vector<uint8_t> &buf)
+size_t Fragment::loadData(std::vector<uint8_t>&& buf)
 {
-    return loadData(buf, 0);
+    return loadData(std::move(buf), 0);
 }
 
-size_t Fragment::loadData(const std::vector<uint8_t> &buf, int received_on_port)
+size_t Fragment::loadData(std::vector<uint8_t>&& buf, int received_on_port)
 {
     const size_t header_len = 14;
     if (buf.size() < header_len) {
@@ -187,11 +187,9 @@ size_t Fragment::loadData(const std::vector<uint8_t> &buf, int received_on_port)
     }
 #endif
 
-    _payload.clear();
     if (_valid) {
-        copy( buf.begin()+index,
-                buf.begin()+index+_Plen,
-                back_inserter(_payload));
+        _fragment = std::move(buf);
+        _payload = std::span<uint8_t>(_fragment.begin()+index, _fragment.begin()+index+_Plen);
         index += _Plen;
     }
 
