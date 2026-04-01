@@ -155,7 +155,7 @@ class TagDispatcher {
         };
 
         decode_result_t decode_afpacket(const std::vector<uint8_t> &input_data);
-        bool decode_tagpacket(const std::vector<uint8_t> &payload);
+        bool decode_tagpacket(const std::span<const uint8_t> &payload);
 
         PFT::PFT m_pft;
         seq_info_t m_last_sequences;

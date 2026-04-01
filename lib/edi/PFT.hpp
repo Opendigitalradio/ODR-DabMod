@@ -23,6 +23,7 @@
 #pragma once
 #include <cstdio>
 #include <cstdint>
+#include <optional>
 #include <stdexcept>
 #include <vector>
 #include <map>
@@ -72,7 +73,7 @@ class Fragment
         // Number of padding bytes in the last fragment
         uint8_t RSz() const { return _RSz; }
 
-        const std::span<uint8_t> payload() const {
+        const std::span<const uint8_t> payload() const {
             if (_valid)
                 return _payload;
             else
@@ -87,7 +88,7 @@ class Fragment
 
     private:
         std::vector<uint8_t> _fragment;
-        std::span<uint8_t> _payload;
+        std::span<const uint8_t> _payload;
 
         pseq_t _Pseq = 0;
         findex_t _Findex = 0;
@@ -125,16 +126,16 @@ class AFBuilder
 
         AFBuilder(pseq_t Pseq, findex_t Fcount, size_t lifetime);
 
-        void pushPFTFrag(const Fragment &frag);
+        void pushPFTFrag(Fragment&& fragment);
 
         /* Assess if it may be possible to decode this AF packet */
         decode_attempt_result_t canAttemptToDecode();
 
         /* Try to build the AF with received fragments.
          * Apply error correction if necessary (missing packets/CRC errors)
-         * \return an empty vector if building the AF is not possible
+         * \return nullopt if building the AF is not possible
          */
-        std::vector<uint8_t> extractAF();
+        std::optional<std::vector<uint8_t>> extractAF();
 
         std::pair<findex_t, findex_t>
             numberOfFragments(void) const {
@@ -164,15 +165,14 @@ class AFBuilder
 
 struct afpacket_pft_t
 {
-    // validity of the struct is given by af_packet begin empty or not.
-    std::vector<uint8_t> af_packet;
+    std::optional<std::vector<uint8_t>> af_packet = std::nullopt;
     pseq_t pseq = 0;
 };
 
 class PFT
 {
     public:
-        void pushPFTFrag(const Fragment &fragment);
+        void pushPFTFrag(Fragment&& fragment);
 
         /* Try to build the AF packet for the next pseq. This might
          * skip one or more pseq according to the maximum delay setting.
