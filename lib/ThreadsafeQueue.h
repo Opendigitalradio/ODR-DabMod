@@ -198,7 +198,7 @@ public:
             return false;
         }
 
-        popped_value = the_queue.front();
+        popped_value = std::move(the_queue.front());
         the_queue.pop_front();
 
         lock.unlock();
