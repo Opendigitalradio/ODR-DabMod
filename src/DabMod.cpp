@@ -708,9 +708,6 @@ static run_modulator_state_t run_modulator(const mod_settings_t& mod_settings, M
                         " with short offset " << offs_to_sys;
                     modulate = false;
                 }
-                else {
-                    etiLog.level(warn) << "Modulator frame " << fct << " offset " << offs_to_sys;
-                }
             }
 
             if (modulate) {
