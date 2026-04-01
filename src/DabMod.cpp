@@ -95,6 +95,8 @@ void signalHandler(int signalNb)
 
 class ModulatorData : public RemoteControllable {
     public:
+        bool pause_modulator = false;
+
         // For ETI
         std::shared_ptr<InputReader> inputReader;
         std::shared_ptr<EtiReader> etiReader;
@@ -106,7 +108,6 @@ class ModulatorData : public RemoteControllable {
         uint64_t framecount = 0;
         Flowgraph *flowgraph = nullptr;
 
-
         // RC-related
         ModulatorData() : RemoteControllable("mainloop") {
             RC_ADD_PARAMETER(num_modulator_restarts, "(Read-only) Number of mod restarts");
@@ -117,12 +118,21 @@ class ModulatorData : public RemoteControllable {
             RC_ADD_PARAMETER(ensemble_eid, "(Read-only) Ensemble ID");
             RC_ADD_PARAMETER(ensemble_services, "(Read-only, only JSON) Ensemble service information");
             RC_ADD_PARAMETER(num_services, "(Read-only) Number of services in the ensemble");
+            RC_ADD_PARAMETER(pause_modulator, "Do not modulate frames, only run input");
         }
 
         virtual ~ModulatorData() {}
 
         virtual void set_parameter(const std::string& parameter, const std::string& value) {
-            throw ParameterError("Parameter " + parameter + " is read-only");
+            if (parameter == "pause_modulator") {
+                using namespace std;
+                stringstream ss(value);
+                ss.exceptions ( stringstream::failbit | stringstream::badbit );
+                ss >> pause_modulator;
+            }
+            else {
+                throw ParameterError("Parameter " + parameter + " is read-only");
+            }
         }
 
         virtual const std::string get_parameter(const std::string& parameter) const {
@@ -183,6 +193,9 @@ class ModulatorData : public RemoteControllable {
             else if (parameter == "ensemble_services") {
                 throw ParameterError("ensemble_services is only available through 'showjson'");
             }
+            else if (parameter == "pause_modulator") {
+                ss << (pause_modulator ? 1 : 0);
+            }
             else {
                 ss << "Parameter '" << parameter <<
                     "' is not exported by controllable " << get_rc_name();
@@ -194,6 +207,7 @@ class ModulatorData : public RemoteControllable {
         virtual const json::map_t get_all_values() const
         {
             json::map_t map;
+            map["pause_modulator"] = pause_modulator;
             map["num_modulator_restarts"] = num_modulator_restarts;
             map["running_since"] = running_since;
             map["most_recent_edi_decoded"] = most_recent_edi_decoded;
@@ -591,6 +605,7 @@ static run_modulator_state_t run_modulator(const mod_settings_t& mod_settings, M
 {
     auto ret = run_modulator_state_t::failure;
     try {
+        bool modulator_was_paused = false;
         int last_eti_fct = -1;
         auto last_frame_received = chrono::steady_clock::now();
         frame_timestamp ts;
@@ -671,6 +686,20 @@ static run_modulator_state_t run_modulator(const mod_settings_t& mod_settings, M
             }
 
             bool modulate = true;
+
+            if (m.pause_modulator) {
+                modulator_was_paused = true;
+                modulate = false;
+            }
+            else if (modulator_was_paused) {
+                // We must restart it because of frame alignment
+                etiLog.level(warn) << "Modulator unpaused";
+                if (m.ediInput) {
+                    m.ediInput->ediReader.clearFrame();
+                }
+                return run_modulator_state_t::again;
+            }
+
             if (last_eti_fct == -1) {
                 if (fp != 0) {
                     // Do not start the flowgraph before we get to FP 0
