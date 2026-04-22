@@ -37,11 +37,11 @@
 #include "Socket.h"
 #include "SubchannelSource.h"
 #include "TimestampDecoder.h"
-#include "ThreadsafeQueue.h"
 #include "lib/edi/ETIDecoder.hpp"
 
 #include <vector>
 #include <memory>
+#include <mutex>
 #include <stdint.h>
 #include <sys/types.h>
 
@@ -51,26 +51,8 @@
 class EtiSource
 {
 public:
-    /* Get the DAB Transmission Mode. Valid values: 1, 2, 3 or 4 */
-    virtual unsigned getMode() = 0;
-
-    /* Get the current Frame Phase */
-    virtual unsigned getFp() = 0;
-
-    /* Get the current Frame Count */
-    virtual unsigned getFct() = 0;
-
-    /* Returns current Timestamp */
-    virtual frame_timestamp getTimestamp() = 0;
-
-    /* Return the FIC source to be used for modulation */
-    virtual std::shared_ptr<FicSource>& getFic(void);
-
     /* Return all subchannel sources containing MST data */
     virtual const std::vector<std::shared_ptr<SubchannelSource> > getSubchannels() const = 0;
-
-protected:
-    std::shared_ptr<FicSource> myFicSource;
 };
 
 enum class EtiReaderState {
@@ -96,12 +78,16 @@ enum class EtiReaderState {
 class EtiReader : public EtiSource
 {
 public:
-    EtiReader(double& tist_offset_s);
+    EtiReader(double& tist_offset_s, std::shared_ptr<FicSource> ficSource);
 
-    virtual unsigned getMode() override;
-    virtual unsigned getFp() override;
-    virtual unsigned getFct() override;
-    virtual frame_timestamp getTimestamp() override;
+    /* Get the DAB Transmission Mode. Valid values: 1, 2, 3 or 4 */
+    unsigned getMode();
+    /* Get the current Frame Phase */
+    unsigned getFp();
+    /* Get the current Frame Count */
+    unsigned getFct();
+    /* Returns current Timestamp */
+    frame_timestamp getTimestamp();
 
     /* Read ETI data from dataIn. Returns the number of bytes
      * read from the buffer.
@@ -128,24 +114,48 @@ private:
     bool eti_fc_valid;
 
     std::vector<std::shared_ptr<SubchannelSource> > mySources;
+    std::shared_ptr<FicSource> myFicSource;
 };
 
 /* The EdiReader extracts the necessary data using the EDI input library in
- * lib/edi
+ * lib/edi.
+ *
+ * The callbacks from EDI reception are called from a different thread than
+ * the functions to get the info.
  */
+
+struct DecodedFrame {
+    uint8_t err;
+    EdiDecoder::eti_fc_data fc;
+    std::vector<uint8_t> fic;
+    uint32_t utco;
+    uint32_t seconds;
+    uint16_t mnsc = 0xffff;
+
+    // 16 bits: RFU field in EOH
+    uint16_t rfu = 0xffff;
+
+    std::map<uint8_t, std::shared_ptr<SubchannelSource> > sources;
+
+    std::time_t utc_ts() const {
+        /* According to Annex F
+         *  EDI = UTC + UTCO
+         * We need UTC = EDI - UTCO
+         *
+         * The seconds value is given in number of seconds since
+         * 1.1.2000
+         */
+        const std::time_t posix_timestamp_1_jan_2000 = 946684800;
+        return posix_timestamp_1_jan_2000 + seconds - utco;
+    }
+};
+
 class EdiReader : public EtiSource, public EdiDecoder::ETIDataCollector
 {
 public:
-    EdiReader(double& tist_offset_s);
-
-    virtual unsigned getMode() override;
-    virtual unsigned getFp() override;
-    virtual unsigned getFct() override;
-    virtual frame_timestamp getTimestamp() override;
     virtual const std::vector<std::shared_ptr<SubchannelSource> > getSubchannels() const override;
 
-    virtual bool isFrameReady(void);
-    virtual void clearFrame(void);
+    std::optional<DecodedFrame> popFrame();
 
     // Tell the ETIWriter what EDI protocol we receive in *ptr.
     // This is not part of the ETI data, but is used as check
@@ -176,38 +186,15 @@ public:
     // Gets called by the EDI library to tell us that all data for a frame was given to us
     virtual void assemble(EdiDecoder::ReceivedTagPacket&& tagpacket) override;
 
-    std::optional<FIC_ENSEMBLE> getEnsembleInfo() const {
-        return m_fic_decoder.observer.ensemble;
-    }
-
-    std::map<int /*SId*/, LISTED_SERVICE> getServiceInfo() const {
-        return m_fic_decoder.observer.services;
-    }
-
 private:
+    mutable std::mutex m_mutex;
+
     bool m_proto_valid = false;
-    bool m_frameReady = false;
-
-    uint8_t m_err;
-
     bool m_fc_valid = false;
-    EdiDecoder::eti_fc_data m_fc;
-
-    std::vector<uint8_t> m_fic;
-
     bool m_time_valid = false;
-    uint32_t m_utco;
-    uint32_t m_seconds;
+    DecodedFrame m_currentFrame;
 
-    uint16_t m_mnsc = 0xffff;
-
-    // 16 bits: RFU field in EOH
-    uint16_t m_rfu = 0xffff;
-
-    std::map<uint8_t, std::shared_ptr<SubchannelSource> > m_sources;
-
-    TimestampDecoder m_timestamp_decoder;
-    FICDecoder m_fic_decoder;
+    std::deque<DecodedFrame> m_readyFrames;
 };
 
 /* The EDI input does not use the inputs defined in InputReader.h, as they were
@@ -215,7 +202,7 @@ private:
  */
 class EdiTransport {
     public:
-        EdiTransport(EdiDecoder::ETIDecoder& decoder);
+        EdiTransport(EdiReader& edi_reader, float edi_max_delay_ms);
         EdiTransport(const EdiTransport&) = delete;
         EdiTransport& operator=(const EdiTransport&) = delete;
         ~EdiTransport();
@@ -229,7 +216,9 @@ class EdiTransport {
          * true if a packet was received, false in case of socket
          * read was interrupted by a signal.
          */
-        bool rxPacket(void);
+        bool rxPacket();
+
+        std::chrono::steady_clock::time_point get_last_frame_received() const;
 
     private:
         void udp_receive_thread();
@@ -246,19 +235,20 @@ class EdiTransport {
         std::atomic<bool> m_udp_running;
         Socket::UDPSocket m_udp_sock;
         std::thread m_udp_receive_thread;
-        ThreadsafeQueue<Socket::UDPPacket> m_udp_packet_queue;
 
         std::vector<uint8_t> m_tcpbuffer;
         Socket::TCPClient m_tcpclient;
-        EdiDecoder::ETIDecoder& m_decoder;
+
+        std::atomic<std::chrono::steady_clock::time_point> m_last_frame_received;
+
+        EdiDecoder::ETIDecoder m_decoder;
 };
 
 // EdiInput wraps an EdiReader, an EdiDecoder::ETIDecoder and an EdiTransport
 class EdiInput {
     public:
-        EdiInput(double& tist_offset_s, float edi_max_delay_ms);
+        EdiInput(float edi_max_delay_ms);
         EdiReader ediReader;
-        EdiDecoder::ETIDecoder decoder;
         EdiTransport ediTransport;
 };
 

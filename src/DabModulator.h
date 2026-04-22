@@ -46,7 +46,11 @@
 class DabModulator : public ModInput, public ModMetadata, public RemoteControllable
 {
 public:
-    DabModulator(EtiSource& etiSource, mod_settings_t& settings, const std::string& format);
+    DabModulator(
+            EtiSource& etiSource,
+            std::shared_ptr<FicSource> ficSource,
+            mod_settings_t& settings,
+            const std::string& format);
     // Allowed formats: s8, u8 and s16. Empty string means no conversion
 
     virtual ~DabModulator() {}
@@ -71,6 +75,7 @@ protected:
     std::string m_format;
 
     EtiSource& m_etiSource;
+    std::shared_ptr<FicSource> m_ficSource;
     std::shared_ptr<Flowgraph> m_flowgraph;
 
     size_t m_nbSymbols;

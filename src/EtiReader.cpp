@@ -40,18 +40,13 @@
 using namespace std;
 
 EtiReader::EtiReader(
-        double& tist_offset_s) :
+        double& tist_offset_s, std::shared_ptr<FicSource> ficSource) :
     myTimestampDecoder(tist_offset_s),
-    eti_fc_valid(false)
+    eti_fc_valid(false),
+    myFicSource(ficSource)
 {
     rcs.enrol(&myTimestampDecoder);
 }
-
-std::shared_ptr<FicSource>& EtiSource::getFic()
-{
-    return myFicSource;
-}
-
 
 unsigned EtiReader::getMode()
 {
@@ -152,9 +147,8 @@ int EtiReader::loadEtiData(const Buffer& dataIn)
                     throw std::runtime_error("FIC must be present to modulate!");
                 }
                 if (not myFicSource) {
-                    unsigned ficf = eti_fc.FICF;
                     unsigned mid = eti_fc.MID;
-                    myFicSource = make_shared<FicSource>(ficf, mid);
+                    myFicSource = make_shared<FicSource>(mid);
                 }
                 break;
             case EtiReaderState::Nst:
@@ -295,49 +289,14 @@ uint32_t EtiReader::getPPSOffset()
     return timestamp;
 }
 
-EdiReader::EdiReader(double& tist_offset_s) :
-    m_timestamp_decoder(tist_offset_s),
-    m_fic_decoder(/*verbose*/ false)
-{
-    rcs.enrol(&m_timestamp_decoder);
-}
-
-unsigned EdiReader::getMode()
-{
-    if (not m_fc_valid) {
-        throw std::runtime_error("Trying to access Mode before it is ready!");
-    }
-    return m_fc.mid;
-}
-
-
-unsigned EdiReader::getFp()
-{
-    if (not m_fc_valid) {
-        throw std::runtime_error("Trying to access FP before it is ready!");
-    }
-    return m_fc.fp;
-}
-
-unsigned EdiReader::getFct()
-{
-    if (not m_fc_valid) {
-        throw std::runtime_error("Trying to access FCT before it is ready!");
-    }
-    return m_fc.fct();
-}
-
-frame_timestamp EdiReader::getTimestamp()
-{
-    return m_timestamp_decoder.getTimestamp();
-}
-
 const std::vector<std::shared_ptr<SubchannelSource> > EdiReader::getSubchannels() const
 {
+    std::scoped_lock<std::mutex> lock(m_mutex);
+
     std::vector<std::shared_ptr<SubchannelSource> > sources;
 
-    sources.resize(m_sources.size());
-    for (const auto& s : m_sources) {
+    sources.resize(m_currentFrame.sources.size());
+    for (const auto& s : m_currentFrame.sources) {
         if (s.first < sources.size()) {
             sources.at(s.first) = s.second;
         }
@@ -349,17 +308,15 @@ const std::vector<std::shared_ptr<SubchannelSource> > EdiReader::getSubchannels(
     return sources;
 }
 
-bool EdiReader::isFrameReady()
+std::optional<DecodedFrame> EdiReader::popFrame()
 {
-    return m_frameReady;
-}
-
-void EdiReader::clearFrame()
-{
-    m_frameReady = false;
-    m_proto_valid = false;
-    m_fc_valid = false;
-    m_fic.clear();
+    std::scoped_lock<std::mutex> lock(m_mutex);
+    if (m_readyFrames.size() > 0) {
+        auto f = std::move(m_readyFrames.front());
+        m_readyFrames.pop_front();
+        return f;
+    }
+    return std::nullopt;
 }
 
 void EdiReader::update_protocol(
@@ -367,6 +324,7 @@ void EdiReader::update_protocol(
         uint16_t major,
         uint16_t minor)
 {
+    std::scoped_lock<std::mutex> lock(m_mutex);
     m_proto_valid = (proto == "DETI" and major == 0 and minor == 0);
 
     if (not m_proto_valid) {
@@ -376,30 +334,32 @@ void EdiReader::update_protocol(
 
 void EdiReader::update_err(uint8_t err)
 {
+    std::scoped_lock<std::mutex> lock(m_mutex);
     if (not m_proto_valid) {
         throw std::logic_error("Cannot update ERR before protocol");
     }
-    m_err = err;
+    m_currentFrame.err = err;
 }
 
 void EdiReader::update_fc_data(const EdiDecoder::eti_fc_data& fc_data)
 {
+    std::scoped_lock<std::mutex> lock(m_mutex);
     if (not m_proto_valid) {
         throw std::logic_error("Cannot update FC before protocol");
     }
 
     m_fc_valid = false;
-    m_fc = fc_data;
+    m_currentFrame.fc = fc_data;
 
-    if (not m_fc.ficf) {
+    if (not m_currentFrame.fc.ficf) {
         throw std::invalid_argument("FIC must be present");
     }
 
-    if (m_fc.mid > 4) {
+    if (m_currentFrame.fc.mid > 4) {
         throw std::invalid_argument("Invalid MID");
     }
 
-    if (m_fc.fp > 7) {
+    if (m_currentFrame.fc.fp > 7) {
         throw std::invalid_argument("Invalid FP");
     }
 
@@ -408,25 +368,25 @@ void EdiReader::update_fc_data(const EdiDecoder::eti_fc_data& fc_data)
 
 void EdiReader::update_fic(std::vector<uint8_t>&& fic)
 {
+    std::scoped_lock<std::mutex> lock(m_mutex);
     if (not m_proto_valid) {
         throw std::logic_error("Cannot update FIC before protocol");
     }
 
-    m_fic_decoder.Process(fic.data(), fic.size());
-
-    m_fic = std::move(fic);
+    m_currentFrame.fic = std::move(fic);
 }
 
 void EdiReader::update_edi_time(
         uint32_t utco,
         uint32_t seconds)
 {
+    std::scoped_lock<std::mutex> lock(m_mutex);
     if (not m_proto_valid) {
         throw std::logic_error("Cannot update time before protocol");
     }
 
-    m_utco = utco;
-    m_seconds = seconds;
+    m_currentFrame.utco = utco;
+    m_currentFrame.seconds = seconds;
 
     // TODO check validity
     m_time_valid = true;
@@ -434,33 +394,36 @@ void EdiReader::update_edi_time(
 
 void EdiReader::update_mnsc(uint16_t mnsc)
 {
+    std::scoped_lock<std::mutex> lock(m_mutex);
     if (not m_proto_valid) {
         throw std::logic_error("Cannot update MNSC before protocol");
     }
 
-    m_mnsc = mnsc;
+    m_currentFrame.mnsc = mnsc;
 }
 
 void EdiReader::update_rfu(uint16_t rfu)
 {
+    std::scoped_lock<std::mutex> lock(m_mutex);
     if (not m_proto_valid) {
         throw std::logic_error("Cannot update RFU before protocol");
     }
 
-    m_rfu = rfu;
+    m_currentFrame.rfu = rfu;
 }
 
 void EdiReader::add_subchannel(EdiDecoder::eti_stc_data&& stc)
 {
+    std::scoped_lock<std::mutex> lock(m_mutex);
     if (not m_proto_valid) {
         throw std::logic_error("Cannot add subchannel before protocol");
     }
 
-    if (m_sources.count(stc.stream_index) == 0) {
-        m_sources[stc.stream_index] = make_shared<SubchannelSource>(stc.sad, stc.stl(), stc.tpl);
+    if (m_currentFrame.sources.count(stc.stream_index) == 0) {
+        m_currentFrame.sources[stc.stream_index] = make_shared<SubchannelSource>(stc.sad, stc.stl(), stc.tpl);
     }
 
-    auto& source = m_sources[stc.stream_index];
+    auto& source = m_currentFrame.sources[stc.stream_index];
 
     if (source->framesize() != stc.mst.size()) {
         throw std::invalid_argument(
@@ -468,13 +431,14 @@ void EdiReader::add_subchannel(EdiDecoder::eti_stc_data&& stc)
     }
     source->loadSubchannelData(std::move(stc.mst));
 
-    if (m_sources.size() > 64) {
+    if (m_currentFrame.sources.size() > 64) {
         throw std::invalid_argument("Too many subchannels");
     }
 }
 
 void EdiReader::assemble(EdiDecoder::ReceivedTagPacket&& tagpacket)
 {
+    std::scoped_lock<std::mutex> lock(m_mutex);
     if (not m_proto_valid) {
         throw std::logic_error("Cannot assemble EDI data before protocol");
     }
@@ -483,57 +447,45 @@ void EdiReader::assemble(EdiDecoder::ReceivedTagPacket&& tagpacket)
         throw std::logic_error("Cannot assemble EDI data without FC");
     }
 
-    if (m_fic.empty()) {
+    if (m_currentFrame.fic.empty()) {
         throw std::logic_error("Cannot assemble EDI data without FIC");
     }
 
     // ETS 300 799 Clause 5.3.2, but we don't support not having
     // a FIC
-    if (    (m_fc.mid == 3 and m_fic.size() != 32 * 4) or
-            (m_fc.mid != 3 and m_fic.size() != 24 * 4) ) {
+    if (    (m_currentFrame.fc.mid == 3 and m_currentFrame.fic.size() != 32 * 4) or
+            (m_currentFrame.fc.mid != 3 and m_currentFrame.fic.size() != 24 * 4) ) {
         stringstream ss;
-        ss << "Invalid FIC length " << m_fic.size() <<
-            " for MID " << m_fc.mid;
+        ss << "Invalid FIC length " << m_currentFrame.fic.size() <<
+            " for MID " << m_currentFrame.fc.mid;
         throw std::invalid_argument(ss.str());
     }
-
-    if (not myFicSource) {
-        myFicSource = make_shared<FicSource>(m_fc.ficf, m_fc.mid);
-    }
-
-    myFicSource->loadFicData(m_fic);
 
     // Accept zero subchannels, because of an edge-case that can happen
     // during reconfiguration. See ETS 300 799 Clause 5.3.3
 
-    if (m_utco == 0 and m_seconds == 0) {
+    if (m_currentFrame.utco == 0 and m_currentFrame.seconds == 0) {
         // We don't support relative-only timestamps
-        m_fc.tsta = 0xFFFFFF; // disable TSTA
+        m_currentFrame.fc.tsta = 0xFFFFFF; // disable TSTA
     }
 
-    /* According to Annex F
-     *  EDI = UTC + UTCO
-     * We need UTC = EDI - UTCO
-     *
-     * The seconds value is given in number of seconds since
-     * 1.1.2000
-     */
-    const std::time_t posix_timestamp_1_jan_2000 = 946684800;
-    auto utc_ts = posix_timestamp_1_jan_2000 + m_seconds - m_utco;
-
-    m_timestamp_decoder.updateTimestampEdi(utc_ts, m_fc.tsta, m_fc.fct(), m_fc.fp);
-
-    myFicSource->loadTimestamp(m_timestamp_decoder.getTimestamp());
-
-    m_frameReady = true;
+    m_readyFrames.push_back(std::move(m_currentFrame));
+    m_currentFrame = DecodedFrame{ };
+    m_proto_valid = false;
+    m_fc_valid = false;
+    m_time_valid = false;
 }
 
-EdiTransport::EdiTransport(EdiDecoder::ETIDecoder& decoder) :
+EdiTransport::EdiTransport(EdiReader& reader, float edi_max_delay_ms) :
     m_port(0),
     m_bindto("0.0.0.0"),
     m_mcastaddr("0.0.0.0"),
-    m_decoder(decoder)
+    m_decoder(reader)
 {
+    if (edi_max_delay_ms > 0.0f) {
+        // setMaxDelay wants number of AF packets, which correspond to 24ms ETI frames
+        m_decoder.setMaxDelay(lroundf(edi_max_delay_ms / 24.0f));
+    }
 }
 
 EdiTransport::~EdiTransport() {
@@ -613,11 +565,15 @@ void EdiTransport::udp_receive_thread()
     constexpr int TIMEOUT_MS = 100;
     while (m_udp_running.load()) {
         try {
-            auto p = m_udp_sock.receive(1024, TIMEOUT_MS);
             // about 10 fragments every 24ms, i.e. 1000 fragments are roughly 2.4s
-            const auto res = m_udp_packet_queue.push_overflow(std::move(p), 1000);
-            if (res.overflowed) {
-                etiLog.level(warn) << "EDI input queue overflow: " << res.new_size;
+            auto rp = m_udp_sock.receive(1024, TIMEOUT_MS);
+
+            if (rp.buffer.size() > 0) {
+                m_last_frame_received.store(chrono::steady_clock::now());
+                EdiDecoder::Packet p;
+                p.buf = std::move(rp.buffer);
+                p.received_on_port = m_port;
+                m_decoder.push_packet(std::move(p));
             }
         }
         catch (const Socket::UDPSocket::Interrupted&) {
@@ -642,18 +598,8 @@ bool EdiTransport::rxPacket()
             }
         case Proto::UDP:
             {
-                Socket::UDPPacket rp;
-                m_udp_packet_queue.try_pop(rp);
-                if (rp.buffer.size() > 0) {
-                    EdiDecoder::Packet p;
-                    p.buf = std::move(rp.buffer);
-                    p.received_on_port = m_port;
-                    m_decoder.push_packet(std::move(p));
-                    return true;
-                }
-                else {
-                    return false;
-                }
+                // all work done in thread
+                return false;
             }
         case Proto::TCP:
             {
@@ -671,6 +617,7 @@ bool EdiTransport::rxPacket()
                     throw logic_error("EDI TCP: invalid recv() return value");
                 }
                 else {
+                    m_last_frame_received.store(chrono::steady_clock::now());
                     m_tcpbuffer.resize(ret);
                     m_decoder.push_bytes(m_tcpbuffer);
                     return true;
@@ -680,13 +627,13 @@ bool EdiTransport::rxPacket()
     throw logic_error("Incomplete rxPacket implementation!");
 }
 
-EdiInput::EdiInput(double& tist_offset_s, float edi_max_delay_ms) :
-    ediReader(tist_offset_s),
-    decoder(ediReader),
-    ediTransport(decoder)
+std::chrono::steady_clock::time_point EdiTransport::get_last_frame_received() const
 {
-    if (edi_max_delay_ms > 0.0f) {
-        // setMaxDelay wants number of AF packets, which correspond to 24ms ETI frames
-        decoder.setMaxDelay(lroundf(edi_max_delay_ms / 24.0f));
-    }
+    return m_last_frame_received.load();
+}
+
+
+EdiInput::EdiInput(float edi_max_delay_ms) :
+    ediTransport(ediReader, edi_max_delay_ms)
+{
 }

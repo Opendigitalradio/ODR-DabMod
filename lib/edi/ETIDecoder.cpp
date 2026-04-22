@@ -20,11 +20,9 @@
  */
 #include "ETIDecoder.hpp"
 #include "buffer_unpack.hpp"
-#include "crc.h"
 #include "Log.h"
 #include <cstdio>
 #include <cassert>
-#include <sstream>
 
 namespace EdiDecoder {
 

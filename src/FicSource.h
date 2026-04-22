@@ -40,7 +40,7 @@
 class FicSource : public ModInput, public ModMetadata
 {
 public:
-    FicSource(unsigned ficf, unsigned mid);
+    FicSource(unsigned mid);
 
     size_t getFramesize() const;
     const std::vector<PuncturingRule>& get_rules() const;

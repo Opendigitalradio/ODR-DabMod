@@ -58,6 +58,7 @@
 using namespace std;
 
 DabModulator::DabModulator(EtiSource& etiSource,
+                           std::shared_ptr<FicSource> ficSource,
                            mod_settings_t& settings,
                            const std::string& format) :
     ModInput(),
@@ -65,6 +66,7 @@ DabModulator::DabModulator(EtiSource& etiSource,
     m_settings(settings),
     m_format(format),
     m_etiSource(etiSource),
+    m_ficSource(ficSource),
     m_flowgraph()
 {
     PDEBUG("DabModulator::DabModulator() @ %p\n", this);
@@ -72,12 +74,7 @@ DabModulator::DabModulator(EtiSource& etiSource,
     RC_ADD_PARAMETER(rate, "(Read-only) IQ output samplerate");
     RC_ADD_PARAMETER(num_clipped_samples, "(Read-only) Number of samples clipped in last frame during format conversion");
 
-    if (m_settings.dabMode == 0) {
-        setMode(1);
-    }
-    else {
-        setMode(m_settings.dabMode);
-    }
+    setMode(m_settings.dabMode);
 }
 
 
@@ -117,7 +114,7 @@ void DabModulator::setMode(unsigned mode)
         m_ficSizeOut = 288;
         break;
     default:
-        throw std::runtime_error("DabModulator::setMode invalid mode size");
+        throw std::runtime_error("DabModulator::setMode invalid mode");
     }
 }
 
@@ -284,30 +281,15 @@ int DabModulator::process(Buffer* dataOut)
         ////////////////////////////////////////////////////////////////
         // Processing FIC
         ////////////////////////////////////////////////////////////////
-        shared_ptr<FicSource> fic(m_etiSource.getFic());
-        ////////////////////////////////////////////////////////////////
-        // Data initialisation
-        ////////////////////////////////////////////////////////////////
-        size_t ficSizeIn = fic->getFramesize();
-
-        ////////////////////////////////////////////////////////////////
-        // Modules configuration
-        ////////////////////////////////////////////////////////////////
-
-        // Configuring FIC channel
+        size_t ficSizeIn = m_ficSource->getFramesize();
 
         PDEBUG("FIC:\n");
-        PDEBUG(" Framesize: %zu\n", fic->getFramesize());
+        PDEBUG(" Framesize: %zu\n", m_ficSource->getFramesize());
 
-        // Configuring prbs generator
         auto ficPrbs = make_shared<PrbsGenerator>(ficSizeIn, 0x110);
-
-        // Configuring convolutionnal encoder
         auto ficConv = make_shared<ConvEncoder>(ficSizeIn);
-
-        // Configuring puncturing encoder
         auto ficPunc = make_shared<PuncturingEncoder>();
-        for (const auto &rule : fic->get_rules()) {
+        for (const auto &rule : m_ficSource->get_rules()) {
             PDEBUG(" Adding rule:\n");
             PDEBUG("  Length: %zu\n", rule.length());
             PDEBUG("  Pattern: 0x%x\n", rule.pattern());
@@ -316,7 +298,7 @@ int DabModulator::process(Buffer* dataOut)
         PDEBUG(" Adding tail\n");
         ficPunc->append_tail_rule(PuncturingRule(3, 0xcccccc));
 
-        m_flowgraph->connect(fic, ficPrbs);
+        m_flowgraph->connect(m_ficSource, ficPrbs);
         m_flowgraph->connect(ficPrbs, ficConv);
         m_flowgraph->connect(ficConv, ficPunc);
         m_flowgraph->connect(ficPunc, cifPart);
@@ -326,43 +308,22 @@ int DabModulator::process(Buffer* dataOut)
         ////////////////////////////////////////////////////////////////
         for (const auto& subchannel : m_etiSource.getSubchannels()) {
 
-            ////////////////////////////////////////////////////////////
-            // Data initialisation
-            ////////////////////////////////////////////////////////////
             size_t subchSizeIn = subchannel->framesize();
             size_t subchSizeOut = subchannel->framesizeCu() * 8;
 
-            ////////////////////////////////////////////////////////////
-            // Modules configuration
-            ////////////////////////////////////////////////////////////
-
-            // Configuring subchannel
             PDEBUG("Subchannel:\n");
-            PDEBUG(" Start address: %zu\n",
-                    subchannel->startAddress());
-            PDEBUG(" Framesize: %zu\n",
-                    subchannel->framesize());
+            PDEBUG(" Start address: %zu\n", subchannel->startAddress());
+            PDEBUG(" Framesize: %zu\n", subchannel->framesize());
             PDEBUG(" Bitrate: %zu\n", subchannel->bitrate());
-            PDEBUG(" Framesize CU: %zu\n",
-                    subchannel->framesizeCu());
-            PDEBUG(" Protection: %zu\n",
-                    subchannel->protection());
-            PDEBUG("  Form: %zu\n",
-                    subchannel->protectionForm());
-            PDEBUG("  Level: %zu\n",
-                    subchannel->protectionLevel());
-            PDEBUG("  Option: %zu\n",
-                    subchannel->protectionOption());
+            PDEBUG(" Framesize CU: %zu\n", subchannel->framesizeCu());
+            PDEBUG(" Protection: %zu\n", subchannel->protection());
+            PDEBUG("  Form: %zu\n", subchannel->protectionForm());
+            PDEBUG("  Level: %zu\n", subchannel->protectionLevel());
+            PDEBUG("  Option: %zu\n", subchannel->protectionOption());
 
-            // Configuring prbs genrerator
             auto subchPrbs = make_shared<PrbsGenerator>(subchSizeIn, 0x110);
-
-            // Configuring convolutionnal encoder
             auto subchConv = make_shared<ConvEncoder>(subchSizeIn);
-
-            // Configuring puncturing encoder
-            auto subchPunc =
-                make_shared<PuncturingEncoder>(subchannel->framesizeCu());
+            auto subchPunc = make_shared<PuncturingEncoder>(subchannel->framesizeCu());
 
             for (const auto& rule : subchannel->get_rules()) {
                 PDEBUG(" Adding rule:\n");
@@ -373,7 +334,6 @@ int DabModulator::process(Buffer* dataOut)
             PDEBUG(" Adding tail\n");
             subchPunc->append_tail_rule(PuncturingRule(3, 0xcccccc));
 
-            // Configuring time interleaver
             auto subchInterleaver = make_shared<TimeInterleaver>(subchSizeOut);
 
             m_flowgraph->connect(subchannel, subchPrbs);
@@ -419,9 +379,6 @@ int DabModulator::process(Buffer* dataOut)
         etiLog.level(debug) << "DabModulator set up.";
     }
 
-    ////////////////////////////////////////////////////////////////////
-    // Processing data
-    ////////////////////////////////////////////////////////////////////
     return m_flowgraph->run();
 }
 

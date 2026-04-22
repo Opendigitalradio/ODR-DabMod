@@ -3,7 +3,7 @@
    Her Majesty the Queen in Right of Canada (Communications Research
    Center Canada)
 
-   Copyright (C) 2023
+   Copyright (C) 2026
    Matthias P. Braendli, matthias.braendli@mpb.li
 
     http://opendigitalradio.org
@@ -103,13 +103,18 @@ class ModulatorData : public RemoteControllable {
 
         // For EDI
         std::shared_ptr<EdiInput> ediInput;
+        std::shared_ptr<TimestampDecoder> ediTimestampDecoder;
 
         // Common to both EDI and EDI
+        std::shared_ptr<FicSource> ficSource;
         uint64_t framecount = 0;
         Flowgraph *flowgraph = nullptr;
 
         // RC-related
-        ModulatorData() : RemoteControllable("mainloop") {
+        FICDecoder ficDecoder;
+
+        ModulatorData() : RemoteControllable("mainloop"), ficDecoder(/*verbose*/ false)
+        {
             RC_ADD_PARAMETER(num_modulator_restarts, "(Read-only) Number of mod restarts");
             RC_ADD_PARAMETER(most_recent_edi_decoded, "(Read-only) UNIX Timestamp of most recently decoded EDI frame");
             RC_ADD_PARAMETER(edi_source, "(Read-only) URL of the EDI/TCP source");
@@ -148,7 +153,7 @@ class ModulatorData : public RemoteControllable {
             }
             else if (parameter == "ensemble_label") {
                 if (ediInput) {
-                    const auto ens = ediInput->ediReader.getEnsembleInfo();
+                    const auto ens = ficDecoder.observer.ensemble;
                     if (ens) {
                         ss << FICDecoder::ConvertLabelToUTF8(ens->label, nullptr);
                     }
@@ -162,7 +167,7 @@ class ModulatorData : public RemoteControllable {
             }
             else if (parameter == "ensemble_eid") {
                 if (ediInput) {
-                    const auto ens = ediInput->ediReader.getEnsembleInfo();
+                    const auto ens = ficDecoder.observer.ensemble;
                     if (ens) {
                         ss << ens->eid;
                     }
@@ -216,7 +221,7 @@ class ModulatorData : public RemoteControllable {
                 map["edi_source"] = ediInput->ediTransport.get_uri();
                 map["num_services"] = ediInput->ediReader.getSubchannels().size();
 
-                const auto ens = ediInput->ediReader.getEnsembleInfo();
+                const auto ens = ficDecoder.observer.ensemble;
                 if (ens) {
                     map["ensemble_label"] = FICDecoder::ConvertLabelToUTF8(ens->label, nullptr);
                     map["ensemble_eid"] = ens->eid;
@@ -228,7 +233,7 @@ class ModulatorData : public RemoteControllable {
 
                 std::vector<json::value_t> services;
 
-                for (const auto& s : ediInput->ediReader.getServiceInfo()) {
+                for (const auto& s : ficDecoder.observer.services) {
                     auto service_map = make_shared<json::map_t>();
                     (*service_map)["sad"] = s.second.subchannel.start;
                     (*service_map)["sid"] = s.second.sid;
@@ -496,7 +501,7 @@ int launch_modulator(int argc, char* argv[])
     shared_ptr<EdiInput> ediInput;
 
     if (mod_settings.inputTransport == "edi") {
-        ediInput = make_shared<EdiInput>(mod_settings.tist_offset_s, mod_settings.edi_max_delay_ms);
+        ediInput = make_shared<EdiInput>(mod_settings.edi_max_delay_ms);
 
         ediInput->ediTransport.open(mod_settings.inputName, mod_settings.edi_verbose);
     }
@@ -534,12 +539,15 @@ int launch_modulator(int argc, char* argv[])
         m.flowgraph = &flowgraph;
 
         shared_ptr<DabModulator> modulator;
+        m.ficSource = make_shared<FicSource>(mod_settings.dabMode);
         if (inputReader) {
-            m.etiReader = make_shared<EtiReader>(mod_settings.tist_offset_s);
-            modulator = make_shared<DabModulator>(*m.etiReader, mod_settings, output_format);
+            m.etiReader = make_shared<EtiReader>(mod_settings.tist_offset_s, m.ficSource);
+            modulator = make_shared<DabModulator>(*m.etiReader, m.ficSource, mod_settings, output_format);
         }
         else if (ediInput) {
-            modulator = make_shared<DabModulator>(ediInput->ediReader, mod_settings, output_format);
+            m.ediTimestampDecoder = make_shared<TimestampDecoder>(mod_settings.tist_offset_s);
+            rcs.enrol(m.ediTimestampDecoder.get());
+            modulator = make_shared<DabModulator>(ediInput->ediReader, m.ficSource, mod_settings, output_format);
         }
 
         rcs.enrol(modulator.get());
@@ -658,31 +666,38 @@ static run_modulator_state_t run_modulator(const mod_settings_t& mod_settings, M
                 ts = m.etiReader->getTimestamp();
             }
             else if (m.ediInput) {
-                while (running and not m.ediInput->ediReader.isFrameReady()) {
-                    try {
-                        bool packet_received = m.ediInput->ediTransport.rxPacket();
-                        if (packet_received) {
-                            last_frame_received = chrono::steady_clock::now();
-                        }
-                        else {
-                            this_thread::sleep_for(chrono::milliseconds(1));
-                        }
-                    }
-                    catch (const std::runtime_error& e) {
-                        etiLog.level(warn) << "EDI input: " << e.what();
-                        running = 0;
+                while (running) {
+                    m.ediInput->ediTransport.rxPacket();
+
+                    last_frame_received = m.ediInput->ediTransport.get_last_frame_received();
+
+                    const auto receivedFrame = m.ediInput->ediReader.popFrame();
+
+                    if (receivedFrame.has_value()) {
+                        fct = receivedFrame->fc.fct();
+                        fp = receivedFrame->fc.fp;
+                        m.ediTimestampDecoder->updateTimestampEdi(
+                                receivedFrame->utc_ts(),
+                                receivedFrame->fc.tsta,
+                                receivedFrame->fc.fct(),
+                                receivedFrame->fc.fp);
+
+                        m.ficDecoder.Process(receivedFrame->fic.data(), receivedFrame->fic.size());
+                        m.ficSource->loadFicData(receivedFrame->fic);
+                        m.ficSource->loadTimestamp(m.ediTimestampDecoder->getTimestamp());
+                        m.most_recent_edi_decoded = get_clock_realtime_seconds();
+
+                        ts = m.ediTimestampDecoder->getTimestamp();
                         break;
+                    }
+                    else {
+                        this_thread::sleep_for(chrono::milliseconds(1));
                     }
                 }
 
                 if (!running) {
                     break;
                 }
-
-                m.most_recent_edi_decoded = get_clock_realtime_seconds();
-                fct = m.ediInput->ediReader.getFct();
-                fp = m.ediInput->ediReader.getFp();
-                ts = m.ediInput->ediReader.getTimestamp();
             }
 
             bool modulate = true;
@@ -694,9 +709,6 @@ static run_modulator_state_t run_modulator(const mod_settings_t& mod_settings, M
             else if (modulator_was_paused) {
                 // We must restart it because of frame alignment
                 etiLog.level(warn) << "Modulator unpaused";
-                if (m.ediInput) {
-                    m.ediInput->ediReader.clearFrame();
-                }
                 return run_modulator_state_t::again;
             }
 
@@ -718,9 +730,6 @@ static run_modulator_state_t run_modulator(const mod_settings_t& mod_settings, M
                 else {
                     etiLog.level(warn) << "ETI FCT discontinuity, expected " <<
                         expected_fct << " received " << fct;
-                    if (m.ediInput) {
-                        m.ediInput->ediReader.clearFrame();
-                    }
                     return run_modulator_state_t::again;
                 }
             }
@@ -742,10 +751,6 @@ static run_modulator_state_t run_modulator(const mod_settings_t& mod_settings, M
             if (modulate) {
                 m.framecount++;
                 m.flowgraph->run();
-            }
-
-            if (m.ediInput) {
-                m.ediInput->ediReader.clearFrame();
             }
 
             /* Check every once in a while if the remote control

@@ -35,7 +35,7 @@
 #include <string.h>
 
 
-FicSource::FicSource(unsigned ficf, unsigned mid) :
+FicSource::FicSource(unsigned mid) :
     ModInput()
 {
 //    PDEBUG("FicSource::FicSource(...)\n");
@@ -43,19 +43,21 @@ FicSource::FicSource(unsigned ficf, unsigned mid) :
 //    PDEBUG("  Framesize: %i\n", m_framesize);
 //    PDEBUG("  Protection: %i\n", d_protection);
 
-    if (ficf == 0) {
-        m_buffer.setLength(0);
-        return;
-    }
-
-    if (mid == 3) {
-        m_framesize = 32 * 4;
-        m_puncturing_rules.emplace_back(29 * 16, 0xeeeeeeee);
-        m_puncturing_rules.emplace_back(3 * 16, 0xeeeeeeec);
-    } else {
-        m_framesize = 24 * 4;
-        m_puncturing_rules.emplace_back(21 * 16, 0xeeeeeeee);
-        m_puncturing_rules.emplace_back(3 * 16, 0xeeeeeeec);
+    switch (mid) {
+        case 1:
+        case 2:
+        case 4:
+            m_framesize = 24 * 4;
+            m_puncturing_rules.emplace_back(21 * 16, 0xeeeeeeee);
+            m_puncturing_rules.emplace_back(3 * 16, 0xeeeeeeec);
+            break;
+        case 3:
+            m_framesize = 32 * 4;
+            m_puncturing_rules.emplace_back(29 * 16, 0xeeeeeeee);
+            m_puncturing_rules.emplace_back(3 * 16, 0xeeeeeeec);
+            break;
+        default:
+            throw std::runtime_error("FicSource: invalid mode");
     }
     m_buffer.setLength(m_framesize);
 }
