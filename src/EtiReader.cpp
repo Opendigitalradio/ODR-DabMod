@@ -84,6 +84,11 @@ const std::vector<std::shared_ptr<SubchannelSource> > EtiReader::getSubchannels(
     return mySources;
 }
 
+size_t EtiReader::getNumSubchannels() const
+{
+    return mySources.size();
+}
+
 
 int EtiReader::loadEtiData(const Buffer& dataIn)
 {
@@ -293,19 +298,26 @@ const std::vector<std::shared_ptr<SubchannelSource> > EdiReader::getSubchannels(
 {
     std::scoped_lock<std::mutex> lock(m_mutex);
 
-    std::vector<std::shared_ptr<SubchannelSource> > sources;
+    std::vector<std::shared_ptr<SubchannelSource> > sources_ordered;
 
-    sources.resize(m_currentFrame.sources.size());
-    for (const auto& s : m_currentFrame.sources) {
-        if (s.first < sources.size()) {
-            sources.at(s.first) = s.second;
+    sources_ordered.resize(sources.size());
+    for (const auto& s : sources) {
+        const auto stc_stream_index = s.first;
+        if (stc_stream_index < sources.size()) {
+            sources_ordered.at(stc_stream_index) = s.second;
         }
         else {
             throw std::runtime_error("Missing subchannel data in EDI source");
         }
     }
 
-    return sources;
+    return sources_ordered;
+}
+
+size_t EdiReader::getNumSubchannels() const
+{
+    std::scoped_lock<std::mutex> lock(m_mutex);
+    return sources.size();
 }
 
 std::optional<DecodedFrame> EdiReader::popFrame()
@@ -419,11 +431,11 @@ void EdiReader::add_subchannel(EdiDecoder::eti_stc_data&& stc)
         throw std::logic_error("Cannot add subchannel before protocol");
     }
 
-    if (m_currentFrame.sources.count(stc.stream_index) == 0) {
-        m_currentFrame.sources[stc.stream_index] = make_shared<SubchannelSource>(stc.sad, stc.stl(), stc.tpl);
+    if (sources.count(stc.stream_index) == 0) {
+        sources[stc.stream_index] = make_shared<SubchannelSource>(stc.sad, stc.stl(), stc.tpl);
     }
 
-    auto& source = m_currentFrame.sources[stc.stream_index];
+    auto& source = sources[stc.stream_index];
 
     if (source->framesize() != stc.mst.size()) {
         throw std::invalid_argument(
@@ -431,7 +443,7 @@ void EdiReader::add_subchannel(EdiDecoder::eti_stc_data&& stc)
     }
     source->loadSubchannelData(std::move(stc.mst));
 
-    if (m_currentFrame.sources.size() > 64) {
+    if (sources.size() > 64) {
         throw std::invalid_argument("Too many subchannels");
     }
 }

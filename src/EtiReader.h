@@ -53,6 +53,8 @@ class EtiSource
 public:
     /* Return all subchannel sources containing MST data */
     virtual const std::vector<std::shared_ptr<SubchannelSource> > getSubchannels() const = 0;
+
+    virtual size_t getNumSubchannels() const = 0;
 };
 
 enum class EtiReaderState {
@@ -95,6 +97,7 @@ public:
     int loadEtiData(const Buffer& dataIn);
 
     virtual const std::vector<std::shared_ptr<SubchannelSource> > getSubchannels() const override;
+    virtual size_t getNumSubchannels() const override;
 
 private:
     /* Transform the ETI TIST to a PPS offset in units of 1/16384000 s */
@@ -135,8 +138,6 @@ struct DecodedFrame {
     // 16 bits: RFU field in EOH
     uint16_t rfu = 0xffff;
 
-    std::map<uint8_t, std::shared_ptr<SubchannelSource> > sources;
-
     std::time_t utc_ts() const {
         /* According to Annex F
          *  EDI = UTC + UTCO
@@ -154,6 +155,7 @@ class EdiReader : public EtiSource, public EdiDecoder::ETIDataCollector
 {
 public:
     virtual const std::vector<std::shared_ptr<SubchannelSource> > getSubchannels() const override;
+    virtual size_t getNumSubchannels() const override;
 
     std::optional<DecodedFrame> popFrame();
 
@@ -195,6 +197,9 @@ private:
     DecodedFrame m_currentFrame;
 
     std::deque<DecodedFrame> m_readyFrames;
+
+    using stc_stream_index_t = uint8_t;
+    std::map<stc_stream_index_t, std::shared_ptr<SubchannelSource> > sources;
 };
 
 /* The EDI input does not use the inputs defined in InputReader.h, as they were
