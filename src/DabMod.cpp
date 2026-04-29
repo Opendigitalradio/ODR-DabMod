@@ -691,7 +691,7 @@ static run_modulator_state_t run_modulator(const mod_settings_t& mod_settings, M
                         break;
                     }
                     else {
-                        this_thread::sleep_for(chrono::milliseconds(1));
+                        this_thread::sleep_for(chrono::microseconds(100));
                     }
                 }
 
