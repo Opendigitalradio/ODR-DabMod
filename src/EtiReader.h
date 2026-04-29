@@ -127,10 +127,13 @@ private:
  * the functions to get the info.
  */
 
+using stc_stream_index_t = uint8_t;
+
 struct DecodedFrame {
     uint8_t err;
     EdiDecoder::eti_fc_data fc;
     std::vector<uint8_t> fic;
+    std::map<stc_stream_index_t, EdiDecoder::eti_stc_data > stream_data;
     uint32_t utco;
     uint32_t seconds;
     uint16_t mnsc = 0xffff;
@@ -198,7 +201,6 @@ private:
 
     std::deque<DecodedFrame> m_readyFrames;
 
-    using stc_stream_index_t = uint8_t;
     std::map<stc_stream_index_t, std::shared_ptr<SubchannelSource> > sources;
 };
 

@@ -326,6 +326,29 @@ std::optional<DecodedFrame> EdiReader::popFrame()
     if (m_readyFrames.size() > 0) {
         auto f = std::move(m_readyFrames.front());
         m_readyFrames.pop_front();
+
+        for (auto& stream : f.stream_data) {
+            const auto stream_index = stream.first;
+            const auto& stc = stream.second;
+
+            if (sources.count(stream_index) == 0) {
+                sources[stream_index] = make_shared<SubchannelSource>(
+                        stc.sad, stc.stl(), stc.tpl);
+            }
+
+            auto& source = sources[stc.stream_index];
+
+            if (source->framesize() != stc.mst.size()) {
+                throw std::invalid_argument(
+                        "EDI: MST data length inconsistent with FIC");
+            }
+            source->loadSubchannelData(std::move(stc.mst));
+
+            if (sources.size() > 64) {
+                throw std::invalid_argument("Too many subchannels");
+            }
+        }
+
         return f;
     }
     return std::nullopt;
@@ -431,21 +454,12 @@ void EdiReader::add_subchannel(EdiDecoder::eti_stc_data&& stc)
         throw std::logic_error("Cannot add subchannel before protocol");
     }
 
-    if (sources.count(stc.stream_index) == 0) {
-        sources[stc.stream_index] = make_shared<SubchannelSource>(stc.sad, stc.stl(), stc.tpl);
+    if (m_currentFrame.stream_data.count(stc.stream_index) == 1) {
+        etiLog.level(warn) << "Received duplicate STC for stream index " <<
+            (int)stc.stream_index;
     }
 
-    auto& source = sources[stc.stream_index];
-
-    if (source->framesize() != stc.mst.size()) {
-        throw std::invalid_argument(
-                "EDI: MST data length inconsistent with FIC");
-    }
-    source->loadSubchannelData(std::move(stc.mst));
-
-    if (sources.size() > 64) {
-        throw std::invalid_argument("Too many subchannels");
-    }
+    m_currentFrame.stream_data.emplace(stc.stream_index, std::move(stc));
 }
 
 void EdiReader::assemble(EdiDecoder::ReceivedTagPacket&& tagpacket)
