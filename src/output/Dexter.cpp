@@ -2,7 +2,7 @@
    Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010 Her Majesty the
    Queen in Right of Canada (Communications Research Center Canada)
 
-   Copyright (C) 2024
+   Copyright (C) 2026
    Matthias P. Braendli, matthias.braendli@mpb.li
 
     http://opendigitalradio.org
@@ -202,7 +202,6 @@ void Dexter::channel_up()
     }
 
     m_channel_is_up = true;
-    etiLog.level(debug) << "DEXTER CHANNEL_UP";
 }
 
 void Dexter::channel_down()
@@ -607,6 +606,7 @@ void Dexter::transmit_frame(struct FrameData&& frame)
         }
 
         channel_up();
+        etiLog.level(debug) << "DEXTER CHANNEL_UP at FCT=" << frame.ts.fct << " with " << (int)(1000.0 * frame.ts.offset_to_system_time()) << " ms offset to sys time";
     }
 
     if (m_require_timestamp_refresh) {
@@ -635,7 +635,14 @@ void Dexter::transmit_frame(struct FrameData&& frame)
             }
             num_buffers_pushed++;
         }
+
         num_frames_modulated++;
+
+        if (m_conf.showMetadata) {
+            etiLog.level(debug) << "Dexter: frame " << frame.ts.fct <<
+                " TS offs=" << (int)(1000.0 * frame.ts.offset_to_system_time()) <<
+                " pps=" << frame.ts.pps_offset();
+        }
     }
 
     {

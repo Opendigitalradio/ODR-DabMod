@@ -613,7 +613,7 @@ static run_modulator_state_t run_modulator(const mod_settings_t& mod_settings, M
 {
     auto ret = run_modulator_state_t::failure;
     try {
-        bool modulator_was_paused = false;
+        bool was_paused = false;
         int last_eti_fct = -1;
         auto last_frame_received = chrono::steady_clock::now();
         frame_timestamp ts;
@@ -701,12 +701,11 @@ static run_modulator_state_t run_modulator(const mod_settings_t& mod_settings, M
             }
 
             bool modulate = true;
-
             if (m.pause_modulator) {
-                modulator_was_paused = true;
+                was_paused = true;
                 modulate = false;
             }
-            else if (modulator_was_paused) {
+            else if (was_paused) {
                 // We must restart it because of frame alignment
                 etiLog.level(warn) << "Modulator unpaused";
                 return run_modulator_state_t::again;
@@ -719,38 +718,43 @@ static run_modulator_state_t run_modulator(const mod_settings_t& mod_settings, M
                     modulate = false;
                 }
                 else {
-                    last_eti_fct = fct;
+                    // Timestamp is good if we run unsynchronised, or if margin is sufficient
+                    if (mod_settings.sdr_device_config.enableSync) {
+                        if (not ts.timestamp_valid) {
+                            etiLog.level(warn) << "Modulator skipping frame " << fct << " with invalid TS";
+                            modulate = false;
+                        }
+                        else {
+                            const auto offs_to_sys = ts.offset_to_system_time();
+                            if (offs_to_sys < 0.2) {
+                                etiLog.level(warn) << "Modulator skipping frame " << fct <<
+                                    " with short offset " << offs_to_sys;
+                                modulate = false;
+                            }
+                        }
+                    }
                 }
             }
             else {
                 const unsigned expected_fct = (last_eti_fct + 1) % 250;
-                if (fct == expected_fct) {
-                    last_eti_fct = fct;
-                }
-                else {
+                if (fct != expected_fct) {
                     etiLog.level(warn) << "ETI FCT discontinuity, expected " <<
                         expected_fct << " received " << fct;
                     return run_modulator_state_t::again;
                 }
-            }
 
-            // Timestamp is good if we run unsynchronised, or if margin is sufficient
-            if (mod_settings.sdr_device_config.enableSync) {
-                const auto offs_to_sys = ts.offset_to_system_time();
-                if (not ts.timestamp_valid) {
-                    etiLog.level(warn) << "Modulator skipping frame " << fct << " with invalid TS";
-                    modulate = false;
-                }
-                else if (offs_to_sys < 0.2) {
-                    etiLog.level(warn) << "Modulator skipping frame " << fct <<
-                        " with short offset " << offs_to_sys;
-                    modulate = false;
+                if (mod_settings.sdr_device_config.enableSync) {
+                    if (not ts.timestamp_valid) {
+                        etiLog.level(warn) << "Modulator restart after frame " << fct << " with invalid TS";
+                        return run_modulator_state_t::again;
+                    }
                 }
             }
 
             if (modulate) {
                 m.framecount++;
                 m.flowgraph->run();
+                last_eti_fct = fct;
             }
 
             /* Check every once in a while if the remote control

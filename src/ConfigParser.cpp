@@ -373,6 +373,7 @@ static void parse_configfile(
 #if defined(HAVE_DEXTER)
     else if (output_selected == "dexter") {
         auto& outputdexter_conf = mod_settings.sdr_device_config;
+        outputdexter_conf.showMetadata = pt.GetBoolean("dexteroutput.show_metadata", false);
         outputdexter_conf.txgain = pt.GetReal("dexteroutput.txgain", 0.0);
         outputdexter_conf.lo_offset = pt.GetReal("dexteroutput.lo_offset", 0.0);
         outputdexter_conf.frequency = pt.GetReal("dexteroutput.frequency", 0);

@@ -68,6 +68,7 @@ struct SDRDeviceConfig {
     bool enableSync = false;
     double bandwidth = 0.0;
     unsigned upsample = 1;
+    bool showMetadata = false;
 
     // When working with timestamps, mute the frames that
     // do not have a timestamp
