@@ -180,6 +180,22 @@ Dexter::Dexter(SDRDeviceConfig& config) :
 void Dexter::channel_up()
 {
     int r;
+
+    // To make it possible to read the number of underflows since we set gain to nonzero
+    long long underflows_attr = 0;
+    r = iio_device_attr_read_longlong(m_dexter_dsp_tx, "buffer_underflows0", &underflows_attr);
+    if (r == 0) {
+        size_t underflows_new = underflows_attr;
+
+        std::unique_lock<std::mutex> lock(m_attr_thread_mutex);
+        if (underflows_new != underflows and underflows_attr != 0) {
+            underflows = underflows_new;
+        }
+    }
+    else {
+        etiLog.level(error) << "Failed to read dexter_dsp_tx.buffer_underflows0: " << get_iio_error(r);
+    }
+
     if ((r = iio_device_attr_write_longlong(m_dexter_dsp_tx, "gain0", m_conf.txgain)) != 0) {
         etiLog.level(error) << "Failed to set dexter_dsp_tx.gain0 = " << m_conf.txgain <<
             " : " << get_iio_error(r);
@@ -627,7 +643,7 @@ void Dexter::transmit_frame(struct FrameData&& frame)
         size_t u = underflows;
         lock.unlock();
 
-        if (u != 0 and u != prev_underflows) {
+        if (prev_underflows != 0 and u != prev_underflows) {
             etiLog.level(warn) << "Dexter: underflow! " << prev_underflows << " -> " << u;
         }
 
