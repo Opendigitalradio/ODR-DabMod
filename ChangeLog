@@ -1,8 +1,13 @@
 This file contains information about the changes done to
 ODR-DabMod in this repository
 
-2026-02-23: Matthias P. Braendli <matthias@mpb.li>
+2026-06-02: Matthias P. Braendli <matthias@mpb.li>
 	(v3.2.0):
+		Improve UDP EDI reception.
+		Take advantage of C++20 features to improve performance.
+
+2026-02-23: Matthias P. Braendli <matthias@mpb.li>
+	(v3.1.0):
 		Add backpressure_input setting.
 		Fix EDI PFT decoding bug in some situations with lost fragments.
 
