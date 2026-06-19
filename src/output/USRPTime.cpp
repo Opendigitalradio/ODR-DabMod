@@ -47,7 +47,7 @@ USRPTime::USRPTime(
     time_last_check(timepoint_t::clock::now())
 {
     if (m_conf.refclk_src == "internal" and m_conf.pps_src != "none") {
-        etiLog.level(warn) << "OutputUHD: Unusal refclk and pps source settings. Setting time once, no monitoring.";
+        etiLog.level(warn) << "OutputUHD: Unusual refclk and pps source settings. Setting time once, no monitoring.";
         set_usrp_time_from_pps();
     }
     else if (m_conf.pps_src == "none") {
