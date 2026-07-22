@@ -31,6 +31,9 @@ sudo apt-get install --yes libzmq3-dev
 ## UHD for USRP
 sudo apt-get install --yes libuhd-dev
 
+## IIO for dexter (PrecisionWave)
+sudo apt install --yes libiio-dev
+
 ## LimeSuite for LimeSDR support
 sudo apt-get install --yes liblimesuite-dev
 
