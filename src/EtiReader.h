@@ -233,8 +233,8 @@ class EdiTransport {
         std::string m_uri;
 
         int m_port;
-        std::string m_bindto;
-        std::string m_mcastaddr;
+        std::string m_bindto = "0.0.0.0";
+        std::string m_mcastaddr = "0.0.0.0";
 
         enum class Proto { Unspecified, UDP, TCP };
         Proto m_proto = Proto::Unspecified;

@@ -255,7 +255,9 @@ void UDPSocket::init_receive_multicast(int port, const string& local_if_addr, co
     }
 
     m_multicast_source = mcastaddr;
-    join_group(mcastaddr.c_str(), local_if_addr.c_str());
+    if (m_multicast_source != "0.0.0.0") {
+        join_group(mcastaddr.c_str(), local_if_addr.c_str());
+    }
 }
 
 

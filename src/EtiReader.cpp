@@ -503,9 +503,6 @@ void EdiReader::assemble(EdiDecoder::ReceivedTagPacket&& tagpacket)
 }
 
 EdiTransport::EdiTransport(EdiReader& reader, float edi_max_delay_ms) :
-    m_port(0),
-    m_bindto("0.0.0.0"),
-    m_mcastaddr("0.0.0.0"),
     m_decoder(reader)
 {
     if (edi_max_delay_ms > 0.0f) {
