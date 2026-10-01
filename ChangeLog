@@ -1,6 +1,10 @@
 This file contains information about the changes done to
 ODR-DabMod in this repository
 
+2026-10-01: Matthias P. Braendli <matthias@mpb.li>
+	(v3.2.1):
+		Fix parsing of multicast address for UDP input.
+
 2026-06-02: Matthias P. Braendli <matthias@mpb.li>
 	(v3.2.0):
 		Improve UDP EDI reception.
